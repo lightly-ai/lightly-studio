@@ -75,6 +75,15 @@ export const useWorkflowFile = (getParams: () => WorkflowFileParams | null) => {
     return { query };
 };
 
+/**
+ * Shown when the service rejects a move as out of date. The action bar offers only the moves
+ * the service allows, so a 409 means someone else moved the file after it was opened.
+ */
+export const STALE_FILE_MESSAGE = 'This file was changed by someone else';
+
+/** HTTP status the workflow service returns for a move the file's current state forbids. */
+const CONFLICT = 409;
+
 /** Moves a batch file to another state; the service checks that the move and the caller are allowed. */
 export async function transitionWorkflowFile(
     params: WorkflowFileParams,
@@ -86,6 +95,7 @@ export async function transitionWorkflowFile(
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify({ state })
     });
+    if (response.status === CONFLICT) throw new Error(STALE_FILE_MESSAGE);
     if (!response.ok) {
         const body = await response.json().catch(() => null);
         const detail = typeof body?.detail === 'string' ? body.detail : null;

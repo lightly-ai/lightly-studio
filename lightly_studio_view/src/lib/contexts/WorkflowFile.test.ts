@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { workflowFile } from '$lib/components/Workflow/workflowFile.fixture';
+import { STALE_FILE_MESSAGE } from '$lib/hooks/useWorkflowFile/useWorkflowFile.svelte';
 import type { createWorkflowFileContext } from './WorkflowFile.svelte';
 import WorkflowFileContextTestWrapper from './WorkflowFileContextTestWrapper.test.svelte';
 
@@ -54,7 +55,7 @@ describe('createWorkflowFileContext', () => {
         await waitFor(() => expect(context.transitioning).toBe(false));
     });
 
-    it('rejects with the service’s reason and shows the file as the service has it', async () => {
+    it('says the file changed and shows it as the service has it, read-only', async () => {
         let state = workflowFile.state;
         vi.stubGlobal(
             'fetch',
@@ -64,15 +65,16 @@ describe('createWorkflowFileContext', () => {
                     state = 'in_review';
                     return json({ detail: 'Cannot move a file from In review to In review' }, 409);
                 }
-                return json({ ...workflowFile, state });
+                const turn = state !== 'in_review';
+                return json({ ...workflowFile, state, can_edit: turn, your_turn: turn });
             })
         );
         const context = await renderLoadedContext();
 
-        await expect(context.transition('in_review')).rejects.toThrow(
-            'Cannot move a file from In review to In review'
-        );
+        await expect(context.transition('in_review')).rejects.toThrow(STALE_FILE_MESSAGE);
         expect(screen.getByTestId('probe-state')).toHaveTextContent('in_review');
+        expect(context.canEdit).toBe(false);
+        expect(context.locked).toBe(true);
     });
 
     it('fails when the moved file cannot be read again', async () => {

@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchWorkflowFile, transitionWorkflowFile } from './useWorkflowFile.svelte';
+import {
+    fetchWorkflowFile,
+    STALE_FILE_MESSAGE,
+    transitionWorkflowFile
+} from './useWorkflowFile.svelte';
 
 const params = { projectId: 'p1', batchId: 'b1', sampleId: 's1' };
 
@@ -55,21 +59,51 @@ describe('transitionWorkflowFile', () => {
         );
     });
 
-    it('fails with the service’s reason when the move is rejected', async () => {
+    it('says the file changed when the service rejects the move as out of date', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi
+                .fn()
+                .mockResolvedValue(
+                    new Response(
+                        JSON.stringify({ detail: 'Cannot move a file from Accepted to Rework' }),
+                        { status: 409 }
+                    )
+                )
+        );
+
+        await expect(transitionWorkflowFile(params, 'rework')).rejects.toThrow(STALE_FILE_MESSAGE);
+    });
+
+    it('fails with the service’s reason when the user may not make the move', async () => {
         vi.stubGlobal(
             'fetch',
             vi.fn().mockResolvedValue(
                 new Response(
-                    JSON.stringify({ detail: 'Cannot move a file from Accepted to Rework' }),
+                    JSON.stringify({ detail: 'Only the batch reviewer can make this change' }),
                     {
-                        status: 409
+                        status: 403
                     }
                 )
             )
         );
 
-        await expect(transitionWorkflowFile(params, 'rework')).rejects.toThrow(
-            'Cannot move a file from Accepted to Rework'
+        await expect(transitionWorkflowFile(params, 'accepted')).rejects.toThrow(
+            'Only the batch reviewer can make this change'
+        );
+    });
+
+    it('fails as before when the service cannot be reached', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+        await expect(transitionWorkflowFile(params, 'accepted')).rejects.toThrow('Failed to fetch');
+    });
+
+    it('fails with the status when the service gives no reason', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('oops', { status: 502 })));
+
+        await expect(transitionWorkflowFile(params, 'accepted')).rejects.toThrow(
+            'Could not change the file state (502)'
         );
     });
 });
