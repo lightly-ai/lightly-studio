@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -22,6 +25,12 @@ class TestHttpTagTransport:
         assert tag is not None
         assert tag.name == "cat"
         assert transport.get_by_name(collection_id=collection_id, tag_name="dog") is None
+
+    def test_get_names_by_sample_ids(self, test_client: TestClient) -> None:
+        transport: TagTransport = HttpTagTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.get_names_by_sample_ids(sample_ids=[])
 
     def test_add_to_samples__remove_from_samples__in_batches(
         self, test_client: TestClient, db_session: Session, mocker: MockerFixture
@@ -57,3 +66,11 @@ class TestHttpTagTransport:
             (remove_path, [a, b]),
             (remove_path, [c]),
         ]
+
+    def test_split_samples(self, test_client: TestClient) -> None:
+        transport: TagTransport = HttpTagTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.split_samples(
+                collection_id=uuid4(), sample_ids=[], tag_sizes={"train": 1}, seed=None
+            )

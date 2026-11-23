@@ -96,6 +96,46 @@ describe('useTags Hook', () => {
         });
     });
 
+    it('loads the tags of all pages', async () => {
+        const toTags = (count: number, start: number): TagView[] =>
+            Array.from({ length: count }, (_, index) => ({
+                tag_id: `${start + index}`,
+                name: `Tag ${start + index}`,
+                description: ''
+            }));
+        const readTagsSpy = vi
+            .spyOn(lightly_studio_local, 'readTags')
+            .mockResolvedValueOnce({ data: toTags(100, 0), error: undefined })
+            .mockResolvedValueOnce({ data: toTags(5, 100), error: undefined });
+
+        const { tags } = useTags({ collection_id: 'many-tags-collection' });
+
+        await waitFor(() => expect(get(tags)).toHaveLength(105));
+        expect(readTagsSpy).toHaveBeenCalledTimes(2);
+        expect(readTagsSpy).toHaveBeenLastCalledWith(
+            expect.objectContaining({ query: { offset: 100, limit: 100 } })
+        );
+    });
+
+    it('keeps no tags when a later page fails', async () => {
+        const testError = new Error('Page error');
+        vi.spyOn(lightly_studio_local, 'readTags')
+            .mockResolvedValueOnce({
+                data: Array.from({ length: 100 }, (_, index) => ({
+                    tag_id: `${index}`,
+                    name: `Tag ${index}`,
+                    description: ''
+                })),
+                error: undefined
+            })
+            .mockResolvedValueOnce({ data: undefined, error: testError });
+
+        const { error, tags } = useTags({ collection_id: 'failing-page-collection' });
+
+        await waitFor(() => expect(get(error)).toEqual(testError));
+        expect(get(tags)).toEqual([]);
+    });
+
     it('should call createQuery with correct parameters', () => {
         const collection_id = '123';
         const createQuery = setup();
@@ -104,7 +144,8 @@ describe('useTags Hook', () => {
         expect(createQuery).toHaveBeenCalledWith({
             path: {
                 collection_id
-            }
+            },
+            query: { offset: 0, limit: 100 }
         });
     });
 

@@ -18,13 +18,16 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.database import db_manager
-from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.collection import (
+    CollectionTable,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import tag_resolver
 from lightly_studio.sampling.sample import Sampling
 from lightly_studio.transport import active_transport
 
@@ -137,7 +140,7 @@ class DatasetQuery(Generic[T]):
 
     def __init__(
         self,
-        dataset: CollectionTable,
+        dataset: CollectionTable | CollectionWithoutChildrenView,
         session: Session | None = None,
         sample_class: type[T] | None = None,
     ) -> None:
@@ -417,24 +420,10 @@ class DatasetQuery(Generic[T]):
         Args:
             tag_name: Name of the tag to add to matching samples.
         """
-        if self._transport_request() is not None:
-            sample_ids = [sample.sample_id for sample in self]
-            active_transport.get_transport().tags.add_to_samples(
-                collection_id=self.dataset.collection_id, tag_name=tag_name, sample_ids=sample_ids
-            )
-            return
-        # Get or create the tag
-        tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=self.session, collection_id=self.dataset.collection_id, tag_name=tag_name
-        )
-
-        # Execute query to get matching samples
-        samples = self.to_list()
-        sample_ids = [sample.sample_id for sample in samples]
-
-        # Use resolver to bulk assign tag (handles validation and edge cases)
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=self.session, tag_id=tag.tag_id, sample_ids=sample_ids
+        active_transport.get_transport().tags.add_to_samples(
+            collection_id=self.dataset.collection_id,
+            tag_name=tag_name,
+            sample_ids=[sample.sample_id for sample in self],
         )
 
     def split(self, tag_sizes: Mapping[str, int], seed: int | None = None) -> dict[str, int]:
@@ -453,14 +442,10 @@ class DatasetQuery(Generic[T]):
         """
         if self.dataset.sample_type not in {SampleType.IMAGE, SampleType.VIDEO}:
             raise ValueError("Splitting is only supported for image and video datasets.")
-        return tag_resolver.split_samples(
-            session=self.session,
+        return active_transport.get_transport().tags.split_samples(
             collection_id=self.dataset.collection_id,
             sample_ids=[sample.sample_id for sample in self],
-            splits=[
-                tag_resolver.SplitDefinition(tag_name=name, relative_size=size)
-                for name, size in tag_sizes.items()
-            ],
+            tag_sizes=tag_sizes,
             seed=seed,
         )
 

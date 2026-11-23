@@ -12,6 +12,7 @@ from lightly_studio.core.annotation.classification import ClassificationAnnotati
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
 from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
 from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
@@ -69,10 +70,12 @@ class TestImageSample:
         assert new_image_table.file_name == "sample1.png"
         assert new_image_table.width == 1000
 
-    def test_add_tag(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_tag(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -86,10 +89,12 @@ class TestImageSample:
         sample.add_tag("tag1")
         assert sorted([tag.name for tag in sample.sample_table.tags]) == ["tag1", "tag2"]
 
-    def test_remove_tag(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_remove_tag(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -108,9 +113,7 @@ class TestImageSample:
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
         # Test removing a tag that exists in database but isn't associated with sample
-        create_tag(
-            session=db_session, collection_id=collection.collection_id, tag_name="unassociated"
-        )
+        create_tag(session=session, collection_id=collection.collection_id, tag_name="unassociated")
         sample.remove_tag("unassociated")
         assert [tag.name for tag in sample.sample_table.tags] == ["tag2"]
 
@@ -118,10 +121,12 @@ class TestImageSample:
         sample.remove_tag("tag2")
         assert [tag.name for tag in sample.sample_table.tags] == []
 
-    def test_tags_property_get(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_tags_property_get(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -134,10 +139,12 @@ class TestImageSample:
         sample.add_tag("tag2")
         assert sample.tags == {"tag1", "tag2"}
 
-    def test_tags_property_set(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_tags_property_set(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -157,10 +164,12 @@ class TestImageSample:
         assert sample.tags == set()
         assert [tag.name for tag in sample.sample_table.tags] == []
 
-    def test_metadata(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_metadata(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -188,10 +197,12 @@ class TestImageSample:
         sample.metadata["string_key"] = "updated_value"
         assert sample.metadata["string_key"] == "updated_value"
 
-    def test_metadata__update(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_metadata__update(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -210,15 +221,17 @@ class TestImageSample:
         assert sample.metadata["key1"] == "new_val1"
         assert sample.metadata["key4"] == 4.0
 
-    def test_metadata__schema_must_match(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_metadata__schema_must_match(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table1 = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
             file_path_abs="/path/to/sample1.png",
         )
         image_table2 = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
             file_path_abs="/path/to/sample2.png",
         )
@@ -236,10 +249,12 @@ class TestImageSample:
         # TODO(Michal, 9/2025): But shouldn't it?
         sample2.metadata["key"] = 123
 
-    def test_add_caption(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_caption(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -250,10 +265,12 @@ class TestImageSample:
         sample.add_caption(text="caption1")
         assert sample.captions == ["caption3", "caption2", "caption1"]
 
-    def test_add_captions(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_captions(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)
@@ -261,10 +278,12 @@ class TestImageSample:
         sample.add_captions(captions=["bright", "day", "city"])
         assert sample.captions == ["bright", "day", "city"]
 
-    def test_captions_setter(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_captions_setter(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         sample = ImageSample(inner=image_table)

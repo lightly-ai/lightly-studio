@@ -54,7 +54,8 @@ def test_get_labeling_models(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {
-        "models": [{"id": "seg", "task": "instance_segmentation", "class_names": ["cat"]}]
+        "models": [{"id": "seg", "task": "instance_segmentation", "class_names": ["cat"]}],
+        "has_loading_models": False,
     }
 
 
@@ -63,7 +64,7 @@ def test_get_labeling_models__none_registered(test_client: TestClient) -> None:
     response = test_client.get("/api/annotate/models")
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == {"models": []}
+    assert response.json() == {"models": [], "has_loading_models": False}
 
 
 def test_get_labeling_models__not_ready(
@@ -78,6 +79,19 @@ def test_get_labeling_models__not_ready(
 
     assert response.status_code == HTTP_STATUS_OK
     assert [model["id"] for model in response.json()["models"]] == ["loaded"]
+    assert response.json()["has_loading_models"]
+
+
+def test_get_labeling_models__ready_during_request(
+    test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    model_registry.register(model=helpers.ReadyOnSecondReadModel(model_id="late"))
+
+    response = test_client.get("/api/annotate/models")
+
+    assert response.status_code == HTTP_STATUS_OK
+    # The model is either in the list or counted as loading, so the GUI polls for it.
+    assert response.json() == {"models": [], "has_loading_models": True}
 
 
 def test_get_labeling_models__faulty_model(

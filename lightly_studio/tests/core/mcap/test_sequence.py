@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from lightly_studio.core.mcap.sequence import McapSequence, McapSequenceEntry
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate
@@ -16,6 +17,12 @@ from lightly_studio.resolvers import (
     sample_resolver,
 )
 from tests.helpers_resolvers import create_collection
+
+
+@pytest.fixture
+def db_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the ingestion transport writes through."""
+    return db_manager.persistent_session()
 
 
 class TestMcapSequence:

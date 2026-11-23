@@ -7,17 +7,11 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.core.mcap import recording_rows
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
 from lightly_studio.core.mcap.type_definitions import StaticTransform
-from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.recording import RecordingFormat, RecordingTable
-from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
-from lightly_studio.models.static_transform import StaticTransformCreate
-from lightly_studio.resolvers import (
-    dynamic_transform_resolver,
-    sensor_calibration_resolver,
-    static_transform_resolver,
-)
+from lightly_studio.transport import active_transport
 
 
 class Recording:
@@ -73,15 +67,10 @@ class Recording:
             sqlalchemy.exc.IntegrityError: If a component already has a calibration on
                 this recording.
         """
-        return sensor_calibration_resolver.create_many(
-            session=self._session,
+        return active_transport.get_transport().ingestion.add_sensor_calibrations(
             rows=[
-                SensorCalibrationCreate(
-                    recording_id=self.recording_id,
-                    collection_id=calibration.collection_id,
-                    width=calibration.width,
-                    height=calibration.height,
-                    k=list(calibration.k),
+                recording_rows.sensor_calibration_create(
+                    recording_id=self.recording_id, calibration=calibration
                 )
                 for calibration in calibrations
             ],
@@ -104,10 +93,11 @@ class Recording:
             sqlalchemy.exc.IntegrityError: If an edge is already stored for this
                 recording.
         """
-        return static_transform_resolver.create_many(
-            session=self._session,
+        return active_transport.get_transport().ingestion.add_static_transforms(
             rows=[
-                _static_transform_create(recording_id=self.recording_id, transform=transform)
+                recording_rows.static_transform_create(
+                    recording_id=self.recording_id, transform=transform
+                )
                 for transform in transforms
             ],
         )
@@ -127,10 +117,11 @@ class Recording:
         Raises:
             ValueError: If `transforms` is empty, or a frame id is empty.
         """
-        return dynamic_transform_resolver.create_many(
-            session=self._session,
+        return active_transport.get_transport().ingestion.add_dynamic_transforms(
             rows=[
-                _dynamic_transform_create(recording_id=self.recording_id, transform=transform)
+                recording_rows.dynamic_transform_create(
+                    recording_id=self.recording_id, transform=transform
+                )
                 for transform in transforms
             ],
         )
@@ -147,44 +138,3 @@ class Recording:
         self._session.add(self._inner)
         self._session.commit()
         self._session.refresh(self._inner)
-
-
-def _static_transform_create(
-    recording_id: UUID, transform: StaticTransform
-) -> StaticTransformCreate:
-    """Build the row of one static transform edge."""
-    qx, qy, qz, qw = transform.rotation
-    tx, ty, tz = transform.translation
-    return StaticTransformCreate(
-        recording_id=recording_id,
-        parent=transform.parent_frame_id,
-        child=transform.child_frame_id,
-        qx=qx,
-        qy=qy,
-        qz=qz,
-        qw=qw,
-        tx=tx,
-        ty=ty,
-        tz=tz,
-    )
-
-
-def _dynamic_transform_create(
-    recording_id: UUID, transform: StaticTransform
-) -> DynamicTransformCreate:
-    """Build the row of one dynamic transform edge."""
-    qx, qy, qz, qw = transform.rotation
-    tx, ty, tz = transform.translation
-    return DynamicTransformCreate(
-        recording_id=recording_id,
-        parent=transform.parent_frame_id,
-        child=transform.child_frame_id,
-        timestamp_ns=transform.timestamp_ns,
-        qx=qx,
-        qy=qy,
-        qz=qz,
-        qw=qw,
-        tx=tx,
-        ty=ty,
-        tz=tz,
-    )
