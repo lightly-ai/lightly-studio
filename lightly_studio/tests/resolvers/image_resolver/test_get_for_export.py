@@ -250,4 +250,4 @@ def test_get_for_export__preloaded_data_accessible(db_session: Session) -> None:
     annotations = image_sample.annotations
     assert len(annotations) == 1
     assert annotations[0].class_name == "cat"
-    assert image_sample.captions == ["a cat sitting on a mat"]
+    assert [caption.text for caption in result[0].sample.captions] == ["a cat sitting on a mat"]
