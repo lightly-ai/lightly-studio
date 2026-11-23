@@ -95,3 +95,10 @@ class TestHttpIngestionTransport:
 
             with pytest.raises(NotImplementedError):
                 getattr(transport, method)(rows=[])
+
+    def test_add_sequence_samples(self) -> None:
+        with httpx.Client() as client:
+            transport: IngestionTransport = HttpIngestionTransport(client=client)
+
+            with pytest.raises(NotImplementedError):
+                transport.add_sequence_samples(sequence_sample_id=uuid4(), links=[])
