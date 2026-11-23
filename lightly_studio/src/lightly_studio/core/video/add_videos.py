@@ -6,7 +6,7 @@ import itertools
 import logging
 import math
 import os
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
@@ -43,7 +43,7 @@ from lightly_studio.core.file_outcome_report import (
     InputFileError,
     MissingInputFileError,
 )
-from lightly_studio.dataset import remote_storage
+from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.embed import embed_samples
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
@@ -114,6 +114,21 @@ class _FetchedVideo:
     path: str
     content: bytes | None = None
     error: InputFileError | None = None
+
+
+def collect_video_file_paths(
+    path: str, allowed_extensions: Sequence[str] | None, limit: int | None
+) -> list[str]:
+    """Return the video files in a folder. None as `allowed_extensions` uses VIDEO_EXTENSIONS."""
+    if allowed_extensions:
+        allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
+    else:
+        allowed_extensions_set = VIDEO_EXTENSIONS
+    return list(
+        fsspec_lister.iter_files_from_path(
+            path=path, allowed_extensions=allowed_extensions_set, limit=limit
+        )
+    )
 
 
 def load_into_collection_from_paths(  # noqa: PLR0913

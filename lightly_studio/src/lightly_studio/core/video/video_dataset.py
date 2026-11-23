@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Iterable
 from pathlib import Path
 from uuid import UUID
@@ -17,7 +16,6 @@ from lightly_studio.analytics.ingest_tracking import IngestFormat
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video import add_annotations, add_videos
-from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
@@ -27,8 +25,6 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
-
-logger = logging.getLogger(__name__)
 
 
 class VideoDataset(BaseSampleDataset[VideoSample]):
@@ -142,31 +138,17 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 original. Must be greater than 0.
             limit: Maximum number of samples to load. By default, all samples are loaded.
         """
-        if target_fps is not None and target_fps <= 0:
-            raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
         source = ingest_tracking.get_source(path=path)
-        fsspec_lister.validate_limit(limit)
-
-        video_paths = _collect_video_file_paths(
-            path=path, allowed_extensions=allowed_extensions, limit=limit
-        )
-        logger.info(f"Found {len(video_paths)} videos in {path}.")
-
-        # Process videos.
-        video_path_to_id, _ = add_videos.load_into_collection_from_paths(
-            session=self.session,
+        active_transport.get_transport().ingestion.add_videos_from_path(
             collection_id=self.collection_id,
-            video_paths=video_paths,
+            path=str(path),
+            allowed_extensions=None if allowed_extensions is None else list(allowed_extensions),
             num_decode_threads=num_decode_threads,
-            target_fps=target_fps,
+            embed=embed,
             embed_frames=embed_frames,
+            target_fps=target_fps,
+            limit=limit,
         )
-        created_sample_ids = list(video_path_to_id.values())
-
-        if embed:
-            active_transport.get_transport().ingestion.embed_videos(
-                collection_id=self.collection_id, sample_ids=created_sample_ids
-            )
         ingest_tracking.track_samples_ingested(
             source=source, sample_type=SampleType.VIDEO, ingest_format=IngestFormat.FOLDER
         )
@@ -217,8 +199,10 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         else:
             raise ValueError(f"Invalid annotation type: {annotation_type}")
 
-        video_paths = _collect_video_file_paths(
-            path=videos_path, allowed_extensions=allowed_extensions
+        video_paths = add_videos.collect_video_file_paths(
+            path=str(videos_path),
+            allowed_extensions=None if allowed_extensions is None else list(allowed_extensions),
+            limit=None,
         )
 
         created_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
@@ -266,20 +250,3 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             annotations_json=annotations_json,
             collection_name=annotation_source,
         )
-
-
-def _collect_video_file_paths(
-    path: PathLike,
-    allowed_extensions: Iterable[str] | None = None,
-    limit: int | None = None,
-) -> list[str]:
-    # Collect video file paths.
-    if allowed_extensions:
-        allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
-    else:
-        allowed_extensions_set = VIDEO_EXTENSIONS
-    return list(
-        fsspec_lister.iter_files_from_path(
-            path=str(path), allowed_extensions=allowed_extensions_set, limit=limit
-        )
-    )

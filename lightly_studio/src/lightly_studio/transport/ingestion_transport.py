@@ -15,7 +15,6 @@ class IngestionTransport(Protocol):
     A path is a local path or a cloud URI. A remote transport reads it on the server.
     """
 
-    # TODO(Iunir, 11/2026): Add the ingestion of videos.
     # TODO(Iunir, 11/2026): Add MCAP ingestion when `McapComponentSpec` has no DB imports.
 
     def add_images_from_path(  # noqa: PLR0913
@@ -82,6 +81,35 @@ class IngestionTransport(Protocol):
         Args:
             collection_id: The ID of the collection.
             sample_ids: The images to embed.
+        """
+
+    def add_videos_from_path(  # noqa: PLR0913
+        self,
+        collection_id: UUID,
+        path: str,
+        allowed_extensions: Sequence[str] | None,
+        num_decode_threads: int | None,
+        embed: bool,
+        embed_frames: bool,
+        target_fps: float | None,
+        limit: int | None,
+    ) -> None:
+        """Add the raw videos from a path to a collection.
+
+        Args:
+            collection_id: The ID of the collection.
+            path: The folder with the videos.
+            allowed_extensions: The file extensions to add. None uses the default extensions.
+            num_decode_threads: The number of FFmpeg decode threads. None uses the number
+                of CPU cores minus 1, at most 16.
+            embed: If True, compute embeddings for the new videos.
+            embed_frames: If True, compute embeddings for the frames of the new videos.
+            target_fps: The frame rate of the added frames. None adds all frames.
+            limit: The maximum number of videos to add. None adds all videos.
+
+        Raises:
+            ValueError: If `target_fps` or `limit` is not greater than 0.
+            AllInputFilesFailedError: If all videos are missing or broken.
         """
 
     def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
