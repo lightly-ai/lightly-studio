@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Button, buttonVariants } from '$lib/components/ui/button';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import Ellipsis from '@lucide/svelte/icons/ellipsis';
     import { toast } from 'svelte-sonner';
     import WorkflowOverrideDialog from './WorkflowOverrideDialog.svelte';
@@ -70,22 +71,24 @@
         {#if pendingMenuAction}
             <Button size="sm" variant="ghost" disabled>{pendingMenuAction.pendingLabel}</Button>
         {:else if actions.menu.length > 0}
-            <DropdownMenu.Root>
-                <DropdownMenu.Trigger
-                    class={buttonVariants({ variant: 'ghost', size: 'icon' })}
-                    aria-label="Admin actions"
-                    disabled={busy}
-                >
-                    <Ellipsis class="size-4" />
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content align="end">
-                    {#each actions.menu as action (action.target)}
-                        <DropdownMenu.Item onSelect={() => (confirming = action)}
-                            >{action.label}</DropdownMenu.Item
-                        >
-                    {/each}
-                </DropdownMenu.Content>
-            </DropdownMenu.Root>
+            <Tooltip content="Admin actions" position="bottom" noTriggerRole>
+                <DropdownMenu.Root>
+                    <DropdownMenu.Trigger
+                        class={buttonVariants({ variant: 'ghost', size: 'icon' })}
+                        aria-label="Admin actions"
+                        disabled={busy}
+                    >
+                        <Ellipsis class="size-4" />
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end">
+                        {#each actions.menu as action (action.target)}
+                            <DropdownMenu.Item onSelect={() => (confirming = action)}
+                                >{action.label}</DropdownMenu.Item
+                            >
+                        {/each}
+                    </DropdownMenu.Content>
+                </DropdownMenu.Root>
+            </Tooltip>
         {/if}
     </div>
 {/if}

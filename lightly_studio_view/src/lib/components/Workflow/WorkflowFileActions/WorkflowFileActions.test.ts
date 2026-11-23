@@ -169,6 +169,15 @@ describe('WorkflowFileActions', () => {
             expect(await openMenu(user)).toEqual(['Reopen (send back to Rework)']);
         });
 
+        it('names the ⋯ button in a tooltip on hover', async () => {
+            const user = userEvent.setup();
+            renderActions({ fileState: 'accepted', allowedTransitions: ADMIN_ALLOWED.accepted });
+
+            await user.hover(screen.getByRole('button', { name: 'Admin actions' }));
+
+            expect(await screen.findByRole('tooltip')).toHaveTextContent('Admin actions');
+        });
+
         it('lists only the moves in the menu, without a heading', async () => {
             const user = userEvent.setup();
             renderActions({ fileState: 'accepted', allowedTransitions: ADMIN_ALLOWED.accepted });
