@@ -68,45 +68,6 @@ fps >= 29.97
 duration_s > 10 AND fps = 30
 ```
 
-## Video frame queries
-
-Use `frame(...)` to return videos with a matching frame. Inside it, combine annotation
-functions with `frame_timestamp_s`, the frame’s presentation timestamp in seconds on the video’s
-timeline. The first frame might have a nonzero timestamp. If the timestamp is unavailable,
-LightlyStudio stores `-1.0`, so `frame_timestamp_s < 5` also matches frames with an unknown time.
-
-```mysql
-# A person appears on a frame with a timestamp from 0 up to (but excluding) 5 seconds
-frame(object_detection(class_name = "person") AND frame_timestamp_s >= 0 AND frame_timestamp_s < 5)
-
-# A person and a car appear on the same frame
-frame(object_detection(class_name = "person") AND object_detection(class_name = "car"))
-
-# Both appear in the video, possibly on different frames
-frame(object_detection(class_name = "person")) AND frame(object_detection(class_name = "car"))
-```
-
-`frame(NOT object_detection(class_name = "car"))` requires at least one frame without a car detection.
-`NOT frame(object_detection(class_name = "car"))` matches videos with no car detections on any frame, including videos with no frames.
-
-## Video event queries
-
-Use `event(...)` to return videos with at least one temporal event that satisfies the expression.
-Only classifications attached to a video can have a time span when you create them.
-You can filter by annotation class (`class_name`), annotation source (`source`), `confidence`,
-and event boundaries (`start_time_s` and `end_time_s`, in seconds from the start of the video).
-
-```mysql
-# A run event starts before five seconds
-event(class_name = "run" AND start_time_s < 5)
-
-# A run event and a walk event both occur in the video
-event(class_name = "run") AND event(class_name = "walk")
-```
-
-On the Videos page, `classification(class_name = "run")` matches both whole-video classifications
-and temporal events. Use `event(class_name = "run")` to find only temporal events.
-
 ## Metadata filtering
 
 Use `metadata["path"]` to compare sample metadata. Quote the path with double or single quotes.
@@ -239,6 +200,46 @@ height > 400 AND object_detection(class_name = "cat")
 width >= 640 AND classification(class_name = "approved")
 "reviewed" IN tags AND segmentation_mask(class_name = "road")
 ```
+
+## Video frame queries
+
+Use `frame(...)` to return videos with a matching frame. Inside it, combine annotation
+functions with `frame_timestamp_s`, the frame’s presentation timestamp in seconds on the video’s
+timeline. The first frame might have a nonzero timestamp. If the timestamp is unavailable,
+LightlyStudio stores `-1.0`, so `frame_timestamp_s < 5` also matches frames with an unknown time.
+
+```mysql
+# A person appears on a frame with a timestamp from 0 up to (but excluding) 5 seconds
+frame(object_detection(class_name = "person") AND frame_timestamp_s >= 0 AND frame_timestamp_s < 5)
+
+# A person and a car appear on the same frame
+frame(object_detection(class_name = "person") AND object_detection(class_name = "car"))
+
+# Both appear in the video, possibly on different frames
+frame(object_detection(class_name = "person")) AND frame(object_detection(class_name = "car"))
+```
+
+`frame(NOT object_detection(class_name = "car"))` requires at least one frame without a car detection.
+`NOT frame(object_detection(class_name = "car"))` matches videos with no car detections on any frame, including videos with no frames.
+
+## Video event queries
+
+Use `event(...)` to return videos with at least one temporal event that satisfies the expression.
+Only classifications attached to a video can have a time span when you create them.
+You can filter by annotation class (`class_name`), annotation source (`source`), `confidence`,
+and event boundaries (`start_time_s` and `end_time_s`, in seconds from the start of the video).
+
+```mysql
+# A run event starts before five seconds
+event(class_name = "run" AND start_time_s < 5)
+
+# A run event and a walk event both occur in the video
+event(class_name = "run") AND event(class_name = "walk")
+```
+
+On the Videos page, `classification(class_name = "run")` matches both whole-video classifications
+and temporal events. Use `event(class_name = "run")` to find only temporal events.
+
 
 ## Sample evaluation filtering
 
