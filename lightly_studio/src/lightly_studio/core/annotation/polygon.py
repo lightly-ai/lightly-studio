@@ -56,4 +56,5 @@ class PolygonAnnotation(Annotation):
     @property
     def polygons(self) -> Polygons:
         """Parts of the polygon, each a list of (x, y) vertices in pixels."""
-        return self.inner.polygons
+        # The JSON column returns vertices as lists, so convert them to tuples.
+        return [[(x, y) for x, y in part] for part in self.inner.polygons]

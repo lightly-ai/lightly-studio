@@ -551,11 +551,11 @@ class TestImageSample:
         assert isinstance(annotation, PolygonAnnotation)
         assert annotation.class_name == "cat"
         assert annotation.confidence == pytest.approx(0.9)
-        # The JSON column returns vertices as lists, not tuples.
         assert annotation.polygons == [
-            [[1.5, 2], [5, 2], [5, 6]],
-            [[10, 10], [12, 10], [12, 13]],
+            [(1.5, 2), (5, 2), (5, 6)],
+            [(10, 10), (12, 10), (12, 13)],
         ]
+        assert isinstance(annotation.polygons[0][0], tuple)
         assert (annotation.x, annotation.y) == (1, 2)
         assert (annotation.width, annotation.height) == (11, 11)
 
