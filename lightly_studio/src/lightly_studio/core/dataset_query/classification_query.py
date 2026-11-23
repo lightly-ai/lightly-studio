@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from sqlalchemy import ColumnElement, and_, or_
-from sqlmodel import col, select
+from sqlalchemy import ColumnElement, and_
+from sqlmodel import col
 
 from lightly_studio.core.dataset_query.annotation_expression import AnnotationSourceField
 from lightly_studio.core.dataset_query.boolean_expression import AND
@@ -16,7 +16,6 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.video import VideoTable
 
 
 class ClassificationField:
