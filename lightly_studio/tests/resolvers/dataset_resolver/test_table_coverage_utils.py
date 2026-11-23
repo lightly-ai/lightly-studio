@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Iterator
-from contextlib import contextmanager
 
 import pytest
 from sqlalchemy import Column, Integer, Table
@@ -24,10 +24,9 @@ def test_verify_table_coverage__fails_for_new_table_in_default_schema() -> None:
         table_coverage_utils.verify_table_coverage()
 
 
-@contextmanager
+@contextlib.contextmanager
 def _extra_table(schema: str | None) -> Iterator[None]:
-    # The other tests use SQLModel.metadata to create and truncate the tables, so the extra table
-    # must not stay in it.
+    # Other tests create and truncate all tables in SQLModel.metadata
     table = Table(
         "test_extra_table",
         SQLModel.metadata,

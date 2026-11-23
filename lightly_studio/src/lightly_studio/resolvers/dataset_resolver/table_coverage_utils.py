@@ -38,5 +38,5 @@ def verify_table_coverage() -> None:
         raise RuntimeError(
             f"Table count in the default schema changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
             "Update deep_copy and delete_dataset to handle new tables, then update "
-            "_HANDLED_TABLES_COUNT in table_coverage_utils.py."
+            "_HANDLED_TABLES_COUNT or _EXCLUDED_TABLES_COUNT in table_coverage_utils.py."
         )
