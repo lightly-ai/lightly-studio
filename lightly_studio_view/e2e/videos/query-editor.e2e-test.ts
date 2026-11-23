@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 import { test, expect } from '../utils';
 import { youtubeVisVideosDataset } from './fixtures/youtubeVisVideosDataset';
@@ -56,51 +57,67 @@ test('video query supports apply, disable, re-enable, reopen, and clear', async 
     await expect.poll(() => videosPage.getVideos().count()).toBeGreaterThan(1);
 });
 
-test('queries same-frame detections, separate frames, frame times and temporal events', async ({
-    page,
-    videosPage
-}) => {
+const same = '0a275e7f12.mp4';
+const separate = '0a2f2bd294.mp4';
+const car = 'object_detection(class_name = "car")';
+const person = 'object_detection(class_name = "person")';
+
+async function openVideoQueryEditor(page: Page) {
     const response = await page.request.get('/api/collections');
     expect(response.ok()).toBe(true);
     const collections: CollectionView[] = await response.json();
     const fixture = collections.find((collection) => collection.name === 'video-query-fixture');
     if (!fixture) throw new Error('Missing video-query-fixture dataset');
     await page.goto(`/datasets/${fixture.collection_id}/video/${fixture.collection_id}/videos`);
-
-    const same = '0a275e7f12.mp4';
-    const separate = '0a2f2bd294.mp4';
-    const car = 'object_detection(class_name = "car")';
-    const person = 'object_detection(class_name = "person")';
     await page.getByTestId('side-panel-tabs-query').click();
-    for (const [query, expected] of [
-        [`frame(${car} AND ${person})`, [same]],
-        [`frame(${car}) AND frame(${person})`, [same, separate]],
-        [`frame(frame_timestamp_s > 0 AND ${car})`, [separate]],
-        ['event(class_name = "run")', [same, separate]],
-        ['classification(class_name = "run")', [separate]],
-        ['event(class_name = "run" AND start_time_s < 1)', [same]]
-    ] as const) {
-        await page.locator('.monaco-editor .view-lines').first().click();
-        await page.keyboard.press('ControlOrMeta+a');
-        await page.keyboard.insertText(query);
-        const applied = page.waitForResponse(
-            (response) =>
-                response.request().method() === 'POST' &&
-                new URL(response.url()).pathname.endsWith('/video/') &&
-                Boolean(response.request().postDataJSON()?.filter?.sample_filter?.query_expr)
-        );
-        await page.getByTestId('query-editor-apply-button').click();
-        expect((await applied).status()).toBe(200);
+}
+
+async function applyQuery(page: Page, query: string) {
+    await page.locator('.monaco-editor .view-lines').first().click();
+    await page.keyboard.press('ControlOrMeta+a');
+    await page.keyboard.insertText(query);
+    const applied = page.waitForResponse(
+        (response) =>
+            response.request().method() === 'POST' &&
+            new URL(response.url()).pathname.endsWith('/video/') &&
+            Boolean(response.request().postDataJSON()?.filter?.sample_filter?.query_expr)
+    );
+    await page.getByTestId('query-editor-apply-button').click();
+    expect((await applied).status()).toBe(200);
+}
+
+for (const [query, expected] of [
+    [`frame(${car} AND ${person})`, [same]],
+    [`frame(${car}) AND frame(${person})`, [same, separate]],
+    [`frame(frame_timestamp_s > 0 AND ${car})`, [separate]],
+    ['event(class_name = "run")', [same, separate]],
+    ['classification(class_name = "run")', [separate]],
+    ['event(class_name = "run" AND start_time_s < 1)', [same]]
+] as const) {
+    test(`video query returns the expected clips for ${query}`, async ({ page, videosPage }) => {
+        await openVideoQueryEditor(page);
+        await applyQuery(page, query);
         await expect(videosPage.getVideos()).toHaveCount(expected.length);
         for (const name of expected) await expect(videosPage.getVideoByName(name)).toBeVisible();
-    }
+    });
+}
 
+test('select all selects only videos matching the active query', async ({ page, videosPage }) => {
+    await openVideoQueryEditor(page);
+    await applyQuery(page, 'event(class_name = "run" AND start_time_s < 1)');
     await page.getByTestId('query-editor-close-button').click();
     await page.click('body');
     await page.keyboard.press('ControlOrMeta+a');
     await expect(page.getByText('1 selected', { exact: true })).toBeVisible();
     await expect(videosPage.getVideoByName(same).getByTestId('sample-selected-box')).toBeChecked();
+});
 
+test('opening the frame grid clears the video query', async ({ page, videosPage }) => {
+    await openVideoQueryEditor(page);
+    await applyQuery(page, 'classification(class_name = "run")');
+    await page.getByTestId('query-editor-close-button').click();
+    await expect(videosPage.getVideoByName(separate)).toBeVisible();
+    await expect(page.getByTestId('query-filter-chip')).toBeVisible();
     await page.getByTestId('navigation-menu-frames').click();
     await page.getByRole('option', { name: 'Frames', exact: true }).click();
     await expect(page.getByTestId('frame-grid-item').first()).toBeVisible();
