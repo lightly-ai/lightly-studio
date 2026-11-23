@@ -28,6 +28,11 @@
     });
 
     const elapsed = $derived(formatDuration((now - (startedAt ?? now)) / MS_PER_SECOND));
+    const detail = $derived(
+        view === 'prompt'
+            ? `${embeddingCount.toLocaleString('en-US')} ${itemLabel}s.`
+            : `Running for ${elapsed}.`
+    );
 </script>
 
 <div
@@ -37,16 +42,14 @@
     {#if view === 'prompt'}
         <ChartScatter class="size-8 text-muted-foreground" />
         <div class="text-base font-medium">Plot not computed</div>
-        <div class="max-w-64 text-sm text-muted-foreground">
-            {embeddingCount.toLocaleString('en-US')}
-            {itemLabel}s. The first compute can take several minutes.
-        </div>
-        <Button class="mt-2" onclick={onCompute}>Compute plot</Button>
     {:else}
         <LoaderCircle class="size-8 animate-spin text-muted-foreground" />
         <div class="text-base font-medium">Computing plot…</div>
-        <div class="max-w-64 text-sm text-muted-foreground">
-            Running for {elapsed}. The first compute can take several minutes.
-        </div>
+    {/if}
+    <div class="max-w-64 text-sm text-muted-foreground">
+        {detail} The first compute can take several minutes.
+    </div>
+    {#if view === 'prompt'}
+        <Button class="mt-2" onclick={onCompute}>Compute plot</Button>
     {/if}
 </div>
