@@ -250,8 +250,8 @@ def test_postgres_polygon_annotation__upgrade_and_downgrade(
     engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
     config = db_migrations.get_alembic_config(engine_url=postgres_url)
     polygons = [
-        [(10.5, 20.0), (30.0, 20.0), (30.0, 40.25)],
-        [(50.0, 50.0), (60.0, 50.0), (60.0, 60.0)],
+        [[10.5, 20.0], [30.0, 20.0], [30.0, 40.25]],
+        [[50.0, 50.0], [60.0, 50.0], [60.0, 60.0]],
     ]
     try:
         db_migrations._run_alembic_command(

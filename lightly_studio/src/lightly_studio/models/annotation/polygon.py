@@ -26,13 +26,15 @@ COORDINATE_DECIMALS = 3
 MIN_VERTICES_PER_PART = 3
 
 Polygons = list[list[tuple[float, float]]]
+# The JSON column returns lists, so the storage type uses lists for vertices too.
+StoredPolygons = list[list[list[float]]]
 
 
 @dataclass(frozen=True)
 class ValidatedPolygons:
     """Rounded polygon parts and the integer bounding box that contains all vertices."""
 
-    polygons: Polygons
+    polygons: StoredPolygons
     x: int
     y: int
     width: int
@@ -56,7 +58,7 @@ class PolygonAnnotationTable(SQLModel, table=True):
     y: int
     width: int
     height: int
-    polygons: Polygons = Field(sa_column=Column(JSON, nullable=False))
+    polygons: StoredPolygons = Field(sa_column=Column(JSON, nullable=False))
 
 
 class PolygonAnnotationView(SQLModel):
@@ -100,12 +102,12 @@ def validate_polygons(polygons: Sequence[Sequence[Sequence[float]]]) -> Validate
     )
 
 
-def _round_part(part: Sequence[Sequence[float]]) -> list[tuple[float, float]]:
+def _round_part(part: Sequence[Sequence[float]]) -> list[list[float]]:
     if len(part) < MIN_VERTICES_PER_PART:
         raise ValueError(f"Each polygon part needs at least {MIN_VERTICES_PER_PART} vertices.")
     rounded_part = []
     for x, y in part:
         if not (math.isfinite(x) and math.isfinite(y)):
             raise ValueError("Polygon vertices must be finite numbers.")
-        rounded_part.append((round(x, COORDINATE_DECIMALS), round(y, COORDINATE_DECIMALS)))
+        rounded_part.append([round(x, COORDINATE_DECIMALS), round(y, COORDINATE_DECIMALS)])
     return rounded_part

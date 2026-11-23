@@ -475,10 +475,4 @@ def _polygon_view(annotation: AnnotationBaseTable) -> PolygonAnnotationView | No
     details = annotation.polygon_details
     if details is None:
         return None
-    return PolygonAnnotationView(
-        x=details.x,
-        y=details.y,
-        width=details.width,
-        height=details.height,
-        polygons=details.polygons,
-    )
+    return PolygonAnnotationView.model_validate(details)
