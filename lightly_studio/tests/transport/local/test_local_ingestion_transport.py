@@ -15,7 +15,16 @@ from lightly_studio.database import db_manager
 from lightly_studio.embed import embed_samples
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.resolvers import group_resolver, image_resolver, tag_resolver, video_resolver
+from lightly_studio.models.recording import RecordingFormat
+from lightly_studio.models.static_transform import StaticTransformCreate
+from lightly_studio.resolvers import (
+    group_resolver,
+    image_resolver,
+    recording_resolver,
+    static_transform_resolver,
+    tag_resolver,
+    video_resolver,
+)
 from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from tests.helpers_resolvers import create_collection, create_image
@@ -179,3 +188,33 @@ class TestLocalIngestionTransport:
                 collection_id=group_ds.collection_id,
                 groups=[{"vid": CreateImage(path="/a.png")}],
             )
+
+    def test_add_static_transforms(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session, sample_type=SampleType.SEQUENCE)
+        recording_id = recording_resolver.create(
+            session=session,
+            dataset_id=collection.dataset_id,
+            uri="/data/a.mcap",
+            format_=RecordingFormat.MCAP,
+        )
+        row = StaticTransformCreate(
+            recording_id=recording_id,
+            parent="map",
+            child="base",
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            tx=0.0,
+            ty=0.0,
+            tz=0.0,
+        )
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        transform_ids = transport.add_static_transforms(rows=[row])
+
+        stored = static_transform_resolver.get_all_by_recording_id(
+            session=session, recording_id=recording_id
+        )
+        assert [transform.static_transform_id for transform in stored] == transform_ids

@@ -13,12 +13,18 @@ from lightly_studio.database import db_manager
 from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.embed import embed_samples
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
+from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
+from lightly_studio.models.static_transform import StaticTransformCreate
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     collection_resolver,
+    dynamic_transform_resolver,
     group_resolver,
     image_resolver,
+    sensor_calibration_resolver,
+    static_transform_resolver,
 )
 
 logger = logging.getLogger(__name__)
@@ -189,6 +195,24 @@ class LocalIngestionTransport:
         ]
         return group_resolver.create_many(
             session=session, collection_id=collection_id, groups=component_sample_ids
+        )
+
+    def add_sensor_calibrations(self, rows: Sequence[SensorCalibrationCreate]) -> list[UUID]:
+        """Add camera calibrations to MCAP recordings."""
+        return sensor_calibration_resolver.create_many(
+            session=db_manager.persistent_session(), rows=rows
+        )
+
+    def add_static_transforms(self, rows: Sequence[StaticTransformCreate]) -> list[UUID]:
+        """Add static transforms between the coordinate frames of MCAP recordings."""
+        return static_transform_resolver.create_many(
+            session=db_manager.persistent_session(), rows=rows
+        )
+
+    def add_dynamic_transforms(self, rows: Sequence[DynamicTransformCreate]) -> list[UUID]:
+        """Add dynamic transforms between the coordinate frames of MCAP recordings."""
+        return dynamic_transform_resolver.create_many(
+            session=db_manager.persistent_session(), rows=rows
         )
 
 
