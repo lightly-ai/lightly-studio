@@ -119,6 +119,26 @@ class TestRemoteLabelingModelRunner:
         np.testing.assert_array_equal(first.mask, mask)
         assert second == PredictedAnnotation(class_name="car", box=(1.0, 0.0, 2.0, 1.0), score=0.6)
 
+    def test_predict__mask_size_not_image_size(self) -> None:
+        # The image has the shape (2, 3), so a mask of shape (3, 2) has the axes swapped.
+        model = StubLabelingModel(
+            model_id="seg",
+            task=ModelTask.INSTANCE_SEGMENTATION,
+            class_names=["car"],
+            predictions=[
+                PredictedAnnotation(
+                    class_name="car",
+                    box=(0.0, 0.0, 2.0, 3.0),
+                    score=0.9,
+                    mask=np.ones((3, 2), dtype=np.bool_),
+                ),
+            ],
+        )
+        runner = RemoteLabelingModelRunner.connect(client=_client(model=model))
+
+        with pytest.raises(ProviderError, match="mask that is not valid: mask_png has the size"):
+            runner.predict(image=_image(), threshold=0.5)
+
     def test_predict__model_error(self) -> None:
         model = StubLabelingModel(model_id="m", error=RuntimeError("secret output"))
         runner = RemoteLabelingModelRunner.connect(client=_client(model=model))

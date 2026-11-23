@@ -133,7 +133,9 @@ class RemoteLabelingModelRunner:
             )
         try:
             return [
-                labeling_protocol.from_wire_prediction(prediction=prediction)
+                labeling_protocol.from_wire_prediction(
+                    prediction=prediction, width=image.width, height=image.height
+                )
                 for prediction in body.predictions
             ]
         except ValueError as error:
