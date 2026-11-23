@@ -16,13 +16,14 @@ export function getPlotComputeView(input: PlotComputeViewInput): PlotComputeView
     const { status, isStatusError, isAxesLayout, isComputeStarted } = input;
     // A text axes layout is a projection, not a PaCMAP compute.
     if (isAxesLayout) return 'plot';
+    // A started compute keeps running on the server when a status refresh fails.
+    if (isComputeStarted) return status?.is_computed ? 'plot' : 'computing';
     if (isStatusError) return 'error';
-    if (status === undefined) return isComputeStarted ? 'computing' : 'checking';
+    if (status === undefined) return 'checking';
     if (status.is_computed) return 'plot';
     // The status has a count whenever no plot is saved.
     const isLarge = (status.embedding_count ?? 0) >= PLOT_COMPUTE_CONFIRM_THRESHOLD;
-    if (isLarge && !isComputeStarted) return 'prompt';
-    return 'computing';
+    return isLarge ? 'prompt' : 'computing';
 }
 
 export function isPlotRequestEnabled(view: PlotComputeView): boolean {
