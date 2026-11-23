@@ -399,8 +399,8 @@
 
     const isReady = true;
 
-    // Lives here, not in PlotToolPill: a new filter (a tag, a region) starts a fresh embeddings
-    // query, and the plot unmounts while it loads. State inside the pill would not survive that.
+    // Lives here, not in PlotToolPill: a new color-by, axes or collection shows the full loader,
+    // and the plot unmounts while it loads. State inside the pill would not survive that.
     let activeTool = $state<ToolMode>('pan');
 
     type RangeSelection = Rectangle | Point[] | null;
