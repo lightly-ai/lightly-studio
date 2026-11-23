@@ -237,6 +237,30 @@ describe('WorkflowFileActions', () => {
             expect(onTransition).not.toHaveBeenCalled();
         });
 
+        it('asks again after the admin dismissed the confirmation with Escape', async () => {
+            const user = userEvent.setup();
+            const { onTransition } = renderActions({
+                fileState: 'accepted',
+                allowedTransitions: ADMIN_ALLOWED.accepted
+            });
+            const pickReopen = async () => {
+                // jsdom never finishes the close animations that give the page its pointer back.
+                document.body.style.pointerEvents = '';
+                await openMenu(user);
+                await user.click(
+                    screen.getByRole('menuitem', { name: 'Reopen (send back to Rework)' })
+                );
+                return screen.findByRole('dialog');
+            };
+
+            await pickReopen();
+            await user.keyboard('{Escape}');
+            await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+            expect(await pickReopen()).toHaveTextContent('Reopen this file?');
+            expect(onTransition).not.toHaveBeenCalled();
+        });
+
         it.each([
             [
                 'not_started',

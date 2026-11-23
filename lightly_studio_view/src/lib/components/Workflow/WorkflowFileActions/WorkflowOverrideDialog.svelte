@@ -13,11 +13,15 @@
     const { action, onConfirm, onCancel }: Props = $props();
 </script>
 
+<!-- Bound both ways: a close from inside the dialog (Escape, the close button, a click
+     outside) must clear the waiting action, or picking it again would not reopen the dialog. -->
 <Dialog.Root
-    open={action !== null}
-    onOpenChange={(open) => {
-        if (!open) onCancel();
-    }}
+    bind:open={
+        () => action !== null,
+        (open) => {
+            if (!open) onCancel();
+        }
+    }
 >
     {#if action}
         <Dialog.Content class="max-w-md">
