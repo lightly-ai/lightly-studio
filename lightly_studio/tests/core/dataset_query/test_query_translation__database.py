@@ -607,15 +607,22 @@ def test_query_translation__polygon_match_expr(db_session: Session) -> None:
     image2 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/2.jpg")
 
     label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="person")
-    for image, x in [(image1, 5.0), (image2, 80.0)]:
-        create_annotation(
-            session=db_session,
-            collection_id=cid,
-            sample_id=image.sample_id,
-            annotation_label_id=label.annotation_label_id,
-            annotation_type=AnnotationType.POLYGON,
-            polygons=[[(x, 0.0), (x + 10.0, 0.0), (x + 10.0, 10.0)]],
-        )
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image1.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(5.0, 0.0), (15.0, 0.0), (15.0, 10.0)]],
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=cid,
+        sample_id=image2.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(80.0, 0.0), (90.0, 0.0), (90.0, 10.0)]],
+    )
 
     query_expr = QueryExpr.model_validate(
         {
