@@ -20,6 +20,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable, Cuboid3DCreate
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver
@@ -61,6 +62,20 @@ def update_annotation_object(
             height=seg_details.height,
         )
         if annotation_type == AnnotationType.SEGMENTATION_MASK and seg_details
+        else None
+    )
+
+    polygon_details = annotation_copy.polygon_details
+    polygon = (
+        PolygonAnnotationTable(
+            sample_id=annotation_copy.sample_id,
+            polygons=polygon_details.polygons,
+            x=polygon_details.x,
+            y=polygon_details.y,
+            width=polygon_details.width,
+            height=polygon_details.height,
+        )
+        if annotation_type == AnnotationType.POLYGON and polygon_details
         else None
     )
 
@@ -134,6 +149,9 @@ def update_annotation_object(
 
     if segmentation:
         session.add(segmentation)
+
+    if polygon:
+        session.add(polygon)
 
     if object_detection:
         session.add(object_detection)

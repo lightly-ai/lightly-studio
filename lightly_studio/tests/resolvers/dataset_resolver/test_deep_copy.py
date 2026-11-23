@@ -9,6 +9,7 @@ from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
@@ -1186,6 +1187,43 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert is_detail.width == 6
     assert is_detail.height == 8
     assert is_detail.segmentation_mask == [1, 0, 0, 1]
+
+
+def test_deep_copy__polygon(db_session: Session) -> None:
+    original = create_collection(session=db_session, collection_name="original")
+    img = create_image(
+        session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=original.collection_id, label_name="test"
+    )
+    polygon = create_annotation(
+        session=db_session,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(1.5, 2.0), (11.0, 2.0), (11.0, 22.25)]],
+    )
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    (copied_polygon,) = annotation_resolver.get_all(
+        session=db_session,
+        filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
+    ).annotations
+    assert copied_polygon.sample_id != polygon.sample_id
+    original_detail = db_session.get(PolygonAnnotationTable, polygon.sample_id)
+    copied_detail = db_session.get(PolygonAnnotationTable, copied_polygon.sample_id)
+    assert original_detail is not None
+    assert copied_detail is not None
+    assert (copied_detail.x, copied_detail.y) == (1, 2)
+    assert (copied_detail.width, copied_detail.height) == (10, 21)
+    assert copied_detail.polygons == original_detail.polygons
 
 
 def test_deep_copy__preserves_video_event_span(

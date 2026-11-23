@@ -7,10 +7,12 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from lightly_studio_serve.types import ImageCrop
-from sqlmodel import Session, col, select
+from sqlalchemy import select
+from sqlmodel import Session, col
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.image import ImageTable
 
@@ -35,8 +37,9 @@ def get_annotation_crops_for_ids(
     """Build valid image crops for the given annotation IDs.
 
     The bounding box is read from whichever detail table holds it: object-detection
-    annotations store it in ``ObjectDetectionAnnotationTable`` and segmentation
-    annotations in ``SegmentationAnnotationTable`` (both expose ``x/y/width/height``).
+    annotations store it in ``ObjectDetectionAnnotationTable``, segmentation annotations
+    in ``SegmentationAnnotationTable`` and polygon annotations in ``PolygonAnnotationTable``
+    (all expose ``x/y/width/height``).
 
     Crops whose box does not overlap the source image are skipped with a warning, so the
     returned list may be shorter than ``annotation_sample_ids``.
@@ -48,12 +51,13 @@ def get_annotation_crops_for_ids(
     Returns:
         Resolved annotation crops ready for embedding.
     """
-    rows = session.exec(
+    rows = session.execute(
         select(
             AnnotationBaseTable,
             ImageTable,
             ObjectDetectionAnnotationTable,
             SegmentationAnnotationTable,
+            PolygonAnnotationTable,
         )
         .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
         .outerjoin(
@@ -64,15 +68,19 @@ def get_annotation_crops_for_ids(
             SegmentationAnnotationTable,
             col(SegmentationAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
         )
+        .outerjoin(
+            PolygonAnnotationTable,
+            col(PolygonAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
+        )
         .where(col(AnnotationBaseTable.sample_id).in_(annotation_sample_ids))
         .order_by(col(ImageTable.file_path_abs))
     ).all()
 
     annotation_crops: list[AnnotationCrop] = []
-    for annotation, image, object_detection, segmentation in rows:
+    for annotation, image, object_detection, segmentation, polygon in rows:
         # An annotation has a detail row in exactly one table, set by its type in
         # create_many, so at most one of these joins matches.
-        box_source = object_detection or segmentation
+        box_source = object_detection or segmentation or polygon
         if box_source is None:
             logger.warning(
                 "Skipping annotation crop %s without a bounding box.", annotation.sample_id
