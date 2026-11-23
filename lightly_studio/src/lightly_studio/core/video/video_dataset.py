@@ -205,8 +205,9 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             limit=None,
         )
 
-        created_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
+        created_sample_ids = add_videos.load_video_annotations_from_labelformat(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             collection_id=self.collection_id,
             dataset_id=self.dataset_id,
             video_paths=video_paths,

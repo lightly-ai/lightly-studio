@@ -30,6 +30,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.video import add_videos
 from lightly_studio.core.video.add_videos import FrameExtractionContext
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -40,8 +41,15 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
+from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from tests.helpers_resolvers import create_collection, create_embedding_model
 from tests.resolvers.video.helpers import VideoStub, create_video_file, create_videos
+
+
+@pytest.fixture
+def db_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the ingestion transport writes through."""
+    return db_manager.persistent_session()
 
 
 def test_collect_video_file_paths__allowed_extensions(tmp_path: Path) -> None:
@@ -618,7 +626,8 @@ def test_load_video_annotations_from_labelformat(
 
     # Act
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
-    _, frame_sample_ids = add_videos.load_video_annotations_from_labelformat(
+    created_video_sample_ids = add_videos.load_video_annotations_from_labelformat(
+        ingestion=LocalIngestionTransport(),
         session=db_session,
         collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
@@ -628,11 +637,13 @@ def test_load_video_annotations_from_labelformat(
     )
 
     # Assert
+    video = video_resolver.get_by_id(session=db_session, sample_id=created_video_sample_ids[0])
+    assert video is not None
     annotations = annotation_resolver.get_all(db_session).annotations
     assert len(annotations) == 2
-    assert {annotations[0].parent_sample_id, annotations[1].parent_sample_id} == set(
-        frame_sample_ids
-    )
+    assert {annotations[0].parent_sample_id, annotations[1].parent_sample_id} == {
+        frame.sample_id for frame in video.frames
+    }
 
     # Check annotation content
     assert annotations[0].annotation_type == "object_detection"
@@ -692,6 +703,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
     # Act
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     add_videos.load_video_annotations_from_labelformat(
+        ingestion=LocalIngestionTransport(),
         session=db_session,
         collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
@@ -758,7 +770,8 @@ def test_load_video_annotations_from_labelformat__same_name_in_different_folders
 
     # Act
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
-    created_video_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
+    created_video_sample_ids = add_videos.load_video_annotations_from_labelformat(
+        ingestion=LocalIngestionTransport(),
         collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         session=db_session,
@@ -904,6 +917,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     with pytest.raises(ValueError, match="Number of frames in annotation"):
         add_videos.load_video_annotations_from_labelformat(
+            ingestion=LocalIngestionTransport(),
             session=db_session,
             collection_id=collection.collection_id,
             dataset_id=collection.dataset_id,
@@ -945,6 +959,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     with pytest.raises(FileNotFoundError, match="No video file found"):
         add_videos.load_video_annotations_from_labelformat(
+            ingestion=LocalIngestionTransport(),
             session=db_session,
             collection_id=collection.collection_id,
             dataset_id=collection.dataset_id,
@@ -990,7 +1005,8 @@ def test_load_video_annotations_from_labelformat__skips_annotations_for_broken_v
 
     # Act: no exception is raised even though the broken video was not created.
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
-    created_video_sample_ids, _ = add_videos.load_video_annotations_from_labelformat(
+    created_video_sample_ids = add_videos.load_video_annotations_from_labelformat(
+        ingestion=LocalIngestionTransport(),
         session=db_session,
         collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
