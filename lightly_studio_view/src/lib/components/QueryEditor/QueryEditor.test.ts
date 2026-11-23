@@ -22,7 +22,11 @@ vi.mock('./useQueryEditor', async () => {
     const { useLightlyQueryLanguage } =
         await import('./useLightlyQueryLanguage/useLightlyQueryLanguage');
     return {
-        useQueryEditor: () => ({ mount, translateQuery: useLightlyQueryLanguage().translateQuery })
+        useQueryEditor: () => ({
+            mount,
+            translateQuery: useLightlyQueryLanguage().translateQuery,
+            setTagNames: vi.fn()
+        })
     };
 });
 
