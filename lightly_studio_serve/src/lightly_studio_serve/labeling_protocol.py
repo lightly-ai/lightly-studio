@@ -37,6 +37,8 @@ THRESHOLD_FIELD_NAME = "threshold"
 
 _FiniteFloat = Annotated[float, Field(allow_inf_nan=False)]
 
+_MASK_DIMENSIONS = 2
+
 
 class LabelingDescribeResponse(BaseModel):
     """The body of ``GET /v1/labeling/describe``. Every labeling server has this endpoint."""
@@ -69,8 +71,8 @@ class WirePrediction(BaseModel):
     box: tuple[_FiniteFloat, _FiniteFloat, _FiniteFloat, _FiniteFloat]
     """The bounding box ``(x_min, y_min, x_max, y_max)`` in pixels."""
 
-    score: _FiniteFloat
-    """The confidence score."""
+    score: Annotated[_FiniteFloat, Field(ge=0, le=1)]
+    """The confidence score, from 0 to 1."""
 
     mask_png: str | None = None
     """The mask as a base64 PNG file with one bit for each pixel, or ``None``."""
@@ -101,7 +103,8 @@ def to_wire_prediction(prediction: PredictedAnnotation) -> WirePrediction:
 
     Raises:
         ValueError: If the mask is not a boolean array with two dimensions.
-        pydantic.ValidationError: If the box or the score holds a value that is not finite.
+        pydantic.ValidationError: If the box or the score holds a value that is not finite,
+            or if the score is not from 0 to 1.
     """
     return WirePrediction(
         class_name=prediction.class_name,
@@ -121,7 +124,7 @@ def from_wire_prediction(prediction: WirePrediction) -> PredictedAnnotation:
         The predicted annotation, with the mask as a boolean array.
 
     Raises:
-        ValueError: If ``mask_png`` is not a base64 PNG file.
+        ValueError: If ``mask_png`` is not a base64 PNG file with one bit for each pixel.
     """
     return PredictedAnnotation(
         class_name=prediction.class_name,
@@ -134,7 +137,7 @@ def from_wire_prediction(prediction: WirePrediction) -> PredictedAnnotation:
 def _encode_mask(mask: NDArray[np.bool_]) -> str:
     """Write a mask of shape (H, W) as a base64 PNG file with one bit for each pixel."""
     # Pillow writes a float or integer array as a gray image, not as a mask.
-    if not isinstance(mask, np.ndarray) or mask.dtype != np.bool_ or mask.ndim != 2:  # noqa: PLR2004
+    if not isinstance(mask, np.ndarray) or mask.dtype != np.bool_ or mask.ndim != _MASK_DIMENSIONS:
         raise ValueError("The mask is not a boolean array with two dimensions.")
     buffer = io.BytesIO()
     PILImage.fromarray(mask).save(buffer, format="PNG")
@@ -145,7 +148,10 @@ def _decode_mask(mask_png: str) -> NDArray[np.bool_]:
     """Read a base64 PNG file as a boolean mask of shape (H, W)."""
     try:
         data = base64.b64decode(mask_png, validate=True)
-        with PILImage.open(io.BytesIO(data)) as image:
-            return np.asarray(image.convert("1"), dtype=np.bool_)
+        with PILImage.open(io.BytesIO(data), formats=["PNG"]) as image:
+            # Do not convert, because Pillow dithers a gray image into a wrong mask.
+            if image.mode != "1":
+                raise ValueError("mask_png is not a PNG file with one bit for each pixel.")
+            return np.asarray(image, dtype=np.bool_)
     except (binascii.Error, UnidentifiedImageError, OSError) as error:
         raise ValueError("mask_png is not a base64 PNG file.") from error

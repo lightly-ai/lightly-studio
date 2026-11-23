@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import base64
+import io
+
 import numpy as np
 import pytest
+from PIL import Image as PILImage
 from pydantic import ValidationError
 
 from lightly_studio_serve import labeling_protocol
@@ -36,6 +40,12 @@ def test_labeling_describe_response__empty_model_id() -> None:
             ready=True,
             limits=ServerLimits(),
         )
+
+
+@pytest.mark.parametrize("score", [-0.1, 1.1])
+def test_wire_prediction__score_out_of_range(score: float) -> None:
+    with pytest.raises(ValidationError, match="score"):
+        WirePrediction(class_name="car", box=(0.0, 0.0, 3.0, 2.0), score=score)
 
 
 def test_predictions_response__json_round_trip() -> None:
@@ -107,3 +117,30 @@ def test_from_wire_prediction__invalid_mask(mask_png: str) -> None:
 
     with pytest.raises(ValueError, match="not a base64 PNG file"):
         labeling_protocol.from_wire_prediction(prediction=wire)
+
+
+@pytest.mark.parametrize(
+    ("mode", "image_format", "message"),
+    [
+        pytest.param("1", "JPEG", "not a base64 PNG file", id="jpeg"),
+        pytest.param("L", "PNG", "one bit for each pixel", id="gray-png"),
+    ],
+)
+def test_from_wire_prediction__mask_not_one_bit_png(
+    mode: str, image_format: str, message: str
+) -> None:
+    wire = WirePrediction(
+        class_name="car",
+        box=(0.0, 0.0, 3.0, 2.0),
+        score=0.9,
+        mask_png=_encode_image(mode=mode, image_format=image_format),
+    )
+
+    with pytest.raises(ValueError, match=message):
+        labeling_protocol.from_wire_prediction(prediction=wire)
+
+
+def _encode_image(mode: str, image_format: str) -> str:
+    buffer = io.BytesIO()
+    PILImage.new(mode=mode, size=(3, 2)).save(buffer, format=image_format)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
