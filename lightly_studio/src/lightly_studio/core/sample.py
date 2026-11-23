@@ -27,6 +27,7 @@ from lightly_studio.transport import active_transport
 from .annotation import Annotation
 from .annotation.classification import ClassificationAnnotation
 from .annotation.object_detection import ObjectDetectionAnnotation
+from .annotation.polygon import PolygonAnnotation
 from .annotation.segmentation_mask import SegmentationMaskAnnotation
 
 
@@ -239,6 +240,10 @@ class Sample(ABC):
                 annotations.append(
                     SegmentationMaskAnnotation(inner=annotation.segmentation_details)
                 )
+            elif annotation.annotation_type == AnnotationType.POLYGON:
+                if annotation.polygon_details is None:
+                    raise RuntimeError("Invalid sample annotation data")
+                annotations.append(PolygonAnnotation(inner=annotation.polygon_details))
             elif annotation.annotation_type == AnnotationType.CLASSIFICATION:
                 annotations.append(ClassificationAnnotation(annotation_base=annotation))
             else:
