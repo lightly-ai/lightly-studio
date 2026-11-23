@@ -64,6 +64,7 @@ Target: at most ~200 added lines of non-test code per PR. Estimates are non-test
 | 9 | `michal-stu-165-09-annotation-task` | 11, 13 | `AnnotationFileTask`, `annotation_task`, YOLO segmentation, deprecation | ~100 |
 | 10 | `michal-stu-165-10-docs` | 15 | Docs, examples, glossary | docs only |
 
+- **Don't release between PR 2 and PR 3; merge them close together.** Until PR 3, copying a dataset drops polygon geometry and relabeling a track or polygon fails or drops geometry. Polygons can only be created through the API or Python in that window.
 - **PR 8 carries the evaluation error.** From PR 8 on, existing COCO segmentation calls store polygons, so that is when evaluation starts to see them.
 - **PR 6 is the riskiest size.** If the export loader grows past the estimate, split it: COCO (Task 8), then YOLO (Task 9).
 - PRs 3, 4 and 5 depend only on PR 2, and PR 7 only on PR 6, so they can be reviewed in parallel.
