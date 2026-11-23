@@ -21,11 +21,15 @@ export function getPlotComputeView(input: PlotComputeViewInput): PlotComputeView
     if (isStatusError) return 'error';
     if (status === undefined) return 'checking';
     if (status.is_computed) return 'plot';
-    // The status has a count whenever no plot is saved.
-    const isLarge = (status.embedding_count ?? 0) >= PLOT_COMPUTE_CONFIRM_THRESHOLD;
-    return isLarge ? 'prompt' : 'computing';
+    return isLargeCollection(status.embedding_count) ? 'prompt' : 'computing';
 }
 
 export function isPlotRequestEnabled(view: PlotComputeView): boolean {
     return view === 'computing' || view === 'plot';
+}
+
+function isLargeCollection(embeddingCount: number | null): boolean {
+    // An unknown count must not skip the prompt.
+    if (embeddingCount === null) return true;
+    return embeddingCount >= PLOT_COMPUTE_CONFIRM_THRESHOLD;
 }

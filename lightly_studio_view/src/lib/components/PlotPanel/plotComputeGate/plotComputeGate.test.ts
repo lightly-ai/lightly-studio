@@ -30,6 +30,7 @@ describe('getPlotComputeView', () => {
         [{ status: { is_computed: true, embedding_count: null } }, 'plot'],
         [{ status: { is_computed: false, embedding_count: 250_000 } }, 'prompt'],
         [{ status: { is_computed: false, embedding_count: 249_999 } }, 'computing'],
+        [{ status: { is_computed: false, embedding_count: null } }, 'prompt'],
         [
             { status: { is_computed: false, embedding_count: 2_000_000 }, isComputeStarted: true },
             'computing'
