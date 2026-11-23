@@ -11,7 +11,7 @@ export interface WorkflowAction {
     label: string;
     /** Shown while this move waits for the workflow service. */
     pendingLabel: string;
-    variant: 'default' | 'outline';
+    variant: 'default' | 'destructive';
 }
 
 /** What an admin confirms before an override that skips a workflow step. */
@@ -63,7 +63,7 @@ const ACTIONS: Record<MoveTarget, WorkflowAction> = {
         target: 'rework',
         label: 'Send back to Rework',
         pendingLabel: 'Sending back…',
-        variant: 'outline'
+        variant: 'destructive'
     }
 };
 
