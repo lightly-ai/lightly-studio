@@ -26,13 +26,34 @@ Users need outlines for irregular objects. Boxes are too coarse, and pixel masks
 - `AnnotationType.POLYGON` (`"polygon"`) gets its own details table, linked one-to-one like the other types. Users see "polygon" and "part", never "multipolygon". The glossary gets both terms.
   - *Alternative considered:* a polygon field on the segmentation annotation. One type would have two shapes, every mask reader would have to branch, and a row could hold both or neither.
 
-**Storage.**
-- `polygons` is a plain `JSON` column: `[[[x, y], ...], ...]` (parts, then vertices). It has the same shape as the API and labelformat's `MultiPolygon.polygons`, so no conversion code is needed.
-  - *Alternative considered:* flat `float8[]` plus part offsets. On PostgreSQL (1M polygons) it was only about 20% smaller and 15% faster to load. That doesn't pay for two columns that must stay in sync. `JSONB` was nearly twice as large. Nested arrays don't work because PostgreSQL arrays must be rectangular.
-- Vertices are float pixels in the original image, with the origin at the top-left corner, rounded to 0.001 px. Floats, unlike the integer boxes, keep coordinates lossless through COCO and YOLO round trips; that is also labelformat's model. Rounding about halves the size and transfer of UI-drawn vertices, and the precision lost can't be seen.
-- Integer `x`, `y`, `width` and `height` are computed from the vertices on every write, rounded outward. Crops, sorting, filters and the query language read them, as they do for masks.
-  - *Alternative considered:* computing the box when it's read. That needs nested JSON unnesting written separately for DuckDB and PostgreSQL, and it can't be indexed.
-- Transfer to the frontend is bounded by page size: about 1.3 MB per grid page even with 200 polygons per image.
+**Storage.** The details table holds two things per polygon:
+
+| Column | Content |
+|---|---|
+| `polygons` | `JSON`: a list of parts, each a list of `[x, y]` vertices. Rounded to 0.001px. |
+| `x`, `y`, `width`, `height` | Integer bounding box, computed from the vertices. |
+
+For example, a polygon with a triangle and a square as its two parts:
+
+```json
+[[[10.5, 20], [30, 20], [30, 40.25]],
+ [[50, 50], [60, 50], [60, 60], [50, 60]]]
+```
+
+*Why JSON:* the API and labelformat's `MultiPolygon.polygons` use the same nested lists, so no conversion code is needed.
+- *Alternatives considered:*
+  - Flat `float8[]` coordinate array plus a second array with where each part starts (offset). On PostgreSQL with 1M polygons it was only about 20% smaller and 15% faster to load. That doesn't pay for two columns that must stay in sync.
+  - `JSONB`: nearly twice as large.
+  - Nested PostgreSQL arrays: don't work, because PostgreSQL arrays must be rectangular and parts have different vertex counts.
+
+*Vertices* are float pixels in the original image, with the origin at the top-left corner.
+- Floats, not integers like boxes, so coordinates stay lossless through COCO and YOLO round trips. labelformat uses floats too.
+- They are rounded to 0.001 px. This about halves the size and transfer of vertices drawn in the UI, and the lost precision can't be seen.
+
+*Why also store a box:* crops, sorting, filters and the query language read the integer box, as they do for masks. It is computed on every write, rounded outward so it contains every vertex.
+- *Alternative considered:* computing the box when it's read. That needs JSON unnesting written separately for DuckDB and PostgreSQL, and it can't be indexed.
+
+*Size is fine:* transfer to the frontend is bounded by page size, about 1.3 MB per grid page even with 200 polygons per image.
 
 **Validation.** Every write goes through one function, because the database doesn't check the shape. It requires at least 1 part, at least 3 vertices per part and finite numbers, then rounds and computes the box.
 
