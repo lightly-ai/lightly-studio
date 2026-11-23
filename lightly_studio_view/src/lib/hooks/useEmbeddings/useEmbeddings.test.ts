@@ -40,6 +40,9 @@ const tableWithLegend = (legend: string) =>
     }) as unknown as Table;
 
 const newQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+// Retries as the app does, without the delay.
+const newRetryingQueryClient = () =>
+    new QueryClient({ defaultOptions: { queries: { retry: 3, retryDelay: 0 } } });
 
 const observeEmbeddings = () =>
     new QueryObserver(newQueryClient(), getEmbeddingsQueryOptions('collection-1', null));
@@ -132,22 +135,50 @@ describe('getEmbeddingsQueryOptions', () => {
         expect(await closeAndReopenPanel(() => false)).toBe(2);
     });
 
-    it('gives onCompute one promise for a compute that settles after the last retry', async () => {
+    it('joins a running compute when the plot is refreshed', async () => {
+        let isComputing = false;
+        const onCompute = vi.fn();
+        const client = newQueryClient();
+        const panel = new QueryObserver(
+            client,
+            getComputeOptions(() => isComputing, onCompute)
+        );
+        panel.subscribe(() => {});
+        await vi.waitFor(() => expect(panel.getCurrentResult().isSuccess).toBe(true));
+
+        isComputing = true;
+        requests.isPending = true;
+        void panel.refetch();
+        await vi.waitFor(() => expect(requests.count).toBe(2));
+        void client.invalidateQueries();
+        requests.resolve();
+        await vi.waitFor(() => expect(panel.getCurrentResult().isFetching).toBe(false));
+
+        expect(requests.count).toBe(2);
+        expect(onCompute).toHaveBeenCalledOnce();
+        await expect(onCompute.mock.calls[0][0]).resolves.toBeInstanceOf(ArrayBuffer);
+    });
+
+    it('does not retry a failed compute', async () => {
         requests.failuresBeforeSuccess = 1;
         const onCompute = vi.fn();
         const options = getComputeOptions(() => true, onCompute);
 
-        const plot = await new QueryClient().fetchQuery({
-            queryKey: options.queryKey,
-            queryFn: options.queryFn,
-            retry: 1,
-            retryDelay: 0
-        });
+        const result = await new QueryObserver(newRetryingQueryClient(), options).refetch();
 
-        const [firstCompute, retryCompute] = onCompute.mock.calls.map(([compute]) => compute);
-        expect(onCompute).toHaveBeenCalledTimes(2);
-        expect(retryCompute).toBe(firstCompute);
-        await expect(firstCompute).resolves.toBe(plot);
+        expect(result.isError).toBe(true);
+        expect(requests.count).toBe(1);
+        await expect(onCompute.mock.calls[0][0]).rejects.toThrow('Server error');
+    });
+
+    it('retries a failed saved plot download', async () => {
+        requests.failuresBeforeSuccess = 1;
+        const options = getComputeOptions(() => false);
+
+        const result = await new QueryObserver(newRetryingQueryClient(), options).refetch();
+
+        expect(result.isSuccess).toBe(true);
+        expect(requests.count).toBe(2);
     });
 
     it('does not call onCompute for a saved plot download', async () => {

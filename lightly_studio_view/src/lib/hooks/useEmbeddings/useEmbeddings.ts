@@ -5,17 +5,37 @@ import {
     type EmbeddingsArrow
 } from '$lib/components/PlotPanel/useArrowData/useArrowData';
 
-import { createQuery, queryOptions } from '@tanstack/svelte-query';
+import { shouldRetryQuery } from '$lib/api/shouldRetryQuery';
+import {
+    createQuery,
+    hashKey,
+    queryOptions,
+    type QueryClient,
+    type SkipToken
+} from '@tanstack/svelte-query';
 import { isEqual } from 'lodash-es';
 
 type EmbeddingsColorBy = GetEmbeddings2dRequest['color_by'];
 type EmbeddingsAxes = GetEmbeddings2dRequest['axes'];
+type FetchPlot = Exclude<
+    ReturnType<typeof get2dEmbeddingsOptions>['queryFn'],
+    SkipToken | undefined
+>;
+type OnCompute = (compute: Promise<unknown>) => void;
 
 interface UseEmbeddingsOptions {
     enabled?: boolean;
     getIsComputing?: () => boolean;
-    onCompute?: (compute: Promise<unknown>) => void;
+    /**
+     * Called once when a compute request starts. The promise settles when the request ends, and
+     * rejects if the compute fails.
+     */
+    onCompute?: OnCompute;
 }
+
+// The server keeps computing after an abort, and a second request conflicts with it.
+// So every request for a plot joins the compute that runs for its query key.
+const runningComputes = new WeakMap<QueryClient, Map<string, Promise<unknown>>>();
 
 // parseAs: 'arrayBuffer' makes the response an ArrayBuffer at runtime, but its type is unknown.
 // A module-level select keeps its identity, so the query parses each response once.
@@ -51,30 +71,47 @@ export function getEmbeddingsQueryOptions(
         parseAs: 'arrayBuffer'
     });
     const fetchPlot = options.queryFn;
-    // The server keeps computing after an abort, and a second request conflicts with it.
-    // TanStack aborts on unmount only if the signal is read, so a compute is not given it:
-    // the fetch outlives a closed panel and a reopened panel joins it.
-    const queryFn: typeof options.queryFn =
-        typeof fetchPlot === 'function'
-            ? (context) => {
-                  if (!getIsComputing()) return fetchPlot(context);
-                  const { client, queryKey, meta } = context;
-                  // The query promise settles after the last retry, not after this attempt.
-                  const compute = client.getQueryCache().find({ queryKey, exact: true })?.promise;
-                  if (compute) onCompute(compute);
-                  const signal = new AbortController().signal;
-                  return fetchPlot({ client, queryKey, meta, signal });
-              }
-            : options.queryFn;
+    if (typeof fetchPlot !== 'function') throw new Error('The plot query has no query function.');
+    // Set by the latest request, so a failed compute is not retried: the user agreed to one.
+    let isComputeRequest = false;
+    const queryFn: typeof fetchPlot = (context) => {
+        isComputeRequest = getIsComputing();
+        if (!isComputeRequest) return fetchPlot(context);
+        return joinRunningCompute(context, fetchPlot, onCompute);
+    };
     return queryOptions({
         ...options,
         queryFn,
         enabled,
+        retry: (failureCount, error) => !isComputeRequest && shouldRetryQuery(failureCount, error),
         // The status query refetches on focus and decides whether a compute may start.
         refetchOnWindowFocus: false,
         select: selectEmbeddingsArrow,
         structuralSharing: shareEqualLegend
     });
+}
+
+// TanStack aborts on unmount only if the signal is read, so a compute gets a signal of its own:
+// it outlives a closed panel, and a reopened panel joins it.
+function joinRunningCompute(
+    context: Parameters<FetchPlot>[0],
+    fetchPlot: FetchPlot,
+    onCompute: OnCompute
+): Promise<unknown> {
+    const { client, queryKey, meta } = context;
+    const computes = runningComputes.get(client) ?? new Map<string, Promise<unknown>>();
+    runningComputes.set(client, computes);
+    const computeKey = hashKey(queryKey);
+    const runningCompute = computes.get(computeKey);
+    if (runningCompute) return runningCompute;
+
+    const signal = new AbortController().signal;
+    const compute = Promise.resolve(fetchPlot({ client, queryKey, meta, signal }));
+    computes.set(computeKey, compute);
+    const endCompute = () => computes.delete(computeKey);
+    void compute.then(endCompute, endCompute);
+    onCompute(compute);
+    return compute;
 }
 
 export function useEmbeddings(...params: Parameters<typeof getEmbeddingsQueryOptions>) {
