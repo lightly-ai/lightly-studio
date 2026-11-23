@@ -1,28 +1,39 @@
+import { render, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as tanstackQuery from '@tanstack/svelte-query';
 import { QueryClient } from '@tanstack/svelte-query';
 import { get2dEmbeddingsStatusQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { useEmbeddingPlotStatus, useRefetchEmbeddingPlotStatus } from '$lib/hooks';
+import { get2dEmbeddingsStatus } from '$lib/api/lightly_studio_local/sdk.gen';
+import { useRefetchEmbeddingPlotStatus, type useEmbeddingPlotStatus } from '$lib/hooks';
+import UseEmbeddingPlotStatusTest from './UseEmbeddingPlotStatus.test.svelte';
+
+vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    get2dEmbeddingsStatus: vi.fn()
+}));
 
 describe('useEmbeddingPlotStatus', () => {
     afterEach(() => {
         vi.restoreAllMocks();
     });
 
-    it('queries the status route of the current collection', () => {
-        const createQuerySpy = vi
-            .spyOn(tanstackQuery, 'createQuery')
-            .mockReturnValue({} as ReturnType<typeof tanstackQuery.createQuery>);
-        let collectionId = 'collection-a';
-        useEmbeddingPlotStatus(() => collectionId);
-        const getOptions = createQuerySpy.mock.lastCall?.[0] as () => { queryKey: unknown };
+    it('requests the status of the current collection', async () => {
+        const embeddingCounts: Record<string, number> = { 'collection-a': 1, 'collection-b': 2 };
+        vi.mocked(get2dEmbeddingsStatus).mockImplementation((async ({ path }) => ({
+            data: { is_computed: false, embedding_count: embeddingCounts[path.collection_id] }
+        })) as typeof get2dEmbeddingsStatus);
+        const params = $state({ collectionId: 'collection-a' });
+        let query!: ReturnType<typeof useEmbeddingPlotStatus>;
+        render(UseEmbeddingPlotStatusTest, {
+            queryClient: new QueryClient(),
+            getCollectionId: () => params.collectionId,
+            onQuery: (created) => (query = created)
+        });
+        await waitFor(() => expect(query.data?.embedding_count).toBe(1));
 
-        const [keyA] = getOptions().queryKey as [{ path: { collection_id: string } }];
-        collectionId = 'collection-b';
-        const [keyB] = getOptions().queryKey as [{ path: { collection_id: string } }];
+        params.collectionId = 'collection-b';
 
-        expect(keyA.path.collection_id).toBe('collection-a');
-        expect(keyB.path.collection_id).toBe('collection-b');
+        await waitFor(() => expect(query.data?.embedding_count).toBe(2));
     });
 
     it('refetches the status of the named collection only', async () => {
