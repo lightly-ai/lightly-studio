@@ -31,7 +31,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.dataset import fsspec_lister, remote_storage
+from lightly_studio.dataset import fsspec_lister
 from lightly_studio.embed import embed_samples
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
@@ -161,45 +161,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             AllInputFilesFailedError: If every image in the path is missing or broken.
         """
         source = ingest_tracking.get_source(path=path)
-        fsspec_lister.validate_limit(limit)
-        if tag_depth < 0:
-            raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
-        # Collect image file paths.
-        if allowed_extensions:
-            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
-        else:
-            allowed_extensions_set = None
-        # Configure clients before discovery creates and caches a filesystem.
-        remote_storage.configure_connections(paths=[str(path)])
-        image_paths = list(
-            fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set, limit=limit
-            )
+        active_transport.get_transport().ingestion.add_images_from_path(
+            collection_id=self.collection_id,
+            path=str(path),
+            allowed_extensions=None if allowed_extensions is None else list(allowed_extensions),
+            embed=embed,
+            tag_depth=tag_depth,
+            limit=limit,
         )
-
-        logger.info(f"Found {len(image_paths)} images in {path}.")
-
-        # Process images
-        path_to_sample_id = add_images.load_into_dataset_from_paths(
-            session=self.session,
-            root_collection_id=self.collection_id,
-            image_paths=image_paths,
-        )
-        created_sample_ids = list(path_to_sample_id.values())
-
-        if created_sample_ids:
-            add_images.tag_samples_by_directory(
-                session=self.session,
-                collection_id=self.collection_id,
-                input_path=path,
-                sample_ids=created_sample_ids,
-                tag_depth=tag_depth,
-            )
-
-        if embed:
-            active_transport.get_transport().ingestion.embed_images(
-                collection_id=self.collection_id, sample_ids=created_sample_ids
-            )
         ingest_tracking.track_samples_ingested(
             source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.FOLDER
         )
