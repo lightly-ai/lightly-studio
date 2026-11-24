@@ -20,11 +20,19 @@
         typeof config.iou_threshold === 'number' ? config.iou_threshold : 0.5
     );
     let classwise = $state(config.classwise === true);
+    let computeAveragePrecision = $state(config.compute_average_precision === true);
     const { mutation, recompute } = useRecomputeEvaluationRun(() => ({
         datasetId,
         runId: run.id,
         onSuccess: onClose,
-        config: hasMatchingSettings ? { ...config, iou_threshold: iouThreshold, classwise } : config
+        config: hasMatchingSettings
+            ? {
+                  ...config,
+                  iou_threshold: iouThreshold,
+                  classwise,
+                  compute_average_precision: computeAveragePrecision
+              }
+            : config
     }));
     const close = () => {
         if (!mutation.isPending) onClose();
@@ -53,7 +61,11 @@
                 />
                 <fieldset disabled={mutation.isPending} class="grid gap-4">
                     {#if hasMatchingSettings}
-                        <ObjectDetectionConfigFields bind:iouThreshold bind:classwise />
+                        <ObjectDetectionConfigFields
+                            bind:iouThreshold
+                            bind:classwise
+                            bind:computeAveragePrecision
+                        />
                     {:else}
                         <p class="text-sm text-muted-foreground">
                             This evaluation has no adjustable parameters.

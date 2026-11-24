@@ -45,6 +45,7 @@ vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte',
 const baseRun: EvaluationRunView = {
     id: 'run-1',
     name: 'Detection eval — v1',
+    task_type: 'object_detection',
     evaluation_run_configuration: {
         iou_threshold: 0.75,
         split: 'val',
@@ -106,11 +107,11 @@ describe('EvaluationRunItem', () => {
         expect(screen.getByTestId(baseRunItemTestId)).toHaveAttribute('aria-expanded', 'true');
         await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
         expect(screen.getByRole('dialog')).toHaveTextContent(baseRun.name);
-        await fireEvent.click(screen.getByRole('switch'));
+        await fireEvent.click(screen.getByRole('switch', { name: 'Require the same class' }));
         await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
         expect(state.recompute).not.toHaveBeenCalled();
         await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-        expect(screen.getByRole('switch')).toBeChecked();
+        expect(screen.getByRole('switch', { name: 'Require the same class' })).toBeChecked();
     });
 
     it.each([
@@ -236,13 +237,24 @@ describe('EvaluationRunItem', () => {
     it('loads saved values, submits changes to the same run, and closes only after success', async () => {
         render(EvaluationRunItem, { ...defaultProps, expanded: true });
         await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-        await fireEvent.click(screen.getByRole('switch'));
+        const averagePrecisionSwitch = screen.getByRole('switch', {
+            name: 'Compute average precision'
+        });
+        // The saved config has no average precision setting, so the run did not compute it.
+        expect(averagePrecisionSwitch).not.toBeChecked();
+        await fireEvent.click(screen.getByRole('switch', { name: 'Require the same class' }));
+        await fireEvent.click(averagePrecisionSwitch);
         await fireEvent.click(screen.getByRole('button', { name: 'Save and rerun' }));
         expect(state.recompute).toHaveBeenCalledOnce();
         expect(state.params()).toMatchObject({
             datasetId: 'dataset-1',
             runId: baseRun.id,
-            config: { iou_threshold: 0.75, classwise: false, split: 'val' }
+            config: {
+                iou_threshold: 0.75,
+                classwise: false,
+                compute_average_precision: true,
+                split: 'val'
+            }
         });
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         state.params().onSuccess();

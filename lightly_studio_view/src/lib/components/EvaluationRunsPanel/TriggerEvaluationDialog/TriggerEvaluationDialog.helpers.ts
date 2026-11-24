@@ -10,6 +10,7 @@ interface BuildEvaluationRunBodyParams {
     collectionId: string;
     iouThreshold: number;
     classwise: boolean;
+    computeAveragePrecision: boolean;
     /** Run name. When empty/omitted, an auto-generated default is used. */
     name?: string;
     /** Reference time for the auto-generated name. Defaults to now. */
@@ -39,7 +40,7 @@ export const defaultEvaluationRunName = (
  * Build the request body for triggering an evaluation run.
  *
  * No filter is sent, so the run evaluates the full dataset. Object-detection
- * runs carry the IoU threshold and class-wise config; the other tasks have no
+ * runs carry the IoU threshold, class-wise, and average precision config; the other tasks have no
  * task-specific config. The provided name is used, or a local-time default.
  */
 export const buildEvaluationRunBody = (
@@ -55,7 +56,11 @@ export const buildEvaluationRunBody = (
         return {
             ...base,
             task_type: 'object_detection',
-            config: { iou_threshold: params.iouThreshold, classwise: params.classwise }
+            config: {
+                iou_threshold: params.iouThreshold,
+                classwise: params.classwise,
+                compute_average_precision: params.computeAveragePrecision
+            }
         };
     }
     return { ...base, task_type: params.taskType };

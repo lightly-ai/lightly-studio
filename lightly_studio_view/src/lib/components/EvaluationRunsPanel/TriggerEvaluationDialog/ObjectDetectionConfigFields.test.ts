@@ -21,9 +21,9 @@ describe('ObjectDetectionConfigFields', () => {
         ).toBeInTheDocument();
         expect(screen.getByText('Minimum overlap (IoU)')).toBeInTheDocument();
         expect(screen.getByRole('switch', { name: 'Require the same class' })).toBeChecked();
-        expect(screen.getByRole('switch')).toHaveAccessibleDescription(
-            'A predicted car must match a car.'
-        );
+        expect(
+            screen.getByRole('switch', { name: 'Require the same class' })
+        ).toHaveAccessibleDescription('A predicted car must match a car.');
     });
 
     it('exposes the IoU slider bounds and step', () => {
@@ -66,5 +66,26 @@ describe('ObjectDetectionConfigFields', () => {
 
         expect(screen.getByTestId('classwise-switch')).not.toBeChecked();
         expect(screen.getByTestId('classwise-state')).toHaveTextContent('false');
+    });
+
+    it('computes average precision by default and explains the cost', () => {
+        render(ObjectDetectionConfigFields);
+
+        const averagePrecisionSwitch = screen.getByRole('switch', {
+            name: 'Compute average precision'
+        });
+        expect(averagePrecisionSwitch).toBeChecked();
+        expect(averagePrecisionSwitch).toHaveAccessibleDescription(
+            'Adds mAP. Takes longer to run.'
+        );
+    });
+
+    it('turns average precision off when the switch is clicked', async () => {
+        const user = userEvent.setup();
+        render(ObjectDetectionConfigFields);
+
+        await user.click(screen.getByTestId('compute-average-precision-switch'));
+
+        expect(screen.getByTestId('compute-average-precision-state')).toHaveTextContent('false');
     });
 });

@@ -33,6 +33,7 @@ const noop = () => {};
 const makeRun = (
     overrides: Partial<EvaluationRunView> & Pick<EvaluationRunView, 'id' | 'name'>
 ): EvaluationRunView => ({
+    task_type: 'object_detection',
     evaluation_run_configuration: {},
     created_at: new Date('2026-01-01T00:00:00Z'),
     stale_since: null,

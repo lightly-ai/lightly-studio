@@ -41,6 +41,7 @@
     let predSource = $state<string | undefined>(undefined);
     let iouThreshold = $state(0.5);
     let classwise = $state(true);
+    let computeAveragePrecision = $state(true);
     // Empty means "use the auto-generated default" (shown as the placeholder).
     let name = $state('');
 
@@ -86,6 +87,7 @@
                 collectionId,
                 iouThreshold,
                 classwise,
+                computeAveragePrecision,
                 name
             })
         );
@@ -170,7 +172,11 @@
                     {/if}
 
                     {#if taskType === 'object_detection'}
-                        <ObjectDetectionConfigFields bind:iouThreshold bind:classwise />
+                        <ObjectDetectionConfigFields
+                            bind:iouThreshold
+                            bind:classwise
+                            bind:computeAveragePrecision
+                        />
                     {/if}
                 </div>
 

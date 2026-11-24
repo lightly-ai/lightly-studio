@@ -14,6 +14,7 @@ describe('buildEvaluationRunBody', () => {
         collectionId: 'collection-1',
         iouThreshold: 0.7,
         classwise: false,
+        computeAveragePrecision: true,
         now
     };
 
@@ -26,7 +27,7 @@ describe('buildEvaluationRunBody', () => {
             pred_annotation_source: 'pred',
             collection_id: 'collection-1',
             name: 'object_detection 2026-06-24 10:15:33',
-            config: { iou_threshold: 0.7, classwise: false }
+            config: { iou_threshold: 0.7, classwise: false, compute_average_precision: true }
         });
     });
 
