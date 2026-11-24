@@ -22,6 +22,8 @@ describe('getPlotComputeView', () => {
         [{ isComputeStarted: true }, 'computing'],
         [{ isStatusError: true }, 'error'],
         [{ isStatusError: true, isComputeStarted: true }, 'computing'],
+        [{ isStatusError: true, status: { is_computed: true, embedding_count: null } }, 'plot'],
+        [{ isStatusError: true, status: { is_computed: false, embedding_count: 0 } }, 'error'],
         [{ status: { is_computed: true, embedding_count: null } }, 'plot'],
         [{ status: { is_computed: false, embedding_count: 250_000 } }, 'prompt'],
         [{ status: { is_computed: false, embedding_count: 249_999 } }, 'computing'],
