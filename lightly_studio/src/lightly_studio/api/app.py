@@ -145,10 +145,7 @@ def create_app(
     register_exception_handlers(app)
 
     # api routes
-    api_router = _create_api_router()
-    for router in routers:
-        api_router.include_router(router)
-    app.include_router(api_router)
+    app.include_router(_create_api_router())
 
     # images serving
     app.include_router(images.app_router, prefix="/images")
@@ -160,17 +157,20 @@ def create_app(
     # health status check
     app.include_router(healthz.health_router)
 
+    # The extra routers keep their own operation IDs.
+    use_route_names_as_operation_ids(app)
+    for router in routers:
+        app.include_router(router, prefix="/api", tags=["api"])
+
     # webapp routes, the catch-all router stays last
     app.include_router(webapp.app_router)
-
-    use_route_names_as_operation_ids(app)
     return app
 
 
 def use_route_names_as_operation_ids(app: FastAPI) -> None:
     """Use API function name for operation IDs.
 
-    Should be called only after all routes have been added.
+    Call it after the built-in routes are added and before the extra routers.
     """
     for route in app.routes:
         if isinstance(route, APIRoute):

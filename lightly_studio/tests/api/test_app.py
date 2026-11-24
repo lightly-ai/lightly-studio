@@ -24,6 +24,14 @@ def test_create_app__serves_extra_router_before_webapp_catch_all() -> None:
     assert _route_paths(app).index("/api/extra/ping") < _route_paths(app).index("/{path:path}")
 
 
+def test_create_app__extra_router_keeps_operation_ids() -> None:
+    app = app_module.create_app(routers=[_extra_router()])
+
+    paths = app.openapi()["paths"]
+    assert paths["/api/extra/ping"]["get"]["operationId"] == "extra_ping"
+    assert paths["/api/version"]["get"]["operationId"] == "get_version"
+
+
 def test_create_app__repeated_calls_do_not_duplicate_routes() -> None:
     first = app_module.create_app(routers=[_extra_router()])
     second = app_module.create_app(routers=[_extra_router()])
@@ -67,7 +75,7 @@ def test_create_app__replace_per_app() -> None:
 def _extra_router() -> APIRouter:
     router = APIRouter(prefix="/extra", tags=["extra"])
 
-    @router.get("/ping")
+    @router.get("/ping", operation_id="extra_ping")
     def ping() -> dict[str, str]:
         return {"status": "ok"}
 
