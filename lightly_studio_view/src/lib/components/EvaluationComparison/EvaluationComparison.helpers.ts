@@ -31,6 +31,17 @@ export interface ComparabilityReport {
     staleRunIds: string[];
 }
 
+export interface ScenarioRow {
+    /** "full" for the full set, else the tag ID. */
+    id: string;
+    label: string;
+    /** One value for each run, in the order of the runs. */
+    values: (number | null)[];
+    bestIndices: number[];
+    /** Evaluated images of each run in this scenario. */
+    sampleCounts: number[];
+}
+
 export interface PerClassRow {
     label: string;
     /** One value for each run, in the order of the runs. */
@@ -44,6 +55,7 @@ const COMPARABLE_TASK_TYPES: readonly string[] = [
     'classification'
 ];
 const MINIMUM_RUN_COUNT = 2;
+const FULL_SET_ROW_ID = 'full';
 const METRIC_DECIMALS = 3;
 const IOU_DECIMALS = 2;
 // The bar chart shows whole numbers best, so chart values are percentage points.
@@ -119,8 +131,13 @@ export const perClassMetrics = (taskType: ComparableTaskType): PerClassMetric[] 
 export const leaderboardValue = (
     view: EvaluationRunMetricsView,
     metric: LeaderboardMetric
+): number | null => metricValue(view.metrics, metric);
+
+/** Reads one leaderboard metric from the metrics of a run or of a tag slice. */
+export const metricValue = (
+    metrics: EvaluationMetrics,
+    metric: LeaderboardMetric
 ): number | null => {
-    const { metrics } = view;
     switch (metric) {
         case 'map':
             return metrics.mean_average_precision ?? null;
@@ -175,6 +192,35 @@ export const perClassRows = (runs: ComparedRun[], metric: PerClassMetric): PerCl
         const values = classesByRun.map((classes) => classValue(classes.get(label), metric));
         return { label, values, bestIndices: bestIndices(values) };
     });
+};
+
+/** Builds the full set row, then one row for each tag slice of the first run. */
+export const scenarioRows = (runs: ComparedRun[], metric: LeaderboardMetric): ScenarioRow[] => {
+    const fullSetValues = runs.map((entry) => metricValue(entry.metrics.metrics, metric));
+    const fullSet: ScenarioRow = {
+        id: FULL_SET_ROW_ID,
+        label: 'Full set',
+        values: fullSetValues,
+        bestIndices: bestIndices(fullSetValues),
+        sampleCounts: runs.map((entry) => entry.metrics.evaluated_sample_count)
+    };
+    const slices = runs[0]?.metrics.slices ?? [];
+    const tagRows = slices.map((slice): ScenarioRow => {
+        const runSlices = runs.map((entry) =>
+            entry.metrics.slices?.find((candidate) => candidate.tag_id === slice.tag_id)
+        );
+        const values = runSlices.map((runSlice) =>
+            runSlice ? metricValue(runSlice.metrics, metric) : null
+        );
+        return {
+            id: slice.tag_id,
+            label: slice.tag_name,
+            values,
+            bestIndices: bestIndices(values),
+            sampleCounts: runSlices.map((runSlice) => runSlice?.evaluated_sample_count ?? 0)
+        };
+    });
+    return [fullSet, ...tagRows];
 };
 
 export const bestIndices = (values: (number | null)[]): number[] => {

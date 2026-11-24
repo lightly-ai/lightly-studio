@@ -15,6 +15,7 @@ import {
     perClassMetrics,
     perClassRows,
     primaryMetric,
+    scenarioRows,
     sortByPrimaryMetric,
     validateSelection,
     type ComparedRun
@@ -282,5 +283,55 @@ describe('matchingSummary', () => {
 
     it('returns null for a run without matching settings', () => {
         expect(matchingSummary(makeRun({ evaluation_run_configuration: {} }))).toBeNull();
+    });
+});
+
+describe('scenarioRows', () => {
+    const slice = (tagId: string, tagName: string, map: number | null, count: number) => ({
+        tag_id: tagId,
+        tag_name: tagName,
+        evaluated_sample_count: count,
+        metrics: { ...makeMetrics().metrics, mean_average_precision: map }
+    });
+
+    it('starts with the full set, then one row for each tag in slice order', () => {
+        const runA = compared(
+            'a',
+            {},
+            {
+                ...makeMetrics({ mean_average_precision: 0.5 }),
+                slices: [slice('t1', 'night', 0.4, 3), slice('t2', 'rain', 0.2, 2)]
+            }
+        );
+        const runB = compared(
+            'b',
+            {},
+            {
+                ...makeMetrics({ mean_average_precision: 0.6 }),
+                slices: [slice('t1', 'night', 0.4, 3), slice('t2', 'rain', null, 2)]
+            }
+        );
+
+        expect(scenarioRows([runA, runB], 'map')).toEqual([
+            {
+                id: 'full',
+                label: 'Full set',
+                values: [0.5, 0.6],
+                bestIndices: [1],
+                sampleCounts: [2, 2]
+            },
+            {
+                id: 't1',
+                label: 'night',
+                values: [0.4, 0.4],
+                bestIndices: [0, 1],
+                sampleCounts: [3, 3]
+            },
+            { id: 't2', label: 'rain', values: [0.2, null], bestIndices: [0], sampleCounts: [2, 2] }
+        ]);
+    });
+
+    it('has only the full set row without slices', () => {
+        expect(scenarioRows([compared('a')], 'f1').map((row) => row.label)).toEqual(['Full set']);
     });
 });

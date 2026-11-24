@@ -10,36 +10,45 @@ const state = vi.hoisted(() => ({
     runsError: null as Error | null,
     metrics: undefined as EvaluationRunMetricsView[] | undefined,
     metricsError: null as Error | null,
-    metricsEnabled: undefined as boolean | undefined
+    metricsEnabled: undefined as boolean | undefined,
+    metricsTagIds: undefined as string[] | undefined
 }));
 
-vi.mock('$lib/hooks', () => ({
-    useEvaluationRuns: () => ({
-        get data() {
-            return state.runs;
-        },
-        isLoading: false,
-        get error() {
-            return state.runsError;
-        }
-    }),
-    useEvaluationRunsMetrics: (getParams: () => { enabled?: boolean }) => {
-        state.metricsEnabled = getParams().enabled;
-        return {
+vi.mock('$lib/hooks', async () => {
+    const { readable } = await import('svelte/store');
+    return {
+        useEvaluationRuns: () => ({
             get data() {
-                return state.metrics;
+                return state.runs;
             },
+            isLoading: false,
             get error() {
-                return state.metricsError;
-            },
-            isLoading: false
-        };
-    }
-}));
+                return state.runsError;
+            }
+        }),
+        useTags: () => ({ tags: readable([]) }),
+        useEvaluationRunsMetrics: (getParams: () => { enabled?: boolean; tagIds: string[] }) => {
+            state.metricsEnabled = getParams().enabled;
+            state.metricsTagIds = getParams().tagIds;
+            return {
+                get data() {
+                    return state.metrics;
+                },
+                get error() {
+                    return state.metricsError;
+                },
+                isLoading: false
+            };
+        }
+    };
+});
 
 const defaultProps = {
     datasetId: 'dataset-1',
+    collectionId: 'collection-1',
     runIds: ['run-a', 'run-b'],
+    tagIds: ['tag-1'],
+    onTagIdsChange: vi.fn(),
     imagesHref: '/datasets/dataset-1/image/collection-1/images'
 };
 
@@ -104,6 +113,8 @@ describe('EvaluationComparison', () => {
 
     it('shows the leaderboard of the runs', () => {
         render(EvaluationComparison, { props: defaultProps });
+
+        expect(state.metricsTagIds).toEqual(['tag-1']);
 
         expect(screen.getByTestId('evaluation-leaderboard')).toHaveTextContent('run a');
         expect(screen.getByTestId('evaluation-leaderboard')).toHaveTextContent('run b');

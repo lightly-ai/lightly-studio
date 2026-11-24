@@ -16,13 +16,17 @@ describe('useEvaluationRunsMetrics', () => {
     it('queries the metrics of the given runs', () => {
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
 
-        useEvaluationRunsMetrics(() => ({ datasetId: 'dataset-1', runIds: ['run-1', 'run-2'] }));
+        useEvaluationRunsMetrics(() => ({
+            datasetId: 'dataset-1',
+            runIds: ['run-1', 'run-2'],
+            tagIds: ['tag-1']
+        }));
 
         const options = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
         expect(options.queryKey).toEqual(
             getEvaluationRunsMetricsOptions({
                 path: { dataset_id: 'dataset-1' },
-                query: { run_ids: ['run-1', 'run-2'] }
+                query: { run_ids: ['run-1', 'run-2'], tag_ids: ['tag-1'] }
             }).queryKey
         );
         expect(options.enabled).toBe(true);
@@ -31,7 +35,12 @@ describe('useEvaluationRunsMetrics', () => {
     it('disables the query when enabled is false', () => {
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
 
-        useEvaluationRunsMetrics(() => ({ datasetId: 'dataset-1', runIds: [], enabled: false }));
+        useEvaluationRunsMetrics(() => ({
+            datasetId: 'dataset-1',
+            runIds: [],
+            tagIds: [],
+            enabled: false
+        }));
 
         const options = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
         expect(options.enabled).toBe(false);

@@ -2,6 +2,8 @@
     import ComparabilityWarning from '../ComparabilityWarning/ComparabilityWarning.svelte';
     import EvaluationLeaderboard from '../EvaluationLeaderboard/EvaluationLeaderboard.svelte';
     import PerClassMetricSection from '../PerClassMetricSection/PerClassMetricSection.svelte';
+    import ScenarioSection from '../ScenarioSection/ScenarioSection.svelte';
+    import type { TagView } from '$lib/api/lightly_studio_local';
     import {
         compareRuns,
         leaderboardColumns,
@@ -14,9 +16,12 @@
     interface Props {
         taskType: ComparableTaskType;
         runs: ComparedRun[];
+        tags: Pick<TagView, 'tag_id' | 'name'>[];
+        selectedTagIds: string[];
+        onSelectedTagIdsChange: (tagIds: string[]) => void;
     }
 
-    const { taskType, runs }: Props = $props();
+    const { taskType, runs, tags, selectedTagIds, onSelectedTagIdsChange }: Props = $props();
 
     const report = $derived(compareRuns(runs));
     const rankedRuns = $derived(sortByPrimaryMetric(runs, primaryMetric(taskType, runs)));
@@ -32,5 +37,12 @@
             staleRunIds={report.staleRunIds}
         />
     </section>
+    <ScenarioSection
+        {taskType}
+        runs={rankedRuns}
+        {tags}
+        {selectedTagIds}
+        {onSelectedTagIdsChange}
+    />
     <PerClassMetricSection {taskType} runs={rankedRuns} />
 </div>

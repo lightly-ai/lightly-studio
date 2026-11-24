@@ -1,7 +1,7 @@
 <script lang="ts">
     import { ApiError } from '$lib/api/ApiError';
     import { Spinner } from '$lib/components';
-    import { useEvaluationRuns, useEvaluationRunsMetrics } from '$lib/hooks';
+    import { useEvaluationRuns, useEvaluationRunsMetrics, useTags } from '$lib/hooks';
     import EvaluationComparisonView from './EvaluationComparisonView/EvaluationComparisonView.svelte';
     import {
         SELECTION_PROBLEM_MESSAGES,
@@ -12,13 +12,20 @@
 
     interface Props {
         datasetId: string;
+        /** Collection of the page. Its tags are the scenarios to pick from. */
+        collectionId: string;
         /** Runs from the page link, in link order. */
         runIds: string[];
+        /** Tags from the page link, compared as scenarios. */
+        tagIds: string[];
+        onTagIdsChange: (tagIds: string[]) => void;
         /** Link back to the images of the collection. */
         imagesHref: string;
     }
 
-    const { datasetId, runIds, imagesHref }: Props = $props();
+    const { datasetId, collectionId, runIds, tagIds, onTagIdsChange, imagesHref }: Props = $props();
+
+    const { tags } = $derived(useTags({ collection_id: collectionId }));
 
     const HTTP_STATUS_NOT_FOUND = 404;
 
@@ -36,6 +43,7 @@
     const metricsQuery = useEvaluationRunsMetrics(() => ({
         datasetId,
         runIds,
+        tagIds,
         enabled: canCompare
     }));
     const isMetricsNotFound = $derived(
@@ -67,6 +75,12 @@
     {:else if metricsQuery.error}
         <p class="text-destructive-text">{metricsQuery.error.message}</p>
     {:else if taskType && isComparableTaskType(taskType)}
-        <EvaluationComparisonView {taskType} runs={comparedRuns} />
+        <EvaluationComparisonView
+            {taskType}
+            runs={comparedRuns}
+            tags={$tags}
+            selectedTagIds={tagIds}
+            onSelectedTagIdsChange={onTagIdsChange}
+        />
     {/if}
 </div>
