@@ -9,6 +9,8 @@ import yaml
 from PIL import Image
 
 from lightly_studio import ImageDataset
+from lightly_studio.core.annotation.polygon import PolygonAnnotation
+from lightly_studio.core.annotation_file_task import AnnotationFileTask
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
@@ -617,6 +619,44 @@ class TestDataset:
         )
         assert covered == {image1_sample.sample_id, image2_sample.sample_id}
 
+    def test_add_samples_from_yolo__instance_segmentation(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        data_yaml = _write_segmentation_dataset(tmp_path=tmp_path, label_names=["image1"])
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_yolo(
+            data_yaml=data_yaml,
+            input_split="train",
+            annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
+        )
+
+        (sample,) = list(dataset)
+        (annotation,) = sample.annotations
+        assert isinstance(annotation, PolygonAnnotation)
+        assert annotation.polygons == [[(10.0, 5.0), (50.0, 5.0), (50.0, 25.0)]]
+
+    def test_add_samples_from_yolo__instance_segmentation_missing_label_file(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        # image2.jpg has no label file.
+        data_yaml = _write_segmentation_dataset(
+            tmp_path=tmp_path, label_names=["image1"], image_names=["image1", "image2"]
+        )
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_yolo(
+            data_yaml=data_yaml,
+            input_split="train",
+            annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
+        )
+
+        assert [s.file_name for s in dataset] == ["image1.jpg"]
+
 
 def _create_sample_images(image_paths: list[Path]) -> None:
     for image_path in image_paths:
@@ -658,3 +698,19 @@ def _create_labels(
         [labels_path_train / f"{name}.txt" for name in label_file_names],
         class_sample_pool=class_sample_pool,
     )
+
+
+def _write_segmentation_dataset(
+    tmp_path: Path, label_names: list[str], image_names: list[str] | None = None
+) -> Path:
+    data_yaml = tmp_path / "data.yaml"
+    data_yaml.write_text(yaml.dump({"train": "../train/images", "nc": 1, "names": ["class_0"]}))
+    images_path = tmp_path / "train" / "images"
+    labels_path = tmp_path / "train" / "labels"
+    images_path.mkdir(parents=True)
+    labels_path.mkdir(parents=True)
+    for name in image_names or label_names:
+        Image.new("RGB", (100, 50)).save(images_path / f"{name}.jpg")
+    for name in label_names:
+        (labels_path / f"{name}.txt").write_text("0 0.1 0.1 0.5 0.1 0.5 0.5\n")
+    return data_yaml

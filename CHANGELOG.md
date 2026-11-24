@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Export polygons to YOLO with the new "Image Instance Segmentation (YOLO)" export.
 - Python SDK: Export polygons to YOLO with `to_yolo_instance_segmentation`.
+- Python SDK: Load polygon annotations from COCO and YOLO with `annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION`, and export them to the same formats.
 - Filter videos by temporal events in the query editor, for example `event(class_name = "run" AND start_time_s < 5)`.
 - Undo cuboid edits in the point cloud workspace with Ctrl/Cmd + Z: delete, move, resize, rotate and class change. An undone delete restores the cuboid in its object track.
 - Use `frame(...)` in the video query editor to match annotations and timestamps on the same frame.
@@ -35,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 
+- Python SDK: `annotation_type` in the COCO methods. Use `annotation_task` instead.
 - Python SDK: `to_coco_segmentation_masks`. Use `to_coco_instance_segmentation` instead.
 
 ### Removed
