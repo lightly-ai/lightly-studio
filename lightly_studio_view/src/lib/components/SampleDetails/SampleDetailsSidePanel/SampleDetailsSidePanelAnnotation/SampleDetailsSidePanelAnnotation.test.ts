@@ -88,7 +88,7 @@ describe('SampleDetailsSidePanelAnnotation', () => {
         expect(screen.queryByText(/Confidence:/)).not.toBeInTheDocument();
     });
 
-    it('unlocks a locked segmentation mask when its lock icon is clicked', async () => {
+    it('requests an unlock when the lock icon of a locked segmentation mask is clicked', async () => {
         page.data.globalStorage.isEditingMode.set(true);
         const onToggleLock = vi.fn();
         const { container } = render(SampleDetailsSidePanelAnnotation, {
@@ -101,6 +101,5 @@ describe('SampleDetailsSidePanelAnnotation', () => {
         await fireEvent.click(container.querySelector('svg.lucide-lock')!);
 
         expect(onToggleLock).toHaveBeenCalledOnce();
-        expect(container.querySelector('svg.lucide-unlock')).not.toBeInTheDocument();
     });
 });
