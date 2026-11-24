@@ -3,7 +3,6 @@
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import Ellipsis from '@lucide/svelte/icons/ellipsis';
-    import { toast } from 'svelte-sonner';
     import WorkflowOverrideDialog from './WorkflowOverrideDialog.svelte';
     import {
         placeWorkflowActions,
@@ -11,6 +10,7 @@
         type WorkflowFileState,
         type WorkflowMenuAction
     } from './workflowActions';
+    import { useWorkflowMove } from './useWorkflowMove.svelte';
 
     interface Props {
         /** The file’s current state. */
@@ -21,14 +21,18 @@
         transitioning: boolean;
         /** Moves the file; resolves once the service confirmed it. */
         onTransition: (state: WorkflowFileState) => Promise<void>;
+        /** Opens the next sample; called after a successful inline move, not an admin override. */
+        onAdvance?: () => void;
     }
 
-    const { fileState, allowedTransitions, transitioning, onTransition }: Props = $props();
+    const { fileState, allowedTransitions, transitioning, onTransition, onAdvance }: Props =
+        $props();
 
     const actions = $derived(placeWorkflowActions(fileState, allowedTransitions));
     const hasActions = $derived(actions.inline.length > 0 || actions.menu.length > 0);
 
-    let requested = $state<WorkflowFileState | null>(null);
+    const workflowMove = useWorkflowMove(() => ({ onTransition, onAdvance }));
+    const requested = $derived(workflowMove.requested);
     /** The admin menu action waiting for confirmation, if any. */
     let confirming = $state<WorkflowMenuAction | null>(null);
 
@@ -37,20 +41,9 @@
     /** A confirmed menu move in flight: shown in place of the ⋯ button. */
     const pendingMenuAction = $derived(actions.menu.find((a) => a.target === requested));
 
-    const move = async (target: WorkflowFileState) => {
-        requested = target;
-        try {
-            await onTransition(target);
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : 'Could not change the file state');
-        } finally {
-            requested = null;
-        }
-    };
-
     const confirmOverride = (action: WorkflowMenuAction) => {
         confirming = null;
-        void move(action.target);
+        workflowMove.override(action.target);
     };
 
     const buttonLabel = (action: WorkflowAction) =>
@@ -65,7 +58,7 @@
                 variant={action.variant}
                 class={action.class}
                 disabled={busy}
-                onclick={() => move(action.target)}>{buttonLabel(action)}</Button
+                onclick={() => workflowMove.moveAndAdvance(action)}>{buttonLabel(action)}</Button
             >
         {/each}
         {#if pendingMenuAction}

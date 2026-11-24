@@ -105,6 +105,12 @@
         workflow
     });
 
+    // A finished Submit / Accept / Rework opens the same sequence as the next-sequence button.
+    $effect(() => {
+        const onNextSequence = neighbours.onNextSequence;
+        if (onNextSequence) return workflow.registerNext(onNextSequence);
+    });
+
     const updateTickNumber = (nextTickNumber: number) => {
         const url = new URL(page.url);
         const hash = new URLSearchParams(url.hash.slice(1));

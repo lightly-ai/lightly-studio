@@ -51,6 +51,7 @@
                 allowedTransitions={workflow.file.allowed_transitions}
                 transitioning={workflow.transitioning}
                 onTransition={workflow.transition}
+                onAdvance={workflow.goToNext}
             />
         {/if}
         <div class={compact ? 'hidden' : 'contents'} hidden={compact}>

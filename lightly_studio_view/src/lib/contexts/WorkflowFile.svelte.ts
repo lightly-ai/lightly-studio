@@ -27,6 +27,13 @@ type WorkflowFileContext = {
      * moves a Not started file to In progress; anything else changes nothing.
      */
     startWork(sampleId: string): Promise<void>;
+    /**
+     * Registers how the page opens the next sample: the target of its → arrow. Returns the
+     * unregister function; registering again replaces the previous handler.
+     */
+    registerNext(goToNext: () => void): () => void;
+    /** Opens the next sample, if the page registered one; otherwise stays on this sample. */
+    goToNext(): void;
 };
 
 const CONTEXT_KEY = 'workflow-file';
@@ -43,6 +50,8 @@ export function createWorkflowFileContext(
 ): WorkflowFileContext {
     const { query } = useWorkflowFile(getParams);
     const { mutation } = useWorkflowFileTransition(getParams);
+    /** The page's → target, registered by its stepper. */
+    let goToNextHandler: (() => void) | undefined;
     const context: WorkflowFileContext = {
         get active() {
             return getParams() !== null;
@@ -76,6 +85,15 @@ export function createWorkflowFileContext(
                 return;
             }
             await mutation.mutateAsync('in_progress');
+        },
+        registerNext(goToNext) {
+            goToNextHandler = goToNext;
+            return () => {
+                if (goToNextHandler === goToNext) goToNextHandler = undefined;
+            };
+        },
+        goToNext() {
+            goToNextHandler?.();
         }
     };
     setContext(CONTEXT_KEY, context);

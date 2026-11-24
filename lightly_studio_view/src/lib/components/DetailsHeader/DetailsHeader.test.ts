@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -72,14 +72,16 @@ describe('DetailsHeader', () => {
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
-    it('shows the batch file’s status and lets the labeler submit it', async () => {
+    it('shows the batch file’s status and lets the labeler submit it and move on', async () => {
         const transition = vi.fn().mockResolvedValue(undefined);
+        const goToNext = vi.fn();
         mocks.workflow = {
             active: true,
             canEdit: true,
             isError: false,
             transitioning: false,
             transition,
+            goToNext,
             file: workflowFile
         };
 
@@ -88,6 +90,7 @@ describe('DetailsHeader', () => {
         expect(screen.getByTestId('workflow-state-badge')).toHaveTextContent('In progress');
         await fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
         expect(transition).toHaveBeenCalledWith('in_review');
+        await waitFor(() => expect(goToNext).toHaveBeenCalledOnce());
     });
 
     it('offers an unassigned admin the moves the workflow service allows', () => {

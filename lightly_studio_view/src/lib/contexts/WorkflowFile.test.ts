@@ -77,6 +77,41 @@ describe('createWorkflowFileContext', () => {
         expect(context.locked).toBe(true);
     });
 
+    describe('next sample', () => {
+        it('opens the next sample the page registered', async () => {
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(() => json(workflowFile))
+            );
+            const context = await renderLoadedContext();
+            const first = vi.fn();
+            const second = vi.fn();
+
+            const unregisterFirst = context.registerNext(first);
+            context.registerNext(second);
+            // A stepper that unmounts after its successor registered leaves the successor in place.
+            unregisterFirst();
+            context.goToNext();
+
+            expect(first).not.toHaveBeenCalled();
+            expect(second).toHaveBeenCalledOnce();
+        });
+
+        it('stays on the sample when there is no next sample', async () => {
+            vi.stubGlobal(
+                'fetch',
+                vi.fn(() => json(workflowFile))
+            );
+            const context = await renderLoadedContext();
+            const next = vi.fn();
+
+            context.registerNext(next)();
+
+            expect(() => context.goToNext()).not.toThrow();
+            expect(next).not.toHaveBeenCalled();
+        });
+    });
+
     it('fails when the moved file cannot be read again', async () => {
         let moved = false;
         vi.stubGlobal(

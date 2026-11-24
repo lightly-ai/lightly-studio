@@ -2,12 +2,22 @@ import { render, fireEvent, screen } from '@testing-library/svelte';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import SampleDetailsNavigation from './SteppingNavigationTestWrapper.svelte';
 
+const workflow = vi.hoisted(() => ({
+    context: undefined as
+        | { active: boolean; registerNext: (goToNext: () => void) => () => void }
+        | undefined
+}));
+vi.mock('$lib/contexts/WorkflowFile.svelte', () => ({
+    useWorkflowFileContext: () => workflow.context
+}));
+
 describe('SampleDetailsNavigation', () => {
     const getNextButton = () => screen.queryByRole('button', { name: 'Next sample' });
     const getPreviousButton = () => screen.queryByRole('button', { name: 'Previous sample' });
 
     beforeEach(() => {
         vi.resetAllMocks();
+        workflow.context = undefined;
     });
 
     it('renders navigation buttons when adjacent samples exist', () => {
@@ -109,5 +119,68 @@ describe('SampleDetailsNavigation', () => {
 
         expect(onPrevious).not.toHaveBeenCalled();
         expect(onNext).not.toHaveBeenCalled();
+    });
+
+    describe('in a workflow batch', () => {
+        /** A workflow context that remembers the registered next-sample handler. */
+        const fakeWorkflow = () => {
+            let next: (() => void) | undefined;
+            workflow.context = {
+                active: true,
+                registerNext: (goToNext) => {
+                    next = goToNext;
+                    return () => {
+                        if (next === goToNext) next = undefined;
+                    };
+                }
+            };
+            return { goToNext: () => next?.() };
+        };
+
+        it('lets a workflow move open the same next sample as the → arrow', () => {
+            const { goToNext } = fakeWorkflow();
+            const onNext = vi.fn();
+            render(SampleDetailsNavigation, {
+                hasPrevious: true,
+                hasNext: true,
+                onNext,
+                onPrevious: vi.fn()
+            });
+
+            goToNext();
+
+            expect(onNext).toHaveBeenCalledOnce();
+        });
+
+        it('offers no next sample on the last sample', () => {
+            const { goToNext } = fakeWorkflow();
+            const onNext = vi.fn();
+            render(SampleDetailsNavigation, {
+                hasPrevious: true,
+                hasNext: false,
+                onNext,
+                onPrevious: vi.fn()
+            });
+
+            goToNext();
+
+            expect(onNext).not.toHaveBeenCalled();
+        });
+
+        it('withdraws the next sample when the arrows go away', () => {
+            const { goToNext } = fakeWorkflow();
+            const onNext = vi.fn();
+            const { unmount } = render(SampleDetailsNavigation, {
+                hasPrevious: true,
+                hasNext: true,
+                onNext,
+                onPrevious: vi.fn()
+            });
+
+            unmount();
+            goToNext();
+
+            expect(onNext).not.toHaveBeenCalled();
+        });
     });
 });

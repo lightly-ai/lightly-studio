@@ -5,7 +5,7 @@ import type { ComponentProps } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import WorkflowFileActions from './WorkflowFileActions.svelte';
 
-vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
+vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 type Props = ComponentProps<typeof WorkflowFileActions>;
 
@@ -29,9 +29,11 @@ const renderActions = (overrides: Partial<Props> = {}) => {
         onTransition: vi.fn().mockResolvedValue(undefined),
         ...overrides
     };
-    const result = render(WorkflowFileActions, { props });
-    const rerenderWith = (changes: Partial<Props>) => result.rerender({ ...props, ...changes });
-    return { onTransition: props.onTransition, rerenderWith };
+    const onAdvance = vi.fn();
+    const result = render(WorkflowFileActions, { props: { onAdvance, ...props } });
+    const rerenderWith = (changes: Partial<Props>) =>
+        result.rerender({ onAdvance, ...props, ...changes });
+    return { onTransition: props.onTransition, onAdvance, rerenderWith };
 };
 
 describe('WorkflowFileActions', () => {
@@ -125,6 +127,38 @@ describe('WorkflowFileActions', () => {
 
             expect(screen.getByRole('button', { name: 'Sending back…' })).toBeDisabled();
             expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
+        });
+
+        it.each([
+            ['Submit for review', 'in_progress', ['in_review'], 'Submitted for review'],
+            ['Accept', 'in_review', ['rework', 'accepted'], 'Sample accepted'],
+            ['Send back to Rework', 'in_review', ['rework', 'accepted'], 'Sent back to Rework']
+        ] as const)(
+            'confirms "%s" and moves on to the next sample',
+            async (button, fileState, allowedTransitions, message) => {
+                const { onTransition, onAdvance } = renderActions({
+                    fileState,
+                    allowedTransitions: [...allowedTransitions]
+                });
+
+                await fireEvent.click(screen.getByRole('button', { name: button }));
+
+                await waitFor(() => expect(onAdvance).toHaveBeenCalledOnce());
+                expect(toast.success).toHaveBeenCalledWith(message);
+                expect(onTransition).toHaveBeenCalledBefore(onAdvance);
+            }
+        );
+
+        it('stays on the sample when the service rejects the move', async () => {
+            const { onAdvance } = renderActions({
+                onTransition: vi.fn().mockRejectedValue(new Error('Cannot move a file'))
+            });
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
+
+            await waitFor(() => expect(toast.error).toHaveBeenCalled());
+            expect(onAdvance).not.toHaveBeenCalled();
+            expect(toast.success).not.toHaveBeenCalled();
         });
 
         it('shows no admin menu when every allowed move is inline', () => {
@@ -223,6 +257,26 @@ describe('WorkflowFileActions', () => {
             );
 
             expect(await screen.findByRole('button', { name: 'Accepting…' })).toBeDisabled();
+        });
+
+        it('stays on the sample after a confirmed admin override', async () => {
+            const user = userEvent.setup();
+            const { onTransition, onAdvance } = renderActions({
+                fileState: 'accepted',
+                allowedTransitions: ['rework']
+            });
+
+            await openMenu(user);
+            await user.click(
+                screen.getByRole('menuitem', { name: 'Reopen (send back to Rework)' })
+            );
+            await user.click(
+                within(await screen.findByRole('dialog')).getByRole('button', { name: 'Reopen' })
+            );
+
+            await waitFor(() => expect(onTransition).toHaveBeenCalledWith('rework'));
+            expect(onAdvance).not.toHaveBeenCalled();
+            expect(toast.success).not.toHaveBeenCalled();
         });
 
         it('does nothing when the admin cancels the confirmation', async () => {

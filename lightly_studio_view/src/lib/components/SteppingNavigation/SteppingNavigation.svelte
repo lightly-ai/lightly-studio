@@ -1,5 +1,6 @@
 <script lang="ts">
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
+    import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
 
     type SteppingNavigationProps = {
         hasPrevious: boolean;
@@ -10,6 +11,14 @@
     };
     const { hasPrevious, hasNext, onNext, onPrevious, isDrawing }: SteppingNavigationProps =
         $props();
+
+    // In a workflow batch, a finished Submit / Accept / Rework opens the same sample as →.
+    // Pages without a stepper (the MCAP sequence page) register their next target themselves.
+    const workflow = useWorkflowFileContext();
+    $effect(() => {
+        if (!workflow?.active || !hasNext) return;
+        return workflow.registerNext(() => onNext());
+    });
 
     const handleKeyDownEvent = (event: KeyboardEvent) => {
         if (

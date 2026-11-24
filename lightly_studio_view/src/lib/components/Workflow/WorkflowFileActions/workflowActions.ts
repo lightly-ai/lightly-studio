@@ -11,6 +11,8 @@ export interface WorkflowAction {
     label: string;
     /** Shown while this move waits for the workflow service. */
     pendingLabel: string;
+    /** Confirms a successful inline move, before the page moves on to the next sample. */
+    doneMessage: string;
     variant: 'default' | 'outline';
     /** Extra button classes, e.g. the red outline of Send back. */
     class?: string;
@@ -53,18 +55,21 @@ const ACTIONS: Record<MoveTarget, WorkflowAction> = {
         target: 'in_review',
         label: 'Submit for review',
         pendingLabel: 'Submitting…',
+        doneMessage: 'Submitted for review',
         variant: 'default'
     },
     accepted: {
         target: 'accepted',
         label: 'Accept',
         pendingLabel: 'Accepting…',
+        doneMessage: 'Sample accepted',
         variant: 'default'
     },
     rework: {
         target: 'rework',
         label: 'Send back to Rework',
         pendingLabel: 'Sending back…',
+        doneMessage: 'Sent back to Rework',
         variant: 'outline',
         // The red of the Rework state.
         class: 'border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-500'
