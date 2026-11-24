@@ -23,6 +23,11 @@ interface Params {
      */
     onResizePreview: (payload: ResizePayload) => void;
     onResizeEnd?: (payload: ResizePayload) => void;
+    /**
+     * Whether a move or rotate gizmo is under the pointer. The gizmos sit inside the cuboid,
+     * so the faces leave the pointer to them.
+     */
+    isGizmoHovered?: () => boolean;
 }
 
 interface FaceResizeReturn {
@@ -39,7 +44,8 @@ export function useCuboidFaceResize({
     onResizeStart,
     onResizeCancel,
     onResizePreview,
-    onResizeEnd
+    onResizeEnd,
+    isGizmoHovered = () => false
 }: Params): FaceResizeReturn {
     const { camera, renderer } = useThrelte();
     const orbitControls = useOrbitControls();
@@ -50,7 +56,7 @@ export function useCuboidFaceResize({
     let lastTransform: ReturnType<typeof computePointerResize> = null;
 
     function onFaceHoverEnter(face: Face): void {
-        if (activeDrag) return;
+        if (activeDrag || isGizmoHovered()) return;
         hoveredFace.set(face);
         canvas.style.cursor = 'grab';
     }
@@ -62,7 +68,7 @@ export function useCuboidFaceResize({
     }
 
     const onFacePointerDown: FaceResizeReturn['onFacePointerDown'] = ({ event, face }) => {
-        if (event.nativeEvent.button !== 0) return;
+        if (event.nativeEvent.button !== 0 || isGizmoHovered()) return;
         onResizeStart?.();
         lastTransform = null;
         activeDrag = createFaceDrag({

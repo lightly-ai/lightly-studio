@@ -100,7 +100,10 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         activeTool: editing.activeTool,
         effectiveTool: editing.effectiveTool,
         isEditingMode: presentation.isEditingMode,
-        showOrthographicViews: presentation.showOrthographicViews,
+        showOrthographicViews:
+            presentation.orthographicViewsEnabled && !presentation.orthographicViewsCollapsed,
+        orthographicViewsEnabled: presentation.orthographicViewsEnabled,
+        orthographicViewsCollapsed: presentation.orthographicViewsCollapsed,
         pointSize: presentation.pointSize,
         showNavigationHelpers: presentation.showNavigationHelpers,
         accumulation,
@@ -115,7 +118,8 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         bufferedRanges: playback.bufferedRanges,
         bufferStatus: playback.bufferStatus,
         onCameraStripCollapsedChange: cameraPane.setCollapsed,
-        onToggleOrthographicProjections: presentation.toggleOrthographicProjections,
+        onOrthographicViewsEnabledChange: presentation.setOrthographicViewsEnabled,
+        onOrthographicViewsCollapsedChange: presentation.setOrthographicViewsCollapsed,
         onPointSizeChange: presentation.setPointSize,
         onToggleNavigationHelpers: presentation.setShowNavigationHelpers,
         onToolChange: (tool) => {

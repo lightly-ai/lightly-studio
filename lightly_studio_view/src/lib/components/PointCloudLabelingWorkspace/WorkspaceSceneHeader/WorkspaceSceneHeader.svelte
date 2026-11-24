@@ -20,10 +20,10 @@
         {/if}
         <SceneViewSettings
             accumulation={layout.accumulation}
-            showOrthographicViews={layout.showOrthographicViews}
+            orthographicViewsEnabled={layout.orthographicViewsEnabled}
             pointSize={layout.pointSize}
             showNavigationHelpers={layout.showNavigationHelpers}
-            onToggle={layout.onToggleOrthographicProjections}
+            onOrthographicViewsEnabledChange={layout.onOrthographicViewsEnabledChange}
             onPointSizeChange={layout.onPointSizeChange}
             onToggleNavigationHelpers={layout.onToggleNavigationHelpers}
         />

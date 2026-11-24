@@ -1,7 +1,5 @@
 import type { WorkspaceTool } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
-const DESELECT_TOOLS = new Set<WorkspaceTool>(['select', 'translate', 'rotate']);
-
 interface CuboidIntersection {
     annotationId: string;
     volume: number;
@@ -44,12 +42,12 @@ export function addCuboidSelectionListeners({
     resetCuboidClicked
 }: CuboidSelectionListenerParams): () => void {
     function onKeyDown(event: KeyboardEvent): void {
-        if (event.key === 'Escape' && DESELECT_TOOLS.has(activeTool)) onselect?.(null);
+        if (event.key === 'Escape' && activeTool === 'select') onselect?.(null);
     }
 
     function onClick(): void {
         queueMicrotask(() => {
-            if (DESELECT_TOOLS.has(activeTool) && !isCuboidClicked()) onselect?.(null);
+            if (activeTool === 'select' && !isCuboidClicked()) onselect?.(null);
             resetCuboidClicked();
         });
     }

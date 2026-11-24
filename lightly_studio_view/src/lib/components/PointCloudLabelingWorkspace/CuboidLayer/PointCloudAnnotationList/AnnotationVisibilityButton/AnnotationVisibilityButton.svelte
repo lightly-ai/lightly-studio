@@ -21,7 +21,7 @@
     <Button
         variant="ghost"
         size="icon"
-        class="shrink-0 p-2 text-muted-foreground"
+        class="h-7 w-7 shrink-0 text-muted-foreground"
         {disabled}
         onclick={onToggle}
         aria-label={label}

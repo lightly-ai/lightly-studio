@@ -23,32 +23,34 @@ export function restoreTransformSnapshot(
 const EDIT_MODES = ['translate', 'rotate', 'resize'] as const;
 
 /**
- * Returns the edit handles to show on a selected cuboid. While editing, orthographic views
- * show all handles for every tool except cuboid creation; perspective shows only the
- * handle of the active tool.
+ * Returns the edit handles to show on a selected cuboid. Every view shows all handles, so a
+ * selected cuboid is editable without a tool change.
  */
 export function getCuboidEditModes({
     tool,
-    cameraMode,
     isEditingMode
 }: {
     tool: Domain.WorkspaceTool;
-    cameraMode: Domain.CameraMode;
     isEditingMode: boolean;
 }): (typeof EDIT_MODES)[number][] {
     if (!isEditingMode || tool === 'create-cuboid') return [];
-    if (cameraMode !== 'perspective') return [...EDIT_MODES];
-    const editMode = EDIT_MODES.find((mode) => mode === tool);
-    return editMode ? [editMode] : [];
+    return [...EDIT_MODES];
 }
 
+/**
+ * Returns the axes of a gizmo. Rotation is limited to one axis: the yaw in perspective, and the
+ * world axis perpendicular to the view in orthographic views.
+ */
 export function getCuboidGizmoOptions(mode: string, cameraMode: Domain.CameraMode) {
-    const constrained = mode === 'rotate' && cameraMode !== 'perspective';
+    if (mode !== 'rotate')
+        return { space: 'local' as const, showX: true, showY: true, showZ: true };
+    if (cameraMode === 'perspective')
+        return { space: 'local' as const, showX: false, showY: false, showZ: true };
     return {
-        space: constrained ? ('world' as const) : ('local' as const),
-        showX: !constrained || cameraMode === 'side',
-        showY: !constrained || cameraMode === 'front',
-        showZ: !constrained || cameraMode === 'top'
+        space: 'world' as const,
+        showX: cameraMode === 'side',
+        showY: cameraMode === 'front',
+        showZ: cameraMode === 'top'
     };
 }
 
