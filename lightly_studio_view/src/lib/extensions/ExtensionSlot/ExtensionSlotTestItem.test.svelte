@@ -1,5 +1,7 @@
 <script lang="ts">
-    const { datasetId, collectionId }: { datasetId: string; collectionId: string } = $props();
+    import type { SlotProps } from '$lib/extensions';
+
+    const { datasetId, collectionId }: SlotProps['dataset.toolbar'] = $props();
 </script>
 
 <span data-testid="registered">{datasetId}/{collectionId}</span>

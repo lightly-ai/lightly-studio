@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { readable, writable } from 'svelte/store';
 import '@testing-library/jest-dom';
+import type { SlotRegistry } from '$lib/extensions';
+import { registry } from '$lib/extensions/registry';
+import ExtensionSlotTestItem from '$lib/extensions/ExtensionSlot/ExtensionSlotTestItem.test.svelte';
 
 vi.mock('$lib/hooks/useGlobalStorage', () => {
     return {
@@ -36,6 +39,8 @@ vi.mock('$lib/hooks/useFileDrop/useFileDrop', () => ({
     })
 }));
 
+vi.mock('$lib/extensions/registry', () => ({ registry: {} as SlotRegistry }));
+
 import DatasetGridHeader from './DatasetGridHeader.svelte';
 
 const defaultProps = {
@@ -62,6 +67,15 @@ describe('DatasetGridHeader', () => {
     beforeEach(() => {
         defaultProps.onSelectAll.mockClear();
         defaultProps.onDeselectAll.mockClear();
+        delete registry['dataset.toolbar'];
+    });
+
+    it('renders a registered toolbar component with the dataset and collection ids', () => {
+        registry['dataset.toolbar'] = [ExtensionSlotTestItem];
+
+        render(DatasetGridHeader, { props: defaultProps });
+
+        expect(screen.getByTestId('registered')).toHaveTextContent('dataset-1/col1');
     });
 
     it('renders the select-all button when canSelectAll is true', async () => {

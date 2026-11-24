@@ -44,7 +44,8 @@
         const el = barEl;
         if (!el) return;
         const observer = new ResizeObserver(() => measure(el));
-        observer.observe(el);
+        // A control can grow without a change to the bar size, for example after a query loads.
+        for (const element of [el, ...el.children]) observer.observe(element);
         return () => observer.disconnect();
     });
 </script>

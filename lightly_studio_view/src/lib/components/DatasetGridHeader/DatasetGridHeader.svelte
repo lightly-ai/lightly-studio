@@ -65,7 +65,7 @@
             />
         {/if}
     {/snippet}
-    {#snippet auxControls()}
+    {#snippet auxControls(compact)}
         {#if isImages}
             <ImageOrderBy {collectionId} datasetId={collectionDatasetId} />
         {:else if isVideos}
@@ -75,7 +75,7 @@
         {/if}
         <ExtensionSlot
             name="dataset.toolbar"
-            props={{ datasetId: collectionDatasetId, collectionId }}
+            props={{ datasetId: collectionDatasetId, collectionId, compact }}
         />
     {/snippet}
     {#if hasMediaWithEmbeddings}

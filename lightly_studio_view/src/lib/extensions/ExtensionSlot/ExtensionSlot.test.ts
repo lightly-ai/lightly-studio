@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SlotRegistry } from '$lib/extensions/slots';
+import type { SlotRegistry } from '$lib/extensions';
 import { registry } from '$lib/extensions/registry';
 import ExtensionSlot from './ExtensionSlot.svelte';
 import ExtensionSlotTestItem from './ExtensionSlotTestItem.test.svelte';
@@ -11,7 +11,7 @@ vi.mock('$lib/extensions/registry', () => ({ registry: {} as SlotRegistry }));
 
 const defaultProps = {
     name: 'dataset.toolbar' as const,
-    props: { datasetId: 'dataset-1', collectionId: 'collection-1' },
+    props: { datasetId: 'dataset-1', collectionId: 'collection-1', compact: false },
     children: createRawSnippet(() => ({
         render: () => '<span data-testid="default">Default</span>'
     }))

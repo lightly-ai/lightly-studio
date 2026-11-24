@@ -17,7 +17,7 @@
 </script>
 
 {#if components.length > 0}
-    {#each components as Item (Item)}
+    {#each components as Item, index (index)}
         <Item {...props} />
     {/each}
 {:else}

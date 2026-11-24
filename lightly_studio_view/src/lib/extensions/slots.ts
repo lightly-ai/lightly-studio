@@ -4,12 +4,12 @@ import type { Component } from 'svelte';
 // the screen, never a feature. The comment above each slot is its layout contract: where it is
 // and what fits there.
 export interface SlotProps {
-    // Header navigation, in the row after the OSS links: one link per component. The row grows
-    // to the right; keep each link as small as an OSS link.
+    // Header navigation of the dataset pages, in the row after the OSS links: one link per
+    // component. The row does not wrap; keep each link as small as an OSS link.
     'nav.items': Record<string, never>;
-    // Dataset grid header, right side after the order-by controls: small buttons in one row. The
-    // row wraps when the screen is narrow.
-    'dataset.toolbar': { datasetId: string; collectionId: string };
+    // Dataset grid header, right side after the order-by controls: small buttons in one row. When
+    // compact is true, show icons without labels.
+    'dataset.toolbar': { datasetId: string; collectionId: string; compact: boolean };
 }
 
 export type SlotRegistry = {

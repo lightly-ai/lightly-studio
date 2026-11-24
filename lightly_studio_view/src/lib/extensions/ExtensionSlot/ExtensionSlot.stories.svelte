@@ -1,4 +1,4 @@
-<script module>
+<script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import ExtensionSlot from './ExtensionSlot.svelte';
 
@@ -13,7 +13,7 @@
     name="Default Content"
     args={{
         name: 'dataset.toolbar',
-        props: { datasetId: 'dataset-1', collectionId: 'collection-1' }
+        props: { datasetId: 'dataset-1', collectionId: 'collection-1', compact: false }
     }}
 >
     Shown when nothing is registered for the slot.
