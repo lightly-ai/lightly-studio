@@ -38,7 +38,10 @@
             event.stopPropagation();
             onClose();
         } else if (isRelabelKey(event)) {
+            // Stopped so the focused box, after a click with the select tool, doesn't toggle
+            // its selection off and close the card.
             event.preventDefault();
+            event.stopPropagation();
             onSearch();
         }
     };

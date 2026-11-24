@@ -174,6 +174,20 @@ describe('AnnotationCard', () => {
         expect(screen.getByPlaceholderText('Pick a class')).toHaveFocus();
     });
 
+    it('keeps Enter from the focused box so it stays selected', async () => {
+        const box = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const toggleSelection = vi.fn();
+        box.addEventListener('keydown', toggleSelection);
+        document.body.append(box);
+        await renderCard();
+
+        await fireEvent.keyDown(box, { key: 'Enter' });
+        box.remove();
+
+        expect(await screen.findByPlaceholderText('Pick a class')).toBeInTheDocument();
+        expect(toggleSelection).not.toHaveBeenCalled();
+    });
+
     it('keeps the class on a double Enter', async () => {
         await renderCard({}, {
             ...annotation,
