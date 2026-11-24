@@ -580,9 +580,38 @@ class TestImageSample:
         (annotation,) = image.annotations
         assert isinstance(annotation, PolygonAnnotation)
 
-        for name, value in [("x", 1), ("y", 1), ("width", 10), ("height", 10), ("polygons", [])]:
+        for name, value in [("x", 1), ("y", 1), ("width", 10), ("height", 10)]:
             with pytest.raises(AttributeError):
                 setattr(annotation, name, value)
+
+    def test_polygon_annotation__set_polygons(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image = ImageSample(
+            inner=create_image(session=db_session, collection_id=collection.collection_id)
+        )
+        image.add_annotation(CreatePolygon(class_name="cat", polygons=[[(0, 0), (4, 0), (4, 4)]]))
+        (annotation,) = image.annotations
+        assert isinstance(annotation, PolygonAnnotation)
+
+        annotation.polygons = [[(0, 0), (9, 0), (9, 7)]]
+
+        assert annotation.polygons == [[(0, 0), (9, 0), (9, 7)]]
+        assert (annotation.width, annotation.height) == (9, 7)
+
+    def test_polygon_annotation__set_invalid_polygons(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image = ImageSample(
+            inner=create_image(session=db_session, collection_id=collection.collection_id)
+        )
+        image.add_annotation(CreatePolygon(class_name="cat", polygons=[[(0, 0), (4, 0), (4, 4)]]))
+        (annotation,) = image.annotations
+        assert isinstance(annotation, PolygonAnnotation)
+
+        with pytest.raises(ValueError, match="at least 3 vertices"):
+            annotation.polygons = [[(0, 0), (9, 9)]]
+
+        assert annotation.polygons == [[(0, 0), (4, 0), (4, 4)]]
+        assert annotation.width == 4
 
     def test_polygon_annotation__wrong_type(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)

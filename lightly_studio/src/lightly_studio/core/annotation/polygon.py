@@ -5,6 +5,7 @@ from __future__ import annotations
 from lightly_studio.core.annotation import Annotation
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.polygon import PolygonAnnotationTable, Polygons
+from lightly_studio.services import annotations_service
 
 
 class PolygonAnnotation(Annotation):
@@ -18,7 +19,8 @@ class PolygonAnnotation(Annotation):
     print(f"Annotation polygon parts: {annotation.polygons}")
     ```
 
-    The bounding box is derived from the vertices, so it is read-only.
+    The bounding box is derived from the vertices, so it is read-only. Setting `polygons`
+    recomputes it.
     """
 
     def __init__(self, inner: PolygonAnnotationTable) -> None:
@@ -57,3 +59,13 @@ class PolygonAnnotation(Annotation):
     def polygons(self) -> Polygons:
         """Parts of the polygon, each a list of (x, y) vertices in pixels."""
         return [[(x, y) for x, y in part] for part in self.inner.polygons]
+
+    @polygons.setter
+    def polygons(self, value: Polygons) -> None:
+        session = self.get_object_session()
+        annotations_service.update_annotation_polygons(
+            session=session,
+            annotation_id=self.annotation_base.sample_id,
+            polygons=value,
+        )
+        session.refresh(self.inner)
