@@ -2,6 +2,7 @@ import { QueryClient, QueryObserver } from '@tanstack/svelte-query';
 import { tableFromIPC, type Table } from 'apache-arrow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get2dEmbeddings } from '$lib/api/lightly_studio_local/sdk.gen';
+import { shouldRetryQuery } from '$lib/api/shouldRetryQuery';
 import type { GetEmbeddings2dRequest } from '$lib/api/lightly_studio_local/types.gen';
 import { getEmbeddingsQueryOptions } from './useEmbeddings';
 
@@ -45,7 +46,7 @@ const tableWithLegend = (legend: string) =>
 const newQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 // Retries as the app does, without the delay.
 const newRetryingQueryClient = () =>
-    new QueryClient({ defaultOptions: { queries: { retry: 3, retryDelay: 0 } } });
+    new QueryClient({ defaultOptions: { queries: { retry: shouldRetryQuery, retryDelay: 0 } } });
 
 const observeEmbeddings = () =>
     new QueryObserver(newQueryClient(), getEmbeddingsQueryOptions('collection-1', null));

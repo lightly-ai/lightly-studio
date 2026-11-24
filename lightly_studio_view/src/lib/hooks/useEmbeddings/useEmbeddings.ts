@@ -8,7 +8,7 @@ import {
     type EmbeddingsArrow
 } from '$lib/components/PlotPanel/useArrowData/useArrowData';
 
-import { shouldRetryQuery } from '$lib/api/shouldRetryQuery';
+import { NoRetryError } from '$lib/api/NoRetryError';
 import {
     createQuery,
     hashKey,
@@ -89,17 +89,13 @@ export function getEmbeddingsQueryOptions(
     });
     const fetchPlot = options.queryFn;
     if (typeof fetchPlot !== 'function') throw new Error('The plot query has no query function.');
-    // Set by the latest request, so a failed compute is not retried: the user agreed to one.
-    let isComputeRequest = false;
     const queryFn: typeof fetchPlot = (context) => {
-        isComputeRequest = getIsComputing();
-        if (!isComputeRequest) return fetchPlot(context);
-        return joinRunningCompute(context, fetchPlot, onCompute);
+        if (!getIsComputing()) return fetchPlot(context);
+        return joinRunningCompute(context, fetchPlot, onCompute).catch(failWithoutRetry);
     };
     return queryOptions({
         ...options,
         queryFn,
-        retry: (failureCount, error) => !isComputeRequest && shouldRetryQuery(failureCount, error),
         // The status query refetches on focus and decides whether a compute may start.
         refetchOnWindowFocus: false,
         select: selectEmbeddingsArrow,
@@ -136,6 +132,11 @@ function joinRunningCompute(
     onCompute(promise);
     return promise;
 }
+
+// The user agreed to one compute, so a failed compute is not retried.
+const failWithoutRetry = (error: unknown): never => {
+    throw new NoRetryError(error);
+};
 
 /**
  * Fetches the 2D embeddings for the plot. Call it once per plot: a filter change keeps the
