@@ -185,7 +185,13 @@ class TestDataset:
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
-        annotations_path.write_text(json.dumps(_coco_dict_mixed_crowd()))
+        annotations_path.write_text(
+            json.dumps(
+                _coco_dict_mixed_crowd(
+                    polygon_segmentation=[[1, 1, 5, 1, 5, 5], [6, 6, 9, 6, 9, 9]]
+                )
+            )
+        )
         images_path = _create_valid_samples(tmp_path)
 
         dataset = ImageDataset.create(name="test_dataset")
@@ -206,7 +212,9 @@ class TestDataset:
         tmp_path: Path,
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
-        annotations_path.write_text(json.dumps(_coco_dict_mixed_crowd()))
+        annotations_path.write_text(
+            json.dumps(_coco_dict_mixed_crowd(polygon_segmentation=[[1, 1, 5, 1, 5, 5]]))
+        )
         images_path = _create_valid_samples(tmp_path)
 
         dataset = ImageDataset.create(name="test_dataset")
@@ -826,7 +834,8 @@ class TestDataset:
         assert Path(samples[1].file_path_abs).is_absolute()
 
 
-def _coco_dict_mixed_crowd() -> dict[str, Any]:
+def _coco_dict_mixed_crowd(polygon_segmentation: list[list[float]]) -> dict[str, Any]:
+    """Return a COCO dict with one polygon annotation and one crowd RLE annotation."""
     return {
         "images": [{"id": 1, "file_name": "image1.jpg", "width": 10, "height": 10}],
         "annotations": [
@@ -837,7 +846,7 @@ def _coco_dict_mixed_crowd() -> dict[str, Any]:
                 "bbox": [1, 1, 8, 8],
                 "area": 20,
                 "iscrowd": 0,
-                "segmentation": [[1, 1, 5, 1, 5, 5], [6, 6, 9, 6, 9, 9]],
+                "segmentation": polygon_segmentation,
             },
             {
                 "id": 2,

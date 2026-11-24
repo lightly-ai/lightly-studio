@@ -624,7 +624,12 @@ class TestDataset:
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
-        data_yaml = _write_segmentation_dataset(tmp_path=tmp_path, label_names=["image1"])
+        data_yaml = _write_segmentation_dataset(
+            tmp_path=tmp_path,
+            image_size=(100, 50),
+            label_line="0 0.1 0.1 0.5 0.1 0.5 0.5",
+            label_names=["image1"],
+        )
 
         dataset = ImageDataset.create(name="test_dataset")
         dataset.add_samples_from_yolo(
@@ -645,7 +650,11 @@ class TestDataset:
     ) -> None:
         # image2.jpg has no label file.
         data_yaml = _write_segmentation_dataset(
-            tmp_path=tmp_path, label_names=["image1"], image_names=["image1", "image2"]
+            tmp_path=tmp_path,
+            image_size=(100, 50),
+            label_line="0 0.1 0.1 0.5 0.1 0.5 0.5",
+            label_names=["image1"],
+            image_names=["image1", "image2"],
         )
 
         dataset = ImageDataset.create(name="test_dataset")
@@ -701,7 +710,11 @@ def _create_labels(
 
 
 def _write_segmentation_dataset(
-    tmp_path: Path, label_names: list[str], image_names: list[str] | None = None
+    tmp_path: Path,
+    image_size: tuple[int, int],
+    label_line: str,
+    label_names: list[str],
+    image_names: list[str] | None = None,
 ) -> Path:
     data_yaml = tmp_path / "data.yaml"
     data_yaml.write_text(yaml.dump({"train": "../train/images", "nc": 1, "names": ["class_0"]}))
@@ -710,7 +723,7 @@ def _write_segmentation_dataset(
     images_path.mkdir(parents=True)
     labels_path.mkdir(parents=True)
     for name in image_names or label_names:
-        Image.new("RGB", (100, 50)).save(images_path / f"{name}.jpg")
+        Image.new("RGB", image_size).save(images_path / f"{name}.jpg")
     for name in label_names:
-        (labels_path / f"{name}.txt").write_text("0 0.1 0.1 0.5 0.1 0.5 0.5\n")
+        (labels_path / f"{name}.txt").write_text(f"{label_line}\n")
     return data_yaml
