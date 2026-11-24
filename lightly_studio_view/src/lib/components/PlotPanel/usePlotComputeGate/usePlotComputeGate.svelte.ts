@@ -44,14 +44,19 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
     const freshStatus = $derived(isStatusTrusted ? statusQuery.data : undefined);
     // An error from before this mount stays in the cache until the new request finishes.
     const isStatusError = $derived(statusQuery.isError && statusQuery.isFetchedAfterMount);
-    const view = $derived(
-        getPlotComputeView({
-            status: freshStatus,
+    const view = $derived.by(() => {
+        const input = {
             isStatusError,
             isAxesLayout: getIsAxesLayout(),
             isComputeStarted: startedAt !== null
-        })
-    );
+        };
+        const decidedView = getPlotComputeView({ ...input, status: freshStatus });
+        if (decidedView !== 'checking' || !statusQuery.isFetchedAfterMount) return decidedView;
+        // A changed plot request waits for a new status. A prompt stays on screen meanwhile, so it
+        // does not blink on every filter change: the plot request stays off in both views.
+        const lastView = getPlotComputeView({ ...input, status: statusQuery.data });
+        return lastView === 'prompt' ? 'prompt' : decidedView;
+    });
 
     function startCompute() {
         const collectionId = getCollectionId();
