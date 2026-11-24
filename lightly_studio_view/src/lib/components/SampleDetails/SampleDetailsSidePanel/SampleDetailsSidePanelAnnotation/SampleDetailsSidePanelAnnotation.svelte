@@ -310,8 +310,9 @@
             <!-- An annotation is a sample of its annotation collection, so it is tagged like one.
                  The row reads its own annotation query first, so both it and the sample refetch. -->
             {#if isSelected}
+                <!-- Only the tag buttons take clicks; the gaps still reach the row's select button. -->
                 <TagsEditor
-                    class="pointer-events-auto relative flex flex-col gap-1 pt-2"
+                    class="relative flex flex-col gap-1 pt-2 [&_button]:pointer-events-auto"
                     tags={annotationTags}
                     collectionId={annotation.annotation_collection_id}
                     sampleId={annotation.sample_id}

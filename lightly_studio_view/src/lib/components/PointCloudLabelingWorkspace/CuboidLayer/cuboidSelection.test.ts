@@ -77,6 +77,23 @@ describe('addCuboidSelectionListeners', () => {
         expect(onselect).toHaveBeenCalledExactlyOnceWith(null);
     });
 
+    it('keeps the selection when Escape is pressed in a text field or a popover', () => {
+        cleanup = addCuboidSelectionListeners({ ...defaultParams, activeTool: 'select' });
+        const input = document.createElement('input');
+        const popover = document.createElement('div');
+        popover.setAttribute('role', 'dialog');
+        const button = document.createElement('button');
+        popover.append(button);
+        document.body.append(input, popover);
+
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+        expect(onselect).not.toHaveBeenCalled();
+        input.remove();
+        popover.remove();
+    });
+
     it('leaves selection unchanged while creating cuboids', async () => {
         cleanup = addCuboidSelectionListeners({ ...defaultParams, activeTool: 'create-cuboid' });
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));

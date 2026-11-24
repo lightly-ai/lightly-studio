@@ -41,4 +41,20 @@ describe('AddTagPopover', () => {
 
         expect(screen.queryByText('Create:')).not.toBeInTheDocument();
     });
+
+    it('starts with an empty name after a tag was added', async () => {
+        const onSelect = vi.fn();
+        render(AddTagPopover, {
+            props: { options: [], attachedTagNames: new Set<string>(), busy: false, onSelect }
+        });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Add tag' }));
+        await fireEvent.input(screen.getByPlaceholderText('Tag name…'), {
+            target: { value: 'occluded' }
+        });
+        await fireEvent.click(screen.getByRole('option', { name: /Create:\s*occluded/i }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Add tag' }));
+
+        expect(screen.getByPlaceholderText('Tag name…')).toHaveValue('');
+    });
 });

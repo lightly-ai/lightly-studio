@@ -24,7 +24,8 @@
     function handleSelect(name: string) {
         if (busy) return;
         onSelect(name);
-        open = false;
+        // Closing here does not call onOpenChange, so clear the name for the next tag too.
+        handleOpenChange(false);
     }
 
     const normalizedAttachedTagNames = $derived(

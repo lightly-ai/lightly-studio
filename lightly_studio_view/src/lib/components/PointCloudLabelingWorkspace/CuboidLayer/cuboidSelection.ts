@@ -1,4 +1,5 @@
 import type { WorkspaceTool } from '$lib/components/PointCloudLabelingWorkspace/domain';
+import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
 const DESELECT_TOOLS = new Set<WorkspaceTool>(['select', 'translate', 'rotate']);
 
@@ -44,6 +45,8 @@ export function addCuboidSelectionListeners({
     resetCuboidClicked
 }: CuboidSelectionListenerParams): () => void {
     function onKeyDown(event: KeyboardEvent): void {
+        // Escape in a field or a popover, e.g. the tag picker, closes that and keeps the cuboid.
+        if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
         if (event.key === 'Escape' && DESELECT_TOOLS.has(activeTool)) onselect?.(null);
     }
 
