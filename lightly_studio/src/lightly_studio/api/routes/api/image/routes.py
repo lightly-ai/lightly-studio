@@ -8,6 +8,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 
+from lightly_studio.api.dependencies.identity import IdentityDep
+from lightly_studio.api.dependencies.workflow_scope import scope_to_caller
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.image.count_by_sample_tags import (
     count_by_sample_tags_router,
@@ -58,6 +60,7 @@ class ReadImagesRequest(BaseModel):
 @image_router.post("/collections/{collection_id}/images/list")
 def read_images(
     session: SessionDep,
+    identity: IdentityDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
     body: ReadImagesRequest,
 ) -> ImageViewsWithCount:
@@ -65,12 +68,14 @@ def read_images(
 
     Args:
         session: The database session.
+        identity: The user; a labeler sees only their own batch files.
         collection_id: The ID of the collection to filter samples by.
         body: Optional request body containing text embedding.
 
     Returns:
         A list of filtered samples.
     """
+    body.filters = scope_to_caller(identity=identity, filters=body.filters, empty=ImageFilter)
     order_by = (
         [sort.image_sort_expr_to_order_by(expr) for expr in body.sort_by] if body.sort_by else None
     )

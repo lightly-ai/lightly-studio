@@ -126,6 +126,24 @@ def resolve_sample_filter(
     )
 
 
+def scope_to_assignee(filters: ImageFilter | McapSequenceFilter, email: str) -> None:
+    """Limit an image or MCAP sequence filter to one person's batch files.
+
+    A filter without workflow status options gets all of them, so the person's view is
+    limited whether or not they filter by status. A dataset without a workflow project is
+    not limited.
+
+    Args:
+        filters: The filter to update in place.
+        email: The person whose labeled or reviewed files stay visible.
+    """
+    if filters.sample_filter is None:
+        filters.sample_filter = SampleFilter()
+    if not filters.sample_filter.workflow_states:
+        filters.sample_filter.workflow_states = list(WorkflowStatus)
+    filters.sample_filter.set_workflow_assignee(email=email)
+
+
 def filters_by_workflow_status(filters: GridFilterBase | None) -> bool:
     """Whether a filter has workflow status options."""
     return _workflow_sample_filter(filters=filters) is not None

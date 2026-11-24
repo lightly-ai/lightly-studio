@@ -6,7 +6,7 @@ from uuid import UUID
 import sqlalchemy
 from pydantic import PrivateAttr
 from sqlalchemy.orm import aliased
-from sqlmodel import col, select
+from sqlmodel import col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.core.dataset_query import query_translation
@@ -44,6 +44,8 @@ class SampleFilter(RegionSampleIdsFilter):
     workflow_states: list[WorkflowStatus] | None = None
     _workflow_project_id: UUID | None = PrivateAttr(default=None)
     _workflow_project_is_set: bool = PrivateAttr(default=False)
+    # When set, `workflow_states` matches only batch files this person labels or reviews.
+    _workflow_assignee: str | None = PrivateAttr(default=None)
 
     # Query expression filter
     #
@@ -78,6 +80,18 @@ class SampleFilter(RegionSampleIdsFilter):
         """
         self._workflow_project_id = project_id
         self._workflow_project_is_set = True
+
+    def set_workflow_assignee(self, email: str | None) -> None:
+        """Limit the workflow status filter to the batch files of one person.
+
+        A labeler account sees only the files it labels or reviews: samples in other
+        people's batch files, and samples in no batch, no longer match. A dataset without a
+        workflow project is not limited.
+
+        Args:
+            email: The person's email, or None to match everyone's files.
+        """
+        self._workflow_assignee = email.lower() if email else None
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
         if self.sample_ids:
@@ -191,34 +205,46 @@ class SampleFilter(RegionSampleIdsFilter):
         if not self._workflow_project_is_set:
             raise ValueError("Set the workflow project before filtering by workflow status.")
         options = set(self.workflow_states)
-        if options == set(WorkflowStatus):
+        assignee = self._workflow_assignee
+        if options == set(WorkflowStatus) and assignee is None:
             return query
 
         states = [option.value for option in options if option != WorkflowStatus.NOT_IN_WORKFLOW]
         project_id = self._workflow_project_id
         if project_id is None:
-            # Without a project, every sample is "Not in workflow". No workflow SQL runs.
+            # Without a project, every sample is "Not in workflow", for every user too.
+            # No workflow SQL runs.
             if WorkflowStatus.NOT_IN_WORKFLOW in options:
                 return query
             return query.where(sqlalchemy.false())
 
         conditions: list[sqlalchemy.ColumnElement[bool]] = []
         if states:
-            conditions.append(
-                col(SampleTable.sample_id).in_(
-                    select(batch_file_table.c.sample_id).where(
-                        batch_file_table.c.project_id == project_id,
-                        batch_file_table.c.state.in_(states),
+            batch_files = [
+                batch_file_table.c.project_id == project_id,
+                batch_file_table.c.state.in_(states),
+            ]
+            if assignee is not None:
+                batch_files.append(
+                    sqlalchemy.or_(
+                        func.lower(batch_file_table.c.labeler) == assignee,
+                        func.lower(batch_file_table.c.reviewer) == assignee,
                     )
                 )
+            conditions.append(
+                col(SampleTable.sample_id).in_(
+                    select(batch_file_table.c.sample_id).where(*batch_files)
+                )
             )
-        if WorkflowStatus.NOT_IN_WORKFLOW in options:
+        if WorkflowStatus.NOT_IN_WORKFLOW in options and assignee is None:
             conditions.append(
                 ~sqlalchemy.exists().where(
                     batch_file_table.c.project_id == project_id,
                     batch_file_table.c.sample_id == col(SampleTable.sample_id),
                 )
             )
+        if not conditions:
+            return query.where(sqlalchemy.false())
         return query.where(sqlalchemy.or_(*conditions))
 
     def _apply_query_expr_filter(

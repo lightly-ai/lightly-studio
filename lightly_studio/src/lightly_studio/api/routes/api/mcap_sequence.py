@@ -8,6 +8,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Path
 from pydantic import BaseModel, Field
 
+from lightly_studio.api.dependencies.identity import IdentityDep
+from lightly_studio.api.dependencies.workflow_scope import scope_to_caller
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -58,6 +60,7 @@ class ReadMcapSequenceCountAnnotationsRequest(BaseModel):
 )
 def list_mcap_sequences(
     session: SessionDep,
+    identity: IdentityDep,
     collection_id: Annotated[UUID, Path(title="Collection Id")],
     pagination: Annotated[PaginatedWithCursor, Depends()],
     body: ReadMcapSequencesRequest | None = None,
@@ -66,6 +69,7 @@ def list_mcap_sequences(
 
     Args:
         session: The database session.
+        identity: The user; a labeler sees only their own batch files.
         collection_id: The ID of the collection to fetch sequences for.
         pagination: Pagination parameters including offset (cursor) and limit.
         body: Optional filters and text embedding to search for.
@@ -73,11 +77,16 @@ def list_mcap_sequences(
     Returns:
         A paginated list of MCAP sequences with total count and next cursor.
     """
+    filters = scope_to_caller(
+        identity=identity,
+        filters=body.filter if body is not None else None,
+        empty=McapSequenceFilter,
+    )
     return mcap_group_sequence_resolver.get_all_by_collection_id(
         session=session,
         collection_id=collection_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
-        filters=body.filter if body is not None else None,
+        filters=filters,
         text_embedding=body.text_embedding if body is not None else None,
     )
 

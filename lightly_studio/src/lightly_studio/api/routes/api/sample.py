@@ -8,6 +8,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field
 
+from lightly_studio.api.dependencies.identity import IdentityDep
+from lightly_studio.api.dependencies.workflow_scope import scope_adjacent_request
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
@@ -121,6 +123,7 @@ def remove_tag_from_sample(
 @sample_router.post("/samples/{sample_id}/adjacents")
 def get_adjacent_samples(
     session: SessionDep,
+    identity: IdentityDep,
     sample_id: Annotated[UUID, Path(title="Sample Id", description="The ID of the sample")],
     body: AdjacentRequest,
 ) -> AdjacentResultView | None:
@@ -130,10 +133,12 @@ def get_adjacent_samples(
         session: The database session.
         sample_id: The ID of the sample to get adjacents for.
         body: Request body with sample type, filters, and optional text embedding.
+        identity: The user; a labeler steps only through their own batch files.
 
     Returns:
         The adjacent samples with previous/next IDs and position.
     """
+    scope_adjacent_request(identity=identity, request=body)
     return sample_services.get_adjacent_samples(
         session=session,
         sample_id=sample_id,
