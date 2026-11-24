@@ -14,9 +14,7 @@ class Replaceable:
     """Each dependency that a caller of the app may replace, with its default.
 
     A field is one dependency. Its default is the function that routes use in
-    `Depends(...)`. A deployment passes a replacement for each dependency that it changes.
-    FastAPI then calls the replacement instead of the default, and resolves the
-    `Depends(...)` parameters of the replacement.
+    `Depends(...)`.
 
     Attributes:
         get_identity: Returns the user that sends a request. The default returns the local
