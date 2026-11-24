@@ -1,5 +1,5 @@
-import { fromStore, writable } from 'svelte/store';
 import { untrack } from 'svelte';
+import { SvelteMap } from 'svelte/reactivity';
 import { useEmbeddingPlotStatus, useRefetchEmbeddingPlotStatus } from '$lib/hooks';
 import { getPlotComputeView, isPlotRequestEnabled, type PlotComputeView } from '../plotComputeGate';
 
@@ -20,7 +20,7 @@ interface UsePlotComputeGateReturn {
 }
 
 // Module scope, so a compute that runs on keeps its start time when the panel closes and opens.
-const computeStartTimes = writable<Record<string, number>>({});
+const computeStartTimes = new SvelteMap<string, number>();
 // Two computes of one collection can run at once, for example after a filter change.
 const pendingComputes = new Map<string, Set<Promise<unknown>>>();
 
@@ -28,9 +28,8 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
     const { getCollectionId, getIsAxesLayout, getPlotRequestKey } = params;
     const statusQuery = useEmbeddingPlotStatus(getCollectionId);
     const refetchStatus = useRefetchEmbeddingPlotStatus();
-    const startTimes = fromStore(computeStartTimes);
 
-    const startedAt = $derived(startTimes.current[getCollectionId()] ?? null);
+    const startedAt = $derived(computeStartTimes.get(getCollectionId()) ?? null);
     const plotRequestKey = $derived(getPlotRequestKey());
     // Embeddings can change while the panel is open, so a new plot request waits for a new status.
     let checkedPlotRequestKey = $state<string | null>(untrack(getPlotRequestKey));
@@ -56,12 +55,11 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
 
     function startCompute() {
         const collectionId = getCollectionId();
-        computeStartTimes.update((times) =>
-            collectionId in times ? times : { ...times, [collectionId]: Date.now() }
-        );
+        if (!computeStartTimes.has(collectionId)) computeStartTimes.set(collectionId, Date.now());
     }
 
-    // The compute can outlive the panel, so its promise, not an effect, ends it.
+    // The compute can outlive the panel, so its promise, not an effect, ends it. Closing the panel
+    // does not reject it: `useEmbeddings` gives every compute an `AbortController` of its own.
     function trackCompute(compute: Promise<unknown>) {
         startCompute();
         const collectionId = getCollectionId();
@@ -126,8 +124,12 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
     };
 }
 
+/** Forgets every tracked compute. Tests call it, because the tracking is module state. */
+export function resetComputeTracking() {
+    computeStartTimes.clear();
+    pendingComputes.clear();
+}
+
 function clearComputeStart(collectionId: string) {
-    computeStartTimes.update((times) =>
-        Object.fromEntries(Object.entries(times).filter(([id]) => id !== collectionId))
-    );
+    computeStartTimes.delete(collectionId);
 }
