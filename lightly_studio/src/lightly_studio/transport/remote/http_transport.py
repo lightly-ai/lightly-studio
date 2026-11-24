@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import httpx
 
-from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.caption_transport import CaptionTransport
 from lightly_studio.transport.compute_transport import ComputeTransport
 from lightly_studio.transport.export_transport import ExportTransport
 from lightly_studio.transport.metadata_transport import MetadataTransport
+from lightly_studio.transport.remote.http_annotation_transport import HttpAnnotationTransport
 from lightly_studio.transport.remote.http_collection_transport import HttpCollectionTransport
 from lightly_studio.transport.remote.http_ingestion_transport import HttpIngestionTransport
 from lightly_studio.transport.remote.http_sample_transport import HttpSampleTransport
@@ -28,6 +28,7 @@ class HttpTransport:
             client: The HTTP client. Its base URL is the Studio backend, and it sends the
                 authorization header.
         """
+        self.annotations = HttpAnnotationTransport(client=client)
         self.collections = HttpCollectionTransport(client=client)
         self.samples = HttpSampleTransport(client=client)
         self.tags = HttpTagTransport(client=client)
@@ -42,11 +43,6 @@ class HttpTransport:
     def captions(self) -> CaptionTransport:
         """The transport for captions."""
         raise AttributeError("The HTTP caption transport does not exist yet.")
-
-    @property
-    def annotations(self) -> AnnotationTransport:
-        """The transport for annotations."""
-        raise AttributeError("The HTTP annotation transport does not exist yet.")
 
     @property
     def compute(self) -> ComputeTransport:
