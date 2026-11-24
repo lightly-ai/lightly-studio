@@ -34,6 +34,31 @@ from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 
 
+class _InstanceSegmentationInput(InstanceSegmentationInput):
+    def __init__(
+        self,
+        categories: list[Category],
+        images: list[Image],
+        labels: list[ImageInstanceSegmentation],
+    ) -> None:
+        self._categories = categories
+        self._images = images
+        self._labels = labels
+
+    @staticmethod
+    def add_cli_arguments(parser: ArgumentParser) -> None:
+        raise NotImplementedError
+
+    def get_categories(self) -> Iterable[Category]:
+        return self._categories
+
+    def get_images(self) -> Iterable[Image]:
+        return self._images
+
+    def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
+        return self._labels
+
+
 def test_skip_and_warn_unreadable_image__warns_on_image_dimension_error(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -205,31 +230,6 @@ def _get_labelformat_input_obj_det(filename: str) -> LabelformatObjectDetectionI
         images=[image],
         labels=[ImageObjectDetection(image=image, objects=objects)],
     )
-
-
-class _InstanceSegmentationInput(InstanceSegmentationInput):
-    def __init__(
-        self,
-        categories: list[Category],
-        images: list[Image],
-        labels: list[ImageInstanceSegmentation],
-    ) -> None:
-        self._categories = categories
-        self._images = images
-        self._labels = labels
-
-    @staticmethod
-    def add_cli_arguments(parser: ArgumentParser) -> None:
-        raise NotImplementedError
-
-    def get_categories(self) -> Iterable[Category]:
-        return self._categories
-
-    def get_images(self) -> Iterable[Image]:
-        return self._images
-
-    def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
-        return self._labels
 
 
 def _get_labelformat_input_instance_segmentation(
