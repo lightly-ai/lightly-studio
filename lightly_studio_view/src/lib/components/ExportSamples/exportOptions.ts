@@ -4,6 +4,7 @@ export type ExportType =
     | 'object_detections_coco'
     | 'object_detections_yolo'
     | 'segmentation'
+    | 'instance_segmentation_yolo'
     | 'captions'
     | 'youtube_vis_segmentation'
     | 'semantic_segmentations'
@@ -19,7 +20,8 @@ const imageExportOptions: ExportOption[] = [
     { value: 'classifications', label: 'Image Classifications (CSV)' },
     { value: 'object_detections_coco', label: 'Image Object Detections (COCO)' },
     { value: 'object_detections_yolo', label: 'Image Object Detections (YOLO)' },
-    { value: 'segmentation', label: 'Image Segmentation Mask (COCO)' },
+    { value: 'segmentation', label: 'Instance segmentation (COCO)' },
+    { value: 'instance_segmentation_yolo', label: 'Instance segmentation (YOLO)' },
     { value: 'semantic_segmentations', label: 'Image Segmentation Mask (PASCAL VOC)' },
     { value: 'captions', label: 'Image Captions' }
 ];
