@@ -135,6 +135,8 @@ class DatasetExport:
     ) -> None:
         """Exports polygons and segmentation masks to a COCO format JSON file.
 
+        Polygons are written with `iscrowd=0`, segmentation masks as RLE with `iscrowd=1`.
+
         Args:
             output_json: The path to the output COCO JSON file. If not provided,
                 defaults to "coco_export.json" in the current working directory.
