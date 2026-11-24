@@ -135,6 +135,8 @@ class DatasetExport:
     ) -> None:
         """Exports polygons and segmentation masks to a COCO format JSON file.
 
+        Polygons are written with `iscrowd=0`, segmentation masks as RLE with `iscrowd=1`.
+
         Args:
             output_json: The path to the output COCO JSON file. If not provided,
                 defaults to "coco_export.json" in the current working directory.
@@ -162,8 +164,8 @@ class DatasetExport:
         Creates a folder with a ``data.yaml`` dataset config and a ``labels``
         subfolder containing one ``.txt`` file per image with normalized
         ``<class_id> <x1> <y1> <x2> <y2> ...`` rows. A polygon with several parts is
-        written as one row. YOLO supports only polygons, so segmentation masks are
-        skipped with a warning.
+        written as one row, with the parts joined by zero-width bridges. YOLO supports
+        only polygons, so segmentation masks are skipped with a warning.
 
         Args:
             output_folder: The folder where YOLO files are written.
