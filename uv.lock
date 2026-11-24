@@ -2223,7 +2223,7 @@ wheels = [
 [[package]]
 name = "labelformat"
 version = "0.1.17"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/lightly-ai/labelformat.git?rev=0601ca3#0601ca32dab620e59995a05016d5da661c85549b" }
 dependencies = [
     { name = "fsspec" },
     { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -2233,10 +2233,6 @@ dependencies = [
     { name = "pydantic-xml" },
     { name = "pyyaml" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/83/b7174afba0011e4191bebc98b20de0fea436ae2562af26b8ac2a58cbd105/labelformat-0.1.17.tar.gz", hash = "sha256:1b9014bbbb8afa075e65e732a4884f8df535418d7b12e4cf0c769475107c9697", size = 41772, upload-time = "2026-07-27T08:30:01.24Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/bb/4b6e2eb736ce74f66a1ee16253badaba12cc334d74bd7adb707a4a4db7d2/labelformat-0.1.17-py3-none-any.whl", hash = "sha256:10247f932cb541157aaf2e40d58a374092365adcdb871283a3badbeb48abf715", size = 61388, upload-time = "2026-07-27T08:29:59.889Z" },
 ]
 
 [[package]]
@@ -2488,7 +2484,7 @@ requires-dist = [
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "jinja2", specifier = ">=3.1.0" },
-    { name = "labelformat", specifier = ">=0.1.17" },
+    { name = "labelformat", git = "https://github.com/lightly-ai/labelformat.git?rev=0601ca3" },
     { name = "lightly-mundig", specifier = "==0.1.17" },
     { name = "lightly-studio-serve", editable = "lightly_studio_serve" },
     { name = "mcap", specifier = ">=1.6.0,<2.0" },
