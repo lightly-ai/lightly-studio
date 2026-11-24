@@ -31,8 +31,10 @@
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
-    import { useAnnotationTarget } from '$lib/hooks';
-    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
+    import { useAnnotationTarget, useDeleteAnnotationWithUndo } from '$lib/hooks';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { isDeleteKey, isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
         sampleId,
@@ -100,6 +102,10 @@
 
     const { selectAnnotation } = useAnnotationSelection();
 
+    const { user } = useAuth();
+    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
+    const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => collectionId);
+
     let isPanModeEnabled = $state(false);
 
     let annotationsIdsToHide = $state<Set<string>>(new Set());
@@ -131,10 +137,34 @@
             case ' ':
                 handleSpaceKeyDown(event);
                 break;
+            case 'Delete':
+            case 'Backspace':
+                handleDeleteKeyDown(event);
+                break;
         }
 
         // Always pass to the hide annotations handler
         handleKeyEvent(event);
+    };
+
+    /** Delete or Backspace deletes the selected annotation while editing. */
+    const handleDeleteKeyDown = async (event: KeyboardEvent) => {
+        if (!isDeleteKey(event) || !$isEditingMode || !canEdit) return;
+        if (annotationLabelContext.isOnAnnotationDetailsView) return;
+        if (
+            sampleDetailsToolbarContext.status !== 'cursor' &&
+            sampleDetailsToolbarContext.status !== 'drag'
+        )
+            return;
+        const annotationId = annotationLabelContext.annotationId;
+        const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
+        if (!annotation) return;
+
+        event.preventDefault();
+        const isDeleted = await deleteWithUndo(annotation, refetch);
+        if (isDeleted && annotationLabelContext.annotationId === annotationId) {
+            annotationLabelContext.annotationId = null;
+        }
     };
 
     /** Space toggles the selection, or starts pan mode while editing. */
