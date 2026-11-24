@@ -107,7 +107,12 @@ export const cocoDataset = {
         person: {
             name: 'person',
             sampleCount: 61,
-            annotationCount: 67
+            annotationCount: 67,
+            /**
+             * Samples with a person segmentation mask. Only crowd annotations (`iscrowd=1`)
+             * load as segmentation masks, the others load as polygons.
+             */
+            segmentationMaskSampleCount: 8
         },
         tie: {
             name: 'tie',

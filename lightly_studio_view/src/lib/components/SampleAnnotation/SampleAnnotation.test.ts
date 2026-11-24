@@ -165,6 +165,40 @@ describe('SampleAnnotation', () => {
         expect(screen.getByTestId('svg-annotation-text')).not.toHaveTextContent('(');
     });
 
+    it('shows the box of a polygon without resize handles in edit mode', () => {
+        const annotation = {
+            ...BASE_ANNOTATION_FIELDS,
+            sample_id: 'polygon-1',
+            annotation_type: 'polygon',
+            annotation_label: { annotation_label_name: 'car' },
+            polygon_details: {
+                x: 1,
+                y: 2,
+                width: 10,
+                height: 12,
+                polygons: [
+                    [
+                        [1, 2],
+                        [11, 2],
+                        [11, 14]
+                    ]
+                ]
+            }
+        } satisfies ComponentProps<typeof SampleAnnotation>['annotation'];
+
+        render(SampleAnnotation, {
+            props: {
+                annotation,
+                imageWidth: 100,
+                isResizable: true,
+                constraintBox: { x: 0, y: 0, width: 100, height: 100 }
+            }
+        });
+
+        expect(screen.getByTestId('annotation_box')).toBeInTheDocument();
+        expect(screen.queryByTestId('resize-handle-nw')).not.toBeInTheDocument();
+    });
+
     it('keeps object-detection label visible when bounding boxes are hidden', () => {
         render(SampleAnnotation, {
             props: {
