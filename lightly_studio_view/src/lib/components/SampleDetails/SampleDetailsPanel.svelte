@@ -1,13 +1,18 @@
 <script lang="ts">
     import { afterNavigate } from '$app/navigation';
     import { page } from '$app/state';
-    import { Card, CardContent, SampleDetailsSidePanel } from '$lib/components';
-    import { ImageAdjustments } from '$lib/components/ImageAdjustments';
+    import {
+        Card,
+        CardContent,
+        SampleDetailsSidePanel,
+        SidePanelToggleButton
+    } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { untrack, type Snippet } from 'svelte';
 
+    import { cn } from '$lib/utils/shadcn';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
@@ -70,10 +75,9 @@
         toggleSampleSelection,
         clearReversibleActions,
         lastAnnotationBrushSize,
-        imageBrightness,
-        imageContrast,
-        maskOpacity,
-        toggleSampleAnnotationCropSelection
+        toggleSampleAnnotationCropSelection,
+        isSampleDetailsSidePanelCollapsed,
+        openSampleDetailsSidePanel
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
@@ -135,6 +139,13 @@
 
     /** Space toggles the selection, or starts pan mode while editing. */
     const handleSpaceKeyDown = (event: KeyboardEvent) => {
+        // Opted-out buttons, such as the display adjustments trigger, open on Space natively.
+        if (
+            event.target instanceof HTMLElement &&
+            event.target.closest('[data-ignore-space-shortcut]')
+        )
+            return;
+
         // Space would scroll the page.
         event.preventDefault();
         event.stopPropagation();
@@ -240,6 +251,13 @@
             sampleDetailsToolbarContext.brush.mode = 'brush';
         }
     });
+
+    // Auto-open the side panel when an annotation is created while collapsed.
+    $effect(() => {
+        if (annotationLabelContext.lastCreatedAnnotationId) {
+            openSampleDetailsSidePanel();
+        }
+    });
 </script>
 
 {#if sample}
@@ -248,13 +266,7 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            {#if $isEditingMode}
-                <ImageAdjustments
-                    bind:brightness={$imageBrightness}
-                    bind:contrast={$imageContrast}
-                    bind:maskOpacity={$maskOpacity}
-                />
-            {/if}
+            <SidePanelToggleButton />
         </div>
         <Separator class="bg-border-hard" />
 
@@ -296,7 +308,12 @@
                     </CardContent>
                 </Card>
             </div>
-            <div class="relative w-[375px]">
+            <div
+                class={cn(
+                    'relative w-[375px]',
+                    $isSampleDetailsSidePanelCollapsed ? 'hidden' : 'flex'
+                )}
+            >
                 {#if sidePanelItem}
                     {@render sidePanelItem()}
                 {:else}

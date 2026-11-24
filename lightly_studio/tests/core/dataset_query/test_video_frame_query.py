@@ -28,6 +28,7 @@ from lightly_studio.models.query_expr import (
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
+    PolygonMatchExpr,
     QueryExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
@@ -253,13 +254,28 @@ class TestVideoFrameQuery:
                     )
                 ),
             ),
+            (
+                AnnotationType.POLYGON,
+                PolygonMatchExpr(
+                    subexpr=StringExpr(
+                        field=FieldRef(table="polygon", name="source"),
+                        operator=EqualityComparisonOperator.EQ,
+                        value="model",
+                    )
+                ),
+            ),
         ],
     )
     def test_get__annotation_types_and_sources(
         self,
         db_session: Session,
         annotation_type: AnnotationType,
-        expression: ClassificationMatchExpr | ObjectDetectionMatchExpr | SegmentationMaskMatchExpr,
+        expression: (
+            ClassificationMatchExpr
+            | ObjectDetectionMatchExpr
+            | SegmentationMaskMatchExpr
+            | PolygonMatchExpr
+        ),
     ) -> None:
         collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
         label = create_annotation_label(
@@ -281,6 +297,7 @@ class TestVideoFrameQuery:
                         annotation_label_id=label.annotation_label_id,
                         annotation_type=annotation_type,
                         segmentation_mask=[0, 400],
+                        polygons=[[(0.0, 0.0), (20.0, 0.0), (20.0, 20.0)]],
                     )
                     for sample_id in video.frame_sample_ids
                 ],
