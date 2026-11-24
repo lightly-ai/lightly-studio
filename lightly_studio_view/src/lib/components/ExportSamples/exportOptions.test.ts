@@ -36,11 +36,11 @@ describe('export options', () => {
         const options = getExportOptions('image');
         expect(options).toContainEqual({
             value: 'segmentation',
-            label: 'Instance segmentation (COCO)'
+            label: 'Image Instance Segmentation (COCO)'
         });
         expect(options).toContainEqual({
             value: 'instance_segmentation_yolo',
-            label: 'Instance segmentation (YOLO)'
+            label: 'Image Instance Segmentation (YOLO)'
         });
         expect(options.some((option) => option.label.includes('Segmentation Mask (COCO)'))).toBe(
             false
