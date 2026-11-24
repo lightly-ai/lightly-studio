@@ -17,7 +17,8 @@ vi.mock('$lib/components', async () => {
         SegmentTags: stub,
         VideoDetailsNavigation: stub,
         VideoFrameDetails: stub,
-        VideoPlayer: stub
+        VideoPlayer: stub,
+        SidePanelToggleButton: stub
     };
 });
 vi.mock('../VideoSampleMetadata/VideoSampleMetadata.svelte', async () => ({
