@@ -48,6 +48,7 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     framesDetails: `${COLLECTION_BASE_ROUTE}/frames/[sample_id]`,
     videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`,
     groups: `${COLLECTION_BASE_ROUTE}/groups`,
+    evaluationCompare: `${COLLECTION_BASE_ROUTE}/evaluation/compare`,
     mcapSequences: `${MCAP_SEQUENCES_BASE_ROUTE}`,
     pointCloudLabeling: `${MCAP_SEQUENCES_BASE_ROUTE}/[sequence_id]`
 };
@@ -58,6 +59,10 @@ export const isSampleDetailsRoute = (routeId: string | null): boolean => {
 
 export const isAnnotationDetailsRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.annotationDetails : false;
+};
+
+export const isEvaluationCompareRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.evaluationCompare : false;
 };
 
 export const isImagesRoute = (routeId: string | null): boolean => {
@@ -178,6 +183,13 @@ export const routes = {
                 fromVideos ? { from_video: true } : undefined
             );
         },
+        evaluationCompare: (
+            datasetId: string,
+            collectionType: string,
+            collectionId: string,
+            runIds: string[]
+        ) =>
+            `/datasets/${datasetId}/${collectionType}/${collectionId}/evaluation/compare?runs=${runIds.map(encodeURIComponent).join(',')}`,
         groups: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/groups`,
         pointCloudLabeling: ({
@@ -256,6 +268,12 @@ export const routeHelpers = {
             isFromVideos
         );
     },
+    toEvaluationCompare: (
+        datasetId: string,
+        collectionType: string,
+        collectionId: string,
+        runIds: string[]
+    ) => routes.collection.evaluationCompare(datasetId, collectionType, collectionId, runIds),
     toGroups: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.groups(datasetId, collectionType, collectionId);
     },

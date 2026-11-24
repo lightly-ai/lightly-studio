@@ -43,8 +43,40 @@ const COMPARABLE_TASK_TYPES: readonly string[] = [
     'classification'
 ];
 const MINIMUM_RUN_COUNT = 2;
+const METRIC_DECIMALS = 3;
+const MISSING_VALUE = '—';
 const IOU_THRESHOLD_50 = '0.5';
 const IOU_THRESHOLD_75 = '0.75';
+
+export const LEADERBOARD_METRIC_LABELS: Record<LeaderboardMetric, string> = {
+    map: 'mAP',
+    map50: 'mAP@50',
+    map75: 'mAP@75',
+    precision: 'Precision',
+    recall: 'Recall',
+    f1: 'F1',
+    accuracy: 'Accuracy'
+};
+
+export const PER_CLASS_METRIC_LABELS: Record<PerClassMetric, string> = {
+    average_precision: 'AP',
+    precision: 'Precision',
+    recall: 'Recall',
+    f1: 'F1'
+};
+
+/** Metrics that need a run with average precision. */
+export const AVERAGE_PRECISION_METRICS: readonly LeaderboardMetric[] = ['map', 'map50', 'map75'];
+
+/** Metrics that depend on the IoU threshold and class matching of a run. */
+export const MATCHING_DEPENDENT_METRICS: readonly LeaderboardMetric[] = [
+    'precision',
+    'recall',
+    'f1'
+];
+
+export const formatMetricValue = (value: number | null): string =>
+    value === null ? MISSING_VALUE : value.toFixed(METRIC_DECIMALS);
 
 export const isComparableTaskType = (taskType: string): taskType is ComparableTaskType =>
     COMPARABLE_TASK_TYPES.includes(taskType);

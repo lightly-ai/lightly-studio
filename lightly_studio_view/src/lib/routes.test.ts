@@ -3,6 +3,7 @@ import {
     routes,
     routeHelpers,
     APP_ROUTES,
+    isEvaluationCompareRoute,
     isImagesRoute,
     isAnnotationsRoute,
     isVideosRoute,
@@ -32,6 +33,11 @@ describe('routes', () => {
     });
 
     describe('route classification', () => {
+        it('detects the evaluation compare route', () => {
+            expect(isEvaluationCompareRoute(APP_ROUTES.evaluationCompare)).toBe(true);
+            expect(isEvaluationCompareRoute(APP_ROUTES.images)).toBe(false);
+        });
+
         describe('collection-grid routes', () => {
             it('images route is classified as a grid route', () => {
                 expect(isImagesRoute(APP_ROUTES.images)).toBe(true);
@@ -89,6 +95,17 @@ describe('routes', () => {
         const testDatasetId = 'root-123';
         const testCollectionType = 'image';
         const testCollectionId = '123';
+
+        it('should generate the evaluation compare route with the run IDs', () => {
+            expect(
+                routeHelpers.toEvaluationCompare(
+                    testDatasetId,
+                    testCollectionType,
+                    testCollectionId,
+                    ['run-1', 'run-2']
+                )
+            ).toBe('/datasets/root-123/image/123/evaluation/compare?runs=run-1,run-2');
+        });
 
         it('should generate correct images route', () => {
             expect(routeHelpers.toImages(testDatasetId, testCollectionType, testCollectionId)).toBe(

@@ -49,6 +49,7 @@ export {
     useEvaluationRuns,
     useInvalidateEvaluationRunsQueries
 } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
+export { useEvaluationRunsMetrics } from '$lib/hooks/useEvaluationRunsMetrics/useEvaluationRunsMetrics';
 export { useEvaluationConfusionMatrix } from '$lib/hooks/useEvaluationConfusionMatrix/useEvaluationConfusionMatrix.svelte';
 export { useImageOrderBy } from '$lib/hooks/useImageOrderBy/useImageOrderBy';
 export {

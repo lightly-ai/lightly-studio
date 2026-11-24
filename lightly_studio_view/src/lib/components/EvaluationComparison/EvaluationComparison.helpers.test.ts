@@ -7,6 +7,7 @@ import type {
 import {
     bestIndices,
     compareRuns,
+    formatMetricValue,
     leaderboardColumns,
     leaderboardValue,
     perClassMetrics,
@@ -234,5 +235,12 @@ describe('bestIndices', () => {
 
     it('returns no index when every value is missing', () => {
         expect(bestIndices([null, null])).toEqual([]);
+    });
+});
+
+describe('formatMetricValue', () => {
+    it('shows three decimals, or a dash for a missing value', () => {
+        expect(formatMetricValue(0.51234)).toBe('0.512');
+        expect(formatMetricValue(null)).toBe('—');
     });
 });

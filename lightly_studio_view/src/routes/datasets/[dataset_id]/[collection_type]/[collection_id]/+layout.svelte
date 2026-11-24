@@ -46,6 +46,7 @@
         isImagesRoute,
         isMcapSequencesRoute,
         isPointCloudLabelingRoute,
+        isEvaluationCompareRoute,
         isVideoFramesRoute,
         isVideosRoute,
         isGroupsRoute,
@@ -170,6 +171,7 @@
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
     const isPointClouds = $derived(isMcapSequencesRoute(page.route.id));
     const isPointCloudLabeling = $derived(isPointCloudLabelingRoute(page.route.id));
+    const isEvaluationCompare = $derived(isEvaluationCompareRoute(page.route.id));
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);
     const supportsQuery = $derived(isImages || isVideos);
@@ -695,7 +697,7 @@
         {datasetId}
         sampleCount={collection.total_sample_count}
     />
-    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails || isPointCloudLabeling}
+    {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails || isPointCloudLabeling || isEvaluationCompare}
         {@render children()}
     {:else}
         <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
