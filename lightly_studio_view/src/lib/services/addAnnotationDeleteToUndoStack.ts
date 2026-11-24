@@ -39,6 +39,7 @@ const buildRestoreInput = (
     annotation_collection_name: getSourceName(annotation, sources),
     ...getRectangle(annotation),
     segmentation_mask: annotation.segmentation_details?.segmentation_mask,
+    polygons: annotation.polygon_details?.polygons,
     cuboid_3d: annotation.cuboid_3d_details,
     object_track_id: annotation.object_track_id
 });

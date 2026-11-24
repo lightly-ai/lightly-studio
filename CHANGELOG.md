@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- The GUI shows polygon annotations as boxes. Polygons can't be edited in the GUI yet.
 - Export polygons to YOLO with the new "Image Instance Segmentation (YOLO)" export.
 - Python SDK: Export polygons to YOLO with `to_yolo_instance_segmentation`.
 - Filter videos by temporal events in the query editor, for example `event(class_name = "run" AND start_time_s < 5)`.

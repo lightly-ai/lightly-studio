@@ -43,10 +43,11 @@
 
     if (
         !untrack(() => annotation.object_detection_details) &&
-        !untrack(() => annotation.segmentation_details)
+        !untrack(() => annotation.segmentation_details) &&
+        !untrack(() => annotation.polygon_details)
     ) {
         throw new Error(
-            'Unsupported annotation: Only annotations with object_detection_details or segmentation_details are supported. Please check the annotation data.'
+            'Unsupported annotation: Only annotations with object_detection_details, segmentation_details or polygon_details are supported. Please check the annotation data.'
         );
     }
 
