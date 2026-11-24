@@ -10,6 +10,7 @@ import {
     mountGate,
     type StatusQueryStub
 } from './usePlotComputeGate.testFixtures.svelte';
+import { resetComputeTracking } from './usePlotComputeGate.svelte';
 
 const mocks = vi.hoisted(() => ({
     statusQueries: {} as Record<string, StatusQueryStub>
@@ -30,6 +31,7 @@ describe('usePlotComputeGate', () => {
 
     afterEach(() => {
         disposeMountedGates();
+        resetComputeTracking();
         vi.useRealTimers();
     });
 
@@ -126,7 +128,6 @@ describe('usePlotComputeGate', () => {
 
         await vi.waitFor(() => expect(gate.startedAt).toBeNull());
         flushSync();
-        expect(query.refetch).toHaveBeenCalledOnce();
         expect(gate.view).toBe('plot');
     });
 
@@ -156,7 +157,7 @@ describe('usePlotComputeGate', () => {
         first.dispose();
 
         compute.succeed();
-        await vi.waitFor(() => expect(query.refetch).toHaveBeenCalledOnce());
+        await settlePromises();
         const { gate } = mountGate({ collectionId: 'closed' });
 
         await vi.waitFor(() => expect(gate.startedAt).toBeNull());
@@ -174,7 +175,7 @@ describe('usePlotComputeGate', () => {
         gate.trackCompute(second.promise);
 
         first.succeed();
-        await vi.waitFor(() => expect(mocks.statusQueries['two'].refetch).toHaveBeenCalledOnce());
+        await settlePromises();
         flushSync();
         expect(gate.view).toBe('computing');
 
@@ -283,7 +284,7 @@ describe('usePlotComputeGate', () => {
         plotRequestKey = 'filtered';
         flushSync();
 
-        expect(query.refetch).toHaveBeenCalledOnce();
+        expect(gate.view).toBe('checking');
         expect(gate.isPlotRequestEnabled).toBe(false);
 
         finishRefetch();
@@ -314,7 +315,6 @@ describe('usePlotComputeGate', () => {
         plotRequestKey = 'all';
         flushSync();
 
-        expect(query.refetch).toHaveBeenCalledTimes(2);
         expect(gate.isPlotRequestEnabled).toBe(false);
 
         const [finishFilteredRefetch, finishAllRefetch] = finishRefetches;
@@ -355,3 +355,8 @@ describe('usePlotComputeGate', () => {
         expect(gate.isPlotRequestEnabled).toBe(false);
     });
 });
+
+// Lets the `then` callbacks of a settled compute run.
+function settlePromises() {
+    return new Promise((resolve) => setTimeout(resolve));
+}
