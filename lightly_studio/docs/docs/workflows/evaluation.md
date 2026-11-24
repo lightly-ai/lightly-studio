@@ -29,6 +29,30 @@ Evaluation results are accessible in the **Evaluation** panel of the GUI once a 
     - **Red off-diagonal cells** — the model is confusing those two classes.
     - Use the red cells to decide which samples to inspect next in the grid.
 
+### Compare evaluation runs
+
+Compare two or more runs side by side to select the best model:
+
+1. In the **Evaluation** panel, select the check box of each run to compare. All runs must have the same task type.
+2. Click **Compare**.
+
+The comparison page shows:
+
+- **Leaderboard**: one row for each run, ranked by the best metric. Object detection shows mAP, mAP@50, mAP@75, precision, recall, and F1. Instance segmentation shows precision, recall, and F1. Classification shows accuracy. The best value in each column is bold.
+- **Per annotation class**: a table and a bar chart with one value for each annotation class and run. Select AP, precision, recall, or F1.
+
+mAP is available only for object detection runs with **Compute average precision** turned on. This setting is on by default in **New evaluation**. For an older run, turn it on in the run settings and rerun.
+
+!!! warning "Runs that are not comparable"
+
+    The page shows a warning when the runs:
+
+    - use different ground truth annotation sources,
+    - evaluate different images,
+    - use a different IoU threshold or class matching. This changes precision, recall, and F1, but not mAP.
+
+    A stale run has a **Stale** badge. Its annotations changed after the evaluation.
+
 ## Model Evaluation in Python
 
 ### Creating an evaluation run

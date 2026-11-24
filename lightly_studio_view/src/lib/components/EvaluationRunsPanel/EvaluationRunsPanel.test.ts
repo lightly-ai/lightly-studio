@@ -12,10 +12,6 @@ vi.mock(
     }
 );
 
-const mocks = vi.hoisted(() => ({ goto: vi.fn() }));
-
-vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
-
 vi.mock('./TriggerEvaluationDialog/TriggerEvaluationDialog.svelte', async () => {
     const module = await import('./TriggerEvaluationDialog/TriggerEvaluationDialog.mock.svelte');
     return { default: module.default };
@@ -53,7 +49,7 @@ type Props = {
     error?: string;
     datasetId?: string;
     collectionId?: string;
-    collectionType?: string;
+    onCompare?: (runIds: string[]) => void;
 };
 
 const renderPanel = (overrides: Partial<Props> = {}) =>
@@ -183,7 +179,7 @@ describe('EvaluationRunsPanel comparison', () => {
     const compareProps = {
         datasetId: 'dataset-1',
         collectionId: 'collection-1',
-        collectionType: 'image'
+        onCompare: vi.fn()
     };
 
     it('hides the compare checkbox for semantic segmentation runs', () => {
@@ -199,9 +195,10 @@ describe('EvaluationRunsPanel comparison', () => {
     });
 
     it('compares the ticked runs in list order', async () => {
-        mocks.goto.mockClear();
+        const onCompare = vi.fn();
         renderPanel({
             ...compareProps,
+            onCompare,
             evaluationRuns: [
                 makeRun({ id: 'run-1', name: 'first' }),
                 makeRun({ id: 'run-2', name: 'second' })
@@ -218,9 +215,7 @@ describe('EvaluationRunsPanel comparison', () => {
         expect(compareButton).toHaveTextContent('Compare (2)');
         await fireEvent.click(compareButton);
 
-        expect(mocks.goto).toHaveBeenCalledWith(
-            '/datasets/dataset-1/image/collection-1/evaluation/compare?runs=run-1,run-2'
-        );
+        expect(onCompare).toHaveBeenCalledWith(['run-1', 'run-2']);
     });
 
     it('disables compare for runs of different task types', async () => {

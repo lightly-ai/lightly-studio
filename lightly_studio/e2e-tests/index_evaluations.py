@@ -58,6 +58,7 @@ dataset.query()[:0].add_tag(tag_name="distribution_empty")
 evaluation_config = ObjectDetectionEvaluationConfig(
     iou_threshold=0.5,
     classwise=True,
+    compute_average_precision=True,
 )
 
 # Evaluate only the tagged samples

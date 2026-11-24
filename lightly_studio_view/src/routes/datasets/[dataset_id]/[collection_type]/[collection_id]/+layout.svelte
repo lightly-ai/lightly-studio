@@ -19,7 +19,7 @@
     import GripVertical from '@lucide/svelte/icons/grip-vertical';
     import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
     import { onDestroy, onMount } from 'svelte';
-    import { afterNavigate } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import { get, toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -51,7 +51,8 @@
         isVideosRoute,
         isGroupsRoute,
         isGroupDetailsRoute,
-        isVideoDetailsRoute
+        isVideoDetailsRoute,
+        routeHelpers
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
     import type { CategoricalMetadataValue } from '$lib/services/types';
@@ -890,7 +891,15 @@
                                         error={evaluationRunsQuery.error?.message}
                                         datasetId={collection.dataset_id}
                                         {collectionId}
-                                        collectionType={page.params.collection_type}
+                                        onCompare={(runIds) =>
+                                            goto(
+                                                routeHelpers.toEvaluationCompare(
+                                                    page.params.dataset_id!,
+                                                    page.params.collection_type!,
+                                                    collectionId,
+                                                    runIds
+                                                )
+                                            )}
                                     />
                                 {/await}
                             {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}

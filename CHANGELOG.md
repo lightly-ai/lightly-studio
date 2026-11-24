@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show frame tags on the point cloud timeline with the "Show frame tags" checkbox. Each tag gets a row with bars over the frames that have the tag.
 - Filter video collections by categorical metadata.
 - The GUI query filter shows a warning when a query uses a tag that does not exist.
+- Compare evaluation runs side by side: select runs in the Evaluation panel and click Compare to see a leaderboard with mAP, precision, recall and F1, and the metrics for each annotation class.
+- Turn on "Compute average precision" when you create or edit an object detection evaluation in the GUI to get mAP.
 
 
 ### Changed

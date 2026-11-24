@@ -24,8 +24,8 @@
         datasetId?: string;
         /** Collection (active view) to evaluate on. Required to enable the trigger dialog. */
         collectionId?: string;
-        /** Collection type of the route. With the IDs above, enables run comparison. */
-        collectionType?: string;
+        /** Opens the comparison of the given runs. Enables run selection when set. */
+        onCompare?: (runIds: string[]) => void;
     }
 
     const {
@@ -35,7 +35,7 @@
         error,
         datasetId,
         collectionId,
-        collectionType
+        onCompare
     }: Props = $props();
 
     const { trackEvent } = usePostHog();
@@ -63,7 +63,6 @@
 
     let compareRunIds = $state<string[]>([]);
     const compareRuns = $derived(evaluationRuns.filter((run) => compareRunIds.includes(run.id)));
-    const canCompare = $derived(!!datasetId && !!collectionId && !!collectionType);
     const setCompareChecked = (runId: string, checked: boolean) => {
         compareRunIds = checked
             ? [...compareRunIds, runId]
@@ -120,13 +119,8 @@
                     'data-testid': 'evaluation-runs-add-button'
                 }}>New evaluation</Button
             >
-            {#if canCompare && !expandedRun}
-                <CompareRunsButton
-                    datasetId={datasetId!}
-                    collectionType={collectionType!}
-                    collectionId={collectionId!}
-                    selectedRuns={compareRuns}
-                />
+            {#if onCompare && !expandedRun}
+                <CompareRunsButton selectedRuns={compareRuns} {onCompare} />
             {/if}
         </div>
     {/if}
@@ -163,7 +157,7 @@
                         expanded={expandedRunId === run.id}
                         onToggle={() => toggleExpand(run.id)}
                         compareChecked={compareRunIds.includes(run.id)}
-                        onCompareCheckedChange={canCompare && isComparableTaskType(run.task_type)
+                        onCompareCheckedChange={onCompare && isComparableTaskType(run.task_type)
                             ? (checked) => setCompareChecked(run.id, checked)
                             : undefined}
                     />
