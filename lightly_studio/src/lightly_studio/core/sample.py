@@ -13,13 +13,7 @@ from sqlmodel import Session
 from lightly_studio.core.annotation import CreateAnnotation
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import (
-    annotation_resolver,
-    collection_resolver,
-    evaluation_run_resolver,
-)
 from lightly_studio.transport import active_transport
 
 from .annotation import Annotation
@@ -270,37 +264,26 @@ class Sample(ABC):
                 Reusing the same source name appends to that source. If `None`, a
                 default source is used.
         """
-        session = self.get_object_session()
-        collection = collection_resolver.get_by_id(
-            session=session, collection_id=self.collection_id
-        )
+        annotations = list(annotations)
+        transport = active_transport.get_transport()
+        collection = transport.collections.get_by_id(collection_id=self.collection_id)
         if collection is None:
             raise RuntimeError("Collection linked to sample not present")
-        dataset_id = collection.dataset_id
-
-        annotation_creates = [
-            annotation.to_annotation_create(
-                session=session,
-                dataset_id=dataset_id,
-                parent_sample_id=self.sample_id,
-            )
-            for annotation in annotations
-        ]
-        annotation_resolver.create_many(
-            session=session,
+        labels = transport.annotations.get_or_create_labels(
+            dataset_id=collection.dataset_id,
+            label_names=[annotation.class_name for annotation in annotations],
+        )
+        label_ids = {label.annotation_label_name: label.annotation_label_id for label in labels}
+        transport.annotations.create(
             parent_collection_id=self.collection_id,
-            annotations=annotation_creates,
+            annotations=[
+                annotation.to_annotation_create(
+                    annotation_label_id=label_ids[annotation.class_name],
+                    parent_sample_id=self.sample_id,
+                )
+                for annotation in annotations
+            ],
             collection_name=annotation_source,
-        )
-        annotation_collection_id = collection_resolver.get_or_create_child_collection(
-            session=session,
-            collection_id=self.collection_id,
-            sample_type=SampleType.ANNOTATION,
-            name=annotation_source,
-        )
-        evaluation_run_resolver.mark_stale_by_collection_id(
-            session=session,
-            collection_id=annotation_collection_id,
         )
 
     def delete_annotation(self, annotation: Annotation) -> None:
@@ -309,10 +292,8 @@ class Sample(ABC):
         Args:
             annotation: The annotation to delete.
         """
-        session = self.get_object_session()
-        annotation_resolver.delete_annotation(
-            session=session,
-            annotation_id=annotation.annotation_base.sample_id,
+        active_transport.get_transport().annotations.delete(
+            annotation_ids=[annotation.annotation_base.sample_id]
         )
 
 

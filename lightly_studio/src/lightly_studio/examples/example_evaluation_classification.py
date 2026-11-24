@@ -18,6 +18,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
+from lightly_studio.transport import active_transport
 
 DATASET_NAME = "classification_evaluation_example_dataset"
 GT_ANNOTATION_SOURCE = "gt"
@@ -48,6 +49,10 @@ def create_classification_annotations(dataset: ImageDataset) -> None:
     gt_annotations = []
     pred_annotations = []
     rng = random.Random(RANDOM_SEED)
+    labels = active_transport.get_transport().annotations.get_or_create_labels(
+        dataset_id=dataset.dataset_id, label_names=CLASS_NAMES
+    )
+    label_ids = {label.annotation_label_name: label.annotation_label_id for label in labels}
 
     for sample in dataset:
         gt_label = rng.choice(CLASS_NAMES)
@@ -56,9 +61,7 @@ def create_classification_annotations(dataset: ImageDataset) -> None:
 
         gt_annotations.append(
             CreateClassification(class_name=gt_label).to_annotation_create(
-                session=dataset.session,
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=sample.sample_id,
+                annotation_label_id=label_ids[gt_label], parent_sample_id=sample.sample_id
             )
         )
         pred_annotations.append(
@@ -66,9 +69,7 @@ def create_classification_annotations(dataset: ImageDataset) -> None:
                 class_name=pred_label,
                 confidence=pred_confidence,
             ).to_annotation_create(
-                session=dataset.session,
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=sample.sample_id,
+                annotation_label_id=label_ids[pred_label], parent_sample_id=sample.sample_id
             )
         )
 
