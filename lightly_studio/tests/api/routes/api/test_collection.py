@@ -8,8 +8,6 @@ from sqlmodel import Session
 
 from lightly_studio.api.app import app
 from lightly_studio.api.dependencies import authorization
-from lightly_studio.api.dependencies.authorization import Action
-from lightly_studio.api.dependencies.identity import Identity
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
@@ -20,6 +18,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import collection_resolver
+from tests.api.dependencies import helpers
 from tests.helpers_resolvers import (
     ImageStub,
     create_collection,
@@ -340,15 +339,10 @@ def test_delete_dataset__success(test_client: TestClient, db_session: Session) -
     assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
-class _DenyAll:
-    def allows(self, identity: Identity, action: Action) -> bool:  # noqa: ARG002
-        return False
-
-
 def test_delete_dataset__forbidden(test_client: TestClient, db_session: Session) -> None:
     """Deleting a dataset needs the dataset.delete action. The policy decides."""
     collection_id = create_collection(session=db_session, collection_name="kept").collection_id
-    app.dependency_overrides[authorization.get_policy] = _DenyAll
+    app.dependency_overrides[authorization.get_policy] = helpers.get_deny_all_policy
 
     response = test_client.delete(f"/api/collections/{collection_id}/delete-dataset")
 

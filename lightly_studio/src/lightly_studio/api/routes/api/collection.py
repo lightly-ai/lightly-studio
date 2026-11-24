@@ -190,7 +190,7 @@ def deep_copy(
 
 @collection_router.delete(
     "/collections/{collection_id}/delete-dataset",
-    dependencies=[Depends(authorization.require(Action.DATASET_DELETE))],
+    dependencies=[Depends(authorization.require(action=Action.DATASET_DELETE))],
 )
 def delete_dataset(
     session: SessionDep,

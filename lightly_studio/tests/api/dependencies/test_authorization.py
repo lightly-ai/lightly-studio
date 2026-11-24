@@ -6,14 +6,9 @@ from fastapi.testclient import TestClient
 
 from lightly_studio.api.dependencies import authorization
 from lightly_studio.api.dependencies.authorization import Action, AllowAll
-from lightly_studio.api.dependencies.identity import Identity
 from lightly_studio.api.routes.api import exceptions
 from lightly_studio.api.routes.api.status import HTTP_STATUS_FORBIDDEN, HTTP_STATUS_OK
-
-
-class _DenyAll:
-    def allows(self, identity: Identity, action: Action) -> bool:  # noqa: ARG002
-        return False
+from tests.api.dependencies import helpers
 
 
 @pytest.fixture
@@ -23,7 +18,7 @@ def app() -> FastAPI:
 
     @app.delete(
         "/dataset",
-        dependencies=[Depends(authorization.require(Action.DATASET_DELETE))],
+        dependencies=[Depends(authorization.require(action=Action.DATASET_DELETE))],
     )
     def _delete_dataset() -> dict[str, str]:
         return {"status": "deleted"}
@@ -48,7 +43,7 @@ def test_require(client: TestClient) -> None:
 
 
 def test_require__override_denies(app: FastAPI, client: TestClient) -> None:
-    app.dependency_overrides[authorization.get_policy] = _DenyAll
+    app.dependency_overrides[authorization.get_policy] = helpers.get_deny_all_policy
 
     response = client.delete("/dataset")
 

@@ -11,6 +11,7 @@ from enum import Enum
 from typing import Annotated, Protocol
 
 from fastapi import Depends
+from typing_extensions import override  # typing.override needs Python 3.12.
 
 from lightly_studio.api.dependencies.identity import Identity, IdentityDep
 from lightly_studio.errors import ForbiddenError
@@ -29,10 +30,11 @@ class Policy(Protocol):
         """Returns True if `identity` may do `action`."""
 
 
-class AllowAll:
+class AllowAll(Policy):
     """The policy for one local user: every action is allowed."""
 
-    def allows(self, identity: Identity, action: Action) -> bool:  # noqa: ARG002
+    @override
+    def allows(self, identity: Identity, action: Action) -> bool:
         """Returns True for every identity and action."""
         return True
 
@@ -48,7 +50,7 @@ PolicyDep = Annotated[Policy, Depends(get_policy)]
 def require(action: Action) -> Callable[[Identity, Policy], None]:
     """Returns a dependency that rejects a user who may not do `action`.
 
-    Usage: `@router.delete(..., dependencies=[Depends(require(Action.DATASET_DELETE))])`.
+    Usage: `@router.delete(..., dependencies=[Depends(require(action=Action.DATASET_DELETE))])`.
     """
 
     def _check_action(identity: IdentityDep, policy: PolicyDep) -> None:
