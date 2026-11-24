@@ -3,10 +3,12 @@ from .annotation_create import (
     CreateAnnotation,
     CreateClassification,
     CreateObjectDetection,
+    CreatePolygon,
     CreateSegmentationMask,
 )
 from .classification import ClassificationAnnotation
 from .object_detection import ObjectDetectionAnnotation
+from .polygon import PolygonAnnotation
 from .segmentation_mask import SegmentationMaskAnnotation
 
 __all__ = [
@@ -15,7 +17,9 @@ __all__ = [
     "CreateAnnotation",
     "CreateClassification",
     "CreateObjectDetection",
+    "CreatePolygon",
     "CreateSegmentationMask",
     "ObjectDetectionAnnotation",
+    "PolygonAnnotation",
     "SegmentationMaskAnnotation",
 ]

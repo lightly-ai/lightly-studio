@@ -18,6 +18,7 @@ def annotation_detail_load_options() -> LoaderOption:
             selectinload(AnnotationBaseTable.annotation_label),
             selectinload(AnnotationBaseTable.object_detection_details),
             selectinload(AnnotationBaseTable.segmentation_details),
+            selectinload(AnnotationBaseTable.polygon_details),
             selectinload(AnnotationBaseTable.cuboid_3d_details),
             defaultload(AnnotationBaseTable.object_track).selectinload(
                 ObjectTrackTable.parent_object_track

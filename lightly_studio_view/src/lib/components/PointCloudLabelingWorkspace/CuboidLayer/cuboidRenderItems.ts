@@ -12,6 +12,8 @@ interface CuboidRenderItem {
     /** Local axis flattened in an orthographic view, or null for the full cuboid. */
     depthAxis: 0 | 1 | 2 | null;
     headingOrigin: Vector3;
+    /** Heading origin on the top front edge, clear of the front face resize handle. */
+    raisedHeadingOrigin: Vector3;
     arrowLength: number;
 }
 
@@ -36,6 +38,7 @@ export function createCuboidRenderItems(
                     ? createCuboidWireframeGeometry(annotation.size)
                     : createCuboidRectangleGeometry(annotation.size, depthAxis),
             headingOrigin: new Vector3(annotation.size[0] / 2, 0, 0),
+            raisedHeadingOrigin: new Vector3(annotation.size[0] / 2, 0, annotation.size[2] / 2),
             arrowLength: Math.max(annotation.size[0] * 0.35, 0.75)
         };
     });

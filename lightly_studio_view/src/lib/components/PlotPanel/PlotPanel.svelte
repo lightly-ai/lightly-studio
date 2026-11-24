@@ -14,7 +14,7 @@
     import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
-    import type { ToolMode } from './PlotToolPill/selectionTool';
+    import { usePlotViewState } from './usePlotViewState/usePlotViewState';
     import {
         EmbeddingView,
         type DataPoint,
@@ -64,7 +64,7 @@
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import { writable, get, readable } from 'svelte/store';
+    import { writable, get, readable, toStore } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
 
     const NO_LEGEND = new Map<number, string>();
@@ -134,6 +134,8 @@
     });
 
     const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
+    const viewState = usePlotViewState(untrack(() => collectionId));
+    const { activeTool, viewport: userViewport } = viewState;
     // Captured once at mount, like collectionId above.
     const { tags } = useTags({
         collection_id: untrack(() => collectionId)
@@ -157,7 +159,8 @@
     const { colorBy, selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
         selectedColorByType,
         tags,
-        annotationLabels
+        annotationLabels,
+        selectedColorByKey: viewState.selectedColorByKey
     });
 
     const {
@@ -191,27 +194,23 @@
         hiddenCategories,
         toggleCategoryVisibility,
         focusCategoryVisibility,
-        resetCategoryVisibility
+        clearForColorByMode
     } = useCategoryVisibility({
         getCollectionId: () => collectionId,
-        getColorByType: () => get(selectedColorByType)
+        getColorByType: () => get(selectedColorByType),
+        colorLegend: toStore(() => colorLegend),
+        hiddenKeys: viewState.hiddenKeys
     });
 
-    // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
-    // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
-    // survives. INCLUDED is relabeled with the color-by mode, so it survives only a filter-only
-    // change — else a hidden "No category" would empty the plot once all points collapse into it.
-    let previousColorByKey: string | undefined = undefined;
+    // Other color-by modes have other labels. The tag and label IDs in the color-by change when
+    // the user creates a tag or a label, so only the type and the metadata key count as the mode.
+    let previousColorByMode: string | undefined = undefined;
     $effect(() => {
-        void colorLegend;
-        const colorByKey = JSON.stringify($colorBy);
-        const colorByChanged = colorByKey !== previousColorByKey;
-        previousColorByKey = colorByKey;
-        resetCategoryVisibility(
-            colorByChanged
-                ? [EXCLUDED_BY_FILTERS_CATEGORY]
-                : [EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]
-        );
+        const colorByMode = JSON.stringify([$selectedColorByType, $selectedColorByKey]);
+        const isModeChange =
+            previousColorByMode !== undefined && colorByMode !== previousColorByMode;
+        previousColorByMode = colorByMode;
+        if (isModeChange) untrack(clearForColorByMode);
     });
 
     const hasActiveFilter = $derived(filter !== null || pickedSampleIds.length > 0);
@@ -235,15 +234,12 @@
             : (committedSampleRegion?.polygon ?? null)
     );
 
-    // Activating a lasso (or a committed region) unhides the Excluded category, otherwise
-    // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
-    // canvas. The legend keeps showing the user's real toggle state.
+    // While the user draws or picks, the points outside the selection count as Excluded. A hidden
+    // Excluded would then empty the canvas under the cursor, or leave no point to pick next. So
+    // Excluded shows while the user draws or has picks. A committed region follows the legend.
     const effectiveHiddenCategories = $derived.by(() => {
-        const hasSelectionHighlight =
-            $rangeSelection !== null ||
-            committedHighlightRegion !== null ||
-            pickedSampleIds.length > 0;
-        if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+        const isSelecting = $rangeSelection !== null || pickedSampleIds.length > 0;
+        if (!isSelecting || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }
         const next = new Set($hiddenCategories);
@@ -407,14 +403,10 @@
     });
 
     const reset = () => {
-        userViewportState = null;
+        userViewport.set(null);
     };
 
     const isReady = true;
-
-    // Lives here, not in PlotToolPill: a new color-by, axes or collection shows the full loader,
-    // and the plot unmounts while it loads. State inside the pill would not survive that.
-    let activeTool = $state<ToolMode>('pan');
 
     type RangeSelection = Rectangle | Point[] | null;
 
@@ -480,18 +472,17 @@
 
     // The viewport after the user pans or zooms. Until then, the default follows the plot size,
     // because the size is 0 when the panel mounts and the default scale depends on it.
-    let userViewportState: ViewportState | null = $state(null);
     const viewportState = $derived(
-        userViewportState ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
+        $userViewport ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
     );
     const onViewportState = (state: ViewportState) => {
-        userViewportState = state;
+        userViewport.set(state);
     };
 
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
     // region belongs to the layout it was drawn on.
     const resetForNewLayout = () => {
-        userViewportState = null;
+        userViewport.set(null);
         if (hasActiveSelection) clearSelection();
     };
     const selectPlotLayout = (layout: PlotLayout) => {
@@ -729,7 +720,7 @@
                             }}
                         />
 
-                        <PlotToolPill {plotContainer} bind:activeTool />
+                        <PlotToolPill {plotContainer} bind:activeTool={$activeTool} />
                     </div>
                 {/if}
             </div>

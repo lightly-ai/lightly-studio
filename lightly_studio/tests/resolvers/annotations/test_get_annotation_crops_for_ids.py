@@ -91,6 +91,75 @@ def test_get_annotation_crops_for_ids__skips_invalid_boxes(
     assert len(result) == 1
 
 
+def test_get_annotation_crops_for_ids__polygon(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+        width=100,
+        height=100,
+    )
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(10.5, 20.0), (40.0, 20.0), (40.0, 60.25)]],
+    )
+
+    result = annotation_resolver.get_annotation_crops_for_ids(
+        session=db_session,
+        annotation_sample_ids=[annotation.sample_id],
+    )
+
+    assert [crop.annotation_sample_id for crop in result] == [annotation.sample_id]
+    assert [crop.image_crop for crop in result] == [
+        ImageCrop(filepath="/path/to/sample.png", x=10, y=20, width=30, height=41)
+    ]
+
+
+def test_get_annotation_crops_for_ids__polygon_outside_image(db_session: Session) -> None:
+    """A polygon partly outside the image is clipped. A polygon fully outside is skipped."""
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+        width=100,
+        height=100,
+    )
+    partly_outside = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(-10.0, 50.0), (40.0, 50.0), (40.0, 120.0)]],
+    )
+    fully_outside = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(200.0, 200.0), (220.0, 200.0), (220.0, 220.0)]],
+    )
+
+    result = annotation_resolver.get_annotation_crops_for_ids(
+        session=db_session,
+        annotation_sample_ids=[partly_outside.sample_id, fully_outside.sample_id],
+    )
+
+    assert [crop.annotation_sample_id for crop in result] == [partly_outside.sample_id]
+    assert [crop.image_crop for crop in result] == [
+        ImageCrop(filepath="/path/to/sample.png", x=0, y=50, width=40, height=50)
+    ]
+
+
 def test_get_annotation_crops_for_ids__empty_input(
     db_session: Session,
 ) -> None:
