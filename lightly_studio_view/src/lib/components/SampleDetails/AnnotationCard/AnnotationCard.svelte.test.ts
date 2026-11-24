@@ -174,18 +174,21 @@ describe('AnnotationCard', () => {
         expect(screen.getByPlaceholderText('Pick a class')).toHaveFocus();
     });
 
-    it('keeps Enter from the focused box so it stays selected', async () => {
-        const box = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        const toggleSelection = vi.fn();
-        box.addEventListener('keydown', toggleSelection);
-        document.body.append(box);
-        await renderCard();
+    it('marks Enter as handled and lets the focused element still see it', async () => {
+        const focused = document.createElement('div');
+        let seenAsHandled: boolean | undefined;
+        focused.addEventListener('keydown', (event) => (seenAsHandled = event.defaultPrevented));
+        document.body.append(focused);
+        try {
+            await renderCard();
 
-        await fireEvent.keyDown(box, { key: 'Enter' });
-        box.remove();
+            await fireEvent.keyDown(focused, { key: 'Enter' });
 
-        expect(await screen.findByPlaceholderText('Pick a class')).toBeInTheDocument();
-        expect(toggleSelection).not.toHaveBeenCalled();
+            expect(await screen.findByPlaceholderText('Pick a class')).toBeInTheDocument();
+            expect(seenAsHandled).toBe(true);
+        } finally {
+            focused.remove();
+        }
     });
 
     it('keeps the class on a double Enter', async () => {
