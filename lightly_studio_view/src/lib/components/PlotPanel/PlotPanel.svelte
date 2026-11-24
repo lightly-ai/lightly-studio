@@ -14,7 +14,7 @@
     import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
-    import type { ToolMode } from './PlotToolPill/selectionTool';
+    import { usePlotViewState } from './usePlotViewState/usePlotViewState';
     import {
         EmbeddingView,
         type DataPoint,
@@ -134,6 +134,8 @@
     });
 
     const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
+    const viewState = usePlotViewState(untrack(() => collectionId));
+    const { activeTool, viewport: userViewport } = viewState;
     // Captured once at mount, like collectionId above.
     const { tags } = useTags({
         collection_id: untrack(() => collectionId)
@@ -157,7 +159,8 @@
     const { colorBy, selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
         selectedColorByType,
         tags,
-        annotationLabels
+        annotationLabels,
+        selectedColorByKey: viewState.selectedColorByKey
     });
 
     const {
@@ -196,7 +199,7 @@
         getCollectionId: () => collectionId,
         getColorByType: () => get(selectedColorByType),
         colorLegend: toStore(() => colorLegend),
-        hiddenKeys: writable(new Set<string>())
+        hiddenKeys: viewState.hiddenKeys
     });
 
     // Other color-by modes have other labels. The tag and label IDs in the color-by change when
@@ -400,14 +403,10 @@
     });
 
     const reset = () => {
-        userViewportState = null;
+        userViewport.set(null);
     };
 
     const isReady = true;
-
-    // Lives here, not in PlotToolPill: a new color-by, axes or collection shows the full loader,
-    // and the plot unmounts while it loads. State inside the pill would not survive that.
-    let activeTool = $state<ToolMode>('pan');
 
     type RangeSelection = Rectangle | Point[] | null;
 
@@ -473,18 +472,17 @@
 
     // The viewport after the user pans or zooms. Until then, the default follows the plot size,
     // because the size is 0 when the panel mounts and the default scale depends on it.
-    let userViewportState: ViewportState | null = $state(null);
     const viewportState = $derived(
-        userViewportState ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
+        $userViewport ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
     );
     const onViewportState = (state: ViewportState) => {
-        userViewportState = state;
+        userViewport.set(state);
     };
 
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
     // region belongs to the layout it was drawn on.
     const resetForNewLayout = () => {
-        userViewportState = null;
+        userViewport.set(null);
         if (hasActiveSelection) clearSelection();
     };
     const selectPlotLayout = (layout: PlotLayout) => {
@@ -722,7 +720,7 @@
                             }}
                         />
 
-                        <PlotToolPill {plotContainer} bind:activeTool />
+                        <PlotToolPill {plotContainer} bind:activeTool={$activeTool} />
                     </div>
                 {/if}
             </div>
