@@ -2,6 +2,8 @@
 
 Schema changes for PostgreSQL use [Alembic](https://alembic.sqlalchemy.org/). Migration scripts live in `src/lightly_studio/migrations/versions/`; configuration in `alembic.ini` and `migrations/env.py`. Runtime logic is in `db_migrations.run_migrations()`.
 
+The revisions of this package create only tables in the default schema. Autogenerate and `alembic check` ignore tables in other schemas: another package that adds tables to `SQLModel.metadata` keeps them in its own schema and migrates them with its own Alembic history.
+
 ## Startup behavior (Postgres only)
 
 | Database state | On connect | What runs |
