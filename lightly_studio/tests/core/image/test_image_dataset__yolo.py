@@ -643,6 +643,30 @@ class TestDataset:
         assert isinstance(annotation, PolygonAnnotation)
         assert annotation.polygons == [[(10.0, 5.0), (50.0, 5.0), (50.0, 25.0)]]
 
+    def test_add_samples_from_yolo__instance_segmentation_blank_line(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        data_yaml = _write_segmentation_dataset(
+            tmp_path=tmp_path,
+            image_size=(100, 50),
+            label_line="\n0 0.1 0.1 0.5 0.1 0.5 0.5",
+            label_names=["image1"],
+        )
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_yolo(
+            data_yaml=data_yaml,
+            input_split="train",
+            annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
+        )
+
+        (sample,) = list(dataset)
+        (annotation,) = sample.annotations
+        assert isinstance(annotation, PolygonAnnotation)
+        assert annotation.polygons == [[(10.0, 5.0), (50.0, 5.0), (50.0, 25.0)]]
+
     def test_add_samples_from_yolo__instance_segmentation_missing_label_file(
         self,
         patch_collection: None,  # noqa: ARG002
