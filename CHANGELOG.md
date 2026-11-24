@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
 - Each metadata field in the filter panel has a checkbox. A collapsed field shows a short summary of its filter, for example a range or "2 of 3" values. Active fields move to the top, and the metadata filter chips are removed.
 - The embedding plot keeps showing its points while new ones load after a filter change, with a small spinner instead of the full loading screen. A selection drawn before the new points arrive is ignored.
+- In edit mode, the lock icon of a locked annotation in the sample details shows in the primary color, so locked annotations are easier to see.
 
 ### Deprecated
 
