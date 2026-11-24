@@ -28,6 +28,20 @@
     options:
         members: [CreateSegmentationMask]
 
+## Polygon
+
+### PolygonAnnotation
+
+::: lightly_studio.core.annotation
+    options:
+        members: [PolygonAnnotation]
+
+### CreatePolygon
+
+::: lightly_studio.core.annotation
+    options:
+        members: [CreatePolygon]
+
 ## Object Detection
 
 ### ObjectDetectionAnnotation

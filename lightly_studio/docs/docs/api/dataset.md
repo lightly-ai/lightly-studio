@@ -23,6 +23,12 @@ description: Python API reference for LightlyStudio's Dataset, ImageDataset, and
     options:
         members: [VideoDataset]
 
+## AnnotationFileTask
+
+::: lightly_studio
+    options:
+        members: [AnnotationFileTask]
+
 ## ImageDatasetExport
 
 ::: lightly_studio.export.image_dataset_export
