@@ -24,6 +24,7 @@ def start_gui(
     port: int | None = None,
     open_browser: bool = True,
     app: FastAPI | None = None,
+    require_samples: bool = True,
 ) -> Server:
     """Launch the web interface for the loaded dataset.
 
@@ -34,11 +35,17 @@ def start_gui(
         port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
         open_browser: Whether to open the URL in a browser once the server is ready.
         app: The FastAPI app to serve. Defaults to the LightlyStudio app.
+        require_samples: Whether to stop with an error if the database has no samples.
+            A server that starts empty and gets its data later passes False.
 
     Returns:
         The Server instance.
+
+    Raises:
+        ValueError: If require_samples is True and the database has no samples.
     """
-    _validate_has_samples()
+    if require_samples:
+        _validate_has_samples()
 
     server = Server(host=host, port=port, app=app)
     uvicorn_server = server.create_uvicorn_server()

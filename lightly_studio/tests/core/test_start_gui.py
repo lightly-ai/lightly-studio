@@ -9,6 +9,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
 from PIL import Image
 from pytest_mock import MockerFixture
 
@@ -204,6 +205,47 @@ def test_start_gui__does_not_open_browser_when_disabled(
     start_gui(open_browser=False)
 
     mock_open.assert_not_called()
+
+
+def test_start_gui__serves_the_given_app(
+    mocker: MockerFixture,
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    """Test that start_gui passes the given app to the Server."""
+    image_path = tmp_path / "sample.jpg"
+    Image.new("RGB", (10, 10)).save(image_path)
+
+    dataset = ImageDataset.create("test_dataset")
+    dataset.add_images_from_path(path=tmp_path)
+
+    custom_app = FastAPI()
+    mock_server = mocker.patch.object(start_gui_module, "Server")
+
+    start_gui(open_browser=False, app=custom_app)
+
+    mock_server.assert_called_once_with(host=None, port=None, app=custom_app)
+
+
+def test_server__serves_the_given_app() -> None:
+    """Test that the uvicorn server of a Server runs the given app."""
+    custom_app = FastAPI()
+
+    uvicorn_server = Server(app=custom_app).create_uvicorn_server()
+
+    assert uvicorn_server.config.app is custom_app
+
+
+def test_start_gui__no_samples_allowed(
+    mocker: MockerFixture,
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Test that start_gui starts without samples if require_samples is False."""
+    mock_server = mocker.patch.object(start_gui_module, "Server")
+
+    start_gui(open_browser=False, require_samples=False)
+
+    mock_server.assert_called_once_with(host=None, port=None, app=None)
 
 
 def test_start_gui__no_datasets(
