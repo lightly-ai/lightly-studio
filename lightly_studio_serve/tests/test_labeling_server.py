@@ -11,70 +11,17 @@ from PIL import Image as PILImage
 from PIL.Image import Image
 
 from lightly_studio_serve import labeling_protocol, server
-from lightly_studio_serve.embedder import TextEmbedder
-from lightly_studio_serve.labeling import LabelingModel, ModelTask, PredictedAnnotation
+from lightly_studio_serve.labeling import PredictedAnnotation
 from lightly_studio_serve.labeling_protocol import PredictionsResponse
-from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from tests.labeling.helpers import FakeLabelingModel
 
 WIDTH = 3
 HEIGHT = 2
 
 
-class FakeLabelingModel(LabelingModel):
-    """Returns fixed predictions, or raises, and records what it was handed."""
-
-    def __init__(
-        self,
-        predictions: list[PredictedAnnotation] | None = None,
-        error: Exception | None = None,
-        ready: bool = True,
-    ) -> None:
-        self.predictions = predictions or []
-        self.error = error
-        self.is_ready = ready
-        self.received: list[tuple[tuple[int, int], str, float]] = []
-
-    @property
-    def model_id(self) -> str:
-        return "car-detector"
-
-    @property
-    def task(self) -> ModelTask:
-        return ModelTask.OBJECT_DETECTION
-
-    @property
-    def class_names(self) -> list[str]:
-        return ["car"]
-
-    @property
-    def ready(self) -> bool:
-        return self.is_ready
-
-    def predict(self, image: Image, threshold: float) -> list[PredictedAnnotation]:
-        self.received.append((image.size, image.mode, threshold))
-        if self.error is not None:
-            raise self.error
-        return self.predictions
-
-
-class FakeTextEmbedder(TextEmbedder):
-    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        return EmbeddingSpaceSpec(space_key="acme/model@v1", dimension=2)
-
-    def embed_text(self, texts: list[str]) -> EmbeddingResult:
-        return EmbeddingResult(
-            embeddings=np.zeros((len(texts), 2), dtype=np.float32),
-            kept_indices=list(range(len(texts))),
-        )
-
-
-def test_create_app__no_model() -> None:
-    with pytest.raises(ValueError, match="Got neither"):
-        server.create_app()
-
-
 def test_describe_labeling() -> None:
-    client = TestClient(server.create_app(labeling_model=FakeLabelingModel()))
+    model = FakeLabelingModel(model_id="car-detector", class_names=["car"])
+    client = TestClient(server.create_app(labeling_model=model))
 
     response = client.get("/v1/labeling/describe")
 
@@ -89,19 +36,17 @@ def test_describe_labeling() -> None:
     }
 
 
-def test_describe__labeling_model_only() -> None:
-    client = TestClient(server.create_app(labeling_model=FakeLabelingModel()))
+def test_describe_labeling__empty_model_id() -> None:
+    model = FakeLabelingModel(model_id="")
+    client = TestClient(server.create_app(labeling_model=model), raise_server_exceptions=False)
 
-    assert client.get("/v1/describe").status_code == status.HTTP_404_NOT_FOUND
+    response = client.get("/v1/labeling/describe")
 
-
-def test_describe__embedder_and_labeling_model() -> None:
-    client = TestClient(
-        server.create_app(embedder=FakeTextEmbedder(), labeling_model=FakeLabelingModel())
-    )
-
-    assert client.get("/v1/describe").json()["space_key"] == "acme/model@v1"
-    assert client.get("/v1/labeling/describe").json()["model_id"] == "car-detector"
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json() == {
+        "detail": "The labeling model has a property that is not valid: "
+        "model_id: String should have at least 1 character"
+    }
 
 
 def test_predict() -> None:
@@ -110,7 +55,9 @@ def test_predict() -> None:
         predictions=[
             PredictedAnnotation(class_name="car", box=(0.0, 0.0, 3.0, 2.0), score=0.9, mask=mask),
             PredictedAnnotation(class_name="car", box=(1.0, 0.0, 2.0, 1.0), score=0.6),
-        ]
+        ],
+        model_id="car-detector",
+        class_names=["car"],
     )
     client = TestClient(server.create_app(labeling_model=model))
 
@@ -167,6 +114,20 @@ def test_predict__not_an_image() -> None:
     assert model.received == []
 
 
+def test_predict__format_not_served() -> None:
+    model = FakeLabelingModel()
+    client = TestClient(server.create_app(labeling_model=model))
+    # Pillow decodes PPM, but LightlyStudio does not import it.
+    buffer = io.BytesIO()
+    PILImage.new(mode="RGB", size=(WIDTH, HEIGHT)).save(buffer, format="PPM")
+
+    response = _post_predict(client=client, threshold="0.5", image=buffer.getvalue())
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "The image cannot be decoded."}
+    assert model.received == []
+
+
 def test_predict__truncated_header() -> None:
     model = FakeLabelingModel()
     client = TestClient(server.create_app(labeling_model=model))
@@ -180,11 +141,41 @@ def test_predict__truncated_header() -> None:
     assert model.received == []
 
 
+def test_predict__broken_chunk() -> None:
+    model = FakeLabelingModel()
+    client = TestClient(server.create_app(labeling_model=model))
+    png = _png_bytes()
+    # A chunk is a length of 4 bytes, then a type of 4 bytes. The IDAT chunk now claims 1 byte,
+    # so Pillow reads the next chunk type from the middle of the pixel data.
+    type_start = png.index(b"IDAT")
+    broken_png = png[: type_start - 4] + (1).to_bytes(length=4, byteorder="big") + png[type_start:]
+
+    response = _post_predict(client=client, threshold="0.5", image=broken_png)
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "The image cannot be decoded."}
+    assert model.received == []
+
+
 def test_predict__too_many_pixels(monkeypatch: pytest.MonkeyPatch) -> None:
     model = FakeLabelingModel()
     client = TestClient(server.create_app(labeling_model=model))
     # Pillow refuses an image with more than twice this number of pixels. The image has 3 x 2.
     monkeypatch.setattr(PILImage, "MAX_IMAGE_PIXELS", 2)
+
+    response = _post_predict(client=client, threshold="0.5")
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "The image cannot be decoded."}
+    assert model.received == []
+
+
+@pytest.mark.filterwarnings("ignore::PIL.Image.DecompressionBombWarning")
+def test_predict__pixels_over_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    model = FakeLabelingModel()
+    client = TestClient(server.create_app(labeling_model=model))
+    # Pillow only warns about an image with 6 to 10 pixels. The image has 3 x 2.
+    monkeypatch.setattr(PILImage, "MAX_IMAGE_PIXELS", 5)
 
     response = _post_predict(client=client, threshold="0.5")
 
@@ -216,6 +207,19 @@ def test_predict__model_error() -> None:
     }
 
 
+def test_predict__result_not_a_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    model = FakeLabelingModel()
+    monkeypatch.setattr(model, "predict", _return_none)
+    client = TestClient(server.create_app(labeling_model=model), raise_server_exceptions=False)
+
+    response = _post_predict(client=client, threshold="0.5")
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json() == {
+        "detail": "The labeling model returned NoneType, not a list of PredictedAnnotation."
+    }
+
+
 def test_predict__invalid_prediction() -> None:
     model = FakeLabelingModel(
         predictions=[
@@ -239,9 +243,9 @@ def test_predict__invalid_prediction() -> None:
 
 
 def test_predict__undeclared_class() -> None:
-    # The model declares the class "car" alone.
     model = FakeLabelingModel(
-        predictions=[PredictedAnnotation(class_name="truck", box=(0.0, 0.0, 3.0, 2.0), score=0.9)]
+        predictions=[PredictedAnnotation(class_name="truck", box=(0.0, 0.0, 3.0, 2.0), score=0.9)],
+        class_names=["car"],
     )
     client = TestClient(server.create_app(labeling_model=model), raise_server_exceptions=False)
 
@@ -251,6 +255,26 @@ def test_predict__undeclared_class() -> None:
     assert response.json() == {
         "detail": "The labeling model returned a prediction that is not valid: "
         "The class name 'truck' is not one of class_names."
+    }
+
+
+@pytest.mark.parametrize(
+    "box",
+    [(2.0, 0.0, 1.0, 2.0), (0.0, 1.0, 3.0, 1.0)],
+    ids=["x_min over x_max", "zero height"],
+)
+def test_predict__box_without_positive_size(box: tuple[float, float, float, float]) -> None:
+    model = FakeLabelingModel(
+        predictions=[PredictedAnnotation(class_name="car", box=box, score=0.9)]
+    )
+    client = TestClient(server.create_app(labeling_model=model), raise_server_exceptions=False)
+
+    response = _post_predict(client=client, threshold="0.5")
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json() == {
+        "detail": "The labeling model returned a prediction that is not valid: "
+        f"The box {box} does not have a positive size."
     }
 
 
@@ -274,6 +298,23 @@ def test_predict__mask_size_mismatch() -> None:
         "detail": "The labeling model returned a prediction that is not valid: "
         "The mask has the size 1 x 1 pixels, but the image has the size 3 x 2 pixels."
     }
+
+
+def test_predict__empty_model_id() -> None:
+    model = FakeLabelingModel(model_id="")
+    client = TestClient(server.create_app(labeling_model=model), raise_server_exceptions=False)
+
+    response = _post_predict(client=client, threshold="0.5")
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json() == {
+        "detail": "The labeling model has a property that is not valid: "
+        "model_id: String should have at least 1 character"
+    }
+
+
+def _return_none(image: Image, threshold: float) -> None:
+    """Stand in for ``predict`` of a model that breaks the contract."""
 
 
 def _png_bytes() -> bytes:

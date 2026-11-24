@@ -11,6 +11,7 @@ from lightly_studio_serve.embedder import Capability
 from lightly_studio_serve.server import create_app
 from tests.conformance import helpers
 from tests.conformance.helpers import AppProbeClient, FakeEmbedder, FakeTextEmbedder
+from tests.labeling.helpers import FakeLabelingModel
 
 API_KEY = "the-key"
 
@@ -79,6 +80,18 @@ def test_check_conformance__missing_key() -> None:
     assert not report.passed
     assert report.describe_problems == (
         '/v1/describe answers 401, expected 200. {"detail":"Missing or invalid bearer token."}',
+    )
+
+
+def test_check_conformance__labeling_model_only() -> None:
+    client = AppProbeClient(app=create_app(labeling_model=FakeLabelingModel()))
+
+    report = runner.check_conformance(client=client)
+
+    assert not report.passed
+    assert report.describe_problems == (
+        "/v1/describe answers 404, so the server serves no embedder. This kit tests the "
+        "embedding endpoints only.",
     )
 
 

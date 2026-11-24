@@ -165,7 +165,7 @@ def create_app(
     app.add_exception_handler(EmbedderContractError, _handle_contract_error)
     app.add_exception_handler(LabelingModelError, _handle_contract_error)
     app.add_exception_handler(RequestValidationError, _handle_invalid_request)
-    app.add_exception_handler(Exception, _handle_embedder_error)
+    app.add_exception_handler(Exception, _handle_model_error)
     # The dependency enforces nothing, `BearerAuth` does. It writes the scheme into the
     # schema, so that the interactive documentation can send a token.
     security = [] if api_key is None else [Depends(HTTPBearer(auto_error=False))]
@@ -382,17 +382,18 @@ def _handle_contract_error(_request: Request, exc: Exception) -> Response:
     )
 
 
-def _handle_embedder_error(_request: Request, exc: Exception) -> Response:
+def _handle_model_error(_request: Request, exc: Exception) -> Response:
     """Answer 500 in the shape that every other error of this server has.
 
-    Anything a model raises other than an ``EmbedderContractError`` would reach the
-    default handler of starlette, which answers plain text. The message names the class
-    alone, because the text of an exception can hold the input that it failed on.
-    Starlette raises the exception again, so the traceback still reaches the log.
+    Anything that an embedder or a labeling model raises other than an
+    ``EmbedderContractError`` or a ``LabelingModelError`` would reach the default handler
+    of starlette, which answers plain text. The message names the class alone, because
+    the text of an exception can hold the input that it failed on. Starlette raises the
+    exception again, so the traceback still reaches the log.
     """
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": f"The embedder raised {type(exc).__name__}. See the server log."},
+        content={"detail": f"The model raised {type(exc).__name__}. See the server log."},
     )
 
 
