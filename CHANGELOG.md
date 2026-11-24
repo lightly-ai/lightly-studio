@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The "Segmentation masks (COCO)" export is now "Instance segmentation (COCO)" and includes polygons.
 - BREAKING: In the video query editor, `classification(...)` now matches whole-video classifications. Use `event(...)` for temporal events, or combine both with `OR` to include both kinds.
 - BREAKING: Python SDK: On videos, `ClassificationQuery` now matches whole-video classifications. Use `VideoEventQuery` for temporal events, or combine both queries with `OR(...)` to preserve both kinds of matches.
 - Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
@@ -30,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The embedding plot keeps showing its points while new ones load after a filter change, with a small spinner instead of the full loading screen. A selection drawn before the new points arrive is ignored.
 
 ### Deprecated
+
+- Python SDK: `to_coco_segmentation_masks`. Use `to_coco_instance_segmentation` instead.
 
 ### Removed
 

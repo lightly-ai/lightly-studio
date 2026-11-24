@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 from collections.abc import Iterable
 from pathlib import Path
 from uuid import UUID
@@ -121,12 +122,12 @@ class DatasetExport:
         with Path(output_json).open("w") as f:
             json.dump(coco_captions_dict, f, indent=2)
 
-    def to_coco_segmentation_masks(
+    def to_coco_instance_segmentation(
         self,
         output_json: PathLike | None = None,
         annotation_collection_id: UUID | None = None,
     ) -> None:
-        """Exports segmentation masks to a COCO format JSON file.
+        """Exports polygons and segmentation masks to a COCO format JSON file.
 
         Args:
             output_json: The path to the output COCO JSON file. If not provided,
@@ -144,6 +145,28 @@ class DatasetExport:
             sample_to_image=self._sample_to_image,
         )
         COCOInstanceSegmentationOutput(output_file=Path(output_json)).save(label_input=export_input)
+
+    def to_coco_segmentation_masks(
+        self,
+        output_json: PathLike | None = None,
+        annotation_collection_id: UUID | None = None,
+    ) -> None:
+        """Deprecated: use `to_coco_instance_segmentation` instead.
+
+        Args:
+            output_json: The path to the output COCO JSON file. If not provided,
+                defaults to "coco_export.json" in the current working directory.
+            annotation_collection_id: If provided, only annotations from this collection
+                are exported. If None, all annotations are exported.
+        """
+        warnings.warn(
+            "to_coco_segmentation_masks is deprecated, use to_coco_instance_segmentation instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.to_coco_instance_segmentation(
+            output_json=output_json, annotation_collection_id=annotation_collection_id
+        )
 
     def to_pascalvoc_segmentation_mask(
         self,

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PIL import Image as PILImage
 
-from lightly_studio.core.annotation import CreateSegmentationMask
+from lightly_studio.core.annotation import CreatePolygon, CreateSegmentationMask
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from tests.helpers_resolvers import ImageStub, create_annotation_label, create_images
@@ -249,3 +249,28 @@ class TestDatasetExport:
         with PILImage.open(mask_path_1) as mask_1:
             mask_values_1 = list(mask_1.getdata())
         assert mask_values_1 == [0, 0, 0, 0, 1, 0]
+
+    def test_to_pascalvoc_segmentation_mask__ignores_polygons(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.collection_id,
+            images=[ImageStub(path="image0.jpg", width=3, height=2)],
+        )
+        samples = list(dataset)
+        samples[0].add_annotation(
+            CreatePolygon(class_name="dog", polygons=[[(0, 0), (2, 0), (2, 2)]])
+        )
+
+        output_folder = tmp_path / "pascalvoc"
+        ImageDatasetExport(
+            session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
+        ).to_pascalvoc_segmentation_mask(output_folder=output_folder)
+
+        with PILImage.open(output_folder / "SegmentationClass" / "image0.png") as mask:
+            mask_values = list(mask.getdata())
+        assert mask_values == [0, 0, 0, 0, 0, 0]

@@ -1,11 +1,13 @@
-"""Tests for exporting segmentation masks to COCO format via `DatasetExport`."""
+"""Tests for exporting instance segmentation to COCO format via `DatasetExport`."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from lightly_studio.core.annotation import CreateSegmentationMask
+import pytest
+
+from lightly_studio.core.annotation import CreatePolygon, CreateSegmentationMask
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import (
@@ -17,12 +19,12 @@ from tests.helpers_resolvers import ImageStub, create_annotation_label, create_i
 
 
 class TestDatasetExport:
-    def test_to_coco_segmentation_masks(
+    def test_to_coco_instance_segmentation(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        """Tests exporting segmentation masks to COCO format."""
+        """Tests exporting instance segmentation to COCO format."""
         dataset = ImageDataset.create(name="test_dataset")
         create_images(
             db_session=dataset.session,
@@ -42,7 +44,7 @@ class TestDatasetExport:
         output_json = tmp_path / "task_inst_seg_1.json"
         ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
-        ).to_coco_segmentation_masks(output_json=output_json)
+        ).to_coco_instance_segmentation(output_json=output_json)
 
         # Load the generated JSON and verify its content
         with open(output_json) as f:
@@ -63,7 +65,7 @@ class TestDatasetExport:
             ],
         }
 
-    def test_to_coco_segmentation_masks__skips_missing_mask(
+    def test_to_coco_instance_segmentation__skips_missing_mask(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
@@ -100,7 +102,7 @@ class TestDatasetExport:
         output_json = tmp_path / "task_inst_seg_skip.json"
         ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
-        ).to_coco_segmentation_masks(output_json=output_json)
+        ).to_coco_instance_segmentation(output_json=output_json)
 
         # Load the generated JSON and verify its content
         with open(output_json) as f:
@@ -113,3 +115,62 @@ class TestDatasetExport:
             "categories": [{"id": 0, "name": "dog"}],
             "annotations": [],
         }
+
+    def test_to_coco_instance_segmentation__polygons_and_masks(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.collection_id,
+            images=[ImageStub(path="image0.jpg", width=20, height=20)],
+        )
+        samples = list(dataset)
+        samples[0].add_annotation(
+            CreatePolygon(
+                class_name="dog",
+                polygons=[
+                    [(1, 1), (5, 1), (5, 5)],
+                    [(10, 10), (12, 10), (12, 12)],
+                ],
+            )
+        )
+        samples[0].add_annotation(
+            CreateSegmentationMask.from_rle_mask(
+                class_name="dog",
+                sample_2d=samples[0],
+                segmentation_mask=[2, 3, 395],
+            )
+        )
+
+        output_json = tmp_path / "out.json"
+        ImageDatasetExport(
+            session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
+        ).to_coco_instance_segmentation(output_json=output_json)
+
+        with open(output_json) as f:
+            annotations = sorted(json.load(f)["annotations"], key=lambda a: a["iscrowd"])
+        assert annotations[0]["iscrowd"] == 0
+        assert annotations[0]["segmentation"] == [[1, 1, 5, 1, 5, 5], [10, 10, 12, 10, 12, 12]]
+        assert annotations[1]["iscrowd"] == 1
+        assert "counts" in annotations[1]["segmentation"]
+
+
+class TestDatasetExportDeprecated:
+    def test_to_coco_segmentation_masks__deprecated(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        output_json = tmp_path / "out.json"
+        export = ImageDatasetExport(
+            session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
+        )
+
+        with pytest.warns(DeprecationWarning, match="use to_coco_instance_segmentation instead"):
+            export.to_coco_segmentation_masks(output_json=output_json)
+
+        assert output_json.exists()

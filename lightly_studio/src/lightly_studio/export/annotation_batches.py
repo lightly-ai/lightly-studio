@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from typing import TypeVar
 from uuid import UUID
 
@@ -25,16 +25,16 @@ _EXPORT_BATCH_SIZE = 500
 def iter_sample_annotations(
     session: Session,
     samples: Iterable[_Sample],
-    annotation_type: AnnotationType,
+    annotation_types: Sequence[AnnotationType],
     annotation_collection_id: UUID | None,
 ) -> Iterator[tuple[_Sample, list[AnnotationBaseTable]]]:
     """Yield samples in input order with the annotations needed by the export."""
     query = (
         select(AnnotationBaseTable)
-        .where(col(AnnotationBaseTable.annotation_type) == annotation_type)
+        .where(col(AnnotationBaseTable.annotation_type).in_(annotation_types))
         # Pascal VOC writes overlapping pixels in annotation order.
         .order_by(col(AnnotationBaseTable.created_at), col(AnnotationBaseTable.sample_id))
-        .options(lazyload(AnnotationBaseTable.object_track), *_export_options(annotation_type))
+        .options(lazyload(AnnotationBaseTable.object_track), *_export_options(annotation_types))
     )
     if annotation_collection_id is not None:
         query = query.where(
@@ -53,16 +53,19 @@ def iter_sample_annotations(
             yield sample, annotations_by_sample_id.get(sample.sample_id, [])
 
 
-def _export_options(annotation_type: AnnotationType) -> list[LoaderOption]:
-    if annotation_type == AnnotationType.CLASSIFICATION:
+def _export_options(annotation_types: Sequence[AnnotationType]) -> list[LoaderOption]:
+    if AnnotationType.CLASSIFICATION in annotation_types:
         # CSV uses the source name and excludes classifications with a temporal span.
         return [
             joinedload(AnnotationBaseTable.annotation_label),
             joinedload(AnnotationBaseTable.sample).joinedload(SampleTable.collection),
             joinedload(AnnotationBaseTable.temporal_span_details),
         ]
-    if annotation_type == AnnotationType.OBJECT_DETECTION:
-        shape = joinedload(AnnotationBaseTable.object_detection_details)
-    else:
-        shape = joinedload(AnnotationBaseTable.segmentation_details)
-    return [shape, lazyload(AnnotationBaseTable.temporal_span_details)]
+    shape_options: list[LoaderOption] = []
+    if AnnotationType.OBJECT_DETECTION in annotation_types:
+        shape_options.append(joinedload(AnnotationBaseTable.object_detection_details))
+    if AnnotationType.SEGMENTATION_MASK in annotation_types:
+        shape_options.append(joinedload(AnnotationBaseTable.segmentation_details))
+    if AnnotationType.POLYGON in annotation_types:
+        shape_options.append(joinedload(AnnotationBaseTable.polygon_details))
+    return [*shape_options, lazyload(AnnotationBaseTable.temporal_span_details)]

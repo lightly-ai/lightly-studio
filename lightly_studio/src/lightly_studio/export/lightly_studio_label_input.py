@@ -9,7 +9,7 @@ export logic while differing only in how a sample maps to a labelformat `Image`.
 from __future__ import annotations
 
 from argparse import ArgumentParser
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Protocol
 from uuid import UUID
 
@@ -22,6 +22,7 @@ from labelformat.model.instance_segmentation import (
     InstanceSegmentationInput,
     SingleInstanceSegmentation,
 )
+from labelformat.model.multipolygon import MultiPolygon
 from labelformat.model.object_detection import (
     ImageObjectDetection,
     ObjectDetectionInput,
@@ -106,12 +107,12 @@ class LightlyStudioInputBase:
             )
 
     def _samples_with_annotations(
-        self, annotation_type: AnnotationType
+        self, annotation_types: Sequence[AnnotationType]
     ) -> Iterable[tuple[Sample, list[AnnotationBaseTable]]]:
         return annotation_batches.iter_sample_annotations(
             session=self._session,
             samples=self._samples,
-            annotation_type=annotation_type,
+            annotation_types=annotation_types,
             annotation_collection_id=self._annotation_collection_id,
         )
 
@@ -122,7 +123,7 @@ class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionI
     def get_labels(self) -> Iterable[ImageObjectDetection]:
         """Returns the labels for export."""
         for idx, (sample, sample_annotations) in enumerate(
-            self._samples_with_annotations(annotation_type=AnnotationType.OBJECT_DETECTION)
+            self._samples_with_annotations(annotation_types=[AnnotationType.OBJECT_DETECTION])
         ):
             objects = [
                 _annotation_to_single_obj_det(
@@ -153,12 +154,17 @@ class LightlyStudioYOLOObjectDetectionInput(LightlyStudioObjectDetectionInput):
 
 
 class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
-    """Labelformat adapter for segmentation mask backed by dataset samples and annotations."""
+    """Labelformat adapter for polygons and segmentation masks backed by dataset samples."""
+
+    ANNOTATION_TYPES: tuple[AnnotationType, ...] = (
+        AnnotationType.POLYGON,
+        AnnotationType.SEGMENTATION_MASK,
+    )
 
     def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
         """Returns the labels for export."""
         for idx, (sample, sample_annotations) in enumerate(
-            self._samples_with_annotations(annotation_type=AnnotationType.SEGMENTATION_MASK)
+            self._samples_with_annotations(annotation_types=self.ANNOTATION_TYPES)
         ):
             image = self._sample_to_image(
                 sample=sample, image_id=idx, use_relative_filename=self.USE_RELATIVE_FILENAME
@@ -184,6 +190,7 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(LightlyStudioInstanceSegme
 
     # TODO(Leonardo, 03/2026): Ensure Pascal VOC export maps user-defined background to class ID 0
     # and void/ignore to 255 for spec compliance.
+    ANNOTATION_TYPES = (AnnotationType.SEGMENTATION_MASK,)
     CATEGORY_ID_START = 1
     # Pascal VOC derives mask filenames from image names, so an absolute path cannot be used.
     USE_RELATIVE_FILENAME = True
@@ -234,6 +241,16 @@ def _annotation_to_single_inst_seg(
     image_width: int,
     image_height: int,
 ) -> SingleInstanceSegmentation | None:
+    category = label_id_to_category[annotation.annotation_label_id]
+    if annotation.polygon_details is not None:
+        return SingleInstanceSegmentation(
+            category=category,
+            segmentation=MultiPolygon(
+                polygons=[
+                    [(x, y) for x, y in polygon] for polygon in annotation.polygon_details.polygons
+                ]
+            ),
+        )
     if annotation.segmentation_details is None:
         return None
     if annotation.segmentation_details.segmentation_mask is None:
@@ -251,7 +268,6 @@ def _annotation_to_single_inst_seg(
         height=image_height,
         bounding_box=box,
     )
-    category = label_id_to_category[annotation.annotation_label_id]
     return SingleInstanceSegmentation(
         category=category,
         segmentation=segmentation,
