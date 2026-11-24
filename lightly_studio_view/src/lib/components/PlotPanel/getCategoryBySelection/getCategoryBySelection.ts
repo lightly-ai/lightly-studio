@@ -1,6 +1,6 @@
 import type { Point } from 'embedding-atlas/svelte';
 import { isPointInPolygon } from '../isPointInPolygon/isPointInPolygon';
-import type { ArrowData } from '$lib/hooks/useEmbeddings/parseEmbeddingsArrow';
+import type { ArrowData } from '$lib/hooks';
 import { EXCLUDED_BY_FILTERS_CATEGORY } from '../plotCategories';
 
 type Selection = Point[] | null;
