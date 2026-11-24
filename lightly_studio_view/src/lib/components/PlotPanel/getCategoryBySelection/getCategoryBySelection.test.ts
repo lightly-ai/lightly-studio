@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { ArrowData } from '../useArrowData/useArrowData';
+import type { ArrowData } from '$lib/hooks/useEmbeddings/parseEmbeddingsArrow';
 
 type Point = { x: number; y: number };
 
