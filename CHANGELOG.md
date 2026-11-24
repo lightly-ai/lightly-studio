@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The GUI query filter shows a warning when a query uses a tag that does not exist.
 - Compare evaluation runs side by side: select runs in the Evaluation panel and click Compare to see a leaderboard with mAP, precision, recall and F1, and the metrics for each annotation class.
 - Turn on "Compute average precision" when you create or edit an object detection evaluation in the GUI to get mAP.
+- Evaluate only the images of selected tags from the New evaluation dialog. A rerun of the evaluation keeps the same tags.
+- Compare evaluation runs on tags: the Scenarios table on the comparison page shows each run's metrics on the full set and on each selected tag.
 
 
 ### Changed

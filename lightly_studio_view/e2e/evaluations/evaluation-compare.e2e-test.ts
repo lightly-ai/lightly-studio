@@ -27,4 +27,14 @@ test('compares two evaluation runs on a leaderboard', async ({ page }) => {
     // The two runs use different annotation sources and image sets.
     await expect(page.getByText('Runs evaluate different images.')).toBeVisible();
     await expect(page.getByTestId('per-class-metrics')).toBeVisible();
+
+    await page
+        .getByTestId('scenario-tag-picker')
+        .getByRole('checkbox', { name: 'distribution_reviewed' })
+        .click();
+    await expect(page).toHaveURL(/tags=/);
+    const scenarioRow = page
+        .getByTestId('scenario-table')
+        .getByRole('row', { name: /distribution_reviewed/ });
+    await expect(scenarioRow.getByRole('cell').nth(1)).toHaveText(DECIMAL_METRIC);
 });

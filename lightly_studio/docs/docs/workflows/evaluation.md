@@ -29,6 +29,16 @@ Evaluation results are accessible in the **Evaluation** panel of the GUI once a 
     - **Red off-diagonal cells** — the model is confusing those two classes.
     - Use the red cells to decide which samples to inspect next in the grid.
 
+### Evaluate on tags
+
+To evaluate only some images, select one or more tags in **Images** in the **New evaluation** dialog. The run evaluates the images that have any of the selected tags. The run shows the tags as **Images: tag A, tag B**.
+
+When you rerun the evaluation, for example after you edit its settings or when it is stale, it uses the same tags again. Images that you added to a tag later are included.
+
+!!! note
+
+    A run created in Python with `dataset.evaluate(query=...)` does not store its query. A rerun of such a run evaluates all images that have both annotation sources.
+
 ### Compare evaluation runs
 
 Compare two or more runs side by side to select the best model:
@@ -42,6 +52,12 @@ The comparison page shows:
 - **Per annotation class**: a table and a bar chart with one value for each annotation class and run. Select AP, precision, recall, or F1.
 
 mAP is available only for object detection runs with **Compute average precision** turned on. This setting is on by default in **New evaluation**. For an older run, turn it on in the run settings and rerun.
+
+#### Compare runs on tags
+
+Select tags under **Scenarios** to compare the runs on subsets of the images, for example "night" or "small objects". The table has one row for the full set and one row for each tag, and one column for each run. The best run of each row is bold. Select the metric above the table. The link of the page keeps the selected tags.
+
+The values come from the runs that exist. You do not need one run for each tag. LightlyStudio computes the average precision of a tag again each time you open the page, so many tags on a large dataset take longer to load.
 
 !!! warning "Runs that are not comparable"
 
