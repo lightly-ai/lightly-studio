@@ -31,7 +31,7 @@ from lightly_studio.core import labelformat_helpers
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.database import db_manager
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import caption_resolver, image_resolver
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from tests import helpers_resolvers
 from tests.helpers_resolvers import (
@@ -570,6 +570,43 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
     assert samples[0].sample.captions[1].text == "Caption 2 of image 1"
     assert len(samples[1].sample.captions) == 1
     assert samples[1].sample.captions[0].text == "Caption 1 of image 2"
+
+
+def test_load_into_dataset_from_coco_captions__writes_captions_per_batch(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    collection = helpers_resolvers.create_collection(db_session)
+    file_names = ["image0.jpg", "image1.jpg", "image2.jpg"]
+    for file_name in file_names:
+        PILImage.new("RGB", (640, 480)).save(str(tmp_path / file_name))
+    coco_dict = {
+        "images": [
+            {"id": i, "file_name": name, "width": 640, "height": 480}
+            for i, name in enumerate(file_names)
+        ],
+        "annotations": [
+            {"id": i, "image_id": i, "caption": f"Caption {i}"} for i in range(len(file_names))
+        ],
+    }
+    annotations_path = tmp_path / "annotations.json"
+    annotations_path.write_text(json.dumps(coco_dict))
+    mocker.patch.object(add_images, "SAMPLE_BATCH_SIZE", 2)
+    create_captions_spy = mocker.spy(caption_resolver, "create_many")
+
+    sample_ids = add_images.load_into_dataset_from_coco_captions(
+        session=db_session,
+        ingestion=LocalIngestionTransport(),
+        root_collection_id=collection.collection_id,
+        annotations_json=annotations_path,
+        images_path=tmp_path,
+    )
+
+    assert len(sample_ids) == 3
+    caption_texts_per_call = [
+        [caption.text for caption in call.kwargs["captions"]]
+        for call in create_captions_spy.call_args_list
+    ]
+    assert caption_texts_per_call == [["Caption 0", "Caption 1"], ["Caption 2"]]
 
 
 def test_load_into_dataset_from_coco_captions__records_missing_already_present_added_outcomes(
