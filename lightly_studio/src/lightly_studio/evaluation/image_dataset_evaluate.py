@@ -11,10 +11,10 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.evaluation import (
-    aggregate_metrics,
     average_precision,
     classification_metric,
     instance_segmentation_metric,
+    run_metrics,
     semantic_segmentation_metric,
     validators,
 )
@@ -30,11 +30,9 @@ from lightly_studio.models.evaluation_run import (
 )
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
-    annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
     evaluation_annotation_metric_resolver,
-    evaluation_class_metric_resolver,
     evaluation_run_resolver,
 )
 
@@ -321,9 +319,9 @@ class ImageDatasetEvaluate:
         Derives per-class and micro-averaged precision, recall, and F1 from the
         run's confusion matrix, plus accuracy for classification runs. For
         object-detection runs created with ``compute_average_precision=True`` it also
-        includes the per-class and mean average precision. Object detection and
-        classification are supported; segmentation tasks have no confusion matrix and
-        so no confusion-derived metrics.
+        includes the per-class and mean average precision. Object detection, instance
+        segmentation, and classification are supported. Semantic segmentation has no
+        confusion matrix and so no metrics.
 
         Args:
             run_id: ID of the evaluation run.
@@ -335,27 +333,8 @@ class ImageDatasetEvaluate:
             ValueError: If no run with ``run_id`` exists in this dataset.
             NotImplementedError: If the run's task type has no confusion matrix.
         """
-        run, matrix = self._confusion_matrix_with_run(run_id)
-        metrics = aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
-            matrix=matrix,
-            task_type=run.task_type,
-        )
-        if run.task_type != EvaluationTaskType.OBJECT_DETECTION:
-            return metrics
-        by_label = average_precision.by_label_and_threshold(
-            class_metrics=evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
-                session=self.session, evaluation_run_id=run.id
-            ),
-            run_config=run.config_json,
-        )
-        # Resolve names at read time, so renamed labels keep their values and deleted
-        # labels are skipped.
-        labels = annotation_label_resolver.get_by_ids(session=self.session, ids=list(by_label))
-        return average_precision.with_average_precision(
-            metrics=metrics,
-            by_class={
-                label.annotation_label_name: by_label[label.annotation_label_id] for label in labels
-            },
+        return run_metrics.compute_run_metrics(
+            session=self.session, evaluation_run=self._get_run(run_id=run_id)
         )
 
     def _confusion_matrix_with_run(
@@ -367,9 +346,7 @@ class ImageDatasetEvaluate:
             ValueError: If no run with ``run_id`` exists in this dataset.
             NotImplementedError: If the run's task type has no confusion matrix.
         """
-        run = evaluation_run_resolver.get_by_id(session=self.session, evaluation_id=run_id)
-        if run is None or run.dataset_id != self._dataset_id():
-            raise ValueError(f"Evaluation run {run_id} not found in this dataset.")
+        run = self._get_run(run_id=run_id)
         if not evaluation_annotation_metric_resolver.supports_confusion_matrix(run.task_type):
             raise NotImplementedError(
                 f"Evaluation task type {run.task_type.value!r} has no confusion matrix."
@@ -379,6 +356,17 @@ class ImageDatasetEvaluate:
             evaluation_run_id=run_id,
         )
         return run, matrix
+
+    def _get_run(self, run_id: UUID) -> EvaluationRunTable:
+        """Fetch a run of this dataset.
+
+        Raises:
+            ValueError: If no run with ``run_id`` exists in this dataset.
+        """
+        run = evaluation_run_resolver.get_by_id(session=self.session, evaluation_id=run_id)
+        if run is None or run.dataset_id != self._dataset_id():
+            raise ValueError(f"Evaluation run {run_id} not found in this dataset.")
+        return run
 
     def _dataset_id(self) -> UUID:
         """Resolve the dataset ID of the evaluated collection."""
