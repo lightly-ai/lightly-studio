@@ -291,6 +291,36 @@ describe('usePlotComputeGate', () => {
         await vi.waitFor(() => expect(gate.view).toBe('prompt'));
     });
 
+    it('keeps the prompt while a changed plot request waits for a new status', async () => {
+        const query = createStatusQuery(NOT_COMPUTED_LARGE);
+        let finishRefetch = () => {};
+        query.refetch = vi.fn(
+            () =>
+                new Promise<void>((resolve) => {
+                    finishRefetch = () => {
+                        query.data = COMPUTED;
+                        resolve();
+                    };
+                })
+        );
+        mocks.statusQueries['prompt-filter'] = query;
+        let plotRequestKey = $state('all');
+        const { gate } = mountGate({
+            collectionId: 'prompt-filter',
+            plotRequestKey: () => plotRequestKey
+        });
+        expect(gate.view).toBe('prompt');
+
+        plotRequestKey = 'filtered';
+        flushSync();
+
+        expect(gate.view).toBe('prompt');
+        expect(gate.isPlotRequestEnabled).toBe(false);
+
+        finishRefetch();
+        await vi.waitFor(() => expect(gate.view).toBe('plot'));
+    });
+
     it('waits for the latest status when the plot request changes back', async () => {
         const query = createStatusQuery(COMPUTED);
         const finishRefetches: (() => void)[] = [];
@@ -320,7 +350,7 @@ describe('usePlotComputeGate', () => {
         const [finishFilteredRefetch, finishAllRefetch] = finishRefetches;
         finishFilteredRefetch();
         await Promise.resolve();
-        expect(gate.view).toBe('checking');
+        expect(gate.isPlotRequestEnabled).toBe(false);
 
         finishAllRefetch();
         await vi.waitFor(() => expect(gate.view).toBe('prompt'));
