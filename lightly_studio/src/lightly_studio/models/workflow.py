@@ -49,8 +49,13 @@ batch_file_table = Table(
     Column("sample_id", Uuid, primary_key=True),
     Column("project_id", Uuid, nullable=False),
     Column("state", String, nullable=False),
+    Column("labeler", String, nullable=True),
+    Column("reviewer", String, nullable=True),
 )
-"""A sample in a batch. A sample is in at most one batch of a project."""
+"""A sample in a batch, with the emails of its labeler and reviewer.
+
+A sample is in at most one batch of a project.
+"""
 
 
 class SampleWorkflowView(BaseModel):
