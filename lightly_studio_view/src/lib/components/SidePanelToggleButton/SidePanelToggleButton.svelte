@@ -8,18 +8,19 @@
     const { isSampleDetailsSidePanelCollapsed, toggleSampleDetailsSidePanelCollapsed } =
         useGlobalStorage();
 
-    const isCollapsed = $derived($isSampleDetailsSidePanelCollapsed);
-    const label = $derived(isCollapsed ? 'Show side panel' : 'Hide side panel');
+    const label = $derived(
+        $isSampleDetailsSidePanelCollapsed ? 'Show side panel' : 'Hide side panel'
+    );
 </script>
 
 <Tooltip content={label} position="bottom" noTriggerRole>
     <Button
-        icon={isCollapsed ? PanelRightOpen : PanelRightClose}
+        icon={$isSampleDetailsSidePanelCollapsed ? PanelRightOpen : PanelRightClose}
         variant="ghost"
         ariaLabel={label}
         buttonProps={{
             onclick: toggleSampleDetailsSidePanelCollapsed,
-            'aria-expanded': !isCollapsed,
+            'aria-expanded': !$isSampleDetailsSidePanelCollapsed,
             'data-testid': 'side-panel-toggle',
             class: 'h-8 px-2'
         }}
