@@ -12,7 +12,7 @@
 - **One validation function** rounds the vertices and computes the box on every write, because the database doesn't check the shape.
 - **Mirror masks:** each place that handles `SegmentationAnnotationTable` today gets a polygon branch. Most of Tasks 2–3 is this.
 - **One ingestion fix:** labelformat already returns `MultiPolygon` for polygons and `BinaryMaskSegmentation` for masks. A new helper that chooses the type from that fixes the dropped vertices for COCO. YouTube-VIS is out of scope and keeps the current helper.
-- **Ingestion ships last**, so every reader, export and check handles polygons before the first real polygon is stored.
+- **Ingestion ships last**, so every reader, export, check and the GUI handles polygons before the first real polygon is stored. The GUI shows a polygon as a read-only box; drawing and editing polygons is out of scope.
 
 ## Exact values
 
@@ -31,7 +31,7 @@
 
 ## How to work
 
-- Before editing, load the skills from `AGENTS.md`: `python-guide`, `backend-guide`, `clean-code` for Python; `frontend-guide` for Task 14; `changelog` and `glossary` for Task 15.
+- Before editing, load the skills from `AGENTS.md`: `python-guide`, `backend-guide`, `clean-code` for Python; `frontend-guide` for Tasks 14 and 14b; `changelog` for Tasks 14b and 15; `glossary` for Task 15.
 - Validate each task: `cd lightly_studio && make static-checks && uv run pytest <affected tests>`.
 
 ## Review Focus
@@ -60,6 +60,7 @@ Target: at most ~200 added lines of non-test code per PR. Estimates are non-test
 | 5 | `michal-stu-165-05-query-by-box` | 6 | Query by box | ~90 + generated types |
 | 6 | `michal-stu-165-06-export-coco-yolo` | 8, 9 | Export to COCO and YOLO | ~150 + generated types |
 | 7 | `michal-stu-165-07-export-dialog` | 14 | Export dialog entries (frontend) | ~40 |
+| 7b | `michal-stu-165-07b-frontend-polygon-guard` | 14b | GUI shows polygons as boxes; undo, copy and move keep polygons (frontend) | ~40 |
 | 8 | `michal-stu-165-08-coco-ingestion` | 10 (bump), 12, 7 | COCO ingestion keeps polygons; evaluation rejects polygon sources | ~85 + `uv.lock` |
 | 9 | `michal-stu-165-09-annotation-task` | 11, 13 | `AnnotationFileTask`, `annotation_task`, YOLO segmentation, deprecation | ~100 |
 | 10 | `michal-stu-165-10-docs` | 15 | Docs, examples, glossary | docs only |
@@ -68,6 +69,7 @@ Target: at most ~200 added lines of non-test code per PR. Estimates are non-test
 - **PR 8 carries the evaluation error.** From PR 8 on, existing COCO segmentation calls store polygons, so that is when evaluation starts to see them.
 - **PR 6 is the riskiest size.** If the export loader grows past the estimate, split it: COCO (Task 8), then YOLO (Task 9).
 - PRs 3, 4 and 5 depend only on PR 2, and PR 7 only on PR 6, so they can be reviewed in parallel.
+- **PR 7b must merge before PR 8.** From PR 8 on, COCO segmentation data loads as polygons, and without 7b the GUI crashes on them. PR 7b is stacked on PR 7; PR 8 is stacked on PR 7b and keeps only the e2e test changes that its data change causes.
 
 ---
 
@@ -478,6 +480,33 @@ def test_add_annotations_from_labelformat__one_warning_for_skipped(caplog, ...) 
 
 ---
 
+### Task 14b: GUI shows polygons as boxes; undo, copy and move keep polygons (frontend)
+
+Without this task the GUI throws on any polygon in 2 places (`getBoundingBox`, `AnnotationItem.svelte`), and 2 more show nothing (the canvas in `SampleAnnotations/index.svelte`, the size in the side panel). Undo of a delete, copy and move to another source fail: they send no `polygons`, so the backend rejects them with "Polygon annotations require polygons.". The create API already accepts `polygons` and computes the box, so the fix is one field. Move is fixed ahead of time: the annotation card that offers it doesn't open for polygons yet (`CARD_TYPES` in `AnnotationCardLayer.svelte`).
+
+**Files:**
+- Modify: `lightly_studio_view/src/lib/services/types.ts` (`isPolygonAnnotation` guard), `src/lib/components/SampleAnnotation/utils.ts` (`getBoundingBox`), `src/lib/components/SampleAnnotation/SampleAnnotation.svelte` (no `ResizableRectangle` for polygons), `src/lib/components/SampleAnnotations/index.svelte` (draw the box as `object_detection`), `src/lib/components/AnnotationsGrid/AnnotationItem/AnnotationItem.svelte`, `src/lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte`
+- Modify: `src/lib/services/addAnnotationDeleteToUndoStack.ts` (`buildRestoreInput`), `src/lib/components/CopyAnnotationToSource/useCopyAnnotationToSource.svelte.ts`, `src/lib/components/SampleDetails/AnnotationCard/useMoveAnnotationByCopy.svelte.ts`
+- Test: the `.test.ts` next to each modified file, except `types.ts` and `SampleDetailsSidePanelAnnotation.svelte`
+- Modify: `CHANGELOG.md`
+
+**Interfaces:**
+- Consumes: Task 2 `AnnotationView.polygon_details: PolygonAnnotationView | null` (`x`, `y`, `width`, `height`, `polygons`) and `AnnotationCreateInput.polygons` in the generated client.
+- Produces: `isPolygonAnnotation(annotation: Annotation): annotation is Annotation & { polygon_details: PolygonAnnotationView }` in `$lib/services/types`.
+
+- [ ] **Step 1: Show polygons as boxes.** The code and its tests exist in commit `91c58e011` (on PR 8). Bring over its `lightly_studio_view/src/` files only (`git checkout 91c58e011 -- <files>`); its 3 e2e files stay in PR 8. Tests: `utils.test.ts` "returns the rounded box of a polygon annotation", `SampleAnnotation.test.ts` "shows the box of a polygon without resize handles in edit mode", `index.test.ts` "draws the box of a polygon annotation", `AnnotationItem.test.ts` "shows the box of a polygon annotation".
+- [ ] **Step 2: Write the failing tests** for the three create inputs. Each test uses a polygon annotation with `polygon_details.polygons = [[[0, 0], [10, 0], [10, 10]]]` and asserts that `createAnnotation` gets `annotation_type: 'polygon'` and `polygons: [[[0, 0], [10, 0], [10, 10]]]`:
+  - `addAnnotationDeleteToUndoStack.test.ts`: "restores a deleted polygon with its vertices"
+  - `useCopyAnnotationToSource.svelte.test.ts`: "copies a polygon with its vertices"
+  - `useMoveAnnotationByCopy.svelte.test.ts`: "moves a polygon with its vertices", and the undo re-creates the original with the same `polygons`
+- [ ] **Step 3: Run** `npx vitest run <the 3 test files>` — FAIL.
+- [ ] **Step 4: Implement:** add `polygons: annotation.polygon_details?.polygons` to the create input in all three. Don't pass the polygon box: the backend computes it.
+- [ ] **Step 5: Run** the 7 affected test files — PASS; `make static-checks` in `lightly_studio_view`. Never the full suite.
+- [ ] **Step 6: Changelog** (Added): `The GUI shows polygon annotations as boxes. Polygons can't be edited in the GUI yet.`
+- [ ] **Step 7: Commit** `feat: show polygon annotations as boxes in the GUI`. Then merge up without rewriting history: 7b → PR 8 → PR 9 → PR 10 (`git merge --no-edit`), and set PR 8's base on GitHub: `gh pr edit <PR 8> --base michal-stu-165-07b-frontend-polygon-guard`.
+
+---
+
 ### Task 15: Docs, examples, glossary
 
 **Files:**
@@ -491,6 +520,7 @@ def test_add_annotations_from_labelformat__one_warning_for_skipped(caplog, ...) 
   - Changed: `The "Segmentation masks (COCO)" export is now "Instance segmentation (COCO)" and includes polygons.`
   - Deprecated: `Python SDK: annotation_type in the COCO methods. Use annotation_task instead.` and `Python SDK: to_coco_segmentation_masks. Use to_coco_instance_segmentation instead.`
   - Fixed: `Python SDK: COCO polygons are loaded with their vertices, not only their box.`
+  - Added (PR 7b): `The GUI shows polygon annotations as boxes. Polygons can't be edited in the GUI yet.`
   - Changed: `Instance and semantic segmentation evaluation reports an error for annotation sources with polygons. Before, such sources ran and skipped the polygons.`
 - [ ] **Step 3: Run** `cd lightly_studio && make static-checks` and `uv run python -W error::DeprecationWarning -c "import lightly_studio"` — no warnings at import.
 - [ ] **Step 4: Commit** `docs: polygon annotations and annotation_task`
