@@ -112,10 +112,10 @@ describe('AnnotationItem', () => {
             }
         } as AnnotationView;
 
-        const { container } = render(AnnotationItem, { props: { ...defaultProps, annotation } });
+        render(AnnotationItem, { props: { ...defaultProps, annotation } });
 
         // The 200x100 tile shows the 400x200 padded crop at half size.
-        expect(container.querySelector('.annotation-box')).toHaveStyle({
+        expect(screen.getByTestId('annotation-box')).toHaveStyle({
             width: '180px',
             height: '80px'
         });

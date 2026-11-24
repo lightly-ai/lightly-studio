@@ -167,6 +167,7 @@
         {/if}
         <div
             class="annotation-box"
+            data-testid="annotation-box"
             class:invisible={$isHidden || $isAnnotationClassHidden}
             style={`
             left: ${(containerWidth - annotationWidth * scale) / 2}px;
