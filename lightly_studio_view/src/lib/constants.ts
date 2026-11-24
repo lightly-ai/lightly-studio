@@ -6,7 +6,8 @@ export const ANNOTATION_TYPES: Record<Annotation['annotation_type'], string> = {
     object_detection: 'Object Detection',
     segmentation_mask: 'Segmentation Mask',
     classification: 'Classification',
-    cuboid_3d: 'Cuboid 3D'
+    cuboid_3d: 'Cuboid 3D',
+    polygon: 'Polygon'
 } as const;
 
 export const AUTHENTICATION_SESSION_STORAGE_KEY = 'lightlyEnterprise';
