@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from PIL import Image as PILImage
 from sqlalchemy import event
@@ -34,8 +35,9 @@ class TestDatasetExport:
         )
         statements: list[str] = []
 
-        def record_statement(conn, cursor, statement, parameters, context, executemany):  # type: ignore[no-untyped-def]  # noqa: ANN001, ARG001
-            statements.append(statement)
+        def record_statement(*args: Any) -> None:
+            # The arguments are (conn, cursor, statement, parameters, context, executemany).
+            statements.append(args[2])
 
         engine = dataset.session.get_bind()
         event.listen(engine, "before_cursor_execute", record_statement)
