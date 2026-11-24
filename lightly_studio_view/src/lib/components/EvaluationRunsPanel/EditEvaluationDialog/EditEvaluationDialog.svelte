@@ -21,6 +21,10 @@
     );
     let classwise = $state(config.classwise === true);
     let computeAveragePrecision = $state(config.compute_average_precision === true);
+    // Only object detection accepts the average precision setting.
+    const isObjectDetection = untrack(() => run.task_type) === 'object_detection';
+    const averagePrecisionConfig = () =>
+        isObjectDetection ? { compute_average_precision: computeAveragePrecision } : {};
     const { mutation, recompute } = useRecomputeEvaluationRun(() => ({
         datasetId,
         runId: run.id,
@@ -30,7 +34,7 @@
                   ...config,
                   iou_threshold: iouThreshold,
                   classwise,
-                  compute_average_precision: computeAveragePrecision
+                  ...averagePrecisionConfig()
               }
             : config
     }));
@@ -65,6 +69,7 @@
                             bind:iouThreshold
                             bind:classwise
                             bind:computeAveragePrecision
+                            showAveragePrecision={isObjectDetection}
                         />
                     {:else}
                         <p class="text-sm text-muted-foreground">

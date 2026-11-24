@@ -10,12 +10,15 @@
         classwise: boolean;
         /** Whether the run also stores the per-class average precision, for mAP. */
         computeAveragePrecision: boolean;
+        /** Shows the average precision switch. Only object detection supports it. */
+        showAveragePrecision?: boolean;
     }
 
     let {
         iouThreshold = $bindable(0.5),
         classwise = $bindable(true),
-        computeAveragePrecision = $bindable(true)
+        computeAveragePrecision = $bindable(true),
+        showAveragePrecision = true
     }: Props = $props();
 </script>
 
@@ -60,22 +63,24 @@
     />
 </div>
 
-<div class="flex items-center justify-between">
-    <div class="flex flex-col gap-1">
-        <Label for="evaluation-compute-average-precision" class="text-foreground">
-            Compute average precision
-        </Label>
-        <p
-            id="evaluation-compute-average-precision-description"
-            class="text-xs text-muted-foreground"
-        >
-            Adds mAP. Takes longer to run.
-        </p>
+{#if showAveragePrecision}
+    <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-1">
+            <Label for="evaluation-compute-average-precision" class="text-foreground">
+                Compute average precision
+            </Label>
+            <p
+                id="evaluation-compute-average-precision-description"
+                class="text-xs text-muted-foreground"
+            >
+                Adds mAP. Takes longer to run.
+            </p>
+        </div>
+        <Switch
+            id="evaluation-compute-average-precision"
+            aria-describedby="evaluation-compute-average-precision-description"
+            bind:checked={computeAveragePrecision}
+            data-testid="compute-average-precision-switch"
+        />
     </div>
-    <Switch
-        id="evaluation-compute-average-precision"
-        aria-describedby="evaluation-compute-average-precision-description"
-        bind:checked={computeAveragePrecision}
-        data-testid="compute-average-precision-switch"
-    />
-</div>
+{/if}

@@ -4,6 +4,7 @@ import type {
     EvaluationRunMetricsView,
     EvaluationRunView
 } from '$lib/api/lightly_studio_local';
+import type { CategoryCountSeries } from '$lib/components/BarChart';
 
 export type ComparableTaskType = 'object_detection' | 'instance_segmentation' | 'classification';
 export type LeaderboardMetric =
@@ -44,6 +45,9 @@ const COMPARABLE_TASK_TYPES: readonly string[] = [
 ];
 const MINIMUM_RUN_COUNT = 2;
 const METRIC_DECIMALS = 3;
+const IOU_DECIMALS = 2;
+// The bar chart shows whole numbers best, so chart values are percentage points.
+const PERCENT = 100;
 const MISSING_VALUE = '—';
 const IOU_THRESHOLD_50 = '0.5';
 const IOU_THRESHOLD_75 = '0.75';
@@ -179,6 +183,34 @@ export const bestIndices = (values: (number | null)[]): number[] => {
     const best = Math.max(...presentValues);
     return values.flatMap((value, index) => (value === best ? [index] : []));
 };
+
+/**
+ * Builds one bar series for each run. A class without a value has no bar. A total of 0
+ * keeps the tooltip from adding a share of the summed values, which has no meaning here.
+ */
+export const perClassChartSeries = (
+    runs: ComparedRun[],
+    rows: PerClassRow[]
+): CategoryCountSeries[] =>
+    runs.map((entry, runIndex) => ({
+        id: entry.run.id,
+        label: entry.run.name,
+        totalCount: 0,
+        data: rows.flatMap((row) => {
+            const value = row.values[runIndex];
+            return value === null ? [] : [{ label: row.label, count: toPercentPoints(value) }];
+        })
+    }));
+
+/** Describes the IoU threshold and class matching of a run, or null without them. */
+export const matchingSummary = (run: EvaluationRunView): string | null => {
+    const iouThreshold = configValue(run, 'iou_threshold');
+    if (typeof iouThreshold !== 'number') return null;
+    const classMatching = configValue(run, 'classwise') === false ? 'Any class' : 'Same class only';
+    return `IoU ${iouThreshold.toFixed(IOU_DECIMALS)} · ${classMatching}`;
+};
+
+const toPercentPoints = (value: number): number => Math.round(value * PERCENT * 10) / 10;
 
 const mapAtThreshold = (metrics: EvaluationMetrics, threshold: string): number | null =>
     metrics.mean_average_precision_by_iou_threshold?.[threshold] ?? null;

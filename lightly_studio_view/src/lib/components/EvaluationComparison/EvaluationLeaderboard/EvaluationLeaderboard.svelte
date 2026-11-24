@@ -6,6 +6,7 @@
         bestIndices,
         formatMetricValue,
         leaderboardValue,
+        matchingSummary,
         type ComparedRun,
         type LeaderboardMetric
     } from '../EvaluationComparison.helpers';
@@ -52,6 +53,9 @@
                     </div>
                     <div class="text-xs text-muted-foreground">
                         {entry.run.gt_annotation_source} vs {entry.run.pred_annotation_source}
+                        {#if matchingSummary(entry.run)}
+                            · {matchingSummary(entry.run)}
+                        {/if}
                     </div>
                 </td>
                 {#each columns as column, columnIndex (column)}

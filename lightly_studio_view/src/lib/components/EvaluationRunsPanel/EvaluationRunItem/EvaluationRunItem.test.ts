@@ -261,6 +261,22 @@ describe('EvaluationRunItem', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     });
 
+    it('edits an instance segmentation run without the average precision setting', async () => {
+        const run: EvaluationRunView = {
+            ...baseRun,
+            task_type: 'instance_segmentation',
+            evaluation_run_configuration: { iou_threshold: 0.5, classwise: true }
+        };
+        render(EvaluationRunItem, { ...defaultProps, run, expanded: true });
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+
+        expect(
+            screen.queryByRole('switch', { name: 'Compute average precision' })
+        ).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Save and rerun' }));
+        expect(state.params().config).toEqual({ iou_threshold: 0.5, classwise: true });
+    });
+
     it('blocks cancellation and repeated submissions while rerunning', async () => {
         state.pending = true;
         render(EvaluationRunItem, { ...defaultProps, expanded: true });

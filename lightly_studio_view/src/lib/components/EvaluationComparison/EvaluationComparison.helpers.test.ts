@@ -8,6 +8,8 @@ import {
     bestIndices,
     compareRuns,
     formatMetricValue,
+    matchingSummary,
+    perClassChartSeries,
     leaderboardColumns,
     leaderboardValue,
     perClassMetrics,
@@ -242,5 +244,43 @@ describe('formatMetricValue', () => {
     it('shows three decimals, or a dash for a missing value', () => {
         expect(formatMetricValue(0.51234)).toBe('0.512');
         expect(formatMetricValue(null)).toBe('—');
+    });
+});
+
+describe('perClassChartSeries', () => {
+    it('gives one series for each run in percentage points without missing classes', () => {
+        const runs = [compared('a'), compared('b')];
+        const rows = [
+            { label: 'cat', values: [0.9, 0.7], bestIndices: [0] },
+            { label: 'dog', values: [0.4, null], bestIndices: [0] }
+        ];
+
+        expect(perClassChartSeries(runs, rows)).toEqual([
+            {
+                id: 'a',
+                label: 'a',
+                totalCount: 0,
+                data: [
+                    { label: 'cat', count: 90 },
+                    { label: 'dog', count: 40 }
+                ]
+            },
+            { id: 'b', label: 'b', totalCount: 0, data: [{ label: 'cat', count: 70 }] }
+        ]);
+    });
+});
+
+describe('matchingSummary', () => {
+    it('describes the IoU threshold and the class matching of a run', () => {
+        expect(matchingSummary(makeRun())).toBe('IoU 0.50 · Same class only');
+        expect(
+            matchingSummary(
+                makeRun({ evaluation_run_configuration: { iou_threshold: 0.7, classwise: false } })
+            )
+        ).toBe('IoU 0.70 · Any class');
+    });
+
+    it('returns null for a run without matching settings', () => {
+        expect(matchingSummary(makeRun({ evaluation_run_configuration: {} }))).toBeNull();
     });
 });

@@ -26,6 +26,7 @@ describe('EvaluationLeaderboard', () => {
         expect(firstRow).toHaveTextContent('yolo-large');
         expect(firstRow).toHaveTextContent('0.512');
         expect(secondRow).toHaveTextContent('yolo-small');
+        expect(firstRow).toHaveTextContent('IoU 0.50 · Same class only');
     });
 
     it('shows a dash with a hint for a run without average precision', () => {

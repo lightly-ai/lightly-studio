@@ -6,7 +6,8 @@ import EvaluationComparison from './EvaluationComparison.svelte';
 import { makeMetricsView, makeRun } from './fixtures';
 
 const state = vi.hoisted(() => ({
-    runs: [] as EvaluationRunView[],
+    runs: [] as EvaluationRunView[] | undefined,
+    runsError: null as Error | null,
     metrics: undefined as EvaluationRunMetricsView[] | undefined,
     metricsError: null as Error | null,
     metricsEnabled: undefined as boolean | undefined
@@ -18,7 +19,9 @@ vi.mock('$lib/hooks', () => ({
             return state.runs;
         },
         isLoading: false,
-        error: null
+        get error() {
+            return state.runsError;
+        }
     }),
     useEvaluationRunsMetrics: (getParams: () => { enabled?: boolean }) => {
         state.metricsEnabled = getParams().enabled;
@@ -48,6 +51,16 @@ describe('EvaluationComparison', () => {
         ];
         state.metrics = [makeMetricsView('run-a'), makeMetricsView('run-b')];
         state.metricsError = null;
+        state.runsError = null;
+    });
+
+    it('shows the error when the runs request fails', () => {
+        state.runs = undefined;
+        state.runsError = new Error('Network down');
+
+        render(EvaluationComparison, { props: defaultProps });
+
+        expect(screen.getByText('Network down')).toBeInTheDocument();
     });
 
     it('asks for two runs when the link has one', () => {
@@ -60,7 +73,10 @@ describe('EvaluationComparison', () => {
     });
 
     it('asks for runs of the same task type', () => {
-        state.runs[1] = makeRun({ id: 'run-b', task_type: 'classification' });
+        state.runs = [
+            makeRun({ id: 'run-a', name: 'run a' }),
+            makeRun({ id: 'run-b', task_type: 'classification' })
+        ];
 
         render(EvaluationComparison, { props: defaultProps });
 

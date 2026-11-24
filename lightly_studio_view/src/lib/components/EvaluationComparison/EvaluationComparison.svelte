@@ -58,6 +58,8 @@
     </div>
     {#if hasUnknownRun || isMetricsNotFound}
         <p>Evaluation run not found.</p>
+    {:else if runsQuery.error}
+        <p class="text-destructive-text">{runsQuery.error.message}</p>
     {:else if runsQuery.data === undefined || metricsQuery.isLoading}
         <Spinner />
     {:else if selectionProblem !== null}
