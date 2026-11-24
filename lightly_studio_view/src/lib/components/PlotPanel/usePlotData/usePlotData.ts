@@ -1,7 +1,7 @@
 import { writable, type Writable } from 'svelte/store';
 import { EmbeddingView, type Point } from 'embedding-atlas/svelte';
 import type { ComponentProps } from 'svelte';
-import type { ArrowData } from '../useArrowData/useArrowData';
+import type { ArrowData } from '$lib/hooks';
 import { getCategoryBySelection } from '../getCategoryBySelection/getCategoryBySelection';
 import { resolveVisibleCategory } from '../resolveVisibleCategory/resolveVisibleCategory';
 import {

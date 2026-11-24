@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { get } from 'svelte/store';
-import type { ArrowData } from '../useArrowData/useArrowData';
+import type { ArrowData } from '$lib/hooks';
 
 type Point = { x: number; y: number };
 

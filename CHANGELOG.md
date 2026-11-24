@@ -20,14 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Filter video collections by categorical metadata.
 - The embedding plot asks before the first compute for 250,000 or more samples, and shows a timer while a plot computes.
 - The GUI query filter shows a warning when a query uses a tag that does not exist.
+- Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
 
 ### Changed
 
 - BREAKING: In the video query editor, `classification(...)` now matches whole-video classifications. Use `event(...)` for temporal events, or combine both with `OR` to include both kinds.
 - BREAKING: Python SDK: On videos, `ClassificationQuery` now matches whole-video classifications. Use `VideoEventQuery` for temporal events, or combine both queries with `OR(...)` to preserve both kinds of matches.
+- BREAKING: Python SDK: `to_annotation_create(...)` of `CreateClassification`, `CreateObjectDetection`, and `CreateSegmentationMask` takes the annotation class ID in place of `session` and `dataset_id`. To add annotations by class name, use `sample.add_annotations(...)`.
 - Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
 - Each metadata field in the filter panel has a checkbox. A collapsed field shows a short summary of its filter, for example a range or "2 of 3" values. Active fields move to the top, and the metadata filter chips are removed.
 - The embedding plot keeps showing its points while new ones load after a filter change, with a small spinner instead of the full loading screen. A selection drawn before the new points arrive is ignored.
+- In edit mode, the lock icon of a locked annotation in the sample details shows in the primary color, so locked annotations are easier to see.
 
 ### Deprecated
 

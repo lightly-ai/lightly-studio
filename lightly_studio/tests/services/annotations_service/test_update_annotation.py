@@ -8,6 +8,7 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
@@ -126,6 +127,31 @@ def test_update_annotation__raises_error_when_only_end_time_s_is_provided(
         )
 
 
+def test_update_annotation__incomplete_time_span_writes_nothing(
+    mocker: MockerFixture,
+    db_session: Session,
+    collection_id: UUID,
+) -> None:
+    mock_update_annotation_polygons = mocker.patch(
+        "lightly_studio.services.annotations_service.update_annotation_polygons"
+    )
+
+    with pytest.raises(
+        ValueError, match="Both start_time_s and end_time_s must be provided together"
+    ):
+        annotations_service.update_annotation(
+            db_session,
+            AnnotationUpdate(
+                annotation_id=UUID("12345678-1234-5678-1234-567812345678"),
+                collection_id=collection_id,
+                polygons=[[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]],
+                start_time_s=1.0,
+            ),
+        )
+
+    mock_update_annotation_polygons.assert_not_called()
+
+
 def test_update_annotation__calls_update_temporal_span_when_both_times_provided(
     mocker: MockerFixture,
     db_session: Session,
@@ -206,6 +232,33 @@ def test_update_annotation__marks_evaluation_run_stale(db_session: Session) -> N
     refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
     assert refreshed is not None
     assert refreshed.stale_since is not None
+
+
+def test_update_annotation__polygons(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(0, 0), (2, 0), (2, 2)]],
+    )
+
+    result = annotations_service.update_annotation(
+        session=db_session,
+        annotation_update=AnnotationUpdate(
+            annotation_id=annotation.sample_id,
+            collection_id=collection.collection_id,
+            polygons=[[(0, 0), (9, 0), (9, 7)]],
+        ),
+    )
+
+    assert result.polygon_details is not None
+    assert result.polygon_details.polygons == [[[0, 0], [9, 0], [9, 7]]]
+    assert (result.polygon_details.width, result.polygon_details.height) == (9, 7)
 
 
 def test_update_annotation__cuboid_3d_interpolates_track_around_cuboid(
