@@ -165,6 +165,15 @@ class TestDatasetExportDeprecated:
         patch_collection: None,  # noqa: ARG002
     ) -> None:
         dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.collection_id,
+            images=[ImageStub(path="image0.jpg", width=20, height=20)],
+        )
+        samples = list(dataset)
+        samples[0].add_annotation(
+            CreatePolygon(class_name="dog", polygons=[[(1, 1), (5, 1), (5, 5)]])
+        )
         output_json = tmp_path / "out.json"
         export = ImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
@@ -173,4 +182,6 @@ class TestDatasetExportDeprecated:
         with pytest.warns(DeprecationWarning, match="use to_coco_instance_segmentation instead"):
             export.to_coco_segmentation_masks(output_json=output_json)
 
-        assert output_json.exists()
+        with open(output_json) as f:
+            annotations = json.load(f)["annotations"]
+        assert [a["segmentation"] for a in annotations] == [[[1, 1, 5, 1, 5, 5]]]
