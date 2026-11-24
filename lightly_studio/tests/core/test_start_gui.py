@@ -86,7 +86,7 @@ def test_start_gui__with_samples(
     start_gui(open_browser=False)
 
     # Verify that the server was created with None defaults (env fallback is in Server)
-    mock_server.assert_called_once_with(host=None, port=None, app=None)
+    mock_server.assert_called_once_with(host=None, port=None)
     mock_server_instance.create_uvicorn_server.assert_called_once_with()
 
 
@@ -106,7 +106,7 @@ def test_start_gui__with_explicit_host_port(
 
     start_gui(host="0.0.0.0", port=9999, open_browser=False)
 
-    mock_server.assert_called_once_with(host="0.0.0.0", port=9999, app=None)
+    mock_server.assert_called_once_with(host="0.0.0.0", port=9999)
 
 
 def test_start_gui__returns_on_keyboard_interrupt(
@@ -207,47 +207,6 @@ def test_start_gui__does_not_open_browser_when_disabled(
     mock_open.assert_not_called()
 
 
-def test_start_gui__serves_the_given_app(
-    mocker: MockerFixture,
-    patch_collection: None,  # noqa: ARG001
-    tmp_path: Path,
-) -> None:
-    """Test that start_gui passes the given app to the Server."""
-    image_path = tmp_path / "sample.jpg"
-    Image.new("RGB", (10, 10)).save(image_path)
-
-    dataset = ImageDataset.create("test_dataset")
-    dataset.add_images_from_path(path=tmp_path)
-
-    custom_app = FastAPI()
-    mock_server = mocker.patch.object(start_gui_module, "Server")
-
-    start_gui(open_browser=False, app=custom_app)
-
-    mock_server.assert_called_once_with(host=None, port=None, app=custom_app)
-
-
-def test_server__serves_the_given_app() -> None:
-    """Test that the uvicorn server of a Server runs the given app."""
-    custom_app = FastAPI()
-
-    uvicorn_server = Server(app=custom_app).create_uvicorn_server()
-
-    assert uvicorn_server.config.app is custom_app
-
-
-def test_start_gui__no_samples_allowed(
-    mocker: MockerFixture,
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    """Test that start_gui starts without samples if require_samples is False."""
-    mock_server = mocker.patch.object(start_gui_module, "Server")
-
-    start_gui(open_browser=False, require_samples=False)
-
-    mock_server.assert_called_once_with(host=None, port=None, app=None)
-
-
 def test_start_gui__no_datasets(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
@@ -272,6 +231,17 @@ def test_start_gui__empty_datasets(
 
     with pytest.raises(ValueError, match="No images have been indexed"):
         start_gui(open_browser=False)
+
+
+@pytest.mark.usefixtures("patch_collection")
+def test_serve_app(mocker: MockerFixture) -> None:
+    """Test that serve_app serves the given app and starts without samples."""
+    custom_app = FastAPI()
+    mock_server = mocker.patch.object(start_gui_module, "Server")
+
+    start_gui_module.serve_app(app=custom_app, open_browser=False)
+
+    mock_server.assert_called_once_with(host=None, port=None, app=custom_app)
 
 
 def test_start_gui_background(

@@ -23,8 +23,6 @@ def start_gui(
     host: str | None = None,
     port: int | None = None,
     open_browser: bool = True,
-    app: FastAPI | None = None,
-    require_samples: bool = True,
 ) -> Server:
     """Launch the web interface for the loaded dataset.
 
@@ -34,20 +32,39 @@ def start_gui(
         host: Host to bind the server to. Falls back to LIGHTLY_STUDIO_HOST env var.
         port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
         open_browser: Whether to open the URL in a browser once the server is ready.
-        app: The FastAPI app to serve. Defaults to the LightlyStudio app.
-        require_samples: Whether to stop with an error if the database has no samples.
-            A server that starts empty and gets its data later passes False.
 
     Returns:
         The Server instance.
-
-    Raises:
-        ValueError: If require_samples is True and the database has no samples.
     """
-    if require_samples:
-        _validate_has_samples()
+    _validate_has_samples()
+    return _serve(server=Server(host=host, port=port), open_browser=open_browser)
 
-    server = Server(host=host, port=port, app=app)
+
+def serve_app(
+    app: FastAPI,
+    host: str | None = None,
+    port: int | None = None,
+    open_browser: bool = True,
+) -> Server:
+    """Launch the given app. The database can have no samples.
+
+    Use it for a server that starts empty and gets its datasets later. This call blocks until
+    the server stops.
+
+    Args:
+        app: The FastAPI app to serve.
+        host: Host to bind the server to. Falls back to LIGHTLY_STUDIO_HOST env var.
+        port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
+        open_browser: Whether to open the URL in a browser once the server is ready.
+
+    Returns:
+        The Server instance.
+    """
+    return _serve(server=Server(host=host, port=port, app=app), open_browser=open_browser)
+
+
+def _serve(server: Server, open_browser: bool) -> Server:
+    """Run the server until it stops."""
     uvicorn_server = server.create_uvicorn_server()
 
     logger.info(f"Open the LightlyStudio GUI under: {server.url}")
