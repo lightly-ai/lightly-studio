@@ -196,6 +196,14 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(LightlyStudioInstanceSegme
     USE_RELATIVE_FILENAME = True
 
 
+class LightlyStudioYOLOInstanceSegmentationInput(LightlyStudioInstanceSegmentationInput):
+    """Labelformat adapter for YOLO instance segmentation export from polygon annotations."""
+
+    ANNOTATION_TYPES = (AnnotationType.POLYGON,)
+    # YOLO joins the file name with the output directory, so an absolute path cannot be used.
+    USE_RELATIVE_FILENAME = True
+
+
 def _build_label_id_to_category(
     session: Session,
     dataset_id: UUID,

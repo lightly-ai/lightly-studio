@@ -550,6 +550,13 @@ def _generate_annotations_export(
             annotation_collection_id=annotation_collection_id,
         )
         return output_path
+    if export_format == ExportFormat.INSTANCE_SEGMENTATION_YOLO:
+        output_path = temp_dir / "yolo_instance_segmentation"
+        exporter.to_yolo_instance_segmentation(
+            output_folder=output_path,
+            annotation_collection_id=annotation_collection_id,
+        )
+        return output_path
     if export_format == ExportFormat.PASCAL_VOC:
         output_path = temp_dir / "pascalvoc"
         exporter.to_pascalvoc_segmentation_mask(

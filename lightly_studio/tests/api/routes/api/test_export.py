@@ -580,6 +580,61 @@ def test_export_collection_annotations_prepare__segmentation_mask_coco(
     }
 
 
+def test_export_collection_annotations_prepare__instance_segmentation_yolo(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img1.jpg",
+        width=100,
+        height=50,
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.POLYGON,
+                parent_sample_id=image.sample_id,
+                x=10,
+                y=5,
+                width=40,
+                height=20,
+                polygons=[[(10, 5), (50, 5), (50, 25)]],
+            )
+        ],
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
+            "export_format": "instance_segmentation_yolo",
+            "annotation_collection_id": str(annotation_collection_id),
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_job = db_session.get(ExportJobTable, UUID(response.json()["export_key"]))
+    assert export_job is not None
+    export_dir = Path(export_job.export_path)
+    assert (export_dir / "data.yaml").exists()
+    assert (export_dir / "labels" / "img1.txt").read_text() == (
+        "0 0.1 0.1 0.5 0.1 0.5 0.5 0.1 0.1\n"
+    )
+
+
 def test_export_collection_annotations_prepare__pascal_voc(
     db_session: Session,
     test_client: TestClient,

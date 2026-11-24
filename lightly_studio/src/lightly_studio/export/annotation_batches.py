@@ -9,7 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import joinedload, lazyload
 from sqlalchemy.orm.interfaces import LoaderOption
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from lightly_studio.core.sample import Sample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
@@ -51,6 +51,28 @@ def iter_sample_annotations(
             annotations_by_sample_id[annotation.parent_sample_id].append(annotation)
         for sample in batch:
             yield sample, annotations_by_sample_id.get(sample.sample_id, [])
+
+
+def count_annotations(
+    session: Session,
+    samples: Iterable[Sample],
+    annotation_type: AnnotationType,
+    annotation_collection_id: UUID | None,
+) -> int:
+    """Count the annotations of one type on the samples selected for export."""
+    query = select(func.count()).where(col(AnnotationBaseTable.annotation_type) == annotation_type)
+    if annotation_collection_id is not None:
+        query = query.where(
+            AnnotationBaseTable.sample.has(
+                col(SampleTable.collection_id) == annotation_collection_id
+            )
+        )
+    count = 0
+    for batch in batching.batched(items=samples, batch_size=_EXPORT_BATCH_SIZE):
+        sample_ids = {sample.sample_id for sample in batch}
+        batch_query = query.where(col(AnnotationBaseTable.parent_sample_id).in_(sample_ids))
+        count += session.exec(batch_query).one()
+    return count
 
 
 def _export_options(annotation_types: Sequence[AnnotationType]) -> list[LoaderOption]:
