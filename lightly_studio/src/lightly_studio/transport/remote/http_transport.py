@@ -5,6 +5,7 @@ from __future__ import annotations
 import httpx
 
 from lightly_studio.transport.annotation_transport import AnnotationTransport
+from lightly_studio.transport.caption_transport import CaptionTransport
 from lightly_studio.transport.compute_transport import ComputeTransport
 from lightly_studio.transport.export_transport import ExportTransport
 from lightly_studio.transport.metadata_transport import MetadataTransport
@@ -34,8 +35,13 @@ class HttpTransport:
 
     @property
     def metadata(self) -> MetadataTransport:
-        """The transport for metadata and captions."""
+        """The transport for metadata."""
         raise AttributeError("The HTTP metadata transport does not exist yet.")
+
+    @property
+    def captions(self) -> CaptionTransport:
+        """The transport for captions."""
+        raise AttributeError("The HTTP caption transport does not exist yet.")
 
     @property
     def annotations(self) -> AnnotationTransport:

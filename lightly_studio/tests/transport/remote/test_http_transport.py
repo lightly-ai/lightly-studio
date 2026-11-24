@@ -21,7 +21,7 @@ class TestHttpTransport:
             assert isinstance(transport.tags, HttpTagTransport)
             assert isinstance(transport.ingestion, HttpIngestionTransport)
 
-    @pytest.mark.parametrize("area", ["metadata", "annotations", "compute", "export"])
+    @pytest.mark.parametrize("area", ["metadata", "captions", "annotations", "compute", "export"])
     def test_area__not_implemented(self, area: str) -> None:
         with httpx.Client() as client, pytest.raises(AttributeError, match=r"does not exist yet"):
             getattr(HttpTransport(client=client), area)
