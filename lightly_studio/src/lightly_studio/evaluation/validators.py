@@ -13,6 +13,11 @@ from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import collection_resolver
 
+_POLYGON_UNSUPPORTED_TASK_LABELS: dict[EvaluationTaskType, str] = {
+    EvaluationTaskType.INSTANCE_SEGMENTATION: "instance segmentation",
+    EvaluationTaskType.SEMANTIC_SEGMENTATION: "semantic segmentation",
+}
+
 TASK_TO_ANNOTATION_TYPE: dict[EvaluationTaskType, AnnotationType] = {
     EvaluationTaskType.OBJECT_DETECTION: AnnotationType.OBJECT_DETECTION,
     EvaluationTaskType.CLASSIFICATION: AnnotationType.CLASSIFICATION,
@@ -51,8 +56,9 @@ def resolve_and_validate_collection(
 
     Raises:
         ValueError: If task_type is not supported, if the collection does not
-            exist, or if it contains annotations of a type other than the type
-            expected for task_type.
+            exist, if it contains polygons for a segmentation task, or if it
+            contains annotations of a type other than the type expected for
+            task_type.
     """
     annotation_type = get_annotation_type_for_task(task_type)
     resolved_id = collection_resolver.get_by_name(
@@ -63,12 +69,43 @@ def resolve_and_validate_collection(
     if resolved_id is None:
         raise ValueError(f"Annotation source {collection_name!r} not found.")
     _validate_annotation_collection(session=session, collection_id=resolved_id)
+    _validate_no_polygons(session=session, collection_id=resolved_id, task_type=task_type)
     _validate_collection_annotation_type(
         session=session,
         collection_id=resolved_id,
         expected_type=annotation_type,
     )
     return resolved_id
+
+
+def _validate_no_polygons(
+    session: Session,
+    collection_id: UUID,
+    task_type: EvaluationTaskType,
+) -> None:
+    """Raise ValueError if a segmentation task collection contains polygons.
+
+    Args:
+        session: Database session.
+        collection_id: ID of the annotation collection to validate.
+        task_type: Evaluation task type. Tasks without polygon support are checked.
+
+    Raises:
+        ValueError: If the collection contains polygons and task_type is a segmentation task.
+    """
+    task_label = _POLYGON_UNSUPPORTED_TASK_LABELS.get(task_type)
+    if task_label is None:
+        return
+    sample_alias = aliased(SampleTable)
+    polygon_count: int = session.exec(
+        select(func.count())
+        .select_from(AnnotationBaseTable)
+        .join(sample_alias, AnnotationBaseTable.sample)
+        .where(col(sample_alias.collection_id) == collection_id)
+        .where(col(AnnotationBaseTable.annotation_type) == AnnotationType.POLYGON)
+    ).one()
+    if polygon_count > 0:
+        raise ValueError(f"Polygon annotations are not yet supported for {task_label} evaluation.")
 
 
 def _validate_collection_annotation_type(
