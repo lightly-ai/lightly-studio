@@ -8,7 +8,7 @@ import {
     type EmbeddingsArrow
 } from '$lib/components/PlotPanel/useArrowData/useArrowData';
 
-import { shouldRetryQuery } from '$lib/api/shouldRetryQuery';
+import { NoRetryError } from '$lib/api/NoRetryError';
 import {
     createQuery,
     hashKey,
@@ -30,8 +30,8 @@ type OnCompute = (compute: Promise<unknown>) => void;
 interface PlotComputeOptions {
     getIsComputing?: () => boolean;
     /**
-     * Called once when a compute request starts. The promise settles when the request ends, and
-     * rejects if the compute fails.
+     * Called when a request starts a compute. A request that joins a running compute does not
+     * call it. The promise settles when the compute ends, and rejects if the compute fails.
      */
     onCompute?: OnCompute;
 }
@@ -48,7 +48,34 @@ interface RunningCompute {
 
 // The server keeps computing after an abort, and a second request conflicts with it.
 // So every request for a plot joins the compute that runs for its query key.
-const runningComputes = new WeakMap<QueryClient, Map<string, RunningCompute>>();
+class PlotComputeRegistry {
+    readonly #computes = new Map<string, RunningCompute>();
+
+    join(computeKey: string): Promise<unknown> | undefined {
+        return this.#computes.get(computeKey)?.promise;
+    }
+
+    /**
+     * Starts a compute when the running computes of its collection end, because the server saves
+     * one plot per collection. If one of them fails, this compute fails without a request.
+     */
+    start(computeKey: string, collectionId: string, fetchCompute: () => unknown): Promise<unknown> {
+        const earlierComputes = [...this.#computes.values()]
+            .filter((compute) => compute.collectionId === collectionId)
+            .map((compute) => compute.promise);
+        const promise = Promise.all(earlierComputes).then(fetchCompute);
+        this.#computes.set(computeKey, { collectionId, promise });
+        const end = () => this.#end(computeKey);
+        void promise.then(end, end);
+        return promise;
+    }
+
+    #end(computeKey: string): void {
+        this.#computes.delete(computeKey);
+    }
+}
+
+const computeRegistries = new WeakMap<QueryClient, PlotComputeRegistry>();
 
 type EmbeddingsQueryKey = ReturnType<typeof get2dEmbeddingsQueryKey>;
 
@@ -89,17 +116,13 @@ export function getEmbeddingsQueryOptions(
     });
     const fetchPlot = options.queryFn;
     if (typeof fetchPlot !== 'function') throw new Error('The plot query has no query function.');
-    // Set by the latest request, so a failed compute is not retried: the user agreed to one.
-    let isComputeRequest = false;
     const queryFn: typeof fetchPlot = (context) => {
-        isComputeRequest = getIsComputing();
-        if (!isComputeRequest) return fetchPlot(context);
-        return joinRunningCompute(context, fetchPlot, onCompute);
+        if (!getIsComputing()) return fetchPlot(context);
+        return joinRunningCompute(context, fetchPlot, onCompute).catch(failWithoutRetry);
     };
     return queryOptions({
         ...options,
         queryFn,
-        retry: (failureCount, error) => !isComputeRequest && shouldRetryQuery(failureCount, error),
         // The status query refetches on focus and decides whether a compute may start.
         refetchOnWindowFocus: false,
         select: selectEmbeddingsArrow,
@@ -115,27 +138,23 @@ function joinRunningCompute(
     onCompute: OnCompute
 ): Promise<unknown> {
     const { client, queryKey, meta } = context;
-    const computes = runningComputes.get(client) ?? new Map<string, RunningCompute>();
-    runningComputes.set(client, computes);
+    const registry = computeRegistries.get(client) ?? new PlotComputeRegistry();
+    computeRegistries.set(client, registry);
     const computeKey = hashKey(queryKey);
-    const runningCompute = computes.get(computeKey);
-    if (runningCompute) return runningCompute.promise;
+    const runningCompute = registry.join(computeKey);
+    if (runningCompute) return runningCompute;
 
-    // The server saves one plot per collection, so a request with another filter, color-by or
-    // axes waits for the running compute and then reads the saved plot. If it fails, so does this.
-    const collectionId = queryKey[0].path.collection_id;
-    const earlierComputes = [...computes.values()]
-        .filter((compute) => compute.collectionId === collectionId)
-        .map((compute) => compute.promise);
     const signal = new AbortController().signal;
     const fetchCompute = () => fetchPlot({ client, queryKey, meta, signal });
-    const promise = Promise.all(earlierComputes).then(fetchCompute);
-    computes.set(computeKey, { collectionId, promise });
-    const endCompute = () => computes.delete(computeKey);
-    void promise.then(endCompute, endCompute);
-    onCompute(promise);
-    return promise;
+    const compute = registry.start(computeKey, queryKey[0].path.collection_id, fetchCompute);
+    onCompute(compute);
+    return compute;
 }
+
+// The user agreed to one compute, so a failed compute is not retried.
+const failWithoutRetry = (error: unknown): never => {
+    throw new NoRetryError(error);
+};
 
 /**
  * Fetches the 2D embeddings for the plot. Call it once per plot: a filter change keeps the
