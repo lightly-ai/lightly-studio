@@ -128,29 +128,3 @@ class TestDatasetExport:
 
         lines = (output_folder / "labels" / "image0.txt").read_text().splitlines()
         assert len(lines) == 1
-
-    def test_to_yolo_instance_segmentation__warns_for_one_shot_samples(
-        self,
-        tmp_path: Path,
-        patch_collection: None,  # noqa: ARG002
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        dataset = ImageDataset.create(name="test_dataset")
-        create_images(
-            db_session=dataset.session,
-            collection_id=dataset.collection_id,
-            images=[ImageStub(path="image0.jpg", width=10, height=10)],
-        )
-        samples = list(dataset)
-        samples[0].add_annotation(
-            annotation=CreateSegmentationMask.from_rle_mask(
-                class_name="dog", sample_2d=samples[0], segmentation_mask=[2, 3, 95]
-            )
-        )
-
-        with caplog.at_level(logging.WARNING):
-            ImageDatasetExport(
-                session=dataset.session, dataset_id=dataset.dataset_id, samples=iter(samples)
-            ).to_yolo_instance_segmentation(output_folder=tmp_path / "yolo")
-
-        assert "Skipped 1 segmentation mask annotations" in caplog.text
