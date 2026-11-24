@@ -250,7 +250,9 @@ def _annotation_to_single_inst_seg(
     image_height: int,
 ) -> SingleInstanceSegmentation | None:
     category = label_id_to_category[annotation.annotation_label_id]
-    if annotation.polygon_details is not None:
+    if annotation.annotation_type == AnnotationType.POLYGON:
+        if annotation.polygon_details is None:
+            return None
         return SingleInstanceSegmentation(
             category=category,
             segmentation=MultiPolygon(

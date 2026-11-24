@@ -170,16 +170,18 @@ class DatasetExport:
             annotation_collection_id: If provided, only annotations from this collection
                 are exported. If None, all annotations are exported.
         """
+        # Materialize once: the samples can be a one-shot iterator.
+        samples = list(self.samples)
         export_input = LightlyStudioYOLOInstanceSegmentationInput(
             session=self.session,
             dataset_id=self._dataset_id,
-            samples=self.samples,
+            samples=samples,
             annotation_collection_id=annotation_collection_id,
             sample_to_image=self._sample_to_image,
         )
         skipped_mask_count = annotation_batches.count_annotations(
             session=self.session,
-            samples=self.samples,
+            samples=samples,
             annotation_type=AnnotationType.SEGMENTATION_MASK,
             annotation_collection_id=annotation_collection_id,
         )

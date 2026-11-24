@@ -34,7 +34,7 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[2, 3, 7, 2, 86],
@@ -129,7 +129,7 @@ class TestDatasetExport:
         )
         samples = list(dataset)
         samples[0].add_annotation(
-            CreatePolygon(
+            annotation=CreatePolygon(
                 class_name="dog",
                 polygons=[
                     [(1, 1), (5, 1), (5, 5)],
@@ -138,7 +138,7 @@ class TestDatasetExport:
             )
         )
         samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[2, 3, 395],
@@ -172,7 +172,7 @@ class TestDatasetExportDeprecated:
         )
         samples = list(dataset)
         samples[0].add_annotation(
-            CreatePolygon(class_name="dog", polygons=[[(1, 1), (5, 1), (5, 5)]])
+            annotation=CreatePolygon(class_name="dog", polygons=[[(1, 1), (5, 1), (5, 5)]])
         )
         output_json = tmp_path / "out.json"
         export = ImageDatasetExport(

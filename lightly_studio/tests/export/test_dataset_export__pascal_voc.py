@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from PIL import Image as PILImage
+from sqlalchemy import event
 
 from lightly_studio.core.annotation import CreatePolygon, CreateSegmentationMask
 from lightly_studio.core.image.image_dataset import ImageDataset
@@ -14,6 +15,40 @@ from tests.helpers_resolvers import ImageStub, create_annotation_label, create_i
 
 
 class TestDatasetExport:
+    def test_to_pascalvoc_segmentation_mask__does_not_query_polygon_details(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.collection_id,
+            images=[ImageStub(path="image0.jpg", width=3, height=2)],
+        )
+        samples = list(dataset)
+        samples[0].add_annotation(
+            annotation=CreateSegmentationMask.from_rle_mask(
+                class_name="dog", sample_2d=samples[0], segmentation_mask=[1, 1, 4]
+            )
+        )
+        statements: list[str] = []
+
+        def record_statement(conn, cursor, statement, parameters, context, executemany):  # type: ignore[no-untyped-def]  # noqa: ANN001, ARG001
+            statements.append(statement)
+
+        engine = dataset.session.get_bind()
+        event.listen(engine, "before_cursor_execute", record_statement)
+        try:
+            ImageDatasetExport(
+                session=dataset.session, dataset_id=dataset.dataset_id, samples=dataset.query()
+            ).to_pascalvoc_segmentation_mask(output_folder=tmp_path / "pascalvoc")
+        finally:
+            event.remove(engine, "before_cursor_execute", record_statement)
+
+        polygon_selects = [s for s in statements if "FROM polygon_annotation" in s]
+        assert polygon_selects == []
+
     def test_to_pascalvoc_segmentation_mask(
         self,
         tmp_path: Path,
@@ -29,7 +64,7 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
@@ -76,14 +111,14 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
         )
         samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="background",
                 sample_2d=samples[0],
                 segmentation_mask=[4, 1, 1],
@@ -122,14 +157,14 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="cat",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 2, 3],
             )
         )
         samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 2, 1, 1],
@@ -167,14 +202,14 @@ class TestDatasetExport:
 
         samples = list(dataset)
         samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[1, 1, 4],
             )
         )
         samples[0].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=samples[0],
                 segmentation_mask=[4, 1, 1],
@@ -216,14 +251,14 @@ class TestDatasetExport:
         sample_by_name = {sample.file_name: sample for sample in samples}
 
         sample_by_name["image0.jpg"].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=sample_by_name["image0.jpg"],
                 segmentation_mask=[1, 1, 4],
             )
         )
         sample_by_name["image1.jpg"].add_annotation(
-            CreateSegmentationMask.from_rle_mask(
+            annotation=CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=sample_by_name["image1.jpg"],
                 segmentation_mask=[4, 1, 1],
@@ -263,7 +298,7 @@ class TestDatasetExport:
         )
         samples = list(dataset)
         samples[0].add_annotation(
-            CreatePolygon(class_name="dog", polygons=[[(0, 0), (2, 0), (2, 2)]])
+            annotation=CreatePolygon(class_name="dog", polygons=[[(0, 0), (2, 0), (2, 2)]])
         )
 
         output_folder = tmp_path / "pascalvoc"
