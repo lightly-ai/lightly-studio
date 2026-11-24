@@ -81,7 +81,7 @@ def get_instance_segmentation_annotation_create(
     annotation_label_id: UUID,
     segmentation: MultiPolygon | BinaryMaskSegmentation,
 ) -> AnnotationCreate | None:
-    """Get a AnnotationCreate instance for an instance segmentation of an image.
+    """Get an AnnotationCreate instance for an instance segmentation of an image.
 
     A `MultiPolygon` becomes a polygon annotation with its valid parts. A
     `BinaryMaskSegmentation` becomes a segmentation mask annotation.
@@ -127,7 +127,7 @@ def warn_skipped_polygons(count: int) -> None:
         return
     logger.warning(
         f"Skipped {count} polygon annotations without a valid part. "
-        f"A valid part has at least {MIN_VERTICES_PER_PART} vertices."
+        f"A valid part has at least {MIN_VERTICES_PER_PART} vertices and finite coordinates."
     )
 
 

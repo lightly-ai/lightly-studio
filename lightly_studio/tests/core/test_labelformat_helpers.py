@@ -148,7 +148,7 @@ def test_warn_skipped_polygons__warns_with_count(caplog: pytest.LogCaptureFixtur
 
     assert (
         "Skipped 2 polygon annotations without a valid part. "
-        "A valid part has at least 3 vertices." in caplog.text
+        "A valid part has at least 3 vertices and finite coordinates." in caplog.text
     )
 
 
