@@ -23,24 +23,32 @@ from lightly_studio.models.sample import SampleTable
 
 
 class PolygonField:
-    """Providing access to predefined polygon fields for queries."""
+    """Providing access to predefined polygon fields for queries.
+
+    The bounding box is the smallest integer pixel box that contains all vertices of all
+    polygon parts. Fractional vertices round outward.
+    """
 
     width = ForeignNumericalField(
         column=col(PolygonAnnotationTable.width),
         relationship=AnnotationBaseTable.polygon_details,
     )
+    """Width of the bounding box in pixels."""
     height = ForeignNumericalField(
         column=col(PolygonAnnotationTable.height),
         relationship=AnnotationBaseTable.polygon_details,
     )
+    """Height of the bounding box in pixels."""
     x = ForeignNumericalField(
         column=col(PolygonAnnotationTable.x),
         relationship=AnnotationBaseTable.polygon_details,
     )
+    """Left edge of the bounding box in pixels."""
     y = ForeignNumericalField(
         column=col(PolygonAnnotationTable.y),
         relationship=AnnotationBaseTable.polygon_details,
     )
+    """Top edge of the bounding box in pixels."""
     class_name = ForeignComparableField(
         column=col(AnnotationLabelTable.annotation_label_name),
         relationship=AnnotationBaseTable.annotation_label,

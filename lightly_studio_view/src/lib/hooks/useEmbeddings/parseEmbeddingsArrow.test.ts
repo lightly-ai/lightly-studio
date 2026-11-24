@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { parseEmbeddingsArrow } from './useArrowData';
+import { parseEmbeddingsArrow } from './parseEmbeddingsArrow';
 import { Table, tableFromIPC } from 'apache-arrow';
 
 vi.mock('apache-arrow', () => ({
