@@ -79,6 +79,7 @@ def _view_relationship_options() -> list[LoaderOption]:
         selectinload(AnnotationBaseTable.object_detection_details),
         selectinload(AnnotationBaseTable.cuboid_3d_details),
         selectinload(AnnotationBaseTable.segmentation_details),
+        selectinload(AnnotationBaseTable.polygon_details),
         joinedload(AnnotationBaseTable.object_track).joinedload(
             ObjectTrackTable.parent_object_track
         ),

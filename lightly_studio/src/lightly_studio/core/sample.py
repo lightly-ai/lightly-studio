@@ -25,6 +25,7 @@ from lightly_studio.transport import active_transport
 from .annotation import Annotation
 from .annotation.classification import ClassificationAnnotation
 from .annotation.object_detection import ObjectDetectionAnnotation
+from .annotation.polygon import PolygonAnnotation
 from .annotation.segmentation_mask import SegmentationMaskAnnotation
 
 
@@ -178,7 +179,7 @@ class Sample(ABC):
         Args:
             captions: The texts of the captions to add.
         """
-        active_transport.get_transport().metadata.add_captions(
+        active_transport.get_transport().captions.add(
             parent_collection_id=self.collection_id,
             captions=[
                 CaptionCreate(
@@ -192,9 +193,7 @@ class Sample(ABC):
     @property
     def captions(self) -> list[str]:
         """Returns the text of all captions."""
-        captions = active_transport.get_transport().metadata.get_captions(
-            parent_sample_ids=[self.sample_id]
-        )
+        captions = active_transport.get_transport().captions.get(parent_sample_ids=[self.sample_id])
         return [caption.text for caption in captions]
 
     @captions.setter
@@ -204,15 +203,15 @@ class Sample(ABC):
         Args:
             captions: Iterable of caption texts to associate with this sample.
         """
-        metadata_transport = active_transport.get_transport().metadata
+        caption_transport = active_transport.get_transport().captions
 
         # Delete all existing captions for this sample
-        existing_captions = metadata_transport.get_captions(parent_sample_ids=[self.sample_id])
-        metadata_transport.delete_captions(caption_ids=[c.sample_id for c in existing_captions])
+        existing_captions = caption_transport.get(parent_sample_ids=[self.sample_id])
+        caption_transport.delete(caption_ids=[c.sample_id for c in existing_captions])
 
         # Create new captions from the provided texts
         if captions:
-            metadata_transport.add_captions(
+            caption_transport.add(
                 parent_collection_id=self.collection_id,
                 captions=[
                     CaptionCreate(parent_sample_id=self.sample_id, text=text) for text in captions
@@ -236,6 +235,10 @@ class Sample(ABC):
                 annotations.append(
                     SegmentationMaskAnnotation(inner=annotation.segmentation_details)
                 )
+            elif annotation.annotation_type == AnnotationType.POLYGON:
+                if annotation.polygon_details is None:
+                    raise RuntimeError("Invalid sample annotation data")
+                annotations.append(PolygonAnnotation(inner=annotation.polygon_details))
             elif annotation.annotation_type == AnnotationType.CLASSIFICATION:
                 annotations.append(ClassificationAnnotation(annotation_base=annotation))
             else:

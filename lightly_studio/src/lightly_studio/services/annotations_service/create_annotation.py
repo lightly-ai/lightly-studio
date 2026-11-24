@@ -13,6 +13,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -43,6 +44,8 @@ class AnnotationCreateParams(BaseModel):
     height: int | None = None
 
     segmentation_mask: list[int] | None = None
+
+    polygons: Polygons | None = None
 
     start_time_s: float | None = None
     end_time_s: float | None = None

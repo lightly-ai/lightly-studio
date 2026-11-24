@@ -1,6 +1,6 @@
 <script lang="ts">
     import { T } from '@threlte/core';
-    import { Color, DoubleSide } from 'three';
+    import { Color, DoubleSide, Vector3 } from 'three';
     import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
     import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
     import CuboidHeadingIndicator from './CuboidHeadingIndicator/CuboidHeadingIndicator.svelte';
@@ -10,6 +10,8 @@
     interface Props {
         /** Render resources and annotation metadata for this cuboid. */
         item: ReturnType<typeof createCuboidRenderItems>[number];
+        /** Local origin of the heading arrow. */
+        headingOrigin: Vector3;
         /** Unmodified class color for the heading indicator and fill. */
         baseColor: string;
         /** Interaction-aware edge color. */
@@ -34,6 +36,7 @@
 
     let {
         item,
+        headingOrigin,
         baseColor,
         edgeColor,
         isHovered = false,
@@ -78,7 +81,7 @@
         </T.Mesh>
     {/if}
 </T.Group>
-<CuboidHeadingIndicator origin={item.headingOrigin} color={baseColor} />
+<CuboidHeadingIndicator origin={headingOrigin} color={baseColor} />
 <T.Mesh
     visible={false}
     onclick={onClick}

@@ -96,7 +96,7 @@
         onToggleVisibility={onToggleVisibility ? () => onToggleVisibility(cuboid) : undefined}
     />
     {#if isSelected}
-        <div class="px-4 pb-4 pt-1">
+        <div class="px-2 pb-3 pt-1">
             <PointCloudAnnotationDetails
                 {annotationSourceName}
                 annotation={{ ...cuboid, annotationClassName: className }}

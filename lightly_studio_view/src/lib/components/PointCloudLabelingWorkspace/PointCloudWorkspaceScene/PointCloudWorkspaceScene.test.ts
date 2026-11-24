@@ -50,7 +50,10 @@ const defaultProps: Props = {
     selectedCuboidId: null,
     hoveredCuboidId: null,
     draftCuboid: null,
-    onToggleOrthographicProjections: vi.fn(),
+    orthographicViewsEnabled: true,
+    orthographicViewsCollapsed: false,
+    onOrthographicViewsEnabledChange: vi.fn(),
+    onOrthographicViewsCollapsedChange: vi.fn(),
     onPointSizeChange: vi.fn(),
     onToggleNavigationHelpers: vi.fn(),
     onToolChange: vi.fn(),
@@ -107,12 +110,30 @@ it('restores the main viewport when projections are disabled while one is expand
     const { rerender } = render(WorkspaceSceneProviderHarness, { props: { state: defaultProps } });
     await fireEvent.click(screen.getByRole('button', { name: 'Expand Top view' }));
     expect(defaultProps.onCuboidDraftChange).not.toHaveBeenCalled();
-    await rerender({ state: { ...defaultProps, showOrthographicViews: false } });
+    await rerender({
+        state: { ...defaultProps, showOrthographicViews: false, orthographicViewsEnabled: false }
+    });
     // A draft drawn in a removed viewport must not keep its highlight.
     expect(defaultProps.onCuboidDraftChange).toHaveBeenCalledExactlyOnceWith(null);
     expect(screen.getByRole('region', { name: 'perspective' })).toBeVisible();
     expect(screen.queryByRole('region', { name: 'top' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Restore views' })).not.toBeInTheDocument();
+});
+
+it('collapses the orthographic views to their header and expands them again', async () => {
+    const state = { ...defaultProps, onOrthographicViewsCollapsedChange: vi.fn() };
+    const { rerender } = render(WorkspaceSceneProviderHarness, { props: { state } });
+    await fireEvent.click(
+        screen.getByRole('button', { name: 'Collapse orthographic projections' })
+    );
+    expect(state.onOrthographicViewsCollapsedChange).toHaveBeenCalledExactlyOnceWith(true);
+
+    await rerender({
+        state: { ...state, showOrthographicViews: false, orthographicViewsCollapsed: true }
+    });
+    expect(screen.queryByRole('region', { name: 'top' })).not.toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Expand orthographic projections' }));
+    expect(state.onOrthographicViewsCollapsedChange).toHaveBeenLastCalledWith(false);
 });
 
 it('isolates camera state between separate workspace providers', async () => {

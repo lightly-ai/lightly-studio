@@ -97,7 +97,7 @@ describe('buildCuboidTransformPayload', () => {
     });
 });
 
-describe('orthographic editing tools', () => {
+describe('getCuboidGizmoOptions', () => {
     it.each([
         ['top', false, false, true],
         ['side', true, false, false],
@@ -113,44 +113,29 @@ describe('orthographic editing tools', () => {
             });
         }
     );
-    const ALL_HANDLES = ['translate', 'rotate', 'resize'];
-    it.each(['top', 'side', 'front'] as const)(
-        'shows all handles for any edit tool in %s view while editing',
-        (cameraMode) => {
-            for (const tool of ['select', 'translate', 'rotate', 'resize'] as const) {
-                expect(getCuboidEditModes({ tool, cameraMode, isEditingMode: true })).toEqual(
-                    ALL_HANDLES
-                );
-            }
-        }
-    );
-    it('keeps one handle per tool in perspective', () => {
-        for (const tool of ['translate', 'rotate', 'resize'] as const) {
-            expect(
-                getCuboidEditModes({ tool, cameraMode: 'perspective', isEditingMode: true })
-            ).toEqual([tool]);
-        }
-        expect(
-            getCuboidEditModes({ tool: 'select', cameraMode: 'perspective', isEditingMode: true })
-        ).toEqual([]);
-    });
-    it('shows no handles while creating a cuboid', () => {
-        expect(
-            getCuboidEditModes({ tool: 'create-cuboid', cameraMode: 'top', isEditingMode: true })
-        ).toEqual([]);
-    });
-    it('shows no handles outside editing mode', () => {
-        expect(
-            getCuboidEditModes({ tool: 'select', cameraMode: 'top', isEditingMode: false })
-        ).toEqual([]);
-    });
-    it('keeps all local rotation axes in perspective', () => {
+    it('keeps only the yaw ring in perspective', () => {
         expect(getCuboidGizmoOptions('rotate', 'perspective')).toEqual({
             space: 'local',
-            showX: true,
-            showY: true,
+            showX: false,
+            showY: false,
             showZ: true
         });
+    });
+});
+
+describe('getCuboidEditModes', () => {
+    it('shows all handles for the select tool while editing', () => {
+        expect(getCuboidEditModes({ tool: 'select', isEditingMode: true })).toEqual([
+            'translate',
+            'rotate',
+            'resize'
+        ]);
+    });
+    it('shows no handles while creating a cuboid', () => {
+        expect(getCuboidEditModes({ tool: 'create-cuboid', isEditingMode: true })).toEqual([]);
+    });
+    it('shows no handles outside editing mode', () => {
+        expect(getCuboidEditModes({ tool: 'select', isEditingMode: false })).toEqual([]);
     });
 });
 

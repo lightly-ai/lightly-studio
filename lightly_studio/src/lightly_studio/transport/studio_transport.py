@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from lightly_studio.transport.annotation_transport import AnnotationTransport
+from lightly_studio.transport.caption_transport import CaptionTransport
 from lightly_studio.transport.collection_transport import CollectionTransport
 from lightly_studio.transport.compute_transport import ComputeTransport
 from lightly_studio.transport.export_transport import ExportTransport
@@ -35,7 +36,11 @@ class StudioTransport(Protocol):
 
     @property
     def metadata(self) -> MetadataTransport:
-        """The transport for metadata and captions."""
+        """The transport for metadata."""
+
+    @property
+    def captions(self) -> CaptionTransport:
+        """The transport for captions."""
 
     @property
     def annotations(self) -> AnnotationTransport:
