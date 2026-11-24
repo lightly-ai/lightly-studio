@@ -223,7 +223,7 @@
                                     content="Unlock annotation. Allows new brush strokes to paint over this mask again."
                                 >
                                     <Lock
-                                        class="size-4 text-muted-foreground"
+                                        class="size-4 text-primary"
                                         onclick={(e) => {
                                             e.stopPropagation();
                                             onToggleLock?.(e);
