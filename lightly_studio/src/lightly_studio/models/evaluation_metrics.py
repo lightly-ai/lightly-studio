@@ -79,6 +79,22 @@ class EvaluatedSampleSetSummary(BaseModel):
     sample_set_hash: str
 
 
+class EvaluationSliceMetricsView(BaseModel):
+    """API view of the aggregate metrics of one run on the evaluated images with a tag.
+
+    Attributes:
+        tag_id: ID of the tag that selects the images.
+        tag_name: Name of the tag.
+        metrics: Aggregate metrics of the run on the tagged images.
+        evaluated_sample_count: Number of evaluated images with the tag.
+    """
+
+    tag_id: UUID
+    tag_name: str
+    metrics: EvaluationMetrics
+    evaluated_sample_count: int
+
+
 class EvaluationRunMetricsView(BaseModel):
     """API view of the aggregate metrics of one evaluation run.
 
@@ -88,9 +104,11 @@ class EvaluationRunMetricsView(BaseModel):
         evaluated_sample_count: Number of distinct evaluated samples.
         evaluated_sample_set_hash: Hash of the evaluated sample IDs. Runs with different
             hashes evaluated different images.
+        slices: Metrics on the images of each requested tag, in request order.
     """
 
     evaluation_run_id: UUID
     metrics: EvaluationMetrics
     evaluated_sample_count: int
     evaluated_sample_set_hash: str
+    slices: list[EvaluationSliceMetricsView] = []

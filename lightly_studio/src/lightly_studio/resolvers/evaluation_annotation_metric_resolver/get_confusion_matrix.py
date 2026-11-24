@@ -15,11 +15,13 @@ from lightly_studio.models.evaluation_confusion_matrix import (
     NO_PREDICTION_COL_LABEL,
     ConfusionMatrix,
 )
+from lightly_studio.models.sample import SampleTagLinkTable
 
 
 def get_confusion_matrix(
     session: Session,
     evaluation_run_id: UUID,
+    tag_id: UUID | None = None,
 ) -> ConfusionMatrix:
     """Aggregate persisted annotation pairing metrics into a label-by-label matrix.
 
@@ -38,13 +40,16 @@ def get_confusion_matrix(
     Args:
         session: Active database session.
         evaluation_run_id: Evaluation run whose pairing metrics should be aggregated.
+        tag_id: If set, count only the pairings of images with this tag.
 
     Returns:
         Matrix with a shared, sorted class axis for rows and columns. Synthetic
         FP/FN axes are always present (with zero counts when unused) unless the
         run has no pairing metrics at all, in which case all three fields are empty.
     """
-    grouped_rows = _fetch_pair_counts(session=session, evaluation_run_id=evaluation_run_id)
+    grouped_rows = _fetch_pair_counts(
+        session=session, evaluation_run_id=evaluation_run_id, tag_id=tag_id
+    )
     if not grouped_rows:
         return ConfusionMatrix(
             row_labels=[],
@@ -68,6 +73,7 @@ def get_confusion_matrix(
 def _fetch_pair_counts(
     session: Session,
     evaluation_run_id: UUID,
+    tag_id: UUID | None,
 ) -> list[tuple[str | None, str | None, int]]:
     """Return ``(gt_label, pred_label, count)`` triples grouped in SQL.
 
@@ -79,6 +85,7 @@ def _fetch_pair_counts(
     Args:
         session: Active database session.
         evaluation_run_id: Evaluation run whose pairing metrics should be aggregated.
+        tag_id: If set, count only the pairings of images with this tag.
 
     Returns:
         Group rows. ``NULL`` ``gt_label`` denotes the FP bucket; ``NULL`` ``pred_label``
@@ -120,6 +127,11 @@ def _fetch_pair_counts(
         .where(col(EvaluationAnnotationMetricTable.evaluation_run_id) == evaluation_run_id)
         .group_by(gt_label.annotation_label_name, pred_label.annotation_label_name)
     )
+    if tag_id is not None:
+        tagged_sample_ids = select(SampleTagLinkTable.sample_id).where(
+            col(SampleTagLinkTable.tag_id) == tag_id
+        )
+        stmt = stmt.where(col(EvaluationAnnotationMetricTable.sample_id).in_(tagged_sample_ids))
 
     return [(row[0], row[1], row[2]) for row in session.exec(stmt).all()]
 

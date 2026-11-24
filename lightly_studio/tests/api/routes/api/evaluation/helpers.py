@@ -18,6 +18,10 @@ from tests.helpers_resolvers import (
     create_image,
 )
 
+HIT_BOX = {"x": 50, "y": 50, "width": 20, "height": 20}
+MISSED_GT_BOX = {"x": 300, "y": 300, "width": 20, "height": 20}
+FAR_PRED_BOX = {"x": 900, "y": 900, "width": 20, "height": 20}
+
 
 def create_dataset_with_annotations(
     db_session: Session,
@@ -74,3 +78,45 @@ def make_evaluation_run(  # noqa: PLR0913
         config_json=config_json,
         created_at=created_at,
     )
+
+
+def create_dataset_with_hit_and_miss(db_session: Session) -> tuple[CollectionTable, UUID, UUID]:
+    """Create a root image collection with 'gt'/'pred' sources and two images.
+
+    The hit image has a prediction on its ground truth box. The miss image has its
+    prediction far from its ground truth box: one false positive and one false negative.
+
+    Returns:
+        The root collection, the sample ID of the hit image, and of the miss image.
+    """
+    root = create_collection(session=db_session)
+    label = create_annotation_label(session=db_session, root_collection_id=root.collection_id)
+    for source_name in ("gt", "pred"):
+        create_collection(
+            session=db_session,
+            collection_name=source_name,
+            parent_collection_id=root.collection_id,
+            sample_type=SampleType.ANNOTATION,
+        )
+    boxes_by_image = {
+        "hit": {"gt": HIT_BOX, "pred": HIT_BOX},
+        "miss": {"gt": MISSED_GT_BOX, "pred": FAR_PRED_BOX},
+    }
+    sample_ids = {}
+    for image_name, boxes in boxes_by_image.items():
+        image = create_image(
+            session=db_session,
+            collection_id=root.collection_id,
+            file_path_abs=f"/path/to/{image_name}.png",
+        )
+        sample_ids[image_name] = image.sample_id
+        for source_name, box in boxes.items():
+            create_annotation(
+                session=db_session,
+                collection_id=root.collection_id,
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_data=box,
+                annotation_collection_name=source_name,
+            )
+    return root, sample_ids["hit"], sample_ids["miss"]

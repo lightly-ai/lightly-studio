@@ -16,8 +16,10 @@ from lightly_studio.evaluation.image_dataset_evaluate import (
 )
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.evaluation_run import EvaluationTaskType
+from lightly_studio.resolvers import tag_resolver
 from lightly_studio.services import evaluation_service
 from tests.api.routes.api.evaluation import helpers
+from tests.helpers_resolvers import create_tag
 from tests.resolvers.evaluation_sample_metric_resolver import (
     helpers as evaluation_sample_metric_helpers,
 )
@@ -103,6 +105,72 @@ def test_get_evaluation_runs_metrics__no_run_ids_returns_422(test_client: TestCl
     response = test_client.get(f"/api/datasets/{uuid4()}/evaluation/runs/metrics")
 
     assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_get_evaluation_runs_metrics__tag_slices(
+    test_client: TestClient, db_session: Session
+) -> None:
+    root, hit_id, miss_id = helpers.create_dataset_with_hit_and_miss(db_session=db_session)
+    run_id = _run_object_detection(
+        session=db_session, root=root, name="run-1", compute_average_precision=True
+    )
+    tags = {
+        name: create_tag(session=db_session, collection_id=root.collection_id, tag_name=name)
+        for name in ("hits", "misses")
+    }
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tags["hits"].tag_id, sample_ids=[hit_id]
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tags["misses"].tag_id, sample_ids=[miss_id]
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{root.dataset_id}/evaluation/runs/metrics",
+        params={
+            "run_ids": [str(run_id)],
+            "tag_ids": [str(tags["misses"].tag_id), str(tags["hits"].tag_id)],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    slices = response.json()[0]["slices"]
+    assert [entry["tag_name"] for entry in slices] == ["misses", "hits"]
+    assert [entry["evaluated_sample_count"] for entry in slices] == [1, 1]
+    assert slices[0]["metrics"]["precision"] == pytest.approx(0.0)
+    assert slices[1]["metrics"]["precision"] == pytest.approx(1.0)
+
+
+def test_get_evaluation_runs_metrics__no_tags_no_slices(
+    test_client: TestClient, db_session: Session
+) -> None:
+    root = helpers.create_dataset_with_annotations(db_session=db_session)
+    run_id = _run_object_detection(
+        session=db_session, root=root, name="run-1", compute_average_precision=False
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{root.dataset_id}/evaluation/runs/metrics",
+        params={"run_ids": [str(run_id)]},
+    )
+
+    assert response.json()[0]["slices"] == []
+
+
+def test_get_evaluation_runs_metrics__unknown_tag_returns_404(
+    test_client: TestClient, db_session: Session
+) -> None:
+    root = helpers.create_dataset_with_annotations(db_session=db_session)
+    run_id = _run_object_detection(
+        session=db_session, root=root, name="run-1", compute_average_precision=False
+    )
+
+    response = test_client.get(
+        f"/api/datasets/{root.dataset_id}/evaluation/runs/metrics",
+        params={"run_ids": [str(run_id)], "tag_ids": [str(uuid4())]},
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
 def _run_object_detection(
