@@ -195,6 +195,10 @@
     const arrowData = $derived(embeddingsData.data?.columns);
     const colorLegend = $derived(embeddingsData.data?.legend ?? NO_LEGEND);
     const isWaitingForFirstData = $derived(embeddingsData.isLoading || $colorBy === undefined);
+    // A filter change keeps the cached plot on screen while the status check runs.
+    const isCheckingWithoutPlot = $derived(
+        plotComputeGate.view === 'checking' && !embeddingsData.data
+    );
     // Category 1 means "passes the filter but has no color value". Its label tracks the same
     // `color_by` signal that drives its color (see `getCategoryColors` below), so the two never disagree.
     const includedLabel = $derived(
@@ -649,7 +653,7 @@
                 startedAt={plotComputeGate.startedAt}
                 onCompute={plotComputeGate.startCompute}
             />
-        {:else if plotComputeGate.view === 'checking' || isWaitingForFirstData}
+        {:else if isCheckingWithoutPlot || isWaitingForFirstData}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>

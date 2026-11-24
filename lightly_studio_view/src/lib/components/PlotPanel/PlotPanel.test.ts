@@ -1288,6 +1288,20 @@ describe('PlotPanel.svelte', () => {
             expect(lastEmbeddingsParams().enabled).toBe(false);
         });
 
+        it('keeps the cached plot on screen while the status loads', () => {
+            setGate({ view: 'checking' });
+            (useEmbeddings as vi.Mock).mockReturnValue({
+                ...idlePlot,
+                isPlaceholderData: true,
+                data: { columns: {}, legend: new Map() }
+            });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.queryByText('Loading embeddings data...')).not.toBeInTheDocument();
+            expect(screen.getByTestId('plot-loading-indicator')).toBeInTheDocument();
+        });
+
         it('names the items of the collection in the prompt', () => {
             routeState.id = VIDEOS_ROUTE;
             setGate({ view: 'prompt', embeddingCount: 300_000 });
