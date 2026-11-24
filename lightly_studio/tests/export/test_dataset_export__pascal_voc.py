@@ -48,8 +48,8 @@ class TestDatasetExport:
         finally:
             event.remove(engine, "before_cursor_execute", record_statement)
 
-        polygon_selects = [s for s in statements if "FROM polygon_annotation" in s]
-        assert polygon_selects == []
+        polygon_statements = [s for s in statements if "polygon_annotation" in s]
+        assert polygon_statements == []
 
     def test_to_pascalvoc_segmentation_mask(
         self,
