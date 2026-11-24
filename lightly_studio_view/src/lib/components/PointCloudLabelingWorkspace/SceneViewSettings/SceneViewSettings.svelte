@@ -8,23 +8,23 @@
     import PointSizeSettings from './PointSizeSettings.svelte';
 
     interface Props {
-        showOrthographicViews: boolean;
+        orthographicViewsEnabled: boolean;
         pointSize: number;
         showNavigationHelpers: boolean;
         disabled?: boolean;
         accumulation?: ComponentProps<typeof AccumulationSettings>;
-        onToggle: (showOrthographicViews: boolean) => void;
+        onOrthographicViewsEnabledChange: (enabled: boolean) => void;
         onPointSizeChange: (pointSize: number) => void;
         onToggleNavigationHelpers: (show: boolean) => void;
     }
 
     let {
-        showOrthographicViews,
+        orthographicViewsEnabled,
         pointSize,
         showNavigationHelpers,
         disabled = false,
         accumulation,
-        onToggle,
+        onOrthographicViewsEnabledChange,
         onPointSizeChange,
         onToggleNavigationHelpers
     }: Props = $props();
@@ -54,10 +54,10 @@
         </div>
         <label class="flex items-center gap-2 text-sm">
             <Checkbox
-                checked={showOrthographicViews}
+                checked={orthographicViewsEnabled}
                 {disabled}
                 aria-label="Show orthographic projections"
-                onCheckedChange={(checked) => onToggle(checked === true)}
+                onCheckedChange={(checked) => onOrthographicViewsEnabledChange(checked === true)}
             />
             <span>Show orthographic projections</span>
         </label>

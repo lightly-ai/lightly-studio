@@ -1,5 +1,5 @@
 import { isEqual } from 'lodash-es';
-import { derived, readable, readonly, writable, type Readable } from 'svelte/store';
+import { derived, readable, readonly, type Readable, type Writable } from 'svelte/store';
 import type { GetEmbeddings2dRequest } from '$lib/api/lightly_studio_local/types.gen';
 import type { PlotColorByType } from '../PlotColorByPopover/usePlotColorByType/usePlotColorByType';
 
@@ -10,6 +10,8 @@ interface UsePlotColorByParams {
     tags: Readable<{ tag_id: string }[]>;
     // undefined while the labels load.
     annotationLabels: Readable<{ annotation_label_id: string }[] | undefined>;
+    // Owned by the caller, so the key outlives the plot.
+    selectedColorByKey: Writable<string | null>;
 }
 
 interface UsePlotColorByReturn {
@@ -22,10 +24,9 @@ interface UsePlotColorByReturn {
 export function usePlotColorBy({
     selectedColorByType,
     tags,
-    annotationLabels
+    annotationLabels,
+    selectedColorByKey
 }: UsePlotColorByParams): UsePlotColorByReturn {
-    const selectedColorByKey = writable<string | null>(null);
-
     const computedColorBy = derived(
         [selectedColorByType, selectedColorByKey, tags, annotationLabels],
         ([$selectedColorByType, $selectedColorByKey, $tags, $annotationLabels]):

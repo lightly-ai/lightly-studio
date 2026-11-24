@@ -20,6 +20,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable, Cuboid3DCreate
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver
@@ -50,7 +51,12 @@ def update_annotation_object(
 
     annotation_type = annotation_copy.annotation_type
 
-    seg_details = annotation_copy.segmentation_details
+    # Read only the details of the annotation type, so other types do not run a lazy SELECT.
+    seg_details = (
+        annotation_copy.segmentation_details
+        if annotation_type == AnnotationType.SEGMENTATION_MASK
+        else None
+    )
     segmentation = (
         SegmentationAnnotationTable(
             sample_id=annotation_copy.sample_id,
@@ -60,11 +66,31 @@ def update_annotation_object(
             width=seg_details.width,
             height=seg_details.height,
         )
-        if annotation_type == AnnotationType.SEGMENTATION_MASK and seg_details
+        if seg_details
         else None
     )
 
-    od_details = annotation_copy.object_detection_details
+    polygon_details = (
+        annotation_copy.polygon_details if annotation_type == AnnotationType.POLYGON else None
+    )
+    polygon = (
+        PolygonAnnotationTable(
+            sample_id=annotation_copy.sample_id,
+            polygons=polygon_details.polygons,
+            x=polygon_details.x,
+            y=polygon_details.y,
+            width=polygon_details.width,
+            height=polygon_details.height,
+        )
+        if polygon_details
+        else None
+    )
+
+    od_details = (
+        annotation_copy.object_detection_details
+        if annotation_type == AnnotationType.OBJECT_DETECTION
+        else None
+    )
     object_detection = (
         ObjectDetectionAnnotationTable(
             sample_id=annotation_copy.sample_id,
@@ -73,12 +99,14 @@ def update_annotation_object(
             width=od_details.width,
             height=od_details.height,
         )
-        if annotation_type == AnnotationType.OBJECT_DETECTION and od_details
+        if od_details
         else None
     )
 
-    cuboid_details = annotation_copy.cuboid_3d_details
-    if annotation_type == AnnotationType.CUBOID_3D and cuboid_details:
+    cuboid_details = (
+        annotation_copy.cuboid_3d_details if annotation_type == AnnotationType.CUBOID_3D else None
+    )
+    if cuboid_details:
         source = cuboid_3d if cuboid_3d is not None else cuboid_details
         cuboid = Cuboid3DAnnotationTable(
             sample_id=annotation_copy.sample_id,
@@ -134,6 +162,9 @@ def update_annotation_object(
 
     if segmentation:
         session.add(segmentation)
+
+    if polygon:
+        session.add(polygon)
 
     if object_detection:
         session.add(object_detection)

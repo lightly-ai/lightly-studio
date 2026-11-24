@@ -12,6 +12,7 @@ from sqlmodel import Session, col, delete, select
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
@@ -62,6 +63,7 @@ def update_label_by_object_track_id(
     # Capture child row data before deletion so it can be restored afterwards.
     od_data = _capture_object_detection(session=session, sample_ids=sibling_ids)
     seg_data = _capture_segmentation(session=session, sample_ids=sibling_ids)
+    polygon_data = _capture_polygons(session=session, sample_ids=sibling_ids)
     cuboid_data = _capture_cuboid_3d(session=session, sample_ids=sibling_ids)
 
     # Remove all rows that hold FK references to annotation_base.sample_id so the
@@ -86,6 +88,9 @@ def update_label_by_object_track_id(
         )
     )
     session.exec(
+        delete(PolygonAnnotationTable).where(col(PolygonAnnotationTable.sample_id).in_(sibling_ids))
+    )
+    session.exec(
         delete(Cuboid3DAnnotationTable).where(
             col(Cuboid3DAnnotationTable.sample_id).in_(sibling_ids)
         )
@@ -102,6 +107,7 @@ def update_label_by_object_track_id(
             session=session,
             od_data=od_data,
             seg_data=seg_data,
+            polygon_data=polygon_data,
             cuboid_data=cuboid_data,
         )
         session.commit()
@@ -111,6 +117,7 @@ def update_label_by_object_track_id(
             session=session,
             od_data=od_data,
             seg_data=seg_data,
+            polygon_data=polygon_data,
             cuboid_data=cuboid_data,
         )
         session.commit()
@@ -121,12 +128,15 @@ def _reinsert_child_rows(
     session: Session,
     od_data: list[dict[str, Any]],
     seg_data: list[dict[str, Any]],
+    polygon_data: list[dict[str, Any]],
     cuboid_data: list[dict[str, Any]],
 ) -> None:
     for d in od_data:
         session.add(ObjectDetectionAnnotationTable(**d))
     for d in seg_data:
         session.add(SegmentationAnnotationTable(**d))
+    for d in polygon_data:
+        session.add(PolygonAnnotationTable(**d))
     for d in cuboid_data:
         session.add(Cuboid3DAnnotationTable(**d))
 
@@ -153,6 +163,23 @@ def _capture_segmentation(session: Session, sample_ids: list[UUID]) -> list[dict
         {
             "sample_id": r.sample_id,
             "segmentation_mask": r.segmentation_mask,
+            "x": r.x,
+            "y": r.y,
+            "width": r.width,
+            "height": r.height,
+        }
+        for r in rows
+    ]
+
+
+def _capture_polygons(session: Session, sample_ids: list[UUID]) -> list[dict[str, Any]]:
+    rows = session.exec(
+        select(PolygonAnnotationTable).where(col(PolygonAnnotationTable.sample_id).in_(sample_ids))
+    ).all()
+    return [
+        {
+            "sample_id": r.sample_id,
+            "polygons": r.polygons,
             "x": r.x,
             "y": r.y,
             "width": r.width,

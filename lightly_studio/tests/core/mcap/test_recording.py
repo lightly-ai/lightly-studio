@@ -9,7 +9,6 @@ from sqlmodel import Session
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.type_definitions import StaticTransform
-from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.recording import RecordingFormat
@@ -22,27 +21,20 @@ from lightly_studio.resolvers import (
 )
 from tests.helpers_resolvers import create_collection
 
-
-@pytest.fixture
-def db_session(patch_collection: None) -> Session:  # noqa: ARG001
-    """The persistent session, which the ingestion transport writes through."""
-    return db_manager.persistent_session()
-
-
 CAMERA_MATRIX = [600.0, 0.0, 320.0, 0.0, 600.0, 240.0, 0.0, 0.0, 1.0]
 
 
 class TestRecording:
-    def test_properties(self, db_session: Session) -> None:
-        recording = _create_recording(session=db_session, uri="/data/perception.mcap")
+    def test_properties(self, persistent_session: Session) -> None:
+        recording = _create_recording(session=persistent_session, uri="/data/perception.mcap")
 
         assert recording.uri == "/data/perception.mcap"
         assert recording.recording_format == RecordingFormat.MCAP
 
-    def test_add_sensor_calibrations(self, db_session: Session) -> None:
-        recording = _create_recording(session=db_session, uri="/data/perception.mcap")
+    def test_add_sensor_calibrations(self, persistent_session: Session) -> None:
+        recording = _create_recording(session=persistent_session, uri="/data/perception.mcap")
         front = _create_component_collection_id(
-            session=db_session, name="front", mcap_data_type=McapDataType.VIDEO_FRAME
+            session=persistent_session, name="front", mcap_data_type=McapDataType.VIDEO_FRAME
         )
 
         calibration_ids = recording.add_sensor_calibrations(
@@ -53,7 +45,7 @@ class TestRecording:
 
         assert len(calibration_ids) == 1
         calibrations = sensor_calibration_resolver.get_all_by_recording_id(
-            session=db_session, recording_id=recording.recording_id
+            session=persistent_session, recording_id=recording.recording_id
         )
         assert len(calibrations) == 1
         assert calibrations[0].collection_id == front
@@ -61,16 +53,18 @@ class TestRecording:
         assert calibrations[0].height == 480
         assert calibrations[0].k == CAMERA_MATRIX
 
-    def test_add_sensor_calibrations__empty(self, db_session: Session) -> None:
-        recording = _create_recording(session=db_session, uri="/data/perception.mcap")
+    def test_add_sensor_calibrations__empty(self, persistent_session: Session) -> None:
+        recording = _create_recording(session=persistent_session, uri="/data/perception.mcap")
 
         with pytest.raises(ValueError, match="rows must be non-empty"):
             recording.add_sensor_calibrations(calibrations=[])
 
-    def test_add_sensor_calibrations__point_cloud_component(self, db_session: Session) -> None:
-        recording = _create_recording(session=db_session, uri="/data/perception.mcap")
+    def test_add_sensor_calibrations__point_cloud_component(
+        self, persistent_session: Session
+    ) -> None:
+        recording = _create_recording(session=persistent_session, uri="/data/perception.mcap")
         pcl_front = _create_component_collection_id(
-            session=db_session, name="pcl_front", mcap_data_type=McapDataType.POINT_CLOUD
+            session=persistent_session, name="pcl_front", mcap_data_type=McapDataType.POINT_CLOUD
         )
 
         with pytest.raises(ValueError, match="requires a 'video_frame' slot"):
@@ -82,10 +76,10 @@ class TestRecording:
                 ]
             )
 
-    def test_add_sensor_calibrations__component_twice(self, db_session: Session) -> None:
-        recording = _create_recording(session=db_session, uri="/data/perception.mcap")
+    def test_add_sensor_calibrations__component_twice(self, persistent_session: Session) -> None:
+        recording = _create_recording(session=persistent_session, uri="/data/perception.mcap")
         front = _create_component_collection_id(
-            session=db_session, name="front", mcap_data_type=McapDataType.VIDEO_FRAME
+            session=persistent_session, name="front", mcap_data_type=McapDataType.VIDEO_FRAME
         )
         calibration = CreateSensorCalibration(
             collection_id=front, width=640, height=480, k=CAMERA_MATRIX
@@ -94,10 +88,10 @@ class TestRecording:
 
         with pytest.raises(IntegrityError):
             recording.add_sensor_calibrations(calibrations=[calibration])
-        db_session.rollback()
+        persistent_session.rollback()
 
-    def test_add_static_transforms(self, db_session: Session) -> None:
-        recording = _create_recording(session=db_session, uri="/data/perception.mcap")
+    def test_add_static_transforms(self, persistent_session: Session) -> None:
+        recording = _create_recording(session=persistent_session, uri="/data/perception.mcap")
 
         transform_ids = recording.add_static_transforms(
             transforms=[
@@ -113,7 +107,7 @@ class TestRecording:
 
         assert len(transform_ids) == 1
         rows = static_transform_resolver.get_all_by_recording_id(
-            session=db_session, recording_id=recording.recording_id
+            session=persistent_session, recording_id=recording.recording_id
         )
         assert [(row.parent, row.child) for row in rows] == [("base_link", "lidar")]
         # The columns are stored as 32-bit floats.
@@ -122,13 +116,13 @@ class TestRecording:
             (0.0, 0.0, 0.6, 0.8)
         )
 
-    def test_set_reference_frame_ids(self, db_session: Session) -> None:
-        recording = _create_recording(session=db_session, uri="/data/perception.mcap")
+    def test_set_reference_frame_ids(self, persistent_session: Session) -> None:
+        recording = _create_recording(session=persistent_session, uri="/data/perception.mcap")
 
         recording.set_reference_frame_ids(frame_ids=["map", "CABIN"])
 
         stored = recording_resolver.get_by_id(
-            session=db_session, recording_id=recording.recording_id
+            session=persistent_session, recording_id=recording.recording_id
         )
         assert stored is not None
         assert stored.reference_frame_ids == ["map", "CABIN"]

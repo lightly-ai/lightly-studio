@@ -7,7 +7,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from lightly_studio.core.mcap.sequence import McapSequence, McapSequenceEntry
-from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate
@@ -19,16 +18,12 @@ from lightly_studio.resolvers import (
 from tests.helpers_resolvers import create_collection
 
 
-@pytest.fixture
-def db_session(patch_collection: None) -> Session:  # noqa: ARG001
-    """The persistent session, which the ingestion transport writes through."""
-    return db_manager.persistent_session()
-
-
 class TestMcapSequence:
-    def test_add_samples(self, db_session: Session) -> None:
-        sequence, group_collection_id = _create_sequence(session=db_session)
-        sample_ids = _create_samples(session=db_session, collection_id=group_collection_id, count=3)
+    def test_add_samples(self, persistent_session: Session) -> None:
+        sequence, group_collection_id = _create_sequence(session=persistent_session)
+        sample_ids = _create_samples(
+            session=persistent_session, collection_id=group_collection_id, count=3
+        )
 
         sequence.add_samples(
             entries=[
@@ -45,9 +40,11 @@ class TestMcapSequence:
             McapSequenceEntry(sample_id=sample_ids[2], seq_number=2, timestamp_ns=1_000_000_002),
         ]
 
-    def test_add_samples__ordered_by_seq_number(self, db_session: Session) -> None:
-        sequence, group_collection_id = _create_sequence(session=db_session)
-        sample_ids = _create_samples(session=db_session, collection_id=group_collection_id, count=2)
+    def test_add_samples__ordered_by_seq_number(self, persistent_session: Session) -> None:
+        sequence, group_collection_id = _create_sequence(session=persistent_session)
+        sample_ids = _create_samples(
+            session=persistent_session, collection_id=group_collection_id, count=2
+        )
 
         # The entries are passed out of order, the sequence is read back in order.
         sequence.add_samples(
@@ -62,9 +59,11 @@ class TestMcapSequence:
             sample_ids[0],
         ]
 
-    def test_add_samples__without_timestamp(self, db_session: Session) -> None:
-        sequence, group_collection_id = _create_sequence(session=db_session)
-        sample_ids = _create_samples(session=db_session, collection_id=group_collection_id, count=1)
+    def test_add_samples__without_timestamp(self, persistent_session: Session) -> None:
+        sequence, group_collection_id = _create_sequence(session=persistent_session)
+        sample_ids = _create_samples(
+            session=persistent_session, collection_id=group_collection_id, count=1
+        )
 
         sequence.add_samples(entries=[McapSequenceEntry(sample_id=sample_ids[0], seq_number=0)])
 
@@ -72,40 +71,44 @@ class TestMcapSequence:
             McapSequenceEntry(sample_id=sample_ids[0], seq_number=0, timestamp_ns=None)
         ]
 
-    def test_add_samples__empty(self, db_session: Session) -> None:
-        sequence, _ = _create_sequence(session=db_session)
+    def test_add_samples__empty(self, persistent_session: Session) -> None:
+        sequence, _ = _create_sequence(session=persistent_session)
 
         sequence.add_samples(entries=[])
 
         assert sequence.get_samples() == []
 
-    def test_add_samples__unknown_sample(self, db_session: Session) -> None:
-        sequence, _ = _create_sequence(session=db_session)
+    def test_add_samples__unknown_sample(self, persistent_session: Session) -> None:
+        sequence, _ = _create_sequence(session=persistent_session)
         sample_id = uuid4()
 
         with pytest.raises(ValueError, match=f"Sample with sample_id {sample_id} not found"):
             sequence.add_samples(entries=[McapSequenceEntry(sample_id=sample_id, seq_number=0)])
 
-    def test_add_samples__negative_seq_number(self, db_session: Session) -> None:
-        sequence, group_collection_id = _create_sequence(session=db_session)
-        sample_ids = _create_samples(session=db_session, collection_id=group_collection_id, count=1)
+    def test_add_samples__negative_seq_number(self, persistent_session: Session) -> None:
+        sequence, group_collection_id = _create_sequence(session=persistent_session)
+        sample_ids = _create_samples(
+            session=persistent_session, collection_id=group_collection_id, count=1
+        )
 
         with pytest.raises(ValueError, match="seq_number must not be negative, got -1"):
             sequence.add_samples(
                 entries=[McapSequenceEntry(sample_id=sample_ids[0], seq_number=-1)]
             )
 
-    def test_add_samples__slot_taken(self, db_session: Session) -> None:
-        sequence, group_collection_id = _create_sequence(session=db_session)
-        sample_ids = _create_samples(session=db_session, collection_id=group_collection_id, count=2)
+    def test_add_samples__slot_taken(self, persistent_session: Session) -> None:
+        sequence, group_collection_id = _create_sequence(session=persistent_session)
+        sample_ids = _create_samples(
+            session=persistent_session, collection_id=group_collection_id, count=2
+        )
         sequence.add_samples(entries=[McapSequenceEntry(sample_id=sample_ids[0], seq_number=0)])
 
         with pytest.raises(IntegrityError):
             sequence.add_samples(entries=[McapSequenceEntry(sample_id=sample_ids[1], seq_number=0)])
-        db_session.rollback()
+        persistent_session.rollback()
 
-    def test_get_samples__empty(self, db_session: Session) -> None:
-        sequence, _ = _create_sequence(session=db_session)
+    def test_get_samples__empty(self, persistent_session: Session) -> None:
+        sequence, _ = _create_sequence(session=persistent_session)
 
         assert sequence.get_samples() == []
 

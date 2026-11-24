@@ -14,6 +14,7 @@ from sqlmodel import Session, SQLModel, col, delete, select
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
@@ -90,6 +91,7 @@ def delete_annotations_by_ids(
         tables=(
             ObjectDetectionAnnotationTable,
             SegmentationAnnotationTable,
+            PolygonAnnotationTable,
             Cuboid3DAnnotationTable,
             TemporalSpanTable,
         ),

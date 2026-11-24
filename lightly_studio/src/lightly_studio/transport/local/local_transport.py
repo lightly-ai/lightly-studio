@@ -5,6 +5,7 @@ from __future__ import annotations
 from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.compute_transport import ComputeTransport
 from lightly_studio.transport.export_transport import ExportTransport
+from lightly_studio.transport.local.local_caption_transport import LocalCaptionTransport
 from lightly_studio.transport.local.local_collection_transport import LocalCollectionTransport
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from lightly_studio.transport.local.local_metadata_transport import LocalMetadataTransport
@@ -25,6 +26,7 @@ class LocalTransport:
         self.tags = LocalTagTransport()
         self.ingestion = LocalIngestionTransport()
         self.metadata = LocalMetadataTransport()
+        self.captions = LocalCaptionTransport()
 
     @property
     def annotations(self) -> AnnotationTransport:

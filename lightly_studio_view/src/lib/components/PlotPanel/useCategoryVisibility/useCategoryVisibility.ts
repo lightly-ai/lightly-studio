@@ -1,97 +1,109 @@
-import { writable, get, type Readable } from 'svelte/store';
+import { derived, get, type Readable, type Writable } from 'svelte/store';
 import { usePostHog } from '$lib/hooks';
 import type { PlotColorByType } from '../PlotColorByPopover/usePlotColorByType/usePlotColorByType';
+import {
+    EXCLUDED_LEGEND_KEY,
+    getHiddenCategories,
+    getLegendKey,
+    isReservedLegendKey
+} from './legendKeys';
 
 interface UseCategoryVisibilityParams {
     getCollectionId: () => string;
     getColorByType: () => PlotColorByType | null;
+    colorLegend: Readable<Map<number, string>>;
+    hiddenKeys: Writable<Set<string>>;
 }
 
 interface UseCategoryVisibilityReturn {
     hiddenCategories: Readable<Set<number>>;
     toggleCategoryVisibility: (category: number) => void;
     focusCategoryVisibility: (categories: number[], category: number) => void;
-    resetCategoryVisibility: (preservedCategories?: number[]) => void;
+    clearForColorByMode: () => void;
 }
 
 /**
  * Tracks hidden plot categories and exposes focused visibility helpers for the PlotPanel.
+ * The hidden set holds legend keys, so a hidden class stays hidden when the backend moves it
+ * to another slot, and when it leaves the legend and comes back.
  */
 export const useCategoryVisibility = ({
     getCollectionId,
-    getColorByType
+    getColorByType,
+    colorLegend,
+    hiddenKeys
 }: UseCategoryVisibilityParams): UseCategoryVisibilityReturn => {
     const { trackEvent } = usePostHog();
-    const hiddenCategories = writable(new Set<number>());
+    const hiddenCategories = derived([hiddenKeys, colorLegend], ([$hiddenKeys, $colorLegend]) =>
+        getHiddenCategories($hiddenKeys, $colorLegend)
+    );
 
-    const getToggledHiddenCategories = (
-        currentHiddenCategories: ReadonlySet<number>,
-        category: number
-    ) => {
-        const nextHiddenCategories = new Set(currentHiddenCategories);
+    const getKey = (category: number) => getLegendKey(category, get(colorLegend).get(category));
 
-        if (nextHiddenCategories.has(category)) {
-            nextHiddenCategories.delete(category);
+    const getToggledHiddenKeys = (currentHiddenKeys: ReadonlySet<string>, key: string) => {
+        const nextHiddenKeys = new Set(currentHiddenKeys);
+        if (nextHiddenKeys.has(key)) {
+            nextHiddenKeys.delete(key);
         } else {
-            nextHiddenCategories.add(category);
+            nextHiddenKeys.add(key);
         }
-
-        return nextHiddenCategories;
+        return nextHiddenKeys;
     };
 
-    const getFocusedHiddenCategories = (
-        currentHiddenCategories: ReadonlySet<number>,
-        categories: number[],
-        category: number
+    const getFocusedHiddenKeys = (
+        currentHiddenKeys: ReadonlySet<string>,
+        isolateKeys: string[],
+        focusedKey: string
     ) => {
-        // Categories hidden outside the `categories` isolate set are reserved rows; keep them hidden.
-        const preservedHiddenCategories = [...currentHiddenCategories].filter(
-            (hiddenCategory) => !categories.includes(hiddenCategory)
+        // Keys hidden outside the isolate set are reserved rows or classes that left the
+        // legend. Isolating keeps them hidden.
+        const preservedHiddenKeys = [...currentHiddenKeys].filter(
+            (hiddenKey) => !isolateKeys.includes(hiddenKey)
         );
+        const visibleKeys = isolateKeys.filter((key) => !currentHiddenKeys.has(key));
 
-        const visibleCategories = categories.filter(
-            (visibleCategory) => !currentHiddenCategories.has(visibleCategory)
-        );
-
-        if (visibleCategories.length === 1 && visibleCategories[0] === category) {
-            return new Set<number>(preservedHiddenCategories);
+        // Show all keeps only the reserved rows. A class that left the legend shows again, so it
+        // does not come back hidden when the filter is removed.
+        if (visibleKeys.length === 1 && visibleKeys[0] === focusedKey) {
+            return new Set(preservedHiddenKeys.filter(isReservedLegendKey));
         }
-
         return new Set([
-            ...preservedHiddenCategories,
-            ...categories.filter((visibleCategory) => visibleCategory !== category)
+            ...preservedHiddenKeys,
+            ...isolateKeys.filter((key) => key !== focusedKey)
         ]);
     };
 
     const toggleCategoryVisibility = (category: number) => {
-        const action = get(hiddenCategories).has(category) ? 'show' : 'hide';
+        const key = getKey(category);
+        if (key === undefined) return;
         trackEvent('legend_category_toggled', {
             collection_id: getCollectionId(),
             color_by_type: getColorByType(),
-            action
+            action: get(hiddenKeys).has(key) ? 'show' : 'hide'
         });
-        hiddenCategories.update((currentHiddenCategories) =>
-            getToggledHiddenCategories(currentHiddenCategories, category)
-        );
+        hiddenKeys.update((currentHiddenKeys) => getToggledHiddenKeys(currentHiddenKeys, key));
     };
 
     const focusCategoryVisibility = (categories: number[], category: number) => {
+        const focusedKey = getKey(category);
+        if (focusedKey === undefined) return;
+        const isolateKeys = categories
+            .map(getKey)
+            .filter((key): key is string => key !== undefined);
         trackEvent('legend_category_isolated', {
             collection_id: getCollectionId(),
             color_by_type: getColorByType()
         });
-        hiddenCategories.update((currentHiddenCategories) =>
-            getFocusedHiddenCategories(currentHiddenCategories, categories, category)
+        hiddenKeys.update((currentHiddenKeys) =>
+            getFocusedHiddenKeys(currentHiddenKeys, isolateKeys, focusedKey)
         );
     };
 
-    const resetCategoryVisibility = (preservedCategories: number[] = []) => {
-        // Clears remapped color slots; keeps the reserved rows the caller asks to preserve.
-        hiddenCategories.update(
-            (currentHiddenCategories) =>
-                new Set<number>(
-                    preservedCategories.filter((category) => currentHiddenCategories.has(category))
-                )
+    // Excluded means the same in every color-by mode. The other rows get new labels.
+    const clearForColorByMode = () => {
+        hiddenKeys.update(
+            (currentHiddenKeys) =>
+                new Set([...currentHiddenKeys].filter((key) => key === EXCLUDED_LEGEND_KEY))
         );
     };
 
@@ -99,6 +111,6 @@ export const useCategoryVisibility = ({
         hiddenCategories,
         toggleCategoryVisibility,
         focusCategoryVisibility,
-        resetCategoryVisibility
+        clearForColorByMode
     };
 };

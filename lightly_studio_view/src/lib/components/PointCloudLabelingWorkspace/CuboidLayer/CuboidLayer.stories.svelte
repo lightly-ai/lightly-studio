@@ -142,7 +142,7 @@
     args={{
         cuboids: multipleCuboids,
         selectedAnnotationId: 'annotation-2',
-        activeTool: 'rotate',
+        activeTool: 'select',
         cameraMode: 'top'
     }}
 >

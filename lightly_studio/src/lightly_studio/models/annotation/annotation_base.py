@@ -22,6 +22,11 @@ from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationView,
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
+from lightly_studio.models.annotation.polygon import (
+    PolygonAnnotationTable,
+    PolygonAnnotationView,
+    Polygons,
+)
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
     SegmentationAnnotationView,
@@ -51,12 +56,14 @@ class AnnotationType(str, Enum):
     SEGMENTATION_MASK = "segmentation_mask"
     OBJECT_DETECTION = "object_detection"
     CUBOID_3D = "cuboid_3d"
+    POLYGON = "polygon"
 
 
 # Annotation types that have a bounding box and can be cropped for embedding.
 CROPPABLE_ANNOTATION_TYPES = [
     AnnotationType.OBJECT_DETECTION,
     AnnotationType.SEGMENTATION_MASK,
+    AnnotationType.POLYGON,
 ]
 
 
@@ -126,6 +133,12 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
+    # Details about polygons.
+    polygon_details: Mapped[Optional["PolygonAnnotationTable"]] = Relationship(
+        back_populates="annotation_base",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
+
     # Optional temporal bounds for this annotation's sample.
     temporal_span_details: Mapped[Optional["TemporalSpanTable"]] = Relationship(
         sa_relationship_kwargs={
@@ -168,6 +181,9 @@ class AnnotationCreate(ABC, SQLModel):
     # Optional properties for segmentation.
     segmentation_mask: list[int] | None = None
 
+    # Optional properties for polygons.
+    polygons: Polygons | None = None
+
     # Optional properties for temporal annotations.
     start_time_s: float | None = None
     end_time_s: float | None = None
@@ -204,6 +220,7 @@ class AnnotationView(BaseModel):
     object_detection_details: ObjectDetectionAnnotationView | None = None
     cuboid_3d_details: Cuboid3DAnnotationView | None = None
     segmentation_details: SegmentationAnnotationView | None = None
+    polygon_details: PolygonAnnotationView | None = None
     temporal_span_details: TemporalSpanView | None = None
     object_track_id: UUID | None = None
     object_track_number: int | None = None
@@ -262,6 +279,8 @@ class AnnotationView(BaseModel):
             annotation_label=cls.AnnotationLabel(
                 annotation_label_name=annotation.annotation_label.annotation_label_name
             ),
+            # TODO(Michal, 11/2026): Read only the details of the annotation type. Each read of an
+            # unloaded details relationship runs one lazy SELECT.
             object_detection_details=ObjectDetectionAnnotationView(
                 x=annotation.object_detection_details.x,
                 y=annotation.object_detection_details.y,
@@ -294,6 +313,9 @@ class AnnotationView(BaseModel):
                 segmentation_mask=annotation.segmentation_details.segmentation_mask,
             )
             if annotation.segmentation_details
+            else None,
+            polygon_details=PolygonAnnotationView.model_validate(annotation.polygon_details)
+            if annotation.polygon_details
             else None,
             tags=[
                 cls.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in annotation.sample.tags

@@ -29,20 +29,13 @@ from sqlmodel import Session
 
 from lightly_studio.core import labelformat_helpers
 from lightly_studio.core.image import add_annotations, add_images
-from lightly_studio.database import db_manager
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import caption_resolver, image_resolver
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,
 )
-
-
-@pytest.fixture
-def db_session(patch_collection: None) -> Session:  # noqa: ARG001
-    """The persistent session, which the ingestion transport writes through."""
-    return db_manager.persistent_session()
 
 
 class CountingLabelInput(LabelformatObjectDetectionInput):
@@ -108,22 +101,22 @@ class ExplodingLabelInput(ObjectDetectionInput):
             yield ImageObjectDetection(image=image, objects=[])
 
 
-def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
+def test_load_into_collection_from_paths(persistent_session: Session, tmp_path: Path) -> None:
     # Arrange
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
     image_paths = [str(tmp_path / "image1.jpg")]
     PILImage.new("RGB", (100, 100)).save(image_paths[0])
 
     # Act
     path_to_sample_id = add_images.load_into_dataset_from_paths(
-        session=db_session,
+        session=persistent_session,
         root_collection_id=collection.collection_id,
         image_paths=image_paths,
     )
 
     # Assert
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 1
 
@@ -136,11 +129,11 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
 
 
 def test_load_into_dataset_from_paths__records_missing_broken_already_present_outcomes(
-    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    persistent_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     # Arrange: a folder mixing good / already-present / missing / broken files. Each outcome
     # gets a distinct count so a mix-up between two outcomes cannot pass the assertions.
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
 
     # 1 good file -> added=1.
     good_paths = [tmp_path / "good0.jpg"]
@@ -152,7 +145,7 @@ def test_load_into_dataset_from_paths__records_missing_broken_already_present_ou
     for path in already_present_paths:
         PILImage.new("RGB", (100, 100)).save(str(path))
     helpers_resolvers.create_images(
-        db_session,
+        persistent_session,
         collection.collection_id,
         [ImageStub(path=str(path.absolute().as_posix())) for path in already_present_paths],
     )
@@ -168,7 +161,7 @@ def test_load_into_dataset_from_paths__records_missing_broken_already_present_ou
     # Act
     with caplog.at_level("INFO"):
         path_to_sample_id = add_images.load_into_dataset_from_paths(
-            session=db_session,
+            session=persistent_session,
             root_collection_id=collection.collection_id,
             image_paths=[
                 str(path)
@@ -181,7 +174,7 @@ def test_load_into_dataset_from_paths__records_missing_broken_already_present_ou
     # broken paths have no entry.
     assert set(path_to_sample_id.keys()) == {str(path) for path in good_paths}
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert {sample.file_name for sample in samples} == {"good0.jpg", "present0.jpg", "present1.jpg"}
     good_sample = next(sample for sample in samples if sample.file_name == "good0.jpg")
@@ -195,12 +188,12 @@ def test_load_into_dataset_from_paths__records_missing_broken_already_present_ou
 
 
 def test_load_into_dataset_from_paths__records_decompression_bomb_as_broken(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
 
     good_path = tmp_path / "good.jpg"
     PILImage.new("RGB", (100, 100)).save(str(good_path))  # 10_000 pixels
@@ -211,14 +204,14 @@ def test_load_into_dataset_from_paths__records_decompression_bomb_as_broken(
 
     with caplog.at_level("INFO"):
         path_to_sample_id = add_images.load_into_dataset_from_paths(
-            session=db_session,
+            session=persistent_session,
             root_collection_id=collection.collection_id,
             image_paths=[str(good_path), str(bomb_path)],
         )
 
     assert set(path_to_sample_id.keys()) == {str(good_path)}
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert {sample.file_name for sample in samples} == {"good.jpg"}
     assert "added=1" in caplog.text
@@ -243,36 +236,36 @@ def test_probe_image__limits_read_ahead(tmp_path: Path, mocker: MockerFixture) -
 
 
 def test_load_into_collection_from_paths__deduplicates_in_run_duplicates(
-    db_session: Session, tmp_path: Path
+    persistent_session: Session, tmp_path: Path
 ) -> None:
     # Arrange: the same path appears multiple times in a single load call.
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
     image_path = str(tmp_path / "image1.jpg")
     PILImage.new("RGB", (100, 100)).save(image_path)
     image_paths = [image_path, image_path, image_path]
 
     # Act
     path_to_sample_id = add_images.load_into_dataset_from_paths(
-        session=db_session,
+        session=persistent_session,
         root_collection_id=collection.collection_id,
         image_paths=image_paths,
     )
 
     # Assert: the duplicated path is only created once, with a single mapping entry.
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 1
     assert path_to_sample_id == {image_path: samples[0].sample_id}
 
 
 def test_load_into_dataset_from_labelformat__records_missing_already_present_added_outcomes(
-    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    persistent_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     # Arrange: annotations referencing an added / already-present / missing file mix. Each
     # outcome gets a distinct count so a mix-up between two outcomes cannot pass the asserts.
     # Broken is not exercised: this path never opens the file, so it cannot detect broken.
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
 
     # 1 added file: referenced by the annotations and present on disk.
     added_name = "added.jpg"
@@ -282,7 +275,7 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     # short-circuits before the existence check, so these need not exist on disk.
     already_present_names = ["present0.jpg", "present1.jpg"]
     helpers_resolvers.create_images(
-        db_session,
+        persistent_session,
         collection.collection_id,
         [ImageStub(path=posixpath.join(str(tmp_path), name)) for name in already_present_names],
     )
@@ -296,7 +289,7 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     # Act
     with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
         sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=db_session,
+            session=persistent_session,
             ingestion=LocalIngestionTransport(),
             root_collection_id=collection.collection_id,
             input_labels=label_input,
@@ -306,7 +299,7 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     # Assert: only the added file becomes a new sample.
     assert len(sample_ids) == 1
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert {sample.file_name for sample in samples} == {added_name, *already_present_names}
 
@@ -318,16 +311,16 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
 
 
 def test_load_into_dataset_from_labelformat__reraises_non_image_dimension_error(
-    db_session: Session, tmp_path: Path
+    persistent_session: Session, tmp_path: Path
 ) -> None:
     # Arrange: an input whose scan fails with an error that is not an ImageDimensionError.
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
     label_input = ExplodingLabelInput(images_dir=tmp_path)
 
     # Act / Assert: a non-file-outcome error must propagate rather than be recorded as broken.
     with pytest.raises(ValueError, match="boom"):
         add_images.load_into_dataset_from_labelformat(
-            session=db_session,
+            session=persistent_session,
             ingestion=LocalIngestionTransport(),
             root_collection_id=collection.collection_id,
             input_labels=label_input,
@@ -336,16 +329,16 @@ def test_load_into_dataset_from_labelformat__reraises_non_image_dimension_error(
 
 
 def test_load_into_dataset_from_labelformat__calls_get_labels_once(
-    db_session: Session, tmp_path: Path, mocker: MockerFixture
+    persistent_session: Session, tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
     label_input = CountingLabelInput()
     # The referenced file is not on disk; treat it as present so a sample is created and the
     # annotation phase (the second get_labels call) runs.
     mocker.patch.object(add_images, "_file_exists", return_value=True)
 
     add_images.load_into_dataset_from_labelformat(
-        session=db_session,
+        session=persistent_session,
         ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=label_input,
@@ -367,19 +360,19 @@ def test_load_into_dataset_from_labelformat__calls_get_labels_once(
     ],
 )
 def test_load_into_collection_from_labelformat__obj_det(
-    db_session: Session,
+    persistent_session: Session,
     images_path: str,
     mocker: MockerFixture,
 ) -> None:
     # Arrange
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
     # This test covers path normalization across backends, not file existence: the referenced
     # paths (including remote schemes) do not exist, so treat every file as present.
     mocker.patch.object(add_images, "_file_exists", return_value=True)
 
     sample_ids = add_images.load_into_dataset_from_labelformat(
-        session=db_session,
+        session=persistent_session,
         ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=label_input,
@@ -388,7 +381,7 @@ def test_load_into_collection_from_labelformat__obj_det(
 
     # Assert samples
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 1
 
@@ -425,7 +418,7 @@ def test_load_into_collection_from_labelformat__obj_det(
     ],
 )
 def test_load_into_collection_from_labelformat__ins_seg(
-    db_session: Session, images_path: str, mocker: MockerFixture
+    persistent_session: Session, images_path: str, mocker: MockerFixture
 ) -> None:
     # This test covers path normalization across backends, not file existence: the referenced
     # paths (including remote schemes) do not exist, so treat every file as present.
@@ -462,9 +455,9 @@ def test_load_into_collection_from_labelformat__ins_seg(
         def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
             return self.labels
 
-    collection = helpers_resolvers.create_collection(session=db_session)
+    collection = helpers_resolvers.create_collection(session=persistent_session)
     sample_ids = add_images.load_into_dataset_from_labelformat(
-        session=db_session,
+        session=persistent_session,
         ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=TestLabelInput(),
@@ -473,7 +466,7 @@ def test_load_into_collection_from_labelformat__ins_seg(
 
     # Assert samples
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 1
 
@@ -497,11 +490,11 @@ def test_load_into_collection_from_labelformat__ins_seg(
 
 
 def test_load_into_dataset_from_labelformat__does_not_annotate_existing_images(
-    db_session: Session,
+    persistent_session: Session,
 ) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
     images = helpers_resolvers.create_images(
-        db_session,
+        persistent_session,
         collection.collection_id,
         [
             ImageStub(path="/images/image.jpg", width=100, height=200),
@@ -510,7 +503,7 @@ def test_load_into_dataset_from_labelformat__does_not_annotate_existing_images(
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     sample_ids = add_images.load_into_dataset_from_labelformat(
-        session=db_session,
+        session=persistent_session,
         ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=label_input,
@@ -519,16 +512,18 @@ def test_load_into_dataset_from_labelformat__does_not_annotate_existing_images(
 
     assert sample_ids == []
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 1
     assert samples[0].sample_id == images[0].sample_id
     assert len(samples[0].sample.annotations) == 0
 
 
-def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: Path) -> None:
+def test_load_into_collection_from_coco_captions(
+    persistent_session: Session, tmp_path: Path
+) -> None:
     # Arrange
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
 
     # Create and save the coco json file containing the captions
     annotations_path = tmp_path / "annotations.json"
@@ -538,7 +533,7 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
         PILImage.new("RGB", (640, 480)).save(str(tmp_path / file_name))
 
     _ = add_images.load_into_dataset_from_coco_captions(
-        session=db_session,
+        session=persistent_session,
         ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         annotations_json=annotations_path,
@@ -547,7 +542,7 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
 
     # Assert samples
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     samples = sorted(samples, key=lambda sample: sample.file_path_abs)
     assert len(samples) == 2
@@ -572,13 +567,50 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
     assert samples[1].sample.captions[0].text == "Caption 1 of image 2"
 
 
+def test_load_into_dataset_from_coco_captions__writes_captions_per_batch(
+    persistent_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    collection = helpers_resolvers.create_collection(persistent_session)
+    file_names = ["image0.jpg", "image1.jpg", "image2.jpg"]
+    for file_name in file_names:
+        PILImage.new("RGB", (640, 480)).save(str(tmp_path / file_name))
+    coco_dict = {
+        "images": [
+            {"id": i, "file_name": name, "width": 640, "height": 480}
+            for i, name in enumerate(file_names)
+        ],
+        "annotations": [
+            {"id": i, "image_id": i, "caption": f"Caption {i}"} for i in range(len(file_names))
+        ],
+    }
+    annotations_path = tmp_path / "annotations.json"
+    annotations_path.write_text(json.dumps(coco_dict))
+    mocker.patch.object(add_images, "SAMPLE_BATCH_SIZE", 2)
+    create_captions_spy = mocker.spy(caption_resolver, "create_many")
+
+    sample_ids = add_images.load_into_dataset_from_coco_captions(
+        session=persistent_session,
+        ingestion=LocalIngestionTransport(),
+        root_collection_id=collection.collection_id,
+        annotations_json=annotations_path,
+        images_path=tmp_path,
+    )
+
+    assert len(sample_ids) == 3
+    caption_texts_per_call = [
+        [caption.text for caption in call.kwargs["captions"]]
+        for call in create_captions_spy.call_args_list
+    ]
+    assert caption_texts_per_call == [["Caption 0", "Caption 1"], ["Caption 2"]]
+
+
 def test_load_into_dataset_from_coco_captions__records_missing_already_present_added_outcomes(
-    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    persistent_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     # Arrange: a captions file referencing an added / already-present / missing file mix. Each
     # outcome gets a distinct count so a mix-up between two outcomes cannot pass the asserts.
     # Broken is not exercised: this path never opens the file, so it cannot detect broken.
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
 
     # 1 added file: referenced by the captions and present on disk.
     added_name = "added.jpg"
@@ -588,7 +620,7 @@ def test_load_into_dataset_from_coco_captions__records_missing_already_present_a
     # short-circuits before the existence check, so these need not exist on disk.
     already_present_names = ["present0.jpg", "present1.jpg"]
     helpers_resolvers.create_images(
-        db_session,
+        persistent_session,
         collection.collection_id,
         [ImageStub(path=str(tmp_path / name)) for name in already_present_names],
     )
@@ -610,7 +642,7 @@ def test_load_into_dataset_from_coco_captions__records_missing_already_present_a
     # Act
     with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
         sample_ids = add_images.load_into_dataset_from_coco_captions(
-            session=db_session,
+            session=persistent_session,
             ingestion=LocalIngestionTransport(),
             root_collection_id=collection.collection_id,
             annotations_json=annotations_path,
@@ -620,7 +652,7 @@ def test_load_into_dataset_from_coco_captions__records_missing_already_present_a
     # Assert: only the added file becomes a new sample.
     assert len(sample_ids) == 1
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert {sample.file_name for sample in samples} == {added_name, *already_present_names}
 
@@ -631,8 +663,8 @@ def test_load_into_dataset_from_coco_captions__records_missing_already_present_a
     assert "broken=0" in caplog.text
 
 
-def test_create_batch_samples(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
+def test_create_batch_samples(persistent_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(persistent_session)
     collection_id = collection.collection_id
 
     # Existence in the database is checked by the caller, so _create_batch_samples creates
@@ -652,16 +684,16 @@ def test_create_batch_samples(db_session: Session) -> None:
         ),
     ]
     new_path_to_id = add_images._create_batch_samples(
-        session=db_session, collection_id=collection_id, samples=batch
+        session=persistent_session, collection_id=collection_id, samples=batch
     )
     assert set(new_path_to_id.keys()) == {"/path/to/image_0.png", "/path/to/image_1.png"}
 
     # Check that the sample id mapping matches the database
     db_image_0 = image_resolver.get_by_id(
-        session=db_session, sample_id=new_path_to_id["/path/to/image_0.png"]
+        session=persistent_session, sample_id=new_path_to_id["/path/to/image_0.png"]
     )
     db_image_1 = image_resolver.get_by_id(
-        session=db_session, sample_id=new_path_to_id["/path/to/image_1.png"]
+        session=persistent_session, sample_id=new_path_to_id["/path/to/image_1.png"]
     )
     assert db_image_0 is not None
     assert db_image_0.file_path_abs == "/path/to/image_0.png"
@@ -669,15 +701,15 @@ def test_create_batch_samples(db_session: Session) -> None:
     assert db_image_1.file_path_abs == "/path/to/image_1.png"
 
 
-def test_create_label_map(db_session: Session) -> None:
+def test_create_label_map(persistent_session: Session) -> None:
     # Test the creation of new labels and re-use of existing labels
-    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    collection_id = helpers_resolvers.create_collection(session=persistent_session).collection_id
     label_input = _get_labelformat_input_obj_det(
         filename="image.jpg", category_names=["dog", "cat"]
     )
 
     label_map_1 = labelformat_helpers.create_label_map(
-        session=db_session,
+        session=persistent_session,
         root_collection_id=collection_id,
         input_labels=label_input,
     )
@@ -687,7 +719,7 @@ def test_create_label_map(db_session: Session) -> None:
     )
 
     label_map_2 = labelformat_helpers.create_label_map(
-        session=db_session,
+        session=persistent_session,
         root_collection_id=collection_id,
         input_labels=label_input_2,
     )
@@ -702,13 +734,13 @@ def test_create_label_map(db_session: Session) -> None:
 
 
 def test_tag_samples_by_directory__tag_depth_negative(
-    db_session: Session,
+    persistent_session: Session,
 ) -> None:
     """Tests that a negative tag_depth raises an error."""
     # We don't need a full collection, just the function call.
     with pytest.raises(ValueError, match="tag_depth must be non-negative"):
         add_images.tag_samples_by_directory(
-            session=db_session,
+            session=persistent_session,
             collection_id=UUID(int=0),
             input_path=".",
             sample_ids=[],
@@ -717,13 +749,13 @@ def test_tag_samples_by_directory__tag_depth_negative(
 
 
 def test_tag_samples_by_directory__tag_depth_0(
-    db_session: Session,
+    persistent_session: Session,
 ) -> None:
     """Tests the default behavior (tag_depth=0) adds samples but no tags."""
     mock_root_path = "/mock/path"
-    collection_table = helpers_resolvers.create_collection(db_session, "test_collection")
+    collection_table = helpers_resolvers.create_collection(persistent_session, "test_collection")
     created_images = helpers_resolvers.create_images(
-        db_session=db_session,
+        db_session=persistent_session,
         collection_id=collection_table.collection_id,
         images=[
             ImageStub(path=f"{mock_root_path}/root_img.png"),
@@ -733,7 +765,7 @@ def test_tag_samples_by_directory__tag_depth_0(
 
     # Call the function with tag_depth=0
     add_images.tag_samples_by_directory(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection_table.collection_id,
         input_path=mock_root_path,
         sample_ids=[img.sample_id for img in created_images],
@@ -741,7 +773,7 @@ def test_tag_samples_by_directory__tag_depth_0(
     )
 
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection_table.collection_id
+        session=persistent_session, collection_id=collection_table.collection_id
     ).samples
 
     # Assert all samples have no tags
@@ -751,13 +783,13 @@ def test_tag_samples_by_directory__tag_depth_0(
 
 
 def test_tag_samples_by_directory__tag_depth_1(
-    db_session: Session,
+    persistent_session: Session,
 ) -> None:
     """Tests that tag_depth=1 correctly tags samples based on directory structure."""
     mock_root_path = "/mock/path"
-    collection_table = helpers_resolvers.create_collection(db_session, "test_collection")
+    collection_table = helpers_resolvers.create_collection(persistent_session, "test_collection")
     created_images = helpers_resolvers.create_images(
-        db_session=db_session,
+        db_session=persistent_session,
         collection_id=collection_table.collection_id,
         images=[
             ImageStub(path=f"{mock_root_path}/root_img.png"),
@@ -768,7 +800,7 @@ def test_tag_samples_by_directory__tag_depth_1(
     )
     # Run with tag_depth=1
     add_images.tag_samples_by_directory(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection_table.collection_id,
         input_path=mock_root_path,
         sample_ids=[img.sample_id for img in created_images],
@@ -776,7 +808,7 @@ def test_tag_samples_by_directory__tag_depth_1(
     )
 
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection_table.collection_id
+        session=persistent_session, collection_id=collection_table.collection_id
     ).samples
     assert len(samples) == 4
 
@@ -789,13 +821,13 @@ def test_tag_samples_by_directory__tag_depth_1(
 
 
 def test_tag_samples_by_directory__tag_depth_2(
-    db_session: Session,
+    persistent_session: Session,
 ) -> None:
     """Tests that tag_depth=2 tags samples by their first two directory levels."""
     mock_root_path = "/mock/path"
-    collection_table = helpers_resolvers.create_collection(db_session, "test_collection")
+    collection_table = helpers_resolvers.create_collection(persistent_session, "test_collection")
     created_images = helpers_resolvers.create_images(
-        db_session=db_session,
+        db_session=persistent_session,
         collection_id=collection_table.collection_id,
         images=[
             ImageStub(path=f"{mock_root_path}/root_img.png"),
@@ -806,7 +838,7 @@ def test_tag_samples_by_directory__tag_depth_2(
     )
     # Run with tag_depth=2
     add_images.tag_samples_by_directory(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection_table.collection_id,
         input_path=mock_root_path,
         sample_ids=[img.sample_id for img in created_images],
@@ -814,7 +846,7 @@ def test_tag_samples_by_directory__tag_depth_2(
     )
 
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection_table.collection_id
+        session=persistent_session, collection_id=collection_table.collection_id
     ).samples
     assert len(samples) == 4
 
@@ -826,7 +858,7 @@ def test_tag_samples_by_directory__tag_depth_2(
 
 
 def test_tag_samples_by_directory__file_url_normalization(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
 ) -> None:
     """Tests that tag_depth=1 works correctly with file:// URLs."""
@@ -836,11 +868,11 @@ def test_tag_samples_by_directory__file_url_normalization(
     (site_1_dir / "img1.png").touch()
     (tmp_path / "img0.png").touch()
 
-    collection_table = helpers_resolvers.create_collection(db_session, "test_collection")
+    collection_table = helpers_resolvers.create_collection(persistent_session, "test_collection")
 
     # Create samples with normalized absolute paths (as load_into_dataset_from_paths would)
     created_images = helpers_resolvers.create_images(
-        db_session=db_session,
+        db_session=persistent_session,
         collection_id=collection_table.collection_id,
         images=[
             ImageStub(path=str((tmp_path / "img0.png").absolute())),
@@ -851,7 +883,7 @@ def test_tag_samples_by_directory__file_url_normalization(
     # Act: Tag using file:// URL (as user might pass)
     file_url = f"file://{tmp_path}"
     add_images.tag_samples_by_directory(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection_table.collection_id,
         input_path=file_url,
         sample_ids=[img.sample_id for img in created_images],
@@ -860,7 +892,7 @@ def test_tag_samples_by_directory__file_url_normalization(
 
     # Assert: Tags correctly extracted despite file:// URL normalization
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection_table.collection_id
+        session=persistent_session, collection_id=collection_table.collection_id
     ).samples
     assert len(samples) == 2
 
@@ -958,7 +990,7 @@ def _get_captions_input(annotations_path: Path) -> None:
 
 
 def test_load_into_dataset_from_paths__file_url_normalization(
-    db_session: Session, tmp_path: Path
+    persistent_session: Session, tmp_path: Path
 ) -> None:
     """Test that file:// URLs are normalized so annotations can be matched later.
 
@@ -969,14 +1001,14 @@ def test_load_into_dataset_from_paths__file_url_normalization(
     paths are normalized to the same canonical form so lookups succeed.
     """
     # Arrange
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(persistent_session)
     image_path = tmp_path / "image.jpg"
     PILImage.new("RGB", (100, 200)).save(str(image_path))
 
     # Act: Load with file:// directory URL
     file_url = f"file://{tmp_path}"
     path_to_sample_id = add_images.load_into_dataset_from_paths(
-        session=db_session,
+        session=persistent_session,
         root_collection_id=collection.collection_id,
         image_paths=[file_url + "/image.jpg"],
     )
@@ -985,7 +1017,7 @@ def test_load_into_dataset_from_paths__file_url_normalization(
     normalized_path = str(image_path.absolute())
     assert path_to_sample_id.keys() == {normalized_path}
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert len(samples) == 1
     # Path should be absolute (file:// stripped and normalized)
@@ -994,11 +1026,11 @@ def test_load_into_dataset_from_paths__file_url_normalization(
 
     # Act: Now add annotations using the same file:// directory root
     # (Without path normalization, this would fail to match)
-    helpers_resolvers.create_annotation_label(db_session, collection.collection_id, "dog")
+    helpers_resolvers.create_annotation_label(persistent_session, collection.collection_id, "dog")
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
+        session=persistent_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_root=file_url,  # Using file:// URL
