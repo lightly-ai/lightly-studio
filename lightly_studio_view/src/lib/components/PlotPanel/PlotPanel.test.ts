@@ -82,6 +82,66 @@ vi.mock('embedding-atlas/svelte', async () => ({
     EmbeddingView: (await import('./EmbeddingViewStub.test.svelte')).default
 }));
 vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
+interface GateMockState {
+    view: 'checking' | 'error' | 'prompt' | 'computing' | 'plot';
+    embeddingCount: number;
+    startedAt: number | null;
+    statusError: string | null;
+    startCompute: () => void;
+    trackCompute: (compute: Promise<unknown>) => void;
+}
+const DEFAULT_GATE_STATE: GateMockState = {
+    view: 'plot',
+    embeddingCount: 0,
+    startedAt: null,
+    statusError: null,
+    startCompute: () => {},
+    trackCompute: () => {}
+};
+// A reactive map, so a test can change the gate after render like the real hook does.
+const gateMock = vi.hoisted(() => ({
+    values: null as Map<string, unknown> | null,
+    getPlotRequestKey: (() => '') as () => string,
+    getIsAxesLayout: (() => false) as () => boolean
+}));
+vi.mock('./usePlotComputeGate/usePlotComputeGate.svelte', async () => {
+    const { SvelteMap } = await import('svelte/reactivity');
+    const { isPlotRequestEnabled } = await import('./plotComputeGate/plotComputeGate');
+    const values = new SvelteMap<string, unknown>();
+    gateMock.values = values;
+    const read = <K extends keyof GateMockState>(key: K) => values.get(key) as GateMockState[K];
+    return {
+        usePlotComputeGate: (params: {
+            getPlotRequestKey: () => string;
+            getIsAxesLayout: () => boolean;
+        }) => {
+            gateMock.getPlotRequestKey = params.getPlotRequestKey;
+            gateMock.getIsAxesLayout = params.getIsAxesLayout;
+            return {
+                get view() {
+                    return read('view');
+                },
+                get isPlotRequestEnabled() {
+                    return isPlotRequestEnabled(read('view'));
+                },
+                get embeddingCount() {
+                    return read('embeddingCount');
+                },
+                get startedAt() {
+                    return read('startedAt');
+                },
+                get statusError() {
+                    return read('statusError');
+                },
+                startCompute: () => read('startCompute')(),
+                trackCompute: (compute: Promise<unknown>) => read('trackCompute')(compute)
+            };
+        }
+    };
+});
+const setGate = (state: Partial<GateMockState>) => {
+    for (const [key, value] of Object.entries(state)) gateMock.values?.set(key, value);
+};
 const mockEmbedTextAxes = vi.hoisted(() => vi.fn());
 vi.mock('./PlotTextAxesInputs/embedTextAxes', () => ({ embedTextAxes: mockEmbedTextAxes }));
 const usePlotDataSpy = vi.hoisted(() => vi.fn());
@@ -220,6 +280,7 @@ describe('PlotPanel.svelte', () => {
         vi.stubGlobal('ResizeObserver', ResizeObserverMock);
         routeState.id = IMAGES_ROUTE;
         actualVideoFilters = null;
+        setGate(DEFAULT_GATE_STATE);
         clearAnnotationPlotSelection('test-collection-id');
         clearPlotLayout('test-collection-id');
         clearPlotViewState('test-collection-id');
@@ -616,6 +677,41 @@ describe('PlotPanel.svelte', () => {
             colorBy: { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
             axes: null
         });
+    });
+
+    it('gives the gate a new plot request key when the color changes', async () => {
+        const user = userEvent.setup();
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const initialKey = gateMock.getPlotRequestKey();
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'tags' }));
+        await tick();
+
+        expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
+    });
+
+    it('gives the gate a new plot request key when the filter changes', async () => {
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const initialKey = gateMock.getPlotRequestKey();
+
+        imageFilterStore.set({ sample_filter: { sample_ids: [], tag_ids: ['tag-a'] } });
+        await tick();
+
+        expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
+    });
+
+    it('tells the gate about the text axes layout and gives it a new plot request key', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const initialKey = gateMock.getPlotRequestKey();
+        expect(gateMock.getIsAxesLayout()).toBe(false);
+
+        await commitTextAxes(user);
+
+        await vi.waitFor(() => expect(gateMock.getIsAxesLayout()).toBe(true));
+        expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
     });
 
     it('fetches without labels when the annotation labels fail to load', async () => {
@@ -1086,6 +1182,187 @@ describe('PlotPanel.svelte', () => {
             });
         });
     });
+
+    describe('compute gate', () => {
+        const loadingPlot = {
+            isError: false,
+            error: null,
+            isLoading: true,
+            isFetching: true,
+            data: null
+        };
+        const idlePlot = { isError: false, error: null, isLoading: false, data: null };
+
+        it('shows the prompt and sends no plot request', async () => {
+            const startCompute = vi.fn();
+            setGate({
+                view: 'prompt',
+                embeddingCount: 300_000,
+                startCompute
+            });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(
+                screen.getByText('300,000 images. The first compute can take several minutes.')
+            ).toBeInTheDocument();
+            expect(lastEmbeddingsParams().enabled).toBe(false);
+            await fireEvent.click(screen.getByRole('button', { name: 'Compute plot' }));
+            expect(startCompute).toHaveBeenCalledOnce();
+        });
+
+        it('shows a failed compute above the prompt', () => {
+            setGate({ view: 'prompt', embeddingCount: 300_000 });
+            (useEmbeddings as vi.Mock).mockReturnValue({
+                ...idlePlot,
+                isError: true,
+                error: new Error('Server error')
+            });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(
+                screen.getByText('The last plot request failed: Server error')
+            ).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Compute plot' })).toBeInTheDocument();
+        });
+
+        it('hands a running compute to the gate', () => {
+            const trackCompute = vi.fn();
+            setGate({ view: 'computing', trackCompute });
+            (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            const compute = Promise.resolve();
+            lastEmbeddingsParams().onCompute?.(compute);
+
+            expect(trackCompute).toHaveBeenCalledWith(compute);
+        });
+
+        it('keeps the request off when the filter changes under the prompt', async () => {
+            setGate({ view: 'prompt' });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            imageFilterStore.set({ sample_filter: { sample_ids: [], tag_ids: ['tag-a'] } });
+            await tick();
+
+            expect(lastEmbeddingsParams().filters).toMatchObject({
+                sample_filter: { tag_ids: ['tag-a'] }
+            });
+            expect(lastEmbeddingsParams().enabled).toBe(false);
+            expect(screen.getByRole('button', { name: 'Compute plot' })).toBeInTheDocument();
+        });
+
+        it('shows the computing state while the first compute runs', () => {
+            setGate({ view: 'computing', startedAt: Date.now() });
+            (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Computing plot…')).toBeInTheDocument();
+            expect(screen.queryByText('Loading embeddings data...')).not.toBeInTheDocument();
+            expect(lastEmbeddingsParams().enabled).toBe(true);
+            const getIsComputing = lastEmbeddingsParams().getIsComputing;
+            expect(getIsComputing?.()).toBe(true);
+            setGate({ view: 'plot' });
+            expect(getIsComputing?.()).toBe(false);
+        });
+
+        it('shows the computing state over an outdated cached plot', () => {
+            setGate({ view: 'computing', startedAt: Date.now() });
+            (useEmbeddings as vi.Mock).mockReturnValue({
+                isError: false,
+                error: null,
+                isLoading: false,
+                isFetching: true,
+                data: new Blob()
+            });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Computing plot…')).toBeInTheDocument();
+        });
+
+        it('keeps the plot request on when the first compute finishes', async () => {
+            setGate({ view: 'computing', startedAt: Date.now() });
+            (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            setGate({ view: 'plot', startedAt: null });
+            await tick();
+
+            expect(lastEmbeddingsParams().enabled).toBe(true);
+        });
+
+        it('keeps the normal loading state for a computed plot', () => {
+            (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Loading embeddings data...')).toBeInTheDocument();
+            expect(screen.queryByText('Computing plot…')).not.toBeInTheDocument();
+        });
+
+        it('shows the loading state while the status loads', () => {
+            setGate({ view: 'checking' });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Loading embeddings data...')).toBeInTheDocument();
+            expect(lastEmbeddingsParams().enabled).toBe(false);
+        });
+
+        it('keeps the cached plot on screen while the status loads', () => {
+            setGate({ view: 'checking' });
+            (useEmbeddings as vi.Mock).mockReturnValue({
+                ...idlePlot,
+                isPlaceholderData: true,
+                data: { columns: {}, legend: new Map() }
+            });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.queryByText('Loading embeddings data...')).not.toBeInTheDocument();
+            expect(screen.getByTestId('plot-loading-indicator')).toBeInTheDocument();
+        });
+
+        it('names the items of the collection in the prompt', () => {
+            routeState.id = VIDEOS_ROUTE;
+            setGate({ view: 'prompt', embeddingCount: 300_000 });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(
+                screen.getByText('300,000 videos. The first compute can take several minutes.')
+            ).toBeInTheDocument();
+        });
+
+        it('shows no status error while the gate shows the plot', () => {
+            setGate({ view: 'plot', statusError: 'boom' });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.queryByText('Error loading embeddings: boom')).not.toBeInTheDocument();
+        });
+
+        it('shows the status error', () => {
+            setGate({
+                view: 'error',
+                statusError: 'boom'
+            });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Error loading embeddings: boom')).toBeInTheDocument();
+            expect(lastEmbeddingsParams().enabled).toBe(false);
+        });
+    });
+
     describe('with Excluded hidden', () => {
         beforeEach(() => {
             hiddenKeys().set(new Set(['reserved:excluded']));
