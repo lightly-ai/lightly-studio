@@ -34,7 +34,7 @@
     import { useAnnotationTarget, useDeleteAnnotationWithUndo } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
-    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
+    import { isDeleteKey, isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
         sampleId,
@@ -149,7 +149,7 @@
 
     /** Delete or Backspace deletes the selected annotation while editing. */
     const handleDeleteKeyDown = async (event: KeyboardEvent) => {
-        if (!$isEditingMode || !canEdit) return;
+        if (!isDeleteKey(event) || !$isEditingMode || !canEdit) return;
         if (annotationLabelContext.isOnAnnotationDetailsView) return;
         if (
             sampleDetailsToolbarContext.status !== 'cursor' &&

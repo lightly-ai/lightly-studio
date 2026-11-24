@@ -272,6 +272,22 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
             expect(deleteWithUndo).not.toHaveBeenCalled();
         });
 
+        it('does nothing on Cmd+Backspace', async () => {
+            renderWithSelectedAnnotation();
+
+            await fireEvent.keyDown(window, { key: 'Backspace', metaKey: true });
+
+            expect(deleteWithUndo).not.toHaveBeenCalled();
+        });
+
+        it('does nothing on a held Delete key', async () => {
+            renderWithSelectedAnnotation();
+
+            await fireEvent.keyDown(window, { key: 'Delete', repeat: true });
+
+            expect(deleteWithUndo).not.toHaveBeenCalled();
+        });
+
         it('does nothing when typing in a text input', async () => {
             renderWithSelectedAnnotation();
             const input = document.createElement('input');
