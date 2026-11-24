@@ -91,4 +91,33 @@ describe('AnnotationItem', () => {
         expect(screen.getByTestId('mock-annotation-canvas').parentElement).toHaveClass('invisible');
         expect(container.querySelector('.annotation-box')).toHaveClass('invisible');
     });
+
+    it('shows the box of a polygon annotation', () => {
+        const annotation = {
+            sample_id: 'annotation-2',
+            annotation_type: 'polygon',
+            annotation_label: { annotation_label_name: 'car' },
+            polygon_details: {
+                x: 100,
+                y: 200,
+                width: 360,
+                height: 160,
+                polygons: [
+                    [
+                        [100, 200],
+                        [460, 200],
+                        [460, 360]
+                    ]
+                ]
+            }
+        } as AnnotationView;
+
+        const { container } = render(AnnotationItem, { props: { ...defaultProps, annotation } });
+
+        // The 200x100 tile shows the 400x200 padded crop at half size.
+        expect(container.querySelector('.annotation-box')).toHaveStyle({
+            width: '180px',
+            height: '80px'
+        });
+    });
 });
