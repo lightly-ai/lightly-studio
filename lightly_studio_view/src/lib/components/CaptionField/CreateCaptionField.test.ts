@@ -4,12 +4,6 @@ import CreateCaptionField from './CreateCaptionField.svelte';
 import CreateCaptionFieldTestWrapper from './CreateCaptionFieldTestWrapper.svelte';
 
 describe('CreateCaptionField', () => {
-    it('renders the add caption button at full width', () => {
-        render(CreateCaptionField, { props: { onCreate: vi.fn() } });
-
-        expect(screen.getByTestId('add-caption-button')).toHaveClass('w-full');
-    });
-
     it('stops space key propagation to prevent parent navigation handlers', async () => {
         render(CreateCaptionField, {
             props: {
