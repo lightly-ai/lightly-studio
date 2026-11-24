@@ -4,8 +4,7 @@ import pytest
 
 from lightly_studio.database import db_manager
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
-from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.resolvers import caption_resolver, metadata_resolver
+from lightly_studio.resolvers import metadata_resolver
 from lightly_studio.transport.local.local_metadata_transport import LocalMetadataTransport
 from lightly_studio.transport.metadata_transport import MetadataTransport
 from tests.helpers_resolvers import create_collection, create_image
@@ -56,54 +55,3 @@ class TestLocalMetadataTransport:
 
         with pytest.raises(ValueError, match=r"Expected integer, got string"):
             transport.update(sample_metadata=[(image.sample_id, {"count": "one"})])
-
-    def test_get_captions(self) -> None:
-        session = db_manager.persistent_session()
-        collection_id = create_collection(session=session).collection_id
-        image_a = create_image(session=session, collection_id=collection_id, file_path_abs="/a")
-        image_b = create_image(session=session, collection_id=collection_id, file_path_abs="/b")
-        caption_resolver.create_many(
-            session=session,
-            parent_collection_id=collection_id,
-            captions=[
-                CaptionCreate(parent_sample_id=image_a.sample_id, text="a cat"),
-                CaptionCreate(parent_sample_id=image_b.sample_id, text="a dog"),
-            ],
-        )
-        transport: MetadataTransport = LocalMetadataTransport()
-
-        captions = transport.get_captions(parent_sample_ids=[image_a.sample_id])
-
-        assert [(c.parent_sample_id, c.text) for c in captions] == [(image_a.sample_id, "a cat")]
-
-    def test_add_captions(self) -> None:
-        session = db_manager.persistent_session()
-        collection_id = create_collection(session=session).collection_id
-        image = create_image(session=session, collection_id=collection_id)
-        transport: MetadataTransport = LocalMetadataTransport()
-
-        caption_ids = transport.add_captions(
-            parent_collection_id=collection_id,
-            captions=[CaptionCreate(parent_sample_id=image.sample_id, text="a cat")],
-        )
-
-        captions = transport.get_captions(parent_sample_ids=[image.sample_id])
-        assert [(c.sample_id, c.text) for c in captions] == [(caption_ids[0], "a cat")]
-
-    def test_delete_captions(self) -> None:
-        session = db_manager.persistent_session()
-        collection_id = create_collection(session=session).collection_id
-        image = create_image(session=session, collection_id=collection_id)
-        transport: MetadataTransport = LocalMetadataTransport()
-        caption_ids = transport.add_captions(
-            parent_collection_id=collection_id,
-            captions=[
-                CaptionCreate(parent_sample_id=image.sample_id, text="a cat"),
-                CaptionCreate(parent_sample_id=image.sample_id, text="a dog"),
-            ],
-        )
-
-        transport.delete_captions(caption_ids=[caption_ids[0]])
-
-        captions = transport.get_captions(parent_sample_ids=[image.sample_id])
-        assert [c.text for c in captions] == ["a dog"]

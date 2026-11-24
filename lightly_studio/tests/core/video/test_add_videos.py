@@ -30,7 +30,6 @@ from sqlmodel import Session
 
 from lightly_studio.core.video import add_videos
 from lightly_studio.core.video.add_videos import FrameExtractionContext
-from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -46,12 +45,6 @@ from tests.helpers_resolvers import create_collection, create_embedding_model
 from tests.resolvers.video.helpers import VideoStub, create_video_file, create_videos
 
 
-@pytest.fixture
-def db_session(patch_collection: None) -> Session:  # noqa: ARG001
-    """The persistent session, which the ingestion transport writes through."""
-    return db_manager.persistent_session()
-
-
 def test_collect_video_file_paths__allowed_extensions(tmp_path: Path) -> None:
     for name in ["a.mp4", "b.MOV", "c.avi"]:
         (tmp_path / name).touch()
@@ -63,8 +56,8 @@ def test_collect_video_file_paths__allowed_extensions(tmp_path: Path) -> None:
     assert sorted(Path(path).name for path in paths) == ["b.MOV", "c.avi"]
 
 
-def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+def test_load_into_collection_from_paths(persistent_session: Session, tmp_path: Path) -> None:
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
     # Create two temporary video files.
     first_video_path = create_video_file(
         output_path=tmp_path / "test_video_1.mp4",
@@ -81,7 +74,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
         fps=2,
     )
     video_path_to_id, frame_sample_ids = add_videos.load_into_collection_from_paths(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         video_paths=[str(first_video_path), str(second_video_path)],
     )
@@ -90,7 +83,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
 
     # Check that video samples are created.
     videos = video_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert len(videos) == 2
 
@@ -108,7 +101,7 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     # Check the correct collection hierarchy was created. There should be one extra collection
     # created with the video frames.
     collection_hierarchy = dataset_resolver.get_hierarchy(
-        session=db_session,
+        session=persistent_session,
         dataset_id=collection.dataset_id,
     )
     assert len(collection_hierarchy) == 2
@@ -116,22 +109,22 @@ def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) ->
     assert collection_hierarchy[1].sample_type == SampleType.VIDEO_FRAME
 
     video_frames = video_frame_resolver.get_all_by_collection_id(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection_hierarchy[1].collection_id,
     ).samples
     assert len(video_frames) == 60
 
 
 def test_load_into_collection_from_paths__normalizes_relative_path(
-    db_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    persistent_session: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A relative video path is normalized to an absolute file_path_abs, matching images."""
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
     video_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=2, fps=1)
     monkeypatch.chdir(tmp_path)
 
     video_path_to_id, _ = add_videos.load_into_collection_from_paths(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         video_paths=["video.mp4"],
     )
@@ -139,7 +132,7 @@ def test_load_into_collection_from_paths__normalizes_relative_path(
     normalized_path = str(video_path.absolute())
     assert video_path_to_id.keys() == {normalized_path}
     videos = video_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert len(videos) == 1
     assert videos[0].file_path_abs == normalized_path
@@ -147,11 +140,11 @@ def test_load_into_collection_from_paths__normalizes_relative_path(
 
 
 def test_load_into_collection_from_paths__records_missing_broken_already_present_outcomes(
-    db_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    persistent_session: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     # Arrange: a folder mixing good / already-present / missing / broken videos. Each outcome
     # gets a distinct count so a mix-up between two outcomes cannot pass the assertions.
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
 
     # 1 good video -> added=1.
     good_paths = [
@@ -163,7 +156,7 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
     for path in already_present_paths:
         create_video_file(output_path=path, num_frames=2, fps=1)
     create_videos(
-        db_session,
+        persistent_session,
         collection.collection_id,
         [VideoStub(path=str(path)) for path in already_present_paths],
     )
@@ -179,7 +172,7 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
     # Act
     with caplog.at_level("INFO"):
         video_path_to_id, _ = add_videos.load_into_collection_from_paths(
-            session=db_session,
+            session=persistent_session,
             collection_id=collection.collection_id,
             video_paths=[
                 str(path)
@@ -192,7 +185,7 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
     # broken paths have no entry.
     assert set(video_path_to_id.keys()) == {str(path) for path in good_paths}
     videos = video_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert {video.file_name for video in videos} == {
         "good0.mp4",
@@ -210,25 +203,25 @@ def test_load_into_collection_from_paths__records_missing_broken_already_present
 
 
 def test_load_into_collection_from_paths__mid_decode_failure_is_cleaned_up(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
     mocker: MockerFixture,
 ) -> None:
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=persistent_session, sample_type=SampleType.VIDEO)
     good_path = create_video_file(output_path=tmp_path / "good.mp4", num_frames=2, fps=1)
     broken_path = create_video_file(output_path=tmp_path / "broken.mp4", num_frames=2, fps=1)
     _fail_after_frame_creation(mocker=mocker, failing_file_name=broken_path.name)
 
     with caplog.at_level("INFO"):
         video_path_to_id, _ = add_videos.load_into_collection_from_paths(
-            session=db_session,
+            session=persistent_session,
             collection_id=collection.collection_id,
             video_paths=[str(broken_path), str(good_path)],
         )
 
     videos = video_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     assert [video.file_name for video in videos] == [good_path.name]
     assert video_path_to_id == {str(good_path): videos[0].sample_id}
@@ -284,9 +277,9 @@ def _fail_after_frame_creation(
 
 @pytest.mark.parametrize("reported_size", [None, 128 * 2**20, 128 * 2**20 + 1])
 def test_load_into_collection_from_paths__reads_remote_videos(
-    db_session: Session, tmp_path: Path, mocker: MockerFixture, reported_size: int | None
+    persistent_session: Session, tmp_path: Path, mocker: MockerFixture, reported_size: int | None
 ) -> None:
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=persistent_session, sample_type=SampleType.VIDEO)
     local_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=5, fps=5)
     remote_path = _write_to_memory_filesystem(local_path=local_path, name="video.mp4")
 
@@ -295,14 +288,16 @@ def test_load_into_collection_from_paths__reads_remote_videos(
     download = mocker.spy(type(fs), "cat_file")
 
     video_path_to_id, frame_sample_ids = add_videos.load_into_collection_from_paths(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         video_paths=[remote_path, remote_path],
         show_progress=False,
     )
 
     assert set(video_path_to_id) == {remote_path}
-    video = video_resolver.get_by_id(session=db_session, sample_id=video_path_to_id[remote_path])
+    video = video_resolver.get_by_id(
+        session=persistent_session, sample_id=video_path_to_id[remote_path]
+    )
     assert video is not None
     assert video.file_path_abs == remote_path
     assert video.fps == 5
@@ -326,9 +321,12 @@ def test__fetch_video__leaves_local_files_unread(tmp_path: Path, mocker: MockerF
 
 
 def test_load_into_collection_from_paths__continues_after_download_failure(
-    db_session: Session, tmp_path: Path, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+    persistent_session: Session,
+    tmp_path: Path,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(session=persistent_session, sample_type=SampleType.VIDEO)
     local_path = create_video_file(output_path=tmp_path / "video.mp4", num_frames=2, fps=1)
     remote_path = _write_to_memory_filesystem(local_path=local_path, name="broken.mp4")
     fs, _ = fsspec.core.url_to_fs(url=remote_path)
@@ -336,7 +334,7 @@ def test_load_into_collection_from_paths__continues_after_download_failure(
 
     with caplog.at_level("INFO"):
         videos, frames = add_videos.load_into_collection_from_paths(
-            session=db_session,
+            session=persistent_session,
             collection_id=collection.collection_id,
             video_paths=[remote_path, str(local_path)],
             show_progress=False,
@@ -355,9 +353,9 @@ def _write_to_memory_filesystem(local_path: Path, name: str) -> str:
     return memory_path
 
 
-def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> None:
+def test__create_video_frame_samples(persistent_session: Session, tmp_path: Path) -> None:
     """Test _create_video_frame_samples function directly."""
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
 
     # Create a temporary video file
     video_path = create_video_file(
@@ -370,7 +368,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
 
     # Create video sample in database
     video_sample_ids = video_resolver.create_many(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         samples=[
             VideoCreate(
@@ -388,7 +386,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
 
     # Create video frames collection
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         sample_type=SampleType.VIDEO_FRAME,
     )
@@ -399,7 +397,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
 
     frame_sample_ids = add_videos._create_video_frame_samples(
         context=FrameExtractionContext(
-            session=db_session,
+            session=persistent_session,
             collection_id=video_frames_collection_id,
             video_sample_id=video_sample_id,
         ),
@@ -412,7 +410,7 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
 
     # Verify frames are in the database
     video_frames = video_frame_resolver.get_all_by_collection_id(
-        session=db_session,
+        session=persistent_session,
         collection_id=video_frames_collection_id,
     ).samples
     assert len(video_frames) == 2
@@ -430,10 +428,10 @@ def test__create_video_frame_samples(db_session: Session, tmp_path: Path) -> Non
 
 @pytest.mark.usefixtures("patch_collection")
 def test__create_video_frame_samples__embed_frames(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
 ) -> None:
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
     video_path = create_video_file(
         output_path=tmp_path / "test_video_frames_embed.mp4",
         width=320,
@@ -442,7 +440,7 @@ def test__create_video_frame_samples__embed_frames(
         fps=1,
     )
     video_sample_ids = video_resolver.create_many(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         samples=[
             VideoCreate(
@@ -457,13 +455,13 @@ def test__create_video_frame_samples__embed_frames(
     )
     video_sample_id = video_sample_ids[0]
     video_frames_collection_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         sample_type=SampleType.VIDEO_FRAME,
     )
 
     model_id = create_embedding_model(
-        session=db_session,
+        session=persistent_session,
         collection_id=video_frames_collection_id,
         embedding_model_name="random_model",
         embedding_dimension=3,
@@ -476,7 +474,7 @@ def test__create_video_frame_samples__embed_frames(
 
     frame_sample_ids = add_videos._create_video_frame_samples(
         context=FrameExtractionContext(
-            session=db_session,
+            session=persistent_session,
             collection_id=video_frames_collection_id,
             video_sample_id=video_sample_id,
             embed_frames=True,
@@ -487,7 +485,7 @@ def test__create_video_frame_samples__embed_frames(
 
     assert len(frame_sample_ids) == 2
     frame_embeddings = sample_embedding_resolver.get_by_sample_ids(
-        session=db_session,
+        session=persistent_session,
         sample_ids=frame_sample_ids,
         embedding_model_id=model_id,
     )
@@ -535,11 +533,11 @@ def test__should_keep_frame(
 
 @pytest.mark.parametrize("target_fps", [0, -5])
 def test_load_into_collection_from_paths__invalid_fps_raises(
-    db_session: Session, target_fps: float
+    persistent_session: Session, target_fps: float
 ) -> None:
     with pytest.raises(ValueError, match="target_fps must be greater than 0"):
         add_videos.load_into_collection_from_paths(
-            session=db_session,
+            session=persistent_session,
             collection_id=uuid4(),
             video_paths=[],
             target_fps=target_fps,
@@ -593,7 +591,7 @@ def test__configure_stream_threading__min_1_thread(mocker: MockerFixture) -> Non
 
 
 def test_load_video_annotations_from_labelformat(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange
@@ -625,10 +623,10 @@ def test_load_video_annotations_from_labelformat(
     )
 
     # Act
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
     created_video_sample_ids = add_videos.load_video_annotations_from_labelformat(
         ingestion=LocalIngestionTransport(),
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         video_paths=video_paths,
@@ -637,9 +635,11 @@ def test_load_video_annotations_from_labelformat(
     )
 
     # Assert
-    video = video_resolver.get_by_id(session=db_session, sample_id=created_video_sample_ids[0])
+    video = video_resolver.get_by_id(
+        session=persistent_session, sample_id=created_video_sample_ids[0]
+    )
     assert video is not None
-    annotations = annotation_resolver.get_all(db_session).annotations
+    annotations = annotation_resolver.get_all(persistent_session).annotations
     assert len(annotations) == 2
     assert {annotations[0].parent_sample_id, annotations[1].parent_sample_id} == {
         frame.sample_id for frame in video.frames
@@ -653,7 +653,7 @@ def test_load_video_annotations_from_labelformat(
 
 
 def test_load_video_annotations_from_labelformat__multiple_videos(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange
@@ -701,10 +701,10 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
     )
 
     # Act
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
     add_videos.load_video_annotations_from_labelformat(
         ingestion=LocalIngestionTransport(),
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         video_paths=video_paths,
@@ -713,7 +713,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
     )
 
     # Assert
-    annotations = annotation_resolver.get_all(db_session).annotations
+    annotations = annotation_resolver.get_all(persistent_session).annotations
     assert len(annotations) == 5  # 2 from video_1, 3 from video_2
 
     # Check annotation content
@@ -723,7 +723,7 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
 
 
 def test_load_video_annotations_from_labelformat__same_name_in_different_folders(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange
@@ -769,12 +769,12 @@ def test_load_video_annotations_from_labelformat__same_name_in_different_folders
     )
 
     # Act
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
     created_video_sample_ids = add_videos.load_video_annotations_from_labelformat(
         ingestion=LocalIngestionTransport(),
         collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
-        session=db_session,
+        session=persistent_session,
         video_paths=video_paths,
         input_labels=input_labels,
         input_labels_paths_root=tmp_path,
@@ -783,7 +783,7 @@ def test_load_video_annotations_from_labelformat__same_name_in_different_folders
     # Assert
     assert len(created_video_sample_ids) == 2
     videos = video_resolver.get_all_by_collection_id(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
     ).samples
     assert len(videos) == 2
@@ -886,7 +886,7 @@ def test_resolve_video_paths_from_labelformat__prefers_explicit_extension(
 
 
 def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange - create video with 2 frames but annotation says 1 frame
@@ -914,11 +914,11 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
     )
 
     # Act / Assert
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
     with pytest.raises(ValueError, match="Number of frames in annotation"):
         add_videos.load_video_annotations_from_labelformat(
             ingestion=LocalIngestionTransport(),
-            session=db_session,
+            session=persistent_session,
             collection_id=collection.collection_id,
             dataset_id=collection.dataset_id,
             video_paths=video_paths,
@@ -928,7 +928,7 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
 
 
 def test_load_video_annotations_from_labelformat__raises_on_missing_video(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange - create video_3.mp4 but annotation references missing_video
@@ -956,11 +956,11 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
     )
 
     # Act / Assert
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
     with pytest.raises(FileNotFoundError, match="No video file found"):
         add_videos.load_video_annotations_from_labelformat(
             ingestion=LocalIngestionTransport(),
-            session=db_session,
+            session=persistent_session,
             collection_id=collection.collection_id,
             dataset_id=collection.dataset_id,
             video_paths=video_paths,
@@ -970,7 +970,7 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
 
 
 def test_load_video_annotations_from_labelformat__skips_annotations_for_broken_video(
-    db_session: Session,
+    persistent_session: Session,
     tmp_path: Path,
 ) -> None:
     # Arrange: a good video plus a broken one, each referenced by annotations. The broken
@@ -1004,10 +1004,10 @@ def test_load_video_annotations_from_labelformat__skips_annotations_for_broken_v
     )
 
     # Act: no exception is raised even though the broken video was not created.
-    collection = create_collection(db_session, sample_type=SampleType.VIDEO)
+    collection = create_collection(persistent_session, sample_type=SampleType.VIDEO)
     created_video_sample_ids = add_videos.load_video_annotations_from_labelformat(
         ingestion=LocalIngestionTransport(),
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         dataset_id=collection.dataset_id,
         video_paths=[str(tmp_path / "good.mp4"), str(tmp_path / "broken.mp4")],
@@ -1017,7 +1017,7 @@ def test_load_video_annotations_from_labelformat__skips_annotations_for_broken_v
 
     # Assert: only the good video is created, and only its annotation is added.
     assert len(created_video_sample_ids) == 1
-    annotations = annotation_resolver.get_all(db_session).annotations
+    annotations = annotation_resolver.get_all(persistent_session).annotations
     assert len(annotations) == 1
     assert annotations[0].annotation_label.annotation_label_name == "cat"
 

@@ -6,14 +6,17 @@ from lightly_studio.core.annotation import (
     CreateAnnotation,
     CreateClassification,
     CreateObjectDetection,
+    CreatePolygon,
     CreateSegmentationMask,
 )
 from lightly_studio.core.annotation.classification import ClassificationAnnotation
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
+from lightly_studio.core.annotation.polygon import PolygonAnnotation
 from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver, image_resolver
@@ -541,6 +544,59 @@ class TestImageSample:
         assert annotations[0].width == 25
         assert annotations[0].height == 35
         assert annotations[0].segmentation_mask == [1, 2, 3, 4, 5]
+
+    def test_add_annotation_polygon(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image = ImageSample(
+            inner=create_image(session=db_session, collection_id=collection.collection_id)
+        )
+
+        image.add_annotation(
+            CreatePolygon(
+                class_name="cat",
+                confidence=0.9,
+                polygons=[[(1.5, 2), (5, 2), (5, 6)], [(10, 10), (12, 10), (12, 13)]],
+            )
+        )
+
+        (annotation,) = image.annotations
+        assert isinstance(annotation, PolygonAnnotation)
+        assert annotation.class_name == "cat"
+        assert annotation.confidence == pytest.approx(0.9)
+        assert annotation.polygons == [
+            [(1.5, 2), (5, 2), (5, 6)],
+            [(10, 10), (12, 10), (12, 13)],
+        ]
+        assert isinstance(annotation.polygons[0][0], tuple)
+        assert (annotation.x, annotation.y) == (1, 2)
+        assert (annotation.width, annotation.height) == (11, 11)
+
+    def test_polygon_annotation__box_is_read_only(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image = ImageSample(
+            inner=create_image(session=db_session, collection_id=collection.collection_id)
+        )
+        image.add_annotation(CreatePolygon(class_name="cat", polygons=[[(0, 0), (4, 0), (4, 4)]]))
+        (annotation,) = image.annotations
+        assert isinstance(annotation, PolygonAnnotation)
+
+        for name, value in [("x", 1), ("y", 1), ("width", 10), ("height", 10), ("polygons", [])]:
+            with pytest.raises(AttributeError):
+                setattr(annotation, name, value)
+
+    def test_polygon_annotation__wrong_type(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        image = ImageSample(
+            inner=create_image(session=db_session, collection_id=collection.collection_id)
+        )
+        image.add_annotation(CreateClassification(class_name="cat"))
+        (annotation,) = image.annotations
+        details = PolygonAnnotationTable(
+            x=0, y=0, width=1, height=1, polygons=[], annotation_base=annotation.annotation_base
+        )
+
+        with pytest.raises(ValueError, match="Expected annotation type: polygon"):
+            PolygonAnnotation(inner=details)
 
     def test_add_annotations(
         self,

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import annotation_label_resolver
 
@@ -106,6 +107,25 @@ class CreateObjectDetection(CreateAnnotationBase):
             y=self.y,
             width=self.width,
             height=self.height,
+        )
+
+
+class CreatePolygon(CreateAnnotationBase):
+    """Input model for creating polygon annotations."""
+
+    polygons: Polygons
+    """Parts of the polygon, each a list of (x, y) vertices in pixels."""
+
+    def to_annotation_create(
+        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+    ) -> AnnotationCreate:
+        """Convert to AnnotationCreate."""
+        return AnnotationCreate(
+            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_type=AnnotationType.POLYGON,
+            confidence=self.confidence,
+            parent_sample_id=parent_sample_id,
+            polygons=self.polygons,
         )
 
 

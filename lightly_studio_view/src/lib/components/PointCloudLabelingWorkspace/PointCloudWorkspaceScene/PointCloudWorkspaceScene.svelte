@@ -30,9 +30,18 @@
         >
             <WorkspaceViewport cameraMode="perspective" />
         </div>
-        {#if layout.showOrthographicViews}
-            <div class="min-h-0 flex-[2]" hidden={scene.expandedProjection === 'perspective'}>
-                <OrthographicProjectionStrip />
+        {#if layout.orthographicViewsEnabled}
+            <div
+                class={layout.orthographicViewsCollapsed ? 'flex-none' : 'min-h-0 flex-[2]'}
+                hidden={scene.expandedProjection === 'perspective'}
+            >
+                <OrthographicProjectionStrip
+                    collapsed={layout.orthographicViewsCollapsed}
+                    onToggleCollapsed={() =>
+                        layout.onOrthographicViewsCollapsedChange(
+                            !layout.orthographicViewsCollapsed
+                        )}
+                />
             </div>
         {/if}
     {:else if layout.workspace.status === 'loading' || layout.workspace.tickDetails.isLoading || layout.workspace.cloudPointFrame.isLoading}
