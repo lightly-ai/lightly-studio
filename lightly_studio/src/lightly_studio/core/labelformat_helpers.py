@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import math
 from collections.abc import Iterable
 from typing import Protocol
 from uuid import UUID
@@ -16,11 +18,14 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
+from lightly_studio.models.annotation.polygon import MIN_VERTICES_PER_PART, Polygons
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_resolver,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class _LabelsWithCategories(Protocol):
@@ -68,6 +73,61 @@ def get_segmentation_annotation_create(
         height=int(height),
         segmentation_mask=segmentation_rle,
         object_track_id=object_track_id,
+    )
+
+
+def get_instance_segmentation_annotation_create(
+    parent_sample_id: UUID,
+    annotation_label_id: UUID,
+    segmentation: MultiPolygon | BinaryMaskSegmentation,
+) -> AnnotationCreate | None:
+    """Get a AnnotationCreate instance for an instance segmentation of an image.
+
+    A `MultiPolygon` becomes a polygon annotation with its valid parts. A
+    `BinaryMaskSegmentation` becomes a segmentation mask annotation.
+
+    Args:
+        parent_sample_id: ID of the parent sample of the annotation.
+        annotation_label_id: ID of the label for the annotation.
+        segmentation: Instance segmentation in labelformat.
+
+    Returns:
+        The AnnotationCreate instance, or None if a `MultiPolygon` has no valid part.
+    """
+    if not isinstance(segmentation, MultiPolygon):
+        return get_segmentation_annotation_create(
+            parent_sample_id=parent_sample_id,
+            annotation_label_id=annotation_label_id,
+            segmentation=segmentation,
+        )
+    polygons = valid_polygon_parts(multipolygon=segmentation)
+    if not polygons:
+        return None
+    return AnnotationCreate(
+        parent_sample_id=parent_sample_id,
+        annotation_label_id=annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=polygons,
+    )
+
+
+def valid_polygon_parts(multipolygon: MultiPolygon) -> Polygons:
+    """Get the parts of a multipolygon that have enough vertices and only finite coordinates."""
+    return [
+        part
+        for part in multipolygon.polygons
+        if len(part) >= MIN_VERTICES_PER_PART
+        and all(math.isfinite(x) and math.isfinite(y) for x, y in part)
+    ]
+
+
+def warn_skipped_polygons(count: int) -> None:
+    """Log one warning for the polygon annotations that were skipped. Do nothing for 0."""
+    if count == 0:
+        return
+    logger.warning(
+        f"Skipped {count} polygon annotations without a valid part. "
+        f"A valid part has at least {MIN_VERTICES_PER_PART} vertices."
     )
 
 

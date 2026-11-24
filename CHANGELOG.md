@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+- Python SDK: COCO polygons are loaded with their vertices, not only their box.
 - Images with many annotations open faster when LightlyStudio runs on a remote server.
 
 - Dialogs, menus, and messages now show in the full-screen point cloud workspace, so you can pick a class, delete a track, change view settings, switch edit mode, and undo edits there. The full-screen workspace has the same layout and colors as the app.
