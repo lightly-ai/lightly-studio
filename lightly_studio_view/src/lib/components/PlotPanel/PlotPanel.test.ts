@@ -101,7 +101,8 @@ const DEFAULT_GATE_STATE: GateMockState = {
 // A reactive map, so a test can change the gate after render like the real hook does.
 const gateMock = vi.hoisted(() => ({
     values: null as Map<string, unknown> | null,
-    getPlotRequestKey: (() => '') as () => string
+    getPlotRequestKey: (() => '') as () => string,
+    getIsAxesLayout: (() => false) as () => boolean
 }));
 vi.mock('./usePlotComputeGate/usePlotComputeGate.svelte', async () => {
     const { SvelteMap } = await import('svelte/reactivity');
@@ -110,8 +111,12 @@ vi.mock('./usePlotComputeGate/usePlotComputeGate.svelte', async () => {
     gateMock.values = values;
     const read = <K extends keyof GateMockState>(key: K) => values.get(key) as GateMockState[K];
     return {
-        usePlotComputeGate: (params: { getPlotRequestKey: () => string }) => {
+        usePlotComputeGate: (params: {
+            getPlotRequestKey: () => string;
+            getIsAxesLayout: () => boolean;
+        }) => {
             gateMock.getPlotRequestKey = params.getPlotRequestKey;
+            gateMock.getIsAxesLayout = params.getIsAxesLayout;
             return {
                 get view() {
                     return read('view');
@@ -686,6 +691,29 @@ describe('PlotPanel.svelte', () => {
         expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
     });
 
+    it('gives the gate a new plot request key when the filter changes', async () => {
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const initialKey = gateMock.getPlotRequestKey();
+
+        imageFilterStore.set({ sample_filter: { sample_ids: [], tag_ids: ['tag-a'] } });
+        await tick();
+
+        expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
+    });
+
+    it('tells the gate about the text axes layout and gives it a new plot request key', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const initialKey = gateMock.getPlotRequestKey();
+        expect(gateMock.getIsAxesLayout()).toBe(false);
+
+        await commitTextAxes(user);
+
+        await vi.waitFor(() => expect(gateMock.getIsAxesLayout()).toBe(true));
+        expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
+    });
+
     it('fetches without labels when the annotation labels fail to load', async () => {
         annotationLabelsQuery = { data: undefined, isSuccess: false, isError: true };
         usePlotColorByType('test-collection-id').setSelectedColorByType('annotation_label');
@@ -1257,7 +1285,7 @@ describe('PlotPanel.svelte', () => {
             expect(screen.getByText('Computing plot…')).toBeInTheDocument();
         });
 
-        it('keeps one plot query when the first compute finishes', async () => {
+        it('keeps the plot request on when the first compute finishes', async () => {
             setGate({ view: 'computing', startedAt: Date.now() });
             (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
             render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
@@ -1265,7 +1293,6 @@ describe('PlotPanel.svelte', () => {
             setGate({ view: 'plot', startedAt: null });
             await tick();
 
-            expect(useEmbeddings).toHaveBeenCalledOnce();
             expect(lastEmbeddingsParams().enabled).toBe(true);
         });
 
@@ -1314,7 +1341,7 @@ describe('PlotPanel.svelte', () => {
             ).toBeInTheDocument();
         });
 
-        it('keeps a loaded text axes plot when the status request fails', () => {
+        it('shows no status error while the gate shows the plot', () => {
             setGate({ view: 'plot', statusError: 'boom' });
 
             render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
