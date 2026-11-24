@@ -20,6 +20,7 @@
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useAnnotationCollectionsFilter } from '$lib/hooks';
+    import { TagChips, TagsEditor } from '$lib/components';
 
     const {
         annotation: annotationProp,
@@ -109,6 +110,7 @@
     const annotation = $derived(annotationResp.data || annotationProp);
 
     const annotationLabelName = $derived(annotation.annotation_label.annotation_label_name);
+    const annotationTags = $derived(annotation.tags ?? []);
 
     const value = $derived.by(() => {
         const item = items.find((i) => i.value === annotationLabelName);
@@ -305,6 +307,24 @@
                     {/if}
                 </span>
             </div>
+            <!-- An annotation is a sample of its annotation collection, so it is tagged like one.
+                 The row reads its own annotation query first, so both it and the sample refetch. -->
+            {#if isSelected}
+                <TagsEditor
+                    class="pointer-events-auto relative flex flex-col gap-1 pt-2"
+                    tags={annotationTags}
+                    collectionId={annotation.annotation_collection_id}
+                    sampleId={annotation.sample_id}
+                    onRefetch={() => {
+                        refetch();
+                        onUpdate();
+                    }}
+                />
+            {:else if annotationTags.length > 0}
+                <div class="pt-2" data-testid="annotation-tags">
+                    <TagChips tags={annotationTags} />
+                </div>
+            {/if}
         </div>
     </div>
 </div>

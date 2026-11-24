@@ -55,6 +55,8 @@ export { default as GridItem } from '$lib/components/GridItem/GridItem.svelte';
 export { GridContainer } from '$lib/components/GridContainer';
 export { default as VideoFrameItem } from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
 export { default as SegmentTags } from '$lib/components/SegmentTags/SegmentTags.svelte';
+export { TagChips } from '$lib/components/SegmentTags/TagChips';
+export { TagsEditor } from '$lib/components/SegmentTags/TagsEditor';
 export { default as MetadataSegment } from '$lib/components/MetadataSegment/MetadataSegment.svelte';
 export { default as MetadataFilterChips } from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';
 export { default as VideoDetailsNavigation } from '$lib/components/VideoDetailsNavigation/VideoDetailsNavigation.svelte';
