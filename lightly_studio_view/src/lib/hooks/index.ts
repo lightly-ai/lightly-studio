@@ -158,3 +158,4 @@ export { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 export { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
 export { useInvalidateAnnotationSourceQueries } from '$lib/hooks/useInvalidateAnnotationSourceQueries';
 export { useLingeringValue } from '$lib/hooks/useLingeringValue/useLingeringValue.svelte';
+export type { ArrowData } from '$lib/hooks/useEmbeddings/parseEmbeddingsArrow';

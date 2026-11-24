@@ -11,6 +11,7 @@ from lightly_studio.models.query_expr import (
     ObjectDetectionMatchExpr,
     OrdinalFloatExpr,
     OrExpr,
+    PolygonMatchExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     VideoEventMatchExpr,
@@ -42,7 +43,13 @@ def _validate_node(expr: MatchExpr, scope: str | None) -> None:
             expr=expr.subexpr, scope="event" if isinstance(expr, VideoEventMatchExpr) else "frame"
         )
     elif isinstance(
-        expr, (ClassificationMatchExpr, ObjectDetectionMatchExpr, SegmentationMaskMatchExpr)
+        expr,
+        (
+            ClassificationMatchExpr,
+            ObjectDetectionMatchExpr,
+            SegmentationMaskMatchExpr,
+            PolygonMatchExpr,
+        ),
     ):
         child_scope = (
             "frame:" + expr.type.removesuffix("_match_expr") if scope == "frame" else "annotation"

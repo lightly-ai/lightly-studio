@@ -3,10 +3,7 @@ import {
     get2dEmbeddingsQueryKey
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import type { GetEmbeddings2dRequest } from '$lib/api/lightly_studio_local/types.gen';
-import {
-    parseEmbeddingsArrow,
-    type EmbeddingsArrow
-} from '$lib/components/PlotPanel/useArrowData/useArrowData';
+import { parseEmbeddingsArrow, type EmbeddingsArrow } from './parseEmbeddingsArrow';
 
 import { NoRetryError } from '$lib/api/NoRetryError';
 import {
