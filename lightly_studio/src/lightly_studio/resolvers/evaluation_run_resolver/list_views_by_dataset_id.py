@@ -12,6 +12,9 @@ from lightly_studio.resolvers.evaluation_run_resolver.get_all_by_dataset_id impo
     get_all_by_dataset_id,
 )
 
+# Shown for a scope tag that no longer exists, so the run does not look like an all-images run.
+DELETED_TAG_NAME = "(deleted tag)"
+
 
 def list_views_by_dataset_id(
     session: Session,
@@ -50,9 +53,7 @@ def list_views_by_dataset_id(
             pred_annotation_source=collection_name_by_id.get(run.pred_annotation_collection_id),
             stale_since=run.stale_since,
             scope_tag_names=[
-                tag_name_by_id[tag_id]
-                for tag_id in _scope_tag_ids(run=run)
-                if tag_id in tag_name_by_id
+                tag_name_by_id.get(tag_id, DELETED_TAG_NAME) for tag_id in _scope_tag_ids(run=run)
             ],
         )
         for run in runs

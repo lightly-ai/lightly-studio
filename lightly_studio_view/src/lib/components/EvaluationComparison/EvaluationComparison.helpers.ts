@@ -210,7 +210,9 @@ export const scenarioRows = (runs: ComparedRun[], metric: LeaderboardMetric): Sc
             entry.metrics.slices?.find((candidate) => candidate.tag_id === slice.tag_id)
         );
         const values = runSlices.map((runSlice) =>
-            runSlice ? metricValue(runSlice.metrics, metric) : null
+            runSlice && runSlice.evaluated_sample_count > 0
+                ? metricValue(runSlice.metrics, metric)
+                : null
         );
         return {
             id: slice.tag_id,

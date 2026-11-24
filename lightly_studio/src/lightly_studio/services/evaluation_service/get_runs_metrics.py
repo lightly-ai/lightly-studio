@@ -16,6 +16,7 @@ from lightly_studio.models.evaluation_metrics import (
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import (
+    collection_resolver,
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
@@ -48,7 +49,7 @@ def get_runs_metrics(
         _get_run_with_metrics(session=session, dataset_id=dataset_id, evaluation_run_id=run_id)
         for run_id in evaluation_run_ids
     ]
-    tags = [_get_tag(session=session, tag_id=tag_id) for tag_id in tag_ids]
+    tags = [_get_tag(session=session, dataset_id=dataset_id, tag_id=tag_id) for tag_id in tag_ids]
     return [_to_view(session=session, evaluation_run=run, tags=tags) for run in runs]
 
 
@@ -65,10 +66,15 @@ def _get_run_with_metrics(
     return run
 
 
-def _get_tag(session: Session, tag_id: UUID) -> TagTable:
+def _get_tag(session: Session, dataset_id: UUID, tag_id: UUID) -> TagTable:
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
-    if tag is None:
-        raise NotFoundError(f"Tag {tag_id} not found.")
+    collection = (
+        None
+        if tag is None
+        else collection_resolver.get_by_id(session=session, collection_id=tag.collection_id)
+    )
+    if tag is None or collection is None or collection.dataset_id != dataset_id:
+        raise NotFoundError(f"Tag {tag_id} not found in this dataset.")
     return tag
 
 

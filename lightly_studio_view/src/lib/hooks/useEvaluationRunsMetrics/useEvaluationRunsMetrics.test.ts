@@ -30,6 +30,8 @@ describe('useEvaluationRunsMetrics', () => {
             }).queryKey
         );
         expect(options.enabled).toBe(true);
+        // Changing the tags keeps the page on screen while the new slices load.
+        expect(options.placeholderData).toBe(tanstackQuery.keepPreviousData);
     });
 
     it('disables the query when enabled is false', () => {

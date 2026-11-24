@@ -30,10 +30,13 @@ from lightly_studio.resolvers import (
     evaluation_class_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
+    image_resolver,
+    tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.services import evaluation_service
 from tests.api.routes.api.evaluation import helpers
+from tests.helpers_resolvers import create_tag
 
 
 @pytest.mark.parametrize("outdated_caller", [False, True])
@@ -157,6 +160,41 @@ def test_recompute_evaluation_run__keeps_sample_scope(db_session: Session) -> No
     recomputed = evaluation_service.recompute_evaluation_run(session=db_session, run=run)
 
     assert recomputed.sample_count == 1
+
+
+def test_recompute_evaluation_run__scope_without_images_raises(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+    tag = create_tag(session=db_session, collection_id=root.collection_id, tag_name="night")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=tag.tag_id,
+        sample_ids=list(
+            image_resolver.get_sample_ids(session=db_session, collection_id=root.collection_id)
+        ),
+    )
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(),
+        filters=ImageFilter.model_validate({"sample_filter": {"tag_ids": [str(tag.tag_id)]}}),
+        name="run-1",
+    )
+    tag_resolver.delete(session=db_session, tag_id=tag.tag_id)
+    run = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=result.evaluation_run_id
+    )
+    assert run is not None
+
+    with pytest.raises(ValueError, match="selects no images"):
+        evaluation_service.recompute_evaluation_run(session=db_session, run=run)
+
+    stored = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session, evaluation_run_id=run.id
+    )
+    assert len(stored) > 0
 
 
 def test_recompute_evaluation_run__refreshes_average_precision(db_session: Session) -> None:

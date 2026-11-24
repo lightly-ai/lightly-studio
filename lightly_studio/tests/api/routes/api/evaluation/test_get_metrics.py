@@ -173,6 +173,24 @@ def test_get_evaluation_runs_metrics__unknown_tag_returns_404(
     assert response.status_code == HTTP_STATUS_NOT_FOUND
 
 
+def test_get_evaluation_runs_metrics__tag_of_other_dataset_returns_404(
+    test_client: TestClient, db_session: Session
+) -> None:
+    root = helpers.create_dataset_with_annotations(db_session=db_session)
+    run_id = _run_object_detection(
+        session=db_session, root=root, name="run-1", compute_average_precision=False
+    )
+    other_root = helpers.create_dataset_with_annotations(db_session=db_session)
+    other_tag = create_tag(session=db_session, collection_id=other_root.collection_id)
+
+    response = test_client.get(
+        f"/api/datasets/{root.dataset_id}/evaluation/runs/metrics",
+        params={"run_ids": [str(run_id)], "tag_ids": [str(other_tag.tag_id)]},
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
 def _run_object_detection(
     session: Session, root: CollectionTable, name: str, compute_average_precision: bool
 ) -> UUID:

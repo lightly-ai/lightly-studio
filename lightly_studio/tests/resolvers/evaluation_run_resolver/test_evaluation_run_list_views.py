@@ -8,6 +8,9 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import evaluation_run_resolver
 from tests.helpers_resolvers import create_collection, create_tag
+from tests.resolvers.evaluation_sample_metric_resolver import (
+    helpers as evaluation_sample_metric_helpers,
+)
 
 
 def test_list_views_by_dataset_id(db_session: Session) -> None:
@@ -99,6 +102,27 @@ def test_list_views_by_dataset_id__scope_tag_names(db_session: Session) -> None:
     )
 
     assert views[0].scope_tag_names == ["vehicles"]
+
+
+def test_list_views_by_dataset_id__deleted_scope_tag(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id
+    )
+    evaluation_run_resolver.set_sample_scope(
+        session=db_session,
+        evaluation_run_id=run.id,
+        sample_scope_json={
+            "collection_id": str(dataset.collection_id),
+            "filter": {"sample_filter": {"tag_ids": [str(uuid.uuid4())]}},
+        },
+    )
+
+    views = evaluation_run_resolver.list_views_by_dataset_id(
+        session=db_session, dataset_id=dataset.dataset_id
+    )
+
+    assert views[0].scope_tag_names == ["(deleted tag)"]
 
 
 def test_list_views_by_dataset_id__returns_empty_for_unknown_dataset(db_session: Session) -> None:

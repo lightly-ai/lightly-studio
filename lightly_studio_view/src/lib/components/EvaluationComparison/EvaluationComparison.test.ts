@@ -11,7 +11,8 @@ const state = vi.hoisted(() => ({
     metrics: undefined as EvaluationRunMetricsView[] | undefined,
     metricsError: null as Error | null,
     metricsEnabled: undefined as boolean | undefined,
-    metricsTagIds: undefined as string[] | undefined
+    metricsTagIds: undefined as string[] | undefined,
+    tags: [{ tag_id: 'tag-1', name: 'night' }]
 }));
 
 vi.mock('$lib/hooks', async () => {
@@ -26,7 +27,7 @@ vi.mock('$lib/hooks', async () => {
                 return state.runsError;
             }
         }),
-        useTags: () => ({ tags: readable([]) }),
+        useTags: () => ({ tags: readable(state.tags) }),
         useEvaluationRunsMetrics: (getParams: () => { enabled?: boolean; tagIds: string[] }) => {
             state.metricsEnabled = getParams().enabled;
             state.metricsTagIds = getParams().tagIds;
@@ -61,6 +62,14 @@ describe('EvaluationComparison', () => {
         state.metrics = [makeMetricsView('run-a'), makeMetricsView('run-b')];
         state.metricsError = null;
         state.runsError = null;
+    });
+
+    it('ignores tags of the link that do not exist', () => {
+        render(EvaluationComparison, {
+            props: { ...defaultProps, tagIds: ['tag-1', 'deleted-tag'] }
+        });
+
+        expect(state.metricsTagIds).toEqual(['tag-1']);
     });
 
     it('shows the error when the runs request fails', () => {

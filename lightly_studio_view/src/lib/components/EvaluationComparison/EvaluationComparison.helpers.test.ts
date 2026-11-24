@@ -331,6 +331,23 @@ describe('scenarioRows', () => {
         ]);
     });
 
+    it('shows no value for a tag without evaluated images', () => {
+        const run = compared(
+            'a',
+            {},
+            {
+                ...makeMetrics(),
+                slices: [slice('t1', 'empty', null, 0)]
+            }
+        );
+        run.metrics.slices![0].metrics.f1 = 0;
+
+        const [, emptyRow] = scenarioRows([run, run], 'f1');
+
+        expect(emptyRow.values).toEqual([null, null]);
+        expect(emptyRow.bestIndices).toEqual([]);
+    });
+
     it('has only the full set row without slices', () => {
         expect(scenarioRows([compared('a')], 'f1').map((row) => row.label)).toEqual(['Full set']);
     });

@@ -26,6 +26,10 @@
     const { datasetId, collectionId, runIds, tagIds, onTagIdsChange, imagesHref }: Props = $props();
 
     const { tags } = $derived(useTags({ collection_id: collectionId }));
+    // A shared link can name tags that were deleted later. Compare only the tags that exist.
+    const existingTagIds = $derived(
+        tagIds.filter((tagId) => $tags.some((tag) => tag.tag_id === tagId))
+    );
 
     const HTTP_STATUS_NOT_FOUND = 404;
 
@@ -43,7 +47,7 @@
     const metricsQuery = useEvaluationRunsMetrics(() => ({
         datasetId,
         runIds,
-        tagIds,
+        tagIds: existingTagIds,
         enabled: canCompare
     }));
     const isMetricsNotFound = $derived(
@@ -79,7 +83,7 @@
             {taskType}
             runs={comparedRuns}
             tags={$tags}
-            selectedTagIds={tagIds}
+            selectedTagIds={existingTagIds}
             onSelectedTagIdsChange={onTagIdsChange}
         />
     {/if}

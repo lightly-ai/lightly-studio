@@ -1,5 +1,5 @@
 import { getEvaluationRunsMetricsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { createQuery } from '@tanstack/svelte-query';
+import { createQuery, keepPreviousData } from '@tanstack/svelte-query';
 
 interface UseEvaluationRunsMetricsParams {
     datasetId: string;
@@ -19,6 +19,8 @@ export const useEvaluationRunsMetrics = (getParams: () => UseEvaluationRunsMetri
                 path: { dataset_id: datasetId },
                 query: { run_ids: runIds, tag_ids: tagIds }
             }),
-            enabled
+            enabled,
+            // Changing the tags keeps the page on screen while the new slices load.
+            placeholderData: keepPreviousData
         };
     });

@@ -122,6 +122,11 @@ def _fetch_annotations_for_run(session: Session, run: EvaluationRunTable) -> Eva
     selected_sample_ids = gt_covered & pred_covered
     if run.sample_scope_json is not None:
         selected_sample_ids &= _scoped_sample_ids(session=session, scope=run.sample_scope_json)
+        if not selected_sample_ids:
+            # An empty rerun would replace the results without a warning.
+            raise ValueError(
+                "The image scope of the run selects no images. Its tags may have been deleted."
+            )
     gt_annotations = annotation_resolver.get_all_by_collection_id_and_parent_sample_ids(
         session=session,
         parent_sample_ids=list(selected_sample_ids),
