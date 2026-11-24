@@ -12,6 +12,10 @@ vi.mock(
     }
 );
 
+const mocks = vi.hoisted(() => ({ goto: vi.fn() }));
+
+vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
+
 vi.mock('./TriggerEvaluationDialog/TriggerEvaluationDialog.svelte', async () => {
     const module = await import('./TriggerEvaluationDialog/TriggerEvaluationDialog.mock.svelte');
     return { default: module.default };
@@ -49,6 +53,7 @@ type Props = {
     error?: string;
     datasetId?: string;
     collectionId?: string;
+    collectionType?: string;
 };
 
 const renderPanel = (overrides: Partial<Props> = {}) =>
@@ -171,5 +176,68 @@ describe('EvaluationRunsPanel', () => {
 
         await fireEvent.click(addButton);
         expect(screen.getByTestId('trigger-evaluation-dialog-mock')).toBeInTheDocument();
+    });
+});
+
+describe('EvaluationRunsPanel comparison', () => {
+    const compareProps = {
+        datasetId: 'dataset-1',
+        collectionId: 'collection-1',
+        collectionType: 'image'
+    };
+
+    it('hides the compare checkbox for semantic segmentation runs', () => {
+        renderPanel({
+            ...compareProps,
+            evaluationRuns: [
+                makeRun({ id: 'run-1', name: 'detection' }),
+                makeRun({ id: 'run-2', name: 'semantic', task_type: 'semantic_segmentation' })
+            ]
+        });
+
+        expect(screen.getAllByTestId('evaluation-run-compare-checkbox')).toHaveLength(1);
+    });
+
+    it('compares the ticked runs in list order', async () => {
+        mocks.goto.mockClear();
+        renderPanel({
+            ...compareProps,
+            evaluationRuns: [
+                makeRun({ id: 'run-1', name: 'first' }),
+                makeRun({ id: 'run-2', name: 'second' })
+            ]
+        });
+        const [firstCheckbox, secondCheckbox] = screen.getAllByTestId(
+            'evaluation-run-compare-checkbox'
+        );
+        const compareButton = screen.getByTestId('compare-evaluation-runs-button');
+        expect(compareButton).toBeDisabled();
+
+        await fireEvent.click(secondCheckbox);
+        await fireEvent.click(firstCheckbox);
+        expect(compareButton).toHaveTextContent('Compare (2)');
+        await fireEvent.click(compareButton);
+
+        expect(mocks.goto).toHaveBeenCalledWith(
+            '/datasets/dataset-1/image/collection-1/evaluation/compare?runs=run-1,run-2'
+        );
+    });
+
+    it('disables compare for runs of different task types', async () => {
+        renderPanel({
+            ...compareProps,
+            evaluationRuns: [
+                makeRun({ id: 'run-1', name: 'detection' }),
+                makeRun({ id: 'run-2', name: 'classification', task_type: 'classification' })
+            ]
+        });
+
+        for (const checkbox of screen.getAllByTestId('evaluation-run-compare-checkbox')) {
+            await fireEvent.click(checkbox);
+        }
+
+        const compareButton = screen.getByTestId('compare-evaluation-runs-button');
+        expect(compareButton).toBeDisabled();
+        expect(compareButton).toHaveAttribute('title', 'Select runs of the same task type.');
     });
 });

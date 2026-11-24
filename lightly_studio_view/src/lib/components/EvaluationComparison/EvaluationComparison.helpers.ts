@@ -58,6 +58,12 @@ export const LEADERBOARD_METRIC_LABELS: Record<LeaderboardMetric, string> = {
     accuracy: 'Accuracy'
 };
 
+export const SELECTION_PROBLEM_MESSAGES: Record<SelectionProblem, string> = {
+    too_few_runs: 'Select at least two evaluation runs to compare.',
+    mixed_task_types: 'Select runs of the same task type.',
+    unsupported_task_type: 'Semantic segmentation runs have no metrics to compare.'
+};
+
 export const PER_CLASS_METRIC_LABELS: Record<PerClassMetric, string> = {
     average_precision: 'AP',
     precision: 'Precision',

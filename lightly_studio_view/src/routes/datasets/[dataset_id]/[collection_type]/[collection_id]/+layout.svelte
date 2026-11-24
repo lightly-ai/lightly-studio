@@ -890,6 +890,7 @@
                                         error={evaluationRunsQuery.error?.message}
                                         datasetId={collection.dataset_id}
                                         {collectionId}
+                                        collectionType={page.params.collection_type}
                                     />
                                 {/await}
                             {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}

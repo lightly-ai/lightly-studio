@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
     import { Typography } from '$lib/components';
+    import { Checkbox } from '$lib/components/ui/checkbox';
     import { formatDate } from '$lib/utils';
     import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
     import EvaluationRunSummary from './EvaluationRunSummary/EvaluationRunSummary.svelte';
@@ -23,15 +24,38 @@
         expanded: boolean;
         /** Callback to toggle the expanded state. */
         onToggle: () => void;
+        /** Whether the run is selected for comparison. */
+        compareChecked?: boolean;
+        /** Shows the compare checkbox when set. */
+        onCompareCheckedChange?: (checked: boolean) => void;
     }
 
-    const { datasetId, run, expanded, onToggle }: Props = $props();
+    const {
+        datasetId,
+        run,
+        expanded,
+        onToggle,
+        compareChecked = false,
+        onCompareCheckedChange
+    }: Props = $props();
 </script>
 
 <li class="relative rounded-md border border-border bg-background">
+    {#if onCompareCheckedChange}
+        <div class="absolute left-3 top-2.5">
+            <Checkbox
+                checked={compareChecked}
+                onCheckedChange={(checked) => onCompareCheckedChange(checked === true)}
+                aria-label={`Select ${run.name} for comparison`}
+                data-testid="evaluation-run-compare-checkbox"
+            />
+        </div>
+    {/if}
     <button
         type="button"
-        class="block w-full px-3 py-2 text-left hover:bg-muted/50"
+        class="block w-full py-2 pr-3 text-left hover:bg-muted/50 {onCompareCheckedChange
+            ? 'pl-9'
+            : 'pl-3'}"
         onclick={onToggle}
         data-testid={`evaluation-run-item-${run.name}`}
         aria-expanded={expanded}

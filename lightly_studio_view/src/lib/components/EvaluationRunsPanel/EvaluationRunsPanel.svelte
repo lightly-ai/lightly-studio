@@ -7,6 +7,8 @@
 
     import EvaluationRunItem from './EvaluationRunItem/EvaluationRunItem.svelte';
     import TriggerEvaluationDialog from './TriggerEvaluationDialog/TriggerEvaluationDialog.svelte';
+    import CompareRunsButton from './CompareRunsButton/CompareRunsButton.svelte';
+    import { isComparableTaskType } from '$lib/components/EvaluationComparison';
     import { type EvaluationRunView } from '$lib/api/lightly_studio_local';
 
     interface Props {
@@ -22,6 +24,8 @@
         datasetId?: string;
         /** Collection (active view) to evaluate on. Required to enable the trigger dialog. */
         collectionId?: string;
+        /** Collection type of the route. With the IDs above, enables run comparison. */
+        collectionType?: string;
     }
 
     const {
@@ -30,7 +34,8 @@
         isLoading = false,
         error,
         datasetId,
-        collectionId
+        collectionId,
+        collectionType
     }: Props = $props();
 
     const { trackEvent } = usePostHog();
@@ -54,6 +59,15 @@
     };
     const collapseExpanded = () => {
         expandedRunId = null;
+    };
+
+    let compareRunIds = $state<string[]>([]);
+    const compareRuns = $derived(evaluationRuns.filter((run) => compareRunIds.includes(run.id)));
+    const canCompare = $derived(!!datasetId && !!collectionId && !!collectionType);
+    const setCompareChecked = (runId: string, checked: boolean) => {
+        compareRunIds = checked
+            ? [...compareRunIds, runId]
+            : compareRunIds.filter((id) => id !== runId);
     };
 </script>
 
@@ -96,7 +110,7 @@
     </div>
 
     {#if canTrigger}
-        <div class="mb-4">
+        <div class="mb-4 flex items-center gap-2">
             <Button
                 variant="default"
                 icon={Plus}
@@ -106,6 +120,14 @@
                     'data-testid': 'evaluation-runs-add-button'
                 }}>New evaluation</Button
             >
+            {#if canCompare && !expandedRun}
+                <CompareRunsButton
+                    datasetId={datasetId!}
+                    collectionType={collectionType!}
+                    collectionId={collectionId!}
+                    selectedRuns={compareRuns}
+                />
+            {/if}
         </div>
     {/if}
     <div class="flex min-h-0 flex-1 flex-col overflow-y-auto dark:[color-scheme:dark]">
@@ -140,6 +162,10 @@
                         {datasetId}
                         expanded={expandedRunId === run.id}
                         onToggle={() => toggleExpand(run.id)}
+                        compareChecked={compareRunIds.includes(run.id)}
+                        onCompareCheckedChange={canCompare && isComparableTaskType(run.task_type)
+                            ? (checked) => setCompareChecked(run.id, checked)
+                            : undefined}
                     />
                 {/each}
             </ul>

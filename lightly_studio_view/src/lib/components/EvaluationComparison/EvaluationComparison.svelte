@@ -4,10 +4,10 @@
     import { useEvaluationRuns, useEvaluationRunsMetrics } from '$lib/hooks';
     import EvaluationComparisonView from './EvaluationComparisonView/EvaluationComparisonView.svelte';
     import {
+        SELECTION_PROBLEM_MESSAGES,
         isComparableTaskType,
         validateSelection,
-        type ComparedRun,
-        type SelectionProblem
+        type ComparedRun
     } from './EvaluationComparison.helpers';
 
     interface Props {
@@ -20,11 +20,6 @@
 
     const { datasetId, runIds, imagesHref }: Props = $props();
 
-    const SELECTION_MESSAGES: Record<SelectionProblem, string> = {
-        too_few_runs: 'Select at least two evaluation runs to compare.',
-        mixed_task_types: 'Select runs of the same task type.',
-        unsupported_task_type: 'Semantic segmentation runs have no metrics to compare.'
-    };
     const HTTP_STATUS_NOT_FOUND = 404;
 
     const runsQuery = useEvaluationRuns(() => ({ datasetId }));
@@ -66,7 +61,7 @@
     {:else if runsQuery.data === undefined || metricsQuery.isLoading}
         <Spinner />
     {:else if selectionProblem !== null}
-        <p>{SELECTION_MESSAGES[selectionProblem]}</p>
+        <p>{SELECTION_PROBLEM_MESSAGES[selectionProblem]}</p>
     {:else if metricsQuery.error}
         <p class="text-destructive-text">{metricsQuery.error.message}</p>
     {:else if taskType && isComparableTaskType(taskType)}
