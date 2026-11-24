@@ -33,6 +33,7 @@ from lightly_studio.errors import (
     QueryExprError,
     UnauthenticatedError,
     UnknownImageSizeError,
+    UnsupportedEvaluationTaskTypeError,
 )
 
 # Set up logger for error handling
@@ -185,6 +186,16 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
         _request: Request, _exc: UnknownImageSizeError
     ) -> JSONResponse:
         """Handle a stored image without a known size."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY)
+        return JSONResponse(
+            status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY, content={"error": str(_exc)}
+        )
+
+    @app.exception_handler(UnsupportedEvaluationTaskTypeError)
+    async def _unsupported_evaluation_task_type_error_handler(
+        _request: Request, _exc: UnsupportedEvaluationTaskTypeError
+    ) -> JSONResponse:
+        """Handle an operation that does not support the task type of an evaluation run."""
         _report_error(exc=_exc, status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY)
         return JSONResponse(
             status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY, content={"error": str(_exc)}

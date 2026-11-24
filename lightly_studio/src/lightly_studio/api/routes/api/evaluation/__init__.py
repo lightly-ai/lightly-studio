@@ -14,6 +14,7 @@ from lightly_studio.api.routes.api.evaluation.delete_run import delete_run_route
 from lightly_studio.api.routes.api.evaluation.get_confusion_matrix import (
     get_confusion_matrix_router,
 )
+from lightly_studio.api.routes.api.evaluation.get_metrics import get_metrics_router
 from lightly_studio.api.routes.api.evaluation.get_runs import get_runs_router
 from lightly_studio.api.routes.api.evaluation.get_sample_metrics_info import (
     get_sample_metrics_info_router,
@@ -25,6 +26,7 @@ evaluation_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["evaluation
 evaluation_router.include_router(create_run_router)
 evaluation_router.include_router(delete_run_router)
 evaluation_router.include_router(get_runs_router)
+evaluation_router.include_router(get_metrics_router)
 evaluation_router.include_router(get_sample_metrics_info_router)
 evaluation_router.include_router(get_confusion_matrix_router)
 evaluation_router.include_router(recompute_run_router)

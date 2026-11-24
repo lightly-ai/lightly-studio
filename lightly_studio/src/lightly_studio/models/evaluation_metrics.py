@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -62,3 +64,33 @@ class EvaluationMetrics(BaseModel):
     accuracy: float | None
     mean_average_precision: float | None = None
     mean_average_precision_by_iou_threshold: dict[float, float] | None = None
+
+
+class EvaluatedSampleSetSummary(BaseModel):
+    """The set of samples that an evaluation run evaluated.
+
+    Attributes:
+        sample_count: Number of distinct evaluated samples.
+        sample_set_hash: SHA-256 hash of the sorted sample IDs. Runs that evaluated the
+            same samples have the same hash.
+    """
+
+    sample_count: int
+    sample_set_hash: str
+
+
+class EvaluationRunMetricsView(BaseModel):
+    """API view of the aggregate metrics of one evaluation run.
+
+    Attributes:
+        evaluation_run_id: ID of the evaluation run.
+        metrics: Aggregate metrics of the run.
+        evaluated_sample_count: Number of distinct evaluated samples.
+        evaluated_sample_set_hash: Hash of the evaluated sample IDs. Runs with different
+            hashes evaluated different images.
+    """
+
+    evaluation_run_id: UUID
+    metrics: EvaluationMetrics
+    evaluated_sample_count: int
+    evaluated_sample_set_hash: str

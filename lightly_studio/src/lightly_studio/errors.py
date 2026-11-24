@@ -13,6 +13,10 @@ class QueryExprError(Exception):
     """Exception raised when a query expression cannot be translated."""
 
 
+class UnsupportedEvaluationTaskTypeError(Exception):
+    """Exception raised when an operation does not support the task type of an evaluation run."""
+
+
 class UnknownImageSizeError(Exception):
     """Exception raised when a stored image has no known width or height."""
 
