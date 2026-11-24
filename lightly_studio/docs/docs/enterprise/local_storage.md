@@ -113,7 +113,7 @@ absolute paths under your storage root.
     dataset.add_samples_from_coco(
         annotations_json="/mnt/datasets/dataset_c/instances_train.json",
         images_path="/mnt/datasets/dataset_c/images",
-        annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
+        annotation_task=ls.AnnotationFileTask.INSTANCE_SEGMENTATION,
     )
     ```
 

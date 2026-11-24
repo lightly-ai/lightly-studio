@@ -127,7 +127,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 
     </details>
 
-=== "COCO Segmentation Masks"
+=== "COCO Instance Segmentation"
 
     ```python
     import lightly_studio as ls
@@ -139,7 +139,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     dataset.add_samples_from_coco(
         annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
         images_path=f"{dataset_path}/coco_subset_128_images/images",
-        annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
+        annotation_task=ls.AnnotationFileTask.INSTANCE_SEGMENTATION,
     )
     ```
 

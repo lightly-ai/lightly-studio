@@ -17,10 +17,12 @@ Add new topics as their own `##` section below.
 
 | Concept | Term | Python identifier | Avoid |
 |---|---|---|---|
-| A classification, object-detection box, or segmentation mask attached to a sample | **annotation** | - | label, annotation label |
+| A classification, object-detection box, polygon, or segmentation mask attached to a sample | **annotation** | - | label, annotation label |
 | The category of an annotation, e.g. `"dog"`, `"cat"` | **annotation class** | `class_name` | label, label class, annotation label |
 | A group of annotations, e.g. ground truth, a model's predictions | **annotation source** | `annotation_source` | annotation collection, collection, collection name, label source |
 | Creating annotations | **labeling** | - | the noun 'label' |
+| An instance outline made of one or more parts | **polygon** | - | multipolygon |
+| One closed ring of vertices in a polygon | **part** | - | ring, sub-polygon |
 
 ## Data ingestion
 
