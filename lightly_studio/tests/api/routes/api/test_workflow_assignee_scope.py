@@ -140,3 +140,30 @@ def test_adjacents__labeler_steps_over_other_files_without_filters(
     assert response.status_code == HTTP_STATUS_OK, response.text
     assert response.json()["next_sample_id"] == samples[1]
     assert response.json()["total_count"] == 2
+
+
+@pytest.mark.parametrize(
+    ("role", "expected"),
+    [
+        # A labeler counts only their own batch files, and never samples in no batch.
+        ("labeler", {"in_progress": 2, "not_started": 0, "not_in_workflow": 0}),
+        ("editor", {"in_progress": 3, "not_started": 0, "not_in_workflow": 1}),
+    ],
+)
+def test_status_counts__labeler_counts_only_their_files(
+    test_client: TestClient,
+    mocker: MockerFixture,
+    images: tuple[str, list[str]],
+    role: str,
+    expected: dict[str, int],
+) -> None:
+    collection_id, _ = images
+
+    response = test_client.get(
+        f"/api/collections/{collection_id}/workflow/status-counts",
+        headers=_enterprise_headers(mocker=mocker, role=role),
+    )
+
+    assert response.status_code == HTTP_STATUS_OK, response.text
+    counts = response.json()["counts"]
+    assert {key: counts[key] for key in expected} == expected

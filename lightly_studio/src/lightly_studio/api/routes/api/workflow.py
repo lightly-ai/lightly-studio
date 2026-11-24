@@ -8,6 +8,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
+from lightly_studio.api.dependencies.identity import IdentityDep
+from lightly_studio.api.dependencies.workflow_scope import workflow_assignee
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
@@ -52,20 +54,26 @@ class WorkflowStatusCountsView(BaseModel):
     """The sample count of each workflow status option of a dataset."""
 
     counts: dict[WorkflowStatus, int] | None
-    """The count per option, project-wide, or None if the dataset has no project."""
+    """The count per option, or None if the dataset has no project.
+
+    Project-wide, except for a labeler account: then only their own batch files count.
+    """
 
 
 @workflow_router.get("/collections/{collection_id}/workflow/status-counts")
 def get_workflow_status_counts(
     session: SessionDep,
+    identity: IdentityDep,
     collection: Annotated[CollectionTable, Depends(get_and_validate_collection_id)],
 ) -> WorkflowStatusCountsView:
     """Count the samples of the collection's dataset per workflow status.
 
-    The counts are project-wide and ignore the grid filters.
+    The counts ignore the grid filters. They are project-wide, but a labeler account counts
+    only the batch files it labels or reviews, the files its grid shows.
 
     Args:
         session: Database session.
+        identity: The user; a labeler gets the counts of their own files.
         collection: A collection of the dataset.
 
     Returns:
@@ -79,7 +87,10 @@ def get_workflow_status_counts(
         return WorkflowStatusCountsView(counts=None)
     return WorkflowStatusCountsView(
         counts=workflow_resolver.get_status_counts(
-            session=session, dataset_id=dataset.collection_id, project_id=project_id
+            session=session,
+            dataset_id=dataset.collection_id,
+            project_id=project_id,
+            assignee=workflow_assignee(identity=identity),
         )
     )
 

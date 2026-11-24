@@ -41,26 +41,38 @@ def get_project_id(session: Session, dataset_id: UUID) -> UUID | None:
 
 
 def get_status_counts(
-    session: Session, dataset_id: UUID, project_id: UUID
+    session: Session, dataset_id: UUID, project_id: UUID, assignee: str | None = None
 ) -> dict[WorkflowStatus, int]:
-    """Count the dataset's samples per workflow status, project-wide.
+    """Count the dataset's samples per workflow status, project-wide or for one person.
 
     The counts ignore all grid filters. One query returns the batch file count per state
     and the dataset's sample count. "Not in workflow" is the sample count minus the
     batch file counts, because each batched sample is in at most one batch of the project.
+    For an assignee, only the batch files they label or review count, and "Not in workflow"
+    is 0, matching what `SampleFilter.set_workflow_assignee` lets them see.
 
     Args:
         session: The database session.
         dataset_id: The ID of the dataset, that is its root collection.
         project_id: The dataset's workflow project.
+        assignee: Email of the person to count for, or None to count everyone's files.
 
     Returns:
         The sample count of every workflow status option, 0 for an empty state.
     """
     sample_total_label = "__sample_total__"
+    batch_files = [batch_file_table.c.project_id == project_id]
+    if assignee is not None:
+        email = assignee.lower()
+        batch_files.append(
+            sqlalchemy.or_(
+                func.lower(batch_file_table.c.labeler) == email,
+                func.lower(batch_file_table.c.reviewer) == email,
+            )
+        )
     state_counts = (
         select(batch_file_table.c.state.label("key"), func.count().label("count"))
-        .where(batch_file_table.c.project_id == project_id)
+        .where(*batch_files)
         .group_by(batch_file_table.c.state)
     )
     sample_total = (
@@ -78,7 +90,8 @@ def get_status_counts(
     batched = sum(
         count for status, count in counts.items() if status != WorkflowStatus.NOT_IN_WORKFLOW
     )
-    counts[WorkflowStatus.NOT_IN_WORKFLOW] = max(by_key.get(sample_total_label, 0) - batched, 0)
+    not_in_workflow = max(by_key.get(sample_total_label, 0) - batched, 0)
+    counts[WorkflowStatus.NOT_IN_WORKFLOW] = 0 if assignee is not None else not_in_workflow
     return counts
 
 

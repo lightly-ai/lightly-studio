@@ -17,6 +17,17 @@ from lightly_studio.services.sample_services.sample_adjacents_service import Adj
 GridFilter = TypeVar("GridFilter", ImageFilter, McapSequenceFilter)
 
 
+def workflow_assignee(identity: Identity) -> str | None:
+    """Returns whose batch files the workflow views show the user, or None for all files.
+
+    A labeler account sees only the files it labels or reviews; other roles see every file.
+
+    Args:
+        identity: The user that sends the request.
+    """
+    return identity.email if identity.role == Role.LABELER else None
+
+
 def scope_to_caller(
     identity: Identity, filters: GridFilter | None, empty: Callable[[], GridFilter]
 ) -> GridFilter | None:
@@ -29,10 +40,11 @@ def scope_to_caller(
         filters: The request's image or MCAP sequence filter, if any.
         empty: Builds a filter without conditions.
     """
-    if identity.role != Role.LABELER or identity.email is None:
+    email = workflow_assignee(identity=identity)
+    if email is None:
         return filters
     scoped = filters if filters is not None else empty()
-    workflow_resolver.scope_to_assignee(filters=scoped, email=identity.email)
+    workflow_resolver.scope_to_assignee(filters=scoped, email=email)
     return scoped
 
 

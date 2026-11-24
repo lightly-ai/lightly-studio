@@ -977,6 +977,7 @@
             {/if}
         </div>
         <Footer
+            hideTotal={getLightlyEnterpriseSession()?.user.role === 'labeler'}
             totalSamples={collection?.total_sample_count}
             filteredSamples={isCaptions ? $filteredCaptionCount : $filteredSampleCount}
             {totalAnnotations}

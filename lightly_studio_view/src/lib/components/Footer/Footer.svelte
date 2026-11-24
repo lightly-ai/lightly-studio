@@ -16,13 +16,16 @@
         filteredSamples?: number;
         totalAnnotations?: number;
         filteredAnnotations?: number;
+        /** Show only the filtered count, not the dataset total, e.g. for a labeler. */
+        hideTotal?: boolean;
     };
 
     const {
         totalSamples = 0,
         filteredSamples = 0,
         totalAnnotations = 0,
-        filteredAnnotations = 0
+        filteredAnnotations = 0,
+        hideTotal = false
     }: FooterProps = $props();
 
     function getItemType(count: number): string {
@@ -43,8 +46,9 @@
 
     const statsText = $derived.by(() => {
         const isAnnotationView = isAnnotationsRoute(page.route.id);
-        const total = isAnnotationView ? totalAnnotations : totalSamples;
         const filtered = isAnnotationView ? filteredAnnotations : filteredSamples;
+        // A hidden total is the filtered count, so the dataset's size never shows.
+        const total = hideTotal ? filtered : isAnnotationView ? totalAnnotations : totalSamples;
         const itemType = getItemType(total);
 
         if (!total) return '';
