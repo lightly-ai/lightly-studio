@@ -1,7 +1,9 @@
-import type { CreateEvaluationRunData } from '$lib/api/lightly_studio_local/types.gen';
+import type { CreateEvaluationRunData, TagView } from '$lib/api/lightly_studio_local/types.gen';
 
 type EvaluationRunRequest = CreateEvaluationRunData['body'];
 export type EvaluationTaskType = EvaluationRunRequest['task_type'];
+/** A tag that selects the images of a run. */
+export type ScopeTag = Pick<TagView, 'tag_id' | 'name'>;
 
 interface BuildEvaluationRunBodyParams {
     taskType: EvaluationTaskType;
@@ -11,6 +13,8 @@ interface BuildEvaluationRunBodyParams {
     iouThreshold: number;
     classwise: boolean;
     computeAveragePrecision: boolean;
+    /** Tags that select the evaluated images. Empty means all images. */
+    scopeTags: ScopeTag[];
     /** Run name. When empty/omitted, an auto-generated default is used. */
     name?: string;
     /** Reference time for the auto-generated name. Defaults to now. */
@@ -28,18 +32,20 @@ const pad = (value: number): string => String(value).padStart(2, '0');
  */
 export const defaultEvaluationRunName = (
     taskType: EvaluationTaskType,
-    now: Date = new Date()
+    now: Date = new Date(),
+    scopeTagNames: string[] = []
 ): string => {
     const stamp =
         `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
         `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    return `${taskType} ${stamp}`;
+    const scope = scopeTagNames.length > 0 ? ` · ${scopeTagNames.join(', ')}` : '';
+    return `${taskType}${scope} ${stamp}`;
 };
 
 /**
  * Build the request body for triggering an evaluation run.
  *
- * No filter is sent, so the run evaluates the full dataset. Object-detection
+ * Without scope tags no filter is sent, so the run evaluates the full dataset. Object-detection
  * runs carry the IoU threshold, class-wise, and average precision config; the other tasks have no
  * task-specific config. The provided name is used, or a local-time default.
  */
@@ -50,7 +56,16 @@ export const buildEvaluationRunBody = (
         gt_annotation_source: params.gtSource,
         pred_annotation_source: params.predSource,
         collection_id: params.collectionId,
-        name: params.name?.trim() || defaultEvaluationRunName(params.taskType, params.now)
+        name:
+            params.name?.trim() ||
+            defaultEvaluationRunName(
+                params.taskType,
+                params.now,
+                params.scopeTags.map((tag) => tag.name)
+            ),
+        ...(params.scopeTags.length > 0 && {
+            filter: { sample_filter: { tag_ids: params.scopeTags.map((tag) => tag.tag_id) } }
+        })
     };
     if (params.taskType === 'object_detection') {
         return {

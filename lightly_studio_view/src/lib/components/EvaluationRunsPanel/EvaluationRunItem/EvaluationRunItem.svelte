@@ -88,6 +88,7 @@
             <EvaluationRunSummary
                 groundTruth={run.gt_annotation_source}
                 predictions={run.pred_annotation_source}
+                scopeTagNames={run.scope_tag_names ?? []}
             />
         </div>
     </button>

@@ -12,6 +12,13 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({ data: annotationCollectionsData })
 }));
 
+vi.mock('$lib/hooks/useTags/useTags', async () => {
+    const { readable } = await import('svelte/store');
+    return {
+        useTags: () => ({ tags: readable([{ tag_id: 'tag-1', name: 'vehicles' }]) })
+    };
+});
+
 const triggerMock = vi.fn();
 let isPending = false;
 
@@ -87,5 +94,11 @@ describe('TriggerEvaluationDialog', () => {
         expect(screen.getByTestId('no-matching-sources-warning')).toBeInTheDocument();
         expect(screen.queryByTestId('gt-source-select')).not.toBeInTheDocument();
         expect(screen.getByTestId('trigger-evaluation-submit')).toBeDisabled();
+    });
+
+    it('offers the collection tags to scope the run', () => {
+        render(TriggerEvaluationDialog, { props: defaultProps });
+
+        expect(screen.getByRole('checkbox', { name: 'vehicles' })).toBeInTheDocument();
     });
 });

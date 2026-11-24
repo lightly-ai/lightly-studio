@@ -4,9 +4,11 @@
     interface Props {
         groundTruth: string | null;
         predictions: string | null;
+        /** Tags that select the evaluated images. Empty means all images. */
+        scopeTagNames?: string[];
     }
 
-    let { groundTruth, predictions }: Props = $props();
+    let { groundTruth, predictions, scopeTagNames = [] }: Props = $props();
 </script>
 
 <span class="mt-2 grid grid-cols-2 gap-2" data-testid="evaluation-run-annotation-sources">
@@ -25,3 +27,8 @@
         </span>
     {/each}
 </span>
+{#if scopeTagNames.length > 0}
+    <span class="mt-1 block text-xs text-muted-foreground" data-testid="evaluation-run-scope">
+        Images: {scopeTagNames.join(', ')}
+    </span>
+{/if}

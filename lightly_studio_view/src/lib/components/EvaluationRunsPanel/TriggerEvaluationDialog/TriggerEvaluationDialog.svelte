@@ -6,6 +6,8 @@
     import { Button } from '$lib/components';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import ObjectDetectionConfigFields from './ObjectDetectionConfigFields.svelte';
+    import EvaluationScopeField from './EvaluationScopeField/EvaluationScopeField.svelte';
+    import { useTags } from '$lib/hooks/useTags/useTags';
     import { useTriggerEvaluation } from './useTriggerEvaluation.svelte';
     import {
         buildEvaluationRunBody,
@@ -45,7 +47,17 @@
     // Empty means "use the auto-generated default" (shown as the placeholder).
     let name = $state('');
 
-    const defaultName = $derived(defaultEvaluationRunName(taskType));
+    let scopeTagIds = $state<string[]>([]);
+    const { tags } = $derived(useTags({ collection_id: collectionId }));
+    const scopeTags = $derived($tags.filter((tag) => scopeTagIds.includes(tag.tag_id)));
+
+    const defaultName = $derived(
+        defaultEvaluationRunName(
+            taskType,
+            undefined,
+            scopeTags.map((tag) => tag.name)
+        )
+    );
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const sources = $derived(annotationCollectionsQuery.data ?? []);
@@ -88,6 +100,7 @@
                 iouThreshold,
                 classwise,
                 computeAveragePrecision,
+                scopeTags,
                 name
             })
         );
@@ -171,6 +184,7 @@
                         </p>
                     {/if}
 
+                    <EvaluationScopeField tags={$tags} bind:selectedTagIds={scopeTagIds} />
                     {#if taskType === 'object_detection'}
                         <ObjectDetectionConfigFields
                             bind:iouThreshold

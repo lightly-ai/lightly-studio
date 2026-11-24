@@ -15,6 +15,7 @@ describe('buildEvaluationRunBody', () => {
         iouThreshold: 0.7,
         classwise: false,
         computeAveragePrecision: true,
+        scopeTags: [],
         now
     };
 
@@ -29,6 +30,20 @@ describe('buildEvaluationRunBody', () => {
             name: 'object_detection 2026-06-24 10:15:33',
             config: { iou_threshold: 0.7, classwise: false, compute_average_precision: true }
         });
+    });
+
+    it('scopes the run to the selected tags and names it after them', () => {
+        const body = buildEvaluationRunBody({
+            ...base,
+            taskType: 'object_detection',
+            scopeTags: [
+                { tag_id: 'tag-1', name: 'vehicles' },
+                { tag_id: 'tag-2', name: 'night' }
+            ]
+        });
+
+        expect(body.filter).toEqual({ sample_filter: { tag_ids: ['tag-1', 'tag-2'] } });
+        expect(body.name).toBe('object_detection · vehicles, night 2026-06-24 10:15:33');
     });
 
     it('omits config and filter for classification runs (full dataset)', () => {
