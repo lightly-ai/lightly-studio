@@ -39,6 +39,7 @@ def list_views_by_dataset_id(
         EvaluationRunView(
             id=run.id,
             name=run.name,
+            task_type=run.task_type,
             evaluation_run_configuration=run.config_json,
             created_at=run.created_at,
             gt_annotation_source=collection_name_by_id.get(run.gt_annotation_collection_id),

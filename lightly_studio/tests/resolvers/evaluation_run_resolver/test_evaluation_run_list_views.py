@@ -57,6 +57,9 @@ def test_list_views_by_dataset_id(db_session: Session) -> None:
     assert view_1.gt_annotation_source == "gt"
     assert view_1.pred_annotation_source == "pred"
     assert view_1.evaluation_run_configuration == {"iou_threshold": 0.5, "classwise": True}
+    assert view_1.task_type == EvaluationTaskType.OBJECT_DETECTION
+    view_2 = next(view for view in views if view.id == run_2.id)
+    assert view_2.task_type == EvaluationTaskType.CLASSIFICATION
 
 
 def test_list_views_by_dataset_id__returns_empty_for_unknown_dataset(db_session: Session) -> None:
