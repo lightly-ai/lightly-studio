@@ -18,7 +18,7 @@ from typing import NamedTuple
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
-from alembic.script import ScriptDirectory
+from alembic.script import Script, ScriptDirectory
 from sqlalchemy import inspect
 from sqlalchemy.engine import Engine, Inspector
 
@@ -179,13 +179,12 @@ def _get_extension_revisions(
     oss_script: ScriptDirectory, extension_script: ScriptDirectory
 ) -> list[_ExtensionRevision]:
     """Return the extension revisions with their ``oss_revision``, oldest first."""
-    heads = extension_script.get_heads()
-    if len(heads) > 1:
-        raise RuntimeError(f"The extension migrations must be linear, they have heads {heads}.")
+    scripts = list(extension_script.walk_revisions())
+    _ensure_linear_history(scripts=scripts, heads=extension_script.get_heads())
     oss_revisions = {script.revision for script in oss_script.walk_revisions()}
     revisions = []
     # walk_revisions goes from the head to the base.
-    for script in reversed(list(extension_script.walk_revisions())):
+    for script in reversed(scripts):
         oss_revision = getattr(script.module, "oss_revision", None)
         if oss_revision is None:
             raise RuntimeError(f"Extension revision {script.revision} does not set oss_revision.")
@@ -196,6 +195,21 @@ def _get_extension_revisions(
             )
         revisions.append(_ExtensionRevision(revision=script.revision, oss_revision=oss_revision))
     return revisions
+
+
+def _ensure_linear_history(scripts: Sequence[Script], heads: Sequence[str]) -> None:
+    """Raise if the history has more than one head, a branch point, or a merge point.
+
+    A merged history has one head, but the order of its parallel revisions is not defined.
+    """
+    branch_or_merge_points = [
+        script.revision for script in scripts if script.is_branch_point or script.is_merge_point
+    ]
+    if len(heads) > 1 or branch_or_merge_points:
+        raise RuntimeError(
+            f"The extension migrations must be linear. Heads: {list(heads)}, "
+            f"branch or merge points: {branch_or_merge_points}."
+        )
 
 
 def _get_applied_extension_revision(

@@ -150,6 +150,36 @@ def test_run_migrations__extension_migrations(
     assert upgrades == expected_upgrades
 
 
+@pytest.mark.parametrize("has_merge_revision", [False, True])
+def test_run_migrations__nonlinear_extension_history(
+    engine: Engine,
+    tmp_path: Path,
+    has_merge_revision: bool,
+) -> None:
+    extension = _write_extension(path=tmp_path)
+    _write_extension_revision(
+        path=tmp_path, revision="ext0001", down_revision=None, oss_revision=_OSS_REVISION_2
+    )
+    _write_extension_revision(
+        path=tmp_path, revision="ext0002", down_revision="ext0001", oss_revision=_OSS_REVISION_4
+    )
+    _write_extension_revision(
+        path=tmp_path, revision="ext0003", down_revision="ext0001", oss_revision=_OSS_REVISION_2
+    )
+    if has_merge_revision:
+        _write_extension_revision(
+            path=tmp_path,
+            revision="ext0004",
+            down_revision=("ext0002", "ext0003"),
+            oss_revision=_OSS_REVISION_4,
+        )
+
+    with pytest.raises(RuntimeError, match=r"The extension migrations must be linear\."):
+        db_migrations.run_migrations(
+            engine=engine, engine_url=_POSTGRES_URL, extension_migrations=extension
+        )
+
+
 def test_run_migrations__extension_revision_without_oss_revision(
     engine: Engine,
     tmp_path: Path,
@@ -216,7 +246,7 @@ def _write_extension(path: Path) -> ExtensionMigrations:
 def _write_extension_revision(
     path: Path,
     revision: str,
-    down_revision: str | None,
+    down_revision: str | tuple[str, ...] | None,
     oss_revision: str | None,
 ) -> None:
     """Write an extension revision that records the applied lightly_studio revision."""
