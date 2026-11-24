@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The GUI query filter shows a warning when a query uses a tag that does not exist.
 - Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
 - Pressing Delete or Backspace deletes the selected annotation in editing mode.
+- Edit, Undo, Plugins and Settings actions are now in the breadcrumb row on sample detail pages.
 
 ### Changed
 

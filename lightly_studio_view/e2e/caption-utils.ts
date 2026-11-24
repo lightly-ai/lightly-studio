@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 export class CaptionUtils {
     constructor(public readonly page: Page) {
@@ -52,7 +52,7 @@ export class CaptionUtils {
         await expect(this.getVisibleCaptionFields()).toHaveCount(captionCountBefore - 1);
     }
 
-    async undoLastCaptionDelete() {
+    async undoLastCaptionDelete(undoButton: Locator) {
         const captionCountBefore = await this.getCaptionCount();
         const responsePromise = this.page.waitForResponse(
             (response) =>
@@ -60,7 +60,7 @@ export class CaptionUtils {
                 response.url().includes('/captions') &&
                 response.status() === 200
         );
-        await this.page.getByTestId('header-reverse-action-button').click();
+        await undoButton.click();
         await responsePromise;
         await expect(this.getVisibleCaptionFields()).toHaveCount(captionCountBefore + 1);
     }
