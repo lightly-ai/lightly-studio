@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SlotRegistry } from '$lib/extensions/slots';
 import { registry } from '$lib/extensions/registry';
 import ExtensionSlot from './ExtensionSlot.svelte';
@@ -18,6 +18,12 @@ const defaultProps = {
 };
 
 describe('ExtensionSlot', () => {
+    beforeEach(() => {
+        for (const name of Object.keys(registry) as (keyof SlotRegistry)[]) {
+            delete registry[name];
+        }
+    });
+
     it('renders the default content when nothing is registered', () => {
         render(ExtensionSlot, { props: defaultProps });
 

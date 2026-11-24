@@ -7,9 +7,13 @@ import * as useAuthModule from '$lib/hooks/useAuth/useAuth';
 import * as useGlobalStorageModule from '$lib/hooks/useGlobalStorage';
 import * as appState from '$app/state';
 import type { Page } from '@sveltejs/kit';
+import type { SlotRegistry } from '$lib/extensions/slots';
+import { registry } from '$lib/extensions/registry';
+import NavigationMenuTestItem from './NavigationMenuTestItem.test.svelte';
 
 vi.mock('$lib/hooks/useAuth/useAuth');
 vi.mock('$lib/hooks/useGlobalStorage');
+vi.mock('$lib/extensions/registry', () => ({ registry: {} as SlotRegistry }));
 
 describe('NavigationMenu', () => {
     const mockSetCollection = vi.fn();
@@ -50,6 +54,28 @@ describe('NavigationMenu', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        delete registry['nav.items'];
+    });
+
+    describe('nav.items slot', () => {
+        it('renders no extra item when nothing is registered', () => {
+            setup({ user: null });
+
+            render(NavigationMenu, { props: { collection: mockCollection } });
+
+            expect(screen.queryByTestId('registered-nav-item')).not.toBeInTheDocument();
+        });
+
+        it('renders a registered component in the navigation', () => {
+            registry['nav.items'] = [NavigationMenuTestItem];
+            setup({ user: null });
+
+            render(NavigationMenu, { props: { collection: mockCollection } });
+
+            expect(screen.getByTestId('navigation-menu')).toContainElement(
+                screen.getByTestId('registered-nav-item')
+            );
+        });
     });
 
     describe('Menu items based on user authentication', () => {

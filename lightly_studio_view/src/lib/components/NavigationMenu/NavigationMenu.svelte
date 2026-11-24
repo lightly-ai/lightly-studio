@@ -7,6 +7,7 @@
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { ExtensionSlot } from '$lib/extensions';
     const {
         collection
     }: {
@@ -63,4 +64,6 @@
             siblings={level.siblings.length > 1 ? level.siblings : []}
         />
     {/each}
+
+    <ExtensionSlot name="nav.items" props={{}} />
 </div>
