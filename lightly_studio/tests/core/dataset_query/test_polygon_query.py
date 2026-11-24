@@ -87,6 +87,6 @@ class TestPolygonQuery:
             select(ImageTable)
             .join(ImageTable.sample)
             .where(SampleTable.collection_id == collection_id)
-            .where(PolygonQuery(PolygonField.width > 20).get())
+            .where(PolygonQuery(PolygonField.class_name == "label1").get())
         )
         assert db_session.exec(query).all() == []
