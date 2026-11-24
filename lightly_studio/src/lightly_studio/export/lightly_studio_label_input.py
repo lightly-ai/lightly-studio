@@ -249,36 +249,44 @@ def _annotation_to_single_inst_seg(
     image_width: int,
     image_height: int,
 ) -> SingleInstanceSegmentation | None:
-    category = label_id_to_category[annotation.annotation_label_id]
+    segmentation: MultiPolygon | BinaryMaskSegmentation | None
     if annotation.annotation_type == AnnotationType.POLYGON:
-        if annotation.polygon_details is None:
-            return None
-        return SingleInstanceSegmentation(
-            category=category,
-            segmentation=MultiPolygon(
-                polygons=[
-                    [(x, y) for x, y in polygon] for polygon in annotation.polygon_details.polygons
-                ]
-            ),
+        segmentation = _polygon_segmentation(annotation=annotation)
+    else:
+        segmentation = _mask_segmentation(
+            annotation=annotation, image_width=image_width, image_height=image_height
         )
-    if annotation.segmentation_details is None:
+    if segmentation is None:
         return None
-    if annotation.segmentation_details.segmentation_mask is None:
-        return None
-
-    box = BoundingBox(
-        xmin=annotation.segmentation_details.x,
-        ymin=annotation.segmentation_details.y,
-        xmax=annotation.segmentation_details.x + annotation.segmentation_details.width,
-        ymax=annotation.segmentation_details.y + annotation.segmentation_details.height,
+    return SingleInstanceSegmentation(
+        category=label_id_to_category[annotation.annotation_label_id],
+        segmentation=segmentation,
     )
-    segmentation = BinaryMaskSegmentation.from_rle(
-        rle_row_wise=annotation.segmentation_details.segmentation_mask,
+
+
+def _polygon_segmentation(annotation: AnnotationBaseTable) -> MultiPolygon | None:
+    if annotation.polygon_details is None:
+        return None
+    return MultiPolygon(
+        polygons=[[(x, y) for x, y in polygon] for polygon in annotation.polygon_details.polygons]
+    )
+
+
+def _mask_segmentation(
+    annotation: AnnotationBaseTable, image_width: int, image_height: int
+) -> BinaryMaskSegmentation | None:
+    details = annotation.segmentation_details
+    if details is None or details.segmentation_mask is None:
+        return None
+    box = BoundingBox(
+        xmin=details.x,
+        ymin=details.y,
+        xmax=details.x + details.width,
+        ymax=details.y + details.height,
+    )
+    return BinaryMaskSegmentation.from_rle(
+        rle_row_wise=details.segmentation_mask,
         width=image_width,
         height=image_height,
         bounding_box=box,
-    )
-    return SingleInstanceSegmentation(
-        category=category,
-        segmentation=segmentation,
     )
