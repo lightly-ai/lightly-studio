@@ -47,6 +47,8 @@
         onTrackChange?: () => Promise<void>;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
+        /** Reloads the tick after a tag of a cuboid is added or removed. */
+        onTagsChange?: () => void;
         /** Picks the source for new cuboids. Without it, the list shows no source picker. */
         sourcePicker?: SourcePicker;
         /** True when the cuboid is hidden in the scene. */
@@ -69,6 +71,7 @@
         onLabelChange,
         onTrackChange,
         onDeleteCuboid,
+        onTagsChange,
         isCuboidHidden = () => false,
         isSourceHidden = () => false,
         onToggleTrackVisibility,
@@ -124,6 +127,7 @@
         {onLabelChange}
         {onTrackChange}
         onDelete={onDeleteCuboid}
+        {onTagsChange}
         isHidden={isCuboidHidden(cuboid)}
         isVisibilityLocked={isSourceHidden(cuboid.annotationSourceId)}
         onToggleVisibility={onToggleTrackVisibility}

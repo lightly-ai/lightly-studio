@@ -13,6 +13,7 @@ export type {
     CameraMode,
     CoordinateFrame,
     CuboidAnnotation,
+    CuboidTag,
     CuboidHandle,
     DirtyAnnotations,
     FrameSource,

@@ -4,6 +4,7 @@
     import PointCloudAnnotationDetails from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationDetails';
     import PointCloudAnnotationHeader from './PointCloudAnnotationHeader';
     import { cn } from '$lib/utils';
+    import PointCloudAnnotationTags from './PointCloudAnnotationTags';
 
     interface Props {
         /** Cuboid displayed by this row. */
@@ -40,6 +41,8 @@
         isVisibilityLocked?: boolean;
         /** Hides or shows the track of this cuboid. */
         onToggleVisibility?: (cuboid: CuboidAnnotation) => void;
+        /** Reloads the tick after a tag of this cuboid is added or removed. */
+        onTagsChange?: () => void;
     }
 
     let {
@@ -57,7 +60,8 @@
         onDelete,
         isHidden = false,
         isVisibilityLocked = false,
-        onToggleVisibility
+        onToggleVisibility,
+        onTagsChange
     }: Props = $props();
 
     function handleAnnotationChange(
@@ -95,6 +99,7 @@
         {isVisibilityLocked}
         onToggleVisibility={onToggleVisibility ? () => onToggleVisibility(cuboid) : undefined}
     />
+    <PointCloudAnnotationTags {cuboid} {isSelected} {onTagsChange} />
     {#if isSelected}
         <div class="px-4 pb-4 pt-1">
             <PointCloudAnnotationDetails

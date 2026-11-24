@@ -26,6 +26,24 @@ const createAnnotation = (overrides: Partial<AnnotationView> = {}): AnnotationVi
 });
 
 describe('tickAnnotationsToCuboids', () => {
+    it('carries the tags of each cuboid, and none when the response has no tags', () => {
+        const tagged = createAnnotation({
+            tags: [
+                { tag_id: 'tag-1', name: 'occluded' },
+                { tag_id: 'tag-2', name: 'truncated' }
+            ]
+        });
+        const untagged = createAnnotation({ sample_id: 'annotation-2', tags: undefined });
+
+        const [first, second] = tickAnnotationsToCuboids([tagged, untagged]);
+
+        expect(first.tags).toEqual([
+            { tag_id: 'tag-1', name: 'occluded' },
+            { tag_id: 'tag-2', name: 'truncated' }
+        ]);
+        expect(second.tags).toEqual([]);
+    });
+
     it('maps every cuboid in the tick', () => {
         const annotations = [
             createAnnotation({ object_track_id: 'track-1', object_track_number: 7 }),
@@ -54,7 +72,8 @@ describe('tickAnnotationsToCuboids', () => {
                 keyframeId: null,
                 center: [1, 2, 3],
                 size: [4, 5, 6],
-                rotation: [0, 0, 0, 1]
+                rotation: [0, 0, 0, 1],
+                tags: []
             },
             {
                 id: 'annotation-2',
@@ -73,7 +92,8 @@ describe('tickAnnotationsToCuboids', () => {
                 keyframeId: null,
                 center: [1, 2, 3],
                 size: [4, 5, 6],
-                rotation: [0, 0, 0, 1]
+                rotation: [0, 0, 0, 1],
+                tags: []
             }
         ]);
     });

@@ -57,6 +57,7 @@
                     onSequenceTagsChange={workspace.refetchSequenceSample}
                     tick={data.tick}
                     onTagsChange={() => void workspace.tickDetails.refetch()}
+                    onCuboidTagsChange={() => void workspace.tickDetails.refetch()}
                     editable={presentation.isEditingMode}
                     onCuboidTransform={editing.panelCuboidTransform}
                     onLabelChange={editing.handleLabelChange}

@@ -4,7 +4,7 @@
     import type { TagItem } from '../types';
 
     interface Props {
-        tags: TagItem[];
+        tags: readonly TagItem[];
         /** Shows a remove button per tag when given. Without it, the chips are read-only. */
         onRemove?: (tagId: string) => void;
         /** Tags whose removal is pending. */

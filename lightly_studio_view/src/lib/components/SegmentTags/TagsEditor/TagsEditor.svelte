@@ -16,7 +16,7 @@
     // The tags of one sample, with add and remove controls for users who may tag. An
     // annotation is a sample too: pass its sample id and annotation collection id.
     interface Props {
-        tags: TagItem[];
+        tags: readonly TagItem[];
         collectionId: string;
         sampleId: string;
         onRefetch?: () => void;

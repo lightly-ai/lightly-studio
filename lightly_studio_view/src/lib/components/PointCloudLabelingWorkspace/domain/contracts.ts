@@ -147,6 +147,14 @@ export interface CuboidAnnotation {
     readonly size: Vector3;
     /** Cuboid orientation as a unit xyzw quaternion. */
     readonly rotation: Quaternion;
+    /** Tags of this cuboid on this frame; absent when the cuboid was not loaded from a tick. */
+    readonly tags?: readonly CuboidTag[];
+}
+
+/** A tag on a cuboid. The cuboid is a sample of its annotation source collection. */
+export interface CuboidTag {
+    readonly tag_id: string;
+    readonly name: string;
 }
 
 /** Display metadata for an annotation class. */

@@ -21,7 +21,8 @@ export function tickAnnotationsToCuboids(annotations: Readonly<TickDetailView['a
                 keyframeId: null,
                 center: [details.px, details.py, details.pz] as const,
                 size: [details.sx, details.sy, details.sz] as const,
-                rotation: [details.qx, details.qy, details.qz, details.qw] as const
+                rotation: [details.qx, details.qy, details.qz, details.qw] as const,
+                tags: annotation.tags ?? []
             }
         ];
     });

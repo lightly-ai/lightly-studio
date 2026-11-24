@@ -4,7 +4,10 @@ import type { TagItem } from '../types';
 const normalize = (name: string) => name.trim().toLowerCase();
 
 /** The collection's tags that are not on the sample yet. Names match case-insensitively. */
-export const getAddableTags = (collectionTags: TagView[], attached: TagItem[]): TagView[] =>
+export const getAddableTags = (
+    collectionTags: TagView[],
+    attached: readonly TagItem[]
+): TagView[] =>
     collectionTags.filter(
         (tag) =>
             !attached.some(
@@ -14,7 +17,7 @@ export const getAddableTags = (collectionTags: TagView[], attached: TagItem[]): 
             )
     );
 
-export const getAttachedTagNames = (attached: TagItem[]): Set<string> =>
+export const getAttachedTagNames = (attached: readonly TagItem[]): Set<string> =>
     new Set(attached.map((tag) => normalize(tag.name)));
 
 export type TagSelection =
