@@ -6,8 +6,12 @@ import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorag
 /** Owns scene display preferences and editing availability. */
 export function useWorkspacePresentation() {
     const { isEditingMode } = useGlobalStorage();
-    const showOrthographicViews = useSessionStorage<boolean>(
-        'lightlyStudio_pointCloudShowOrthographicViews',
+    const orthographicViewsEnabled = useSessionStorage<boolean>(
+        'lightlyStudio_pointCloudOrthographicViewsEnabled',
+        true
+    );
+    const orthographicViewsCollapsed = useSessionStorage<boolean>(
+        'lightlyStudio_pointCloudOrthographicViewsCollapsed',
         false
     );
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
@@ -16,7 +20,8 @@ export function useWorkspacePresentation() {
         'lightlyStudio_pointCloudShowNavigationHelpers',
         true
     );
-    const orthographic = fromStore(showOrthographicViews);
+    const orthographicEnabled = fromStore(orthographicViewsEnabled);
+    const orthographicCollapsed = fromStore(orthographicViewsCollapsed);
     const editing = fromStore(isEditingMode);
     const points = fromStore(pointSize);
     const helpers = fromStore(showNavigationHelpers);
@@ -25,8 +30,11 @@ export function useWorkspacePresentation() {
         get isEditingMode() {
             return editing.current;
         },
-        get showOrthographicViews() {
-            return orthographic.current;
+        get orthographicViewsEnabled() {
+            return orthographicEnabled.current;
+        },
+        get orthographicViewsCollapsed() {
+            return orthographicCollapsed.current;
         },
         get pointSize() {
             return points.current;
@@ -42,6 +50,7 @@ export function useWorkspacePresentation() {
         },
         setPointSize: pointSize.set,
         setShowNavigationHelpers: showNavigationHelpers.set,
-        toggleOrthographicProjections: showOrthographicViews.set
+        setOrthographicViewsEnabled: orthographicViewsEnabled.set,
+        setOrthographicViewsCollapsed: orthographicViewsCollapsed.set
     };
 }

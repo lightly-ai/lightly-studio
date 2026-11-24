@@ -52,8 +52,12 @@ export interface PointCloudWorkspaceLayoutState {
     effectiveTool: WorkspaceTool;
     /** Whether annotation edits are permitted. */
     isEditingMode: boolean;
-    /** Whether Top, Side, and Front views are visible. */
+    /** Whether the Top, Side, and Front views are on screen: turned on and not collapsed. */
     showOrthographicViews: boolean;
+    /** Whether the Top, Side, and Front views strip is turned on in the scene settings. */
+    orthographicViewsEnabled: boolean;
+    /** Whether the Top, Side, and Front views strip shows only its header. */
+    orthographicViewsCollapsed: boolean;
     /** Screen-space point size in CSS pixels. */
     pointSize: number;
     /** Whether navigation buttons and shortcut hints are shown. */
@@ -80,8 +84,10 @@ export interface PointCloudWorkspaceLayoutState {
     bufferStatus?: ReturnType<typeof createWorkspaceController>['playback']['bufferStatus'];
     /** Persists the collapsed state reported by the camera pane. */
     onCameraStripCollapsedChange: (collapsed: boolean) => void;
-    /** Updates orthographic projection visibility. */
-    onToggleOrthographicProjections: (show: boolean) => void | Promise<void>;
+    /** Turns the Top, Side, and Front views strip on or off. */
+    onOrthographicViewsEnabledChange: (enabled: boolean) => void;
+    /** Collapses or expands the Top, Side, and Front views strip. */
+    onOrthographicViewsCollapsedChange: (collapsed: boolean) => void;
     /** Updates the preferred point size. */
     onPointSizeChange: (value: number) => void;
     /** Updates navigation helper visibility. */

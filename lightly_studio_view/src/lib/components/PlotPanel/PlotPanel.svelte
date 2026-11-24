@@ -1,5 +1,6 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
@@ -63,7 +64,7 @@
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import { writable, get, readable } from 'svelte/store';
+    import { writable, get, readable, toStore } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
 
     const NO_LEGEND = new Map<number, string>();
@@ -169,17 +170,18 @@
     } = usePlotLayout(untrack(() => collectionId));
     const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
 
-    // No request until the color-by is known, so the plot fetches once.
-    const embeddingsData = $derived(
-        $colorBy === undefined
-            ? undefined
-            : useEmbeddings(collectionId, filter, $colorBy, $plotAxes)
-    );
-
+    const embeddingsData = useEmbeddings(() => ({
+        collectionId,
+        filters: filter,
+        colorBy: $colorBy ?? null,
+        axes: $plotAxes,
+        enabled: $colorBy !== undefined
+    }));
     // The query parses the Arrow data. A new color-by or axes is a new query with its own data,
     // so the old points never show under a new layout.
-    const arrowData = $derived(embeddingsData?.data?.columns);
-    const colorLegend = $derived(embeddingsData?.data?.legend ?? NO_LEGEND);
+    const arrowData = $derived(embeddingsData.data?.columns);
+    const colorLegend = $derived(embeddingsData.data?.legend ?? NO_LEGEND);
+    const isWaitingForFirstData = $derived(embeddingsData.isLoading || $colorBy === undefined);
     // Category 1 means "passes the filter but has no color value". Its label tracks the same
     // `color_by` signal that drives its color (see `getCategoryColors` below), so the two never disagree.
     const includedLabel = $derived(
@@ -189,27 +191,23 @@
         hiddenCategories,
         toggleCategoryVisibility,
         focusCategoryVisibility,
-        resetCategoryVisibility
+        clearForColorByMode
     } = useCategoryVisibility({
         getCollectionId: () => collectionId,
-        getColorByType: () => get(selectedColorByType)
+        getColorByType: () => get(selectedColorByType),
+        colorLegend: toStore(() => colorLegend),
+        hiddenKeys: writable(new Set<string>())
     });
 
-    // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
-    // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
-    // survives. INCLUDED is relabeled with the color-by mode, so it survives only a filter-only
-    // change — else a hidden "No category" would empty the plot once all points collapse into it.
-    let previousColorByKey: string | undefined = undefined;
+    // Other color-by modes have other labels. The tag and label IDs in the color-by change when
+    // the user creates a tag or a label, so only the type and the metadata key count as the mode.
+    let previousColorByMode: string | undefined = undefined;
     $effect(() => {
-        void colorLegend;
-        const colorByKey = JSON.stringify($colorBy);
-        const colorByChanged = colorByKey !== previousColorByKey;
-        previousColorByKey = colorByKey;
-        resetCategoryVisibility(
-            colorByChanged
-                ? [EXCLUDED_BY_FILTERS_CATEGORY]
-                : [EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]
-        );
+        const colorByMode = JSON.stringify([$selectedColorByType, $selectedColorByKey]);
+        const isModeChange =
+            previousColorByMode !== undefined && colorByMode !== previousColorByMode;
+        previousColorByMode = colorByMode;
+        if (isModeChange) untrack(clearForColorByMode);
     });
 
     const hasActiveFilter = $derived(filter !== null || pickedSampleIds.length > 0);
@@ -233,15 +231,12 @@
             : (committedSampleRegion?.polygon ?? null)
     );
 
-    // Activating a lasso (or a committed region) unhides the Excluded category, otherwise
-    // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
-    // canvas. The legend keeps showing the user's real toggle state.
+    // While the user draws or picks, the points outside the selection count as Excluded. A hidden
+    // Excluded would then empty the canvas under the cursor, or leave no point to pick next. So
+    // Excluded shows while the user draws or has picks. A committed region follows the legend.
     const effectiveHiddenCategories = $derived.by(() => {
-        const hasSelectionHighlight =
-            $rangeSelection !== null ||
-            committedHighlightRegion !== null ||
-            pickedSampleIds.length > 0;
-        if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+        const isSelecting = $rangeSelection !== null || pickedSampleIds.length > 0;
+        if (!isSelecting || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }
         const next = new Set($hiddenCategories);
@@ -288,9 +283,14 @@
         savePlotSelection({ embeddingRegion, sampleIds: [] });
         setPlotSelectionCount(collectionId, count);
     };
-    // The sequences grid has no sample-id filter, so it does not support picks.
+    // A gesture that starts on the old points stays ignored, even when the new points land
+    // before the release.
+    let isPressOnOldPoints = false;
+    const isOnOldPoints = () => embeddingsData.isPlaceholderData || isPressOnOldPoints;
+    // The sequences grid has no sample-id filter, so it does not support picks. While new points
+    // load, a pick on the old points could select a point that the new filter excludes.
     const commitPickedSampleIds = (sampleIds: string[]) => {
-        if (isSequences) return;
+        if (isSequences || isOnOldPoints()) return;
         if (sampleIds.length === 0) {
             clearPlotFilter();
             return;
@@ -308,8 +308,20 @@
         clearPlotSelectionCount(collectionId);
     };
 
+    const selectableCount = $derived(
+        (arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
+            return fulfils !== 0 ? count + 1 : count;
+        }, 0) ?? null
+    );
     const handleMouseUp = (event: MouseEvent) => {
         if ($rangeSelection === null) {
+            return;
+        }
+        // While new points load, the counts below come from the old points, so the drawn
+        // selection is dropped.
+        if (isOnOldPoints()) {
+            setRangeSelection(null);
+            pendingSelectionType = null;
             return;
         }
         if (isShortShiftDrag(event)) {
@@ -319,11 +331,6 @@
             return;
         }
         const polygon = $rangeSelection;
-
-        const selectableCount =
-            (arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
-                return fulfils !== 0 ? count + 1 : count;
-            }, 0) ?? null;
         const selectedCount = $selectedSampleIds.length;
         // Selecting nothing, or every selectable point, is equivalent to no filter at all.
         const selectsNothingOrEverything =
@@ -398,8 +405,8 @@
 
     const isReady = true;
 
-    // Lives here, not in PlotToolPill: a new filter (a tag, a region) starts a fresh embeddings
-    // query, and the plot unmounts while it loads. State inside the pill would not survive that.
+    // Lives here, not in PlotToolPill: a new color-by, axes or collection shows the full loader,
+    // and the plot unmounts while it loads. State inside the pill would not survive that.
     let activeTool = $state<ToolMode>('pan');
 
     type RangeSelection = Rectangle | Point[] | null;
@@ -500,7 +507,7 @@
     };
     const {
         librarySelection,
-        onPointerDown: onPlotPointerDown,
+        onPointerDown: onPickPointerDown,
         onSelection,
         isShortShiftDrag,
         pickPressedPoint
@@ -510,6 +517,10 @@
             typeof tooltip?.identifier === 'string' ? tooltip.identifier : null,
         commitPickedSampleIds
     });
+    const onPlotPointerDown = (event: PointerEvent) => {
+        isPressOnOldPoints = embeddingsData.isPlaceholderData;
+        onPickPointerDown(event);
+    };
     const hoveredSampleId = $derived(
         typeof tooltip?.identifier === 'string' && $rangeSelection === null
             ? tooltip.identifier
@@ -572,7 +583,7 @@
     );
 
     const errorText = $derived.by(() => {
-        if (embeddingsData?.isError) {
+        if (embeddingsData.isError) {
             return embeddingsData.error?.message || 'Unknown error';
         }
         return null;
@@ -604,7 +615,7 @@
         </Button>
     </div>
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if !embeddingsData || embeddingsData.isLoading}
+        {#if isWaitingForFirstData}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
@@ -618,6 +629,17 @@
                 bind:this={plotContainer}
                 onpointerdowncapture={onPlotPointerDown}
             >
+                {#if embeddingsData.isPlaceholderData}
+                    <div
+                        class="pointer-events-none absolute right-2 top-2 z-10 flex size-[30px] items-center justify-center rounded-lg border border-white/10 bg-black/60 text-white backdrop-blur-sm"
+                        data-testid="plot-loading-indicator"
+                        role="status"
+                        aria-label="Loading embeddings"
+                    >
+                        <LoaderCircle class="size-3.5 animate-spin" />
+                    </div>
+                {/if}
+
                 {#if $plotData && width >= MIN_RENDER_SIZE && height >= MIN_RENDER_SIZE}
                     <div class="embedding-view h-full w-full">
                         <EmbeddingView

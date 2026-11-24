@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BREAKING: Python SDK: On videos, `ClassificationQuery` now matches whole-video classifications. Use `VideoEventQuery` for temporal events, or combine both queries with `OR(...)` to preserve both kinds of matches.
 - Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
 - Each metadata field in the filter panel has a checkbox. A collapsed field shows a short summary of its filter, for example a range or "2 of 3" values. Active fields move to the top, and the metadata filter chips are removed.
+- The embedding plot keeps showing its points while new ones load after a filter change, with a small spinner instead of the full loading screen. A selection drawn before the new points arrive is ignored.
 
 ### Deprecated
 
@@ -38,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dialogs, menus, and messages now show in the full-screen point cloud workspace, so you can pick a class, delete a track, change view settings, switch edit mode, and undo edits there. The full-screen workspace has the same layout and colors as the app.
 
 - The embedding plot selection is cleared when you switch to another tab, so the grid no longer stays narrowed after the Plot filter chip is gone.
+
+- A hidden "Excluded by filters" class in the embedding plot stays hidden after you draw a selection.
+
+- Hidden classes in the embedding plot legend stay hidden after a filter change, also when the legend order changes.
 
 ### Security
 
