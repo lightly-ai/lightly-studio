@@ -47,7 +47,7 @@ def _render_item(
 
 
 def _include_object(
-    _object: SchemaItem,
+    schema_item: SchemaItem,
     name: str | None,
     type_: str,
     _reflected: bool,
@@ -59,7 +59,7 @@ def _include_object(
     that migrations create but SQLModel tables do not declare are kept.
     Used only by ``revision --autogenerate``; ``upgrade`` does not call this hook.
     """
-    if type_ == "table" and getattr(_object, "schema", None) is not None:
+    if type_ == "table" and getattr(schema_item, "schema", None) is not None:
         return False
     postgres_only_indexes = {
         "uq_collection_name_root",
