@@ -327,7 +327,7 @@ describe('usePlotComputeGate', () => {
     });
 
     it('ignores a status error from before the mount until the new request finishes', () => {
-        const query = createStatusQuery(COMPUTED);
+        const query = createStatusQuery(NOT_COMPUTED_LARGE);
         query.isFetchedAfterMount = false;
         query.isError = true;
         query.error = new Error('old');
