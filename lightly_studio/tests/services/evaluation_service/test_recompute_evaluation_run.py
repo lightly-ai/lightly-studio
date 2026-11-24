@@ -31,6 +31,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.services import evaluation_service
 from tests.api.routes.api.evaluation import helpers
 
@@ -132,6 +133,30 @@ def test_recompute_evaluation_run__produces_fresh_metrics(db_session: Session) -
     )
     assert len(new_sample_metrics) == len(old_sample_metrics)
     assert len(new_annotation_metrics) == len(old_annotation_metrics)
+
+
+def test_recompute_evaluation_run__keeps_sample_scope(db_session: Session) -> None:
+    # Only the image of width 1920 passes the filter. A rerun must not add the other one.
+    root = helpers.create_dataset_with_annotations(db_session, image_widths=(1920, 100))
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(),
+        filters=ImageFilter.model_validate({"filter_type": "image", "width": {"min": 500}}),
+        name="run-1",
+    )
+    assert result.sample_count == 1
+    run = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=result.evaluation_run_id
+    )
+    assert run is not None
+
+    recomputed = evaluation_service.recompute_evaluation_run(session=db_session, run=run)
+
+    assert recomputed.sample_count == 1
 
 
 def test_recompute_evaluation_run__refreshes_average_precision(db_session: Session) -> None:

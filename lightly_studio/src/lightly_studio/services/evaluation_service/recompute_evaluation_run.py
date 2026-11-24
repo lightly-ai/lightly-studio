@@ -32,7 +32,9 @@ from lightly_studio.resolvers import (
     evaluation_class_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
+    image_resolver,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +120,8 @@ def _fetch_annotations_for_run(session: Session, run: EvaluationRunTable) -> Eva
         )
     )
     selected_sample_ids = gt_covered & pred_covered
+    if run.sample_scope_json is not None:
+        selected_sample_ids &= _scoped_sample_ids(session=session, scope=run.sample_scope_json)
     gt_annotations = annotation_resolver.get_all_by_collection_id_and_parent_sample_ids(
         session=session,
         parent_sample_ids=list(selected_sample_ids),
@@ -135,6 +139,15 @@ def _fetch_annotations_for_run(session: Session, run: EvaluationRunTable) -> Eva
         selected_sample_ids=selected_sample_ids,
         gt_per_sample=_group_by_parent_sample_id(gt_annotations),
         pred_per_sample=_group_by_parent_sample_id(pred_annotations),
+    )
+
+
+def _scoped_sample_ids(session: Session, scope: dict[str, Any]) -> set[UUID]:
+    """Resolve the images that the stored scope of a run selects."""
+    return image_resolver.get_sample_ids(
+        session=session,
+        collection_id=UUID(scope["collection_id"]),
+        filters=ImageFilter.model_validate(scope["filter"]),
     )
 
 

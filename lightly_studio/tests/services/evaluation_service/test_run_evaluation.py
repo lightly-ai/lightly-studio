@@ -140,6 +140,48 @@ def test_run_evaluation__respects_filter(db_session: Session) -> None:
     assert result.sample_count == 1
 
 
+def test_run_evaluation__stores_sample_scope_of_filter(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session, image_widths=(1920, 100))
+    filters = ImageFilter.model_validate({"filter_type": "image", "width": {"min": 500}})
+
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(),
+        filters=filters,
+    )
+
+    run = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=result.evaluation_run_id
+    )
+    assert run is not None
+    assert run.sample_scope_json is not None
+    assert run.sample_scope_json["collection_id"] == str(root.collection_id)
+    assert ImageFilter.model_validate(run.sample_scope_json["filter"]) == filters
+
+
+def test_run_evaluation__no_sample_scope_without_filter(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(),
+    )
+
+    run = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=result.evaluation_run_id
+    )
+    assert run is not None
+    assert run.sample_scope_json is None
+
+
 def test_run_evaluation__same_source_raises(db_session: Session) -> None:
     root = helpers.create_dataset_with_annotations(db_session)
 

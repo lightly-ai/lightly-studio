@@ -55,6 +55,7 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
             "gt_annotation_source": "gt_v1",
             "pred_annotation_source": "pred_v1",
             "stale_since": None,
+            "scope_tag_names": [],
         },
         {
             "id": str(run_2_id),
@@ -65,6 +66,7 @@ def test_get_evaluation_runs(test_client: TestClient, mocker: MockerFixture) -> 
             "gt_annotation_source": "gt_v2",
             "pred_annotation_source": "pred_v2",
             "stale_since": None,
+            "scope_tag_names": [],
         },
     ]
 

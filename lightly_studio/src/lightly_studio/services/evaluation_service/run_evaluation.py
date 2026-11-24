@@ -22,7 +22,7 @@ from lightly_studio.evaluation.image_dataset_evaluate import (
 )
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.evaluation_run import EvaluationTaskType
-from lightly_studio.resolvers import collection_resolver, image_resolver
+from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver, image_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 EvaluationConfig = (
@@ -90,29 +90,56 @@ def run_evaluation(  # noqa: PLR0913
     )
     run_name = name or f"{task_type.value} {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S.%f}"
 
+    result = _run_task(
+        evaluator=evaluator,
+        config=config,
+        name=run_name,
+        gt_annotation_source=gt_annotation_source,
+        pred_annotation_source=pred_annotation_source,
+    )
+    if filters is not None:
+        evaluation_run_resolver.set_sample_scope(
+            session=session,
+            evaluation_run_id=result.evaluation_run_id,
+            sample_scope_json={
+                "collection_id": str(collection.collection_id),
+                "filter": filters.model_dump(mode="json"),
+            },
+        )
+    return result
+
+
+def _run_task(
+    evaluator: ImageDatasetEvaluate,
+    config: EvaluationConfig,
+    name: str,
+    gt_annotation_source: str,
+    pred_annotation_source: str,
+) -> EvaluationResult:
+    """Run the task method of ``evaluator`` that matches the type of ``config``."""
     if isinstance(config, ObjectDetectionEvaluationConfig):
         return evaluator.object_detection(
-            name=run_name,
+            name=name,
             gt_annotation_source=gt_annotation_source,
             pred_annotation_source=pred_annotation_source,
             config=config,
         )
     if isinstance(config, ClassificationEvaluationConfig):
         return evaluator.classification(
-            name=run_name,
+            name=name,
             gt_annotation_source=gt_annotation_source,
             pred_annotation_source=pred_annotation_source,
             config=config,
         )
     if isinstance(config, InstanceSegmentationEvaluationConfig):
         return evaluator.instance_segmentation(
-            name=run_name,
+            name=name,
             gt_annotation_source=gt_annotation_source,
             pred_annotation_source=pred_annotation_source,
             config=config,
         )
     return evaluator.semantic_segmentation(
-        name=run_name,
+        name=name,
         gt_annotation_source=gt_annotation_source,
         pred_annotation_source=pred_annotation_source,
         config=config,

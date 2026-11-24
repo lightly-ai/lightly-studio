@@ -49,6 +49,15 @@ class EvaluationRunTable(EvaluationRunBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     stale_since: datetime | None = None
+    sample_scope_json: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description=(
+            "Images that the run evaluates, as the collection ID and the image filter of the"
+            " request. None if the run evaluates every covered image, or comes from the Python"
+            " API with a query."
+        ),
+    )
 
 
 class EvaluationRunCreate(EvaluationRunBase):
@@ -66,3 +75,4 @@ class EvaluationRunView(BaseModel):
     stale_since: datetime | None
     gt_annotation_source: str | None
     pred_annotation_source: str | None
+    scope_tag_names: list[str] = []

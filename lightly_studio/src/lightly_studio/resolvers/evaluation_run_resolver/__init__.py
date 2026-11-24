@@ -14,6 +14,7 @@ from lightly_studio.resolvers.evaluation_run_resolver.list_views_by_dataset_id i
 from lightly_studio.resolvers.evaluation_run_resolver.mark_stale_by_collection_id import (
     mark_stale_by_collection_id,
 )
+from lightly_studio.resolvers.evaluation_run_resolver.set_sample_scope import set_sample_scope
 
 __all__ = [
     "clear_stale_since",
@@ -24,4 +25,5 @@ __all__ = [
     "get_names_by_collection_id",
     "list_views_by_dataset_id",
     "mark_stale_by_collection_id",
+    "set_sample_scope",
 ]

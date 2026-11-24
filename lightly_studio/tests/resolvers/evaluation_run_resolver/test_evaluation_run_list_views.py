@@ -7,7 +7,7 @@ from sqlmodel import Session
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import evaluation_run_resolver
-from tests.helpers_resolvers import create_collection
+from tests.helpers_resolvers import create_collection, create_tag
 
 
 def test_list_views_by_dataset_id(db_session: Session) -> None:
@@ -60,6 +60,45 @@ def test_list_views_by_dataset_id(db_session: Session) -> None:
     assert view_1.task_type == EvaluationTaskType.OBJECT_DETECTION
     view_2 = next(view for view in views if view.id == run_2.id)
     assert view_2.task_type == EvaluationTaskType.CLASSIFICATION
+    assert view_1.scope_tag_names == []
+
+
+def test_list_views_by_dataset_id__scope_tag_names(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    sources = [
+        create_collection(
+            session=db_session,
+            collection_name=name,
+            sample_type=SampleType.ANNOTATION,
+            parent_collection_id=dataset.collection_id,
+        )
+        for name in ("gt", "pred")
+    ]
+    tag = create_tag(session=db_session, collection_id=dataset.collection_id, tag_name="vehicles")
+    run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run_1",
+            gt_annotation_collection_id=sources[0].collection_id,
+            pred_annotation_collection_id=sources[1].collection_id,
+            dataset_id=dataset.dataset_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        ),
+    )
+    evaluation_run_resolver.set_sample_scope(
+        session=db_session,
+        evaluation_run_id=run.id,
+        sample_scope_json={
+            "collection_id": str(dataset.collection_id),
+            "filter": {"sample_filter": {"tag_ids": [str(tag.tag_id)]}},
+        },
+    )
+
+    views = evaluation_run_resolver.list_views_by_dataset_id(
+        session=db_session, dataset_id=dataset.dataset_id
+    )
+
+    assert views[0].scope_tag_names == ["vehicles"]
 
 
 def test_list_views_by_dataset_id__returns_empty_for_unknown_dataset(db_session: Session) -> None:
