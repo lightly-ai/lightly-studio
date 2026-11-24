@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show frame tags on the point cloud timeline with the "Show frame tags" checkbox. Each tag gets a row with bars over the frames that have the tag.
 - Filter video collections by categorical metadata.
 - The GUI query filter shows a warning when a query uses a tag that does not exist.
-
+- Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
 
 ### Changed
 
