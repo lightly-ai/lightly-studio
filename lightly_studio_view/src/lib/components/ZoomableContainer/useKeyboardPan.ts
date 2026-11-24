@@ -121,31 +121,18 @@ export const useKeyboardPan = ({
         keyboardPanAnimationFrameId = requestAnimationFrame(onKeyboardPanFrame);
     };
 
-    const handleWindowKeyDown = (event: KeyboardEvent) => {
-        if (!isKeyboardPanContextActive) return;
-        if (!isPanEnabled() || !isZoomEnabled()) return;
-        if (isTextInputTarget(event.target)) return;
+    const handleSpaceKeyDown = (event: KeyboardEvent) => {
+        event.preventDefault();
+        if (event.repeat) return;
 
-        if (isSpaceKey(event)) {
-            if (
-                event.target instanceof HTMLButtonElement &&
-                !getContainerElement()?.contains(event.target)
-            )
-                return;
-            event.preventDefault();
-            if (event.repeat) return;
+        isSpacePanActive = true;
+        if (pressedMovementKeys.size === 0) return;
 
-            isSpacePanActive = true;
-            if (pressedMovementKeys.size > 0) {
-                panWithKeyboard(1 / 60);
-                ensureKeyboardPanLoop();
-            }
-            return;
-        }
+        panWithKeyboard(1 / 60);
+        ensureKeyboardPanLoop();
+    };
 
-        const movementCode = getMovementCode(event);
-        if (!movementCode) return;
-
+    const handleMovementKeyDown = (event: KeyboardEvent, movementCode: string) => {
         const isFirstMovementKeydownForCode = !pressedMovementKeys.has(movementCode);
         pressedMovementKeys.add(movementCode);
         if (!isSpacePanActive) return;
@@ -155,6 +142,22 @@ export const useKeyboardPan = ({
 
         panWithKeyboard(1 / 60);
         ensureKeyboardPanLoop();
+    };
+
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+        if (!isKeyboardPanContextActive) return;
+        if (!isPanEnabled() || !isZoomEnabled()) return;
+        if (isTextInputTarget(event.target)) return;
+
+        if (isSpaceKey(event)) {
+            handleSpaceKeyDown(event);
+            return;
+        }
+
+        const movementCode = getMovementCode(event);
+        if (movementCode) {
+            handleMovementKeyDown(event, movementCode);
+        }
     };
 
     const handleWindowKeyUp = (event: KeyboardEvent) => {
