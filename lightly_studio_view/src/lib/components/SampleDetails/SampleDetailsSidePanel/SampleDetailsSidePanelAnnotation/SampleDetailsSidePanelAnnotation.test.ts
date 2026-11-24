@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from '$app/state';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
@@ -86,5 +86,21 @@ describe('SampleDetailsSidePanelAnnotation', () => {
         expect(screen.getByText('Confidence: 0')).toBeInTheDocument();
         await rerender({ ...props, annotation: { ...annotation, confidence: null } });
         expect(screen.queryByText(/Confidence:/)).not.toBeInTheDocument();
+    });
+
+    it('unlocks a locked segmentation mask when its lock icon is clicked', async () => {
+        page.data.globalStorage.isEditingMode.set(true);
+        const onToggleLock = vi.fn();
+        const { container } = render(SampleDetailsSidePanelAnnotation, {
+            ...defaultProps,
+            annotation: { ...annotation, annotation_type: 'segmentation_mask' },
+            isLocked: true,
+            onToggleLock
+        });
+
+        await fireEvent.click(container.querySelector('svg.lucide-lock')!);
+
+        expect(onToggleLock).toHaveBeenCalledOnce();
+        expect(container.querySelector('svg.lucide-unlock')).not.toBeInTheDocument();
     });
 });
