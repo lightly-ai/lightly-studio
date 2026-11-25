@@ -242,10 +242,9 @@ def _process_annotation_batch(  # noqa: PLR0913
             annotation_collection_id=annotation_collection_id,
             parent_sample_ids=matched_sample_ids,
         )
-        if annotations_to_create:
-            evaluation_run_resolver.mark_stale_by_collection_id(
-                session=session,
-                collection_id=annotation_collection_id,
-            )
+        evaluation_run_resolver.mark_stale_by_collection_id(
+            session=session,
+            collection_id=annotation_collection_id,
+        )
 
     return missing_paths, skipped_polygons
