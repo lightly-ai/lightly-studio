@@ -52,6 +52,7 @@ class LocalAnnotationTransport:
         parent_collection_id: UUID,
         annotations: Sequence[AnnotationCreate],
         collection_name: str | None,
+        covered_sample_ids: Sequence[UUID],
     ) -> list[UUID]:
         """Add annotations to samples. Mark the evaluation runs of their source stale."""
         return annotations_service.create_annotations(
@@ -59,6 +60,7 @@ class LocalAnnotationTransport:
             parent_collection_id=parent_collection_id,
             annotations=annotations,
             collection_name=collection_name,
+            covered_sample_ids=covered_sample_ids,
         )
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:

@@ -195,7 +195,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed_annotations: If True, generate embeddings for the annotation crops.
         """
         missing = add_annotations.add_annotations_from_labelformat(
-            session=self.session,
             root_collection_id=self.collection_id,
             input_labels=input_labels,
             images_root=images_root,
@@ -271,7 +270,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         ):
             label_input = _create_yolo_input(data_yaml=data_yaml, split=split, task=task)
             missing += add_annotations.add_annotations_from_labelformat(
-                session=self.session,
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
                 images_root=label_input._images_dir(),  # noqa: SLF001
@@ -382,7 +380,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_path = Path(images_path).absolute()
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
             ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=input_labels,
@@ -472,7 +469,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_path = label_input._images_dir()  # noqa: SLF001
 
             created_sample_ids = add_images.load_into_dataset_from_labelformat(
-                session=self.session,
                 ingestion=active_transport.get_transport().ingestion,
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
@@ -572,7 +568,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         label_input = _create_coco_input(annotations_json=annotations_json, task=task)
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
             ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
@@ -655,7 +650,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
             ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
@@ -714,7 +708,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_path = input_folder / images_rel_path
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
             ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,

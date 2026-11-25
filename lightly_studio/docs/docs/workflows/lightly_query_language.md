@@ -134,7 +134,10 @@ Use these functions to match classifications, bounding boxes, and segmentation m
 - `object_detection(...)`
 - `segmentation_mask(...)`
 
-Each function matches when at least one annotation of that type satisfies the expression inside the parentheses.
+Leave the parentheses empty to match any annotation of the named type. For example,
+`object_detection()` finds images with at least one bounding box, and `NOT object_detection()`
+finds images without bounding boxes, including images that have other annotation types.
+Add a condition inside the parentheses to require at least one annotation of that type to satisfy it.
 
 Bounding boxes and segmentation masks belong to images or individual video frames.
 In an image query, use `object_detection(...)` or `segmentation_mask(...)` directly.
