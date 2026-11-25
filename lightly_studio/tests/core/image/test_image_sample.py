@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -15,11 +17,13 @@ from lightly_studio.core.annotation.polygon import PolygonAnnotation
 from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.database import db_manager
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
+from lightly_studio.models.annotation_label import AnnotationLabelView
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver, image_resolver
+from lightly_studio.transport import active_transport
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -452,13 +456,12 @@ class TestImageSample:
         assert isinstance(annotations[1], SegmentationMaskAnnotation)
         assert isinstance(annotations[2], ClassificationAnnotation)
 
-    def test_add_annotation_classification(
-        self,
-        db_session: Session,
-    ) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotation_classification(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -477,13 +480,12 @@ class TestImageSample:
         assert annotations[0].class_name == "cat"
         assert annotations[0].confidence == pytest.approx(0.75)
 
-    def test_add_annotation_object_detection(
-        self,
-        db_session: Session,
-    ) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotation_object_detection(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -510,13 +512,12 @@ class TestImageSample:
         assert annotations[0].width == 30
         assert annotations[0].height == 40
 
-    def test_add_annotation_segmentation_mask(
-        self,
-        db_session: Session,
-    ) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotation_segmentation_mask(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -545,10 +546,12 @@ class TestImageSample:
         assert annotations[0].height == 35
         assert annotations[0].segmentation_mask == [1, 2, 3, 4, 5]
 
-    def test_add_annotation_polygon(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotation_polygon(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image = ImageSample(
-            inner=create_image(session=db_session, collection_id=collection.collection_id)
+            inner=create_image(session=session, collection_id=collection.collection_id)
         )
 
         image.add_annotation(
@@ -571,10 +574,12 @@ class TestImageSample:
         assert (annotation.x, annotation.y) == (1, 2)
         assert (annotation.width, annotation.height) == (11, 11)
 
-    def test_polygon_annotation__box_is_read_only(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_polygon_annotation__box_is_read_only(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image = ImageSample(
-            inner=create_image(session=db_session, collection_id=collection.collection_id)
+            inner=create_image(session=session, collection_id=collection.collection_id)
         )
         image.add_annotation(CreatePolygon(class_name="cat", polygons=[[(0, 0), (4, 0), (4, 4)]]))
         (annotation,) = image.annotations
@@ -584,10 +589,12 @@ class TestImageSample:
             with pytest.raises(AttributeError):
                 setattr(annotation, name, value)
 
-    def test_polygon_annotation__set_polygons(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_polygon_annotation__set_polygons(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image = ImageSample(
-            inner=create_image(session=db_session, collection_id=collection.collection_id)
+            inner=create_image(session=session, collection_id=collection.collection_id)
         )
         image.add_annotation(CreatePolygon(class_name="cat", polygons=[[(0, 0), (4, 0), (4, 4)]]))
         (annotation,) = image.annotations
@@ -598,10 +605,12 @@ class TestImageSample:
         assert annotation.polygons == [[(0, 0), (9, 0), (9, 7)]]
         assert (annotation.width, annotation.height) == (9, 7)
 
-    def test_polygon_annotation__set_invalid_polygons(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_polygon_annotation__set_invalid_polygons(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image = ImageSample(
-            inner=create_image(session=db_session, collection_id=collection.collection_id)
+            inner=create_image(session=session, collection_id=collection.collection_id)
         )
         image.add_annotation(CreatePolygon(class_name="cat", polygons=[[(0, 0), (4, 0), (4, 4)]]))
         (annotation,) = image.annotations
@@ -613,10 +622,12 @@ class TestImageSample:
         assert annotation.polygons == [[(0, 0), (4, 0), (4, 4)]]
         assert annotation.width == 4
 
-    def test_polygon_annotation__wrong_type(self, db_session: Session) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_polygon_annotation__wrong_type(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image = ImageSample(
-            inner=create_image(session=db_session, collection_id=collection.collection_id)
+            inner=create_image(session=session, collection_id=collection.collection_id)
         )
         image.add_annotation(CreateClassification(class_name="cat"))
         (annotation,) = image.annotations
@@ -627,13 +638,12 @@ class TestImageSample:
         with pytest.raises(ValueError, match="Expected annotation type: polygon"):
             PolygonAnnotation(inner=details)
 
-    def test_add_annotations(
-        self,
-        db_session: Session,
-    ) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotations(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -665,13 +675,12 @@ class TestImageSample:
         assert dog_ann.width == 30
         assert dog_ann.height == 40
 
-    def test_add_annotation__annotation_source(
-        self,
-        db_session: Session,
-    ) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotation__annotation_source(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -694,13 +703,12 @@ class TestImageSample:
         assert dog_ann.annotation_source == "model-v1"
         assert dog_ann.confidence == pytest.approx(0.9)
 
-    def test_add_annotations__annotation_source_appends(
-        self,
-        db_session: Session,
-    ) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotations__annotation_source_appends(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -719,13 +727,47 @@ class TestImageSample:
         assert len(annotations) == 2
         assert all(a.annotation_source == "model-v1" for a in annotations)
 
-    def test_delete_annotation(
-        self,
-        db_session: Session,
-    ) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotations__transport(self, mocker: MockerFixture) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
+        image_table = create_image(session=session, collection_id=collection.collection_id)
+        image = ImageSample(inner=image_table)
+        label = AnnotationLabelView(
+            dataset_id=collection.dataset_id,
+            annotation_label_name="cat",
+            annotation_label_id=uuid.uuid4(),
+        )
+        transport = mocker.Mock()
+        transport.collections.get_by_id.return_value = collection
+        transport.annotations.get_or_create_labels.return_value = [label]
+        mocker.patch.object(active_transport._active, "transport", transport)
+
+        image.add_annotations(
+            annotations=[CreateClassification(class_name="cat")], annotation_source="gt"
+        )
+
+        transport.annotations.get_or_create_labels.assert_called_once_with(
+            dataset_id=collection.dataset_id, label_names=["cat"]
+        )
+        transport.annotations.create.assert_called_once_with(
+            parent_collection_id=collection.collection_id,
+            annotations=[
+                AnnotationCreate(
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.CLASSIFICATION,
+                    parent_sample_id=image.sample_id,
+                )
+            ],
+            collection_name="gt",
+        )
+
+    @pytest.mark.usefixtures("patch_collection")
+    def test_delete_annotation(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -748,18 +790,17 @@ class TestImageSample:
         # Verify it's gone.
         assert len(image.annotations) == 0
 
-    def test_add_annotations__marks_evaluation_run_stale(
-        self,
-        db_session: Session,
-    ) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotations__marks_evaluation_run_stale(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
         gt_collection = collection_resolver.create(
-            session=db_session,
+            session=session,
             collection=CollectionCreate(
                 name="gt",
                 sample_type=SampleType.ANNOTATION,
@@ -767,12 +808,12 @@ class TestImageSample:
             ),
         )
         pred_collection = create_collection(
-            session=db_session,
+            session=session,
             sample_type=SampleType.ANNOTATION,
             parent_collection_id=collection.collection_id,
         )
         run = evaluation_run_resolver.create(
-            session=db_session,
+            session=session,
             evaluation_run_input=EvaluationRunCreate(
                 name="run",
                 gt_annotation_collection_id=gt_collection.collection_id,
@@ -788,17 +829,16 @@ class TestImageSample:
             annotation_source="gt",
         )
 
-        refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+        refreshed = evaluation_run_resolver.get_by_id(session=session, evaluation_id=run.id)
         assert refreshed is not None
         assert refreshed.stale_since is not None
 
-    def test_delete_annotation__marks_evaluation_run_stale(
-        self,
-        db_session: Session,
-    ) -> None:
-        collection = create_collection(session=db_session)
+    @pytest.mark.usefixtures("patch_collection")
+    def test_delete_annotation__marks_evaluation_run_stale(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
         image_table = create_image(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
         )
         image = ImageSample(inner=image_table)
@@ -807,18 +847,18 @@ class TestImageSample:
             annotation_source="gt",
         )
         gt_collection_id = collection_resolver.get_or_create_child_collection(
-            session=db_session,
+            session=session,
             collection_id=collection.collection_id,
             sample_type=SampleType.ANNOTATION,
             name="gt",
         )
         pred_collection = create_collection(
-            session=db_session,
+            session=session,
             sample_type=SampleType.ANNOTATION,
             parent_collection_id=collection.collection_id,
         )
         run = evaluation_run_resolver.create(
-            session=db_session,
+            session=session,
             evaluation_run_input=EvaluationRunCreate(
                 name="run",
                 gt_annotation_collection_id=gt_collection_id,
@@ -832,6 +872,6 @@ class TestImageSample:
         annotation = image.annotations[0]
         image.delete_annotation(annotation)
 
-        refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+        refreshed = evaluation_run_resolver.get_by_id(session=session, evaluation_id=run.id)
         assert refreshed is not None
         assert refreshed.stale_since is not None

@@ -222,7 +222,7 @@ class ClassificationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching classification annotation."""
 
     type: Literal["classification_match_expr"] = "classification_match_expr"
-    subexpr: MatchExpr
+    subexpr: MatchExpr | None = None
 
 
 class VideoEventMatchExpr(BaseModel):
@@ -243,14 +243,14 @@ class ObjectDetectionMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
     type: Literal["object_detection_match_expr"] = "object_detection_match_expr"
-    subexpr: MatchExpr
+    subexpr: MatchExpr | None = None
 
 
 class SegmentationMaskMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching segmentation mask annotation."""
 
     type: Literal["segmentation_mask_match_expr"] = "segmentation_mask_match_expr"
-    subexpr: MatchExpr
+    subexpr: MatchExpr | None = None
 
 
 class PolygonMatchExpr(BaseModel):
@@ -356,7 +356,8 @@ def _validate_evaluation_scope(expr: MatchExpr, in_annotation: bool) -> None:
             VideoEventMatchExpr,
         ),
     ):
-        _validate_evaluation_scope(expr=expr.subexpr, in_annotation=True)
+        if expr.subexpr is not None:
+            _validate_evaluation_scope(expr=expr.subexpr, in_annotation=True)
     elif isinstance(expr, (AndExpr, OrExpr)):
         for child in expr.children:
             _validate_evaluation_scope(expr=child, in_annotation=in_annotation)

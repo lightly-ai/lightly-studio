@@ -45,6 +45,8 @@
     import { getPlotRequestFilter } from './getPlotRequestFilter/getPlotRequestFilter';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
+    import PlotComputePrompt from './PlotComputePrompt/PlotComputePrompt.svelte';
+    import { usePlotComputeGate } from './usePlotComputeGate/usePlotComputeGate.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
@@ -173,18 +175,30 @@
     } = usePlotLayout(untrack(() => collectionId));
     const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
 
+    const plotComputeGate = usePlotComputeGate({
+        getCollectionId: () => collectionId,
+        getIsAxesLayout: () => $plotAxes !== null,
+        getPlotRequestKey: () => JSON.stringify([filter, $colorBy, $plotAxes])
+    });
     const embeddingsData = useEmbeddings(() => ({
         collectionId,
         filters: filter,
         colorBy: $colorBy ?? null,
         axes: $plotAxes,
-        enabled: $colorBy !== undefined
+        // No request until the color-by is known, so the plot fetches once.
+        enabled: $colorBy !== undefined && plotComputeGate.isPlotRequestEnabled,
+        getIsComputing: () => plotComputeGate.view === 'computing',
+        onCompute: plotComputeGate.trackCompute
     }));
     // The query parses the Arrow data. A new color-by or axes is a new query with its own data,
     // so the old points never show under a new layout.
     const arrowData = $derived(embeddingsData.data?.columns);
     const colorLegend = $derived(embeddingsData.data?.legend ?? NO_LEGEND);
     const isWaitingForFirstData = $derived(embeddingsData.isLoading || $colorBy === undefined);
+    // A filter change keeps the cached plot on screen while the status check runs.
+    const isCheckingWithoutPlot = $derived(
+        plotComputeGate.view === 'checking' && !embeddingsData.data
+    );
     // Category 1 means "passes the filter but has no color value". Its label tracks the same
     // `color_by` signal that drives its color (see `getCategoryColors` below), so the two never disagree.
     const includedLabel = $derived(
@@ -581,6 +595,10 @@
     );
 
     const errorText = $derived.by(() => {
+        // A text axes plot does not use the status, so a failed status request must not hide it.
+        if (plotComputeGate.view === 'error') {
+            return plotComputeGate.statusError;
+        }
         if (embeddingsData.isError) {
             return embeddingsData.error?.message || 'Unknown error';
         }
@@ -613,7 +631,29 @@
         </Button>
     </div>
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if isWaitingForFirstData}
+        {#if plotComputeGate.view === 'prompt'}
+            <PlotComputePrompt
+                view="prompt"
+                embeddingCount={plotComputeGate.embeddingCount}
+                {itemLabel}
+                startedAt={plotComputeGate.startedAt}
+                onCompute={plotComputeGate.startCompute}
+            />
+            <!-- A failed compute returns to the prompt, so the next compute still asks first. -->
+            {#if embeddingsData.isError}
+                <div class="absolute inset-x-0 top-0 p-3 text-center text-sm text-red-500">
+                    The last plot request failed: {embeddingsData.error?.message || 'Unknown error'}
+                </div>
+            {/if}
+        {:else if plotComputeGate.view === 'computing' && embeddingsData.isFetching}
+            <PlotComputePrompt
+                view="computing"
+                embeddingCount={plotComputeGate.embeddingCount}
+                {itemLabel}
+                startedAt={plotComputeGate.startedAt}
+                onCompute={plotComputeGate.startCompute}
+            />
+        {:else if isCheckingWithoutPlot || isWaitingForFirstData}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>

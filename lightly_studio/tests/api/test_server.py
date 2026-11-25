@@ -8,6 +8,7 @@ from socket import AF_INET, SOCK_STREAM, socket
 
 import pytest
 from brotli_asgi import BrotliMiddleware
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
@@ -64,6 +65,15 @@ def test_server_initialization() -> None:
 
     assert server.host == host
     assert server.port == port
+
+
+def test_server_create_uvicorn_server__given_app() -> None:
+    """Test that the uvicorn server of a Server runs the given app."""
+    custom_app = FastAPI()
+
+    uvicorn_server = Server(app=custom_app).create_uvicorn_server()
+
+    assert uvicorn_server.config.app is custom_app
 
 
 def test_server_static_webapp(mocker: MockerFixture, tmp_path: Path) -> None:

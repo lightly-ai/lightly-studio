@@ -1,13 +1,19 @@
 <script lang="ts">
     import { afterNavigate } from '$app/navigation';
     import { page } from '$app/state';
-    import { Card, CardContent, SampleDetailsSidePanel } from '$lib/components';
-    import { ImageAdjustments } from '$lib/components/ImageAdjustments';
+    import {
+        Card,
+        CardContent,
+        SampleDetailsSidePanel,
+        SidePanelToggleButton
+    } from '$lib/components';
+    import BreadcrumbHeaderActions from './BreadcrumbHeaderActions/BreadcrumbHeaderActions.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { untrack, type Snippet } from 'svelte';
 
+    import { cn } from '$lib/utils/shadcn';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
@@ -26,8 +32,10 @@
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
-    import { useAnnotationTarget } from '$lib/hooks';
-    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
+    import { useAnnotationTarget, useDeleteAnnotationWithUndo } from '$lib/hooks';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { isDeleteKey, isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
         sampleId,
@@ -70,10 +78,9 @@
         toggleSampleSelection,
         clearReversibleActions,
         lastAnnotationBrushSize,
-        imageBrightness,
-        imageContrast,
-        maskOpacity,
-        toggleSampleAnnotationCropSelection
+        toggleSampleAnnotationCropSelection,
+        isSampleDetailsSidePanelCollapsed,
+        openSampleDetailsSidePanel
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
@@ -95,6 +102,10 @@
     const { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
     const { selectAnnotation } = useAnnotationSelection();
+
+    const { user } = useAuth();
+    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
+    const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => collectionId);
 
     let isPanModeEnabled = $state(false);
 
@@ -127,14 +138,45 @@
             case ' ':
                 handleSpaceKeyDown(event);
                 break;
+            case 'Delete':
+            case 'Backspace':
+                handleDeleteKeyDown(event);
+                break;
         }
 
         // Always pass to the hide annotations handler
         handleKeyEvent(event);
     };
 
+    /** Delete or Backspace deletes the selected annotation while editing. */
+    const handleDeleteKeyDown = async (event: KeyboardEvent) => {
+        if (!isDeleteKey(event) || !$isEditingMode || !canEdit) return;
+        if (annotationLabelContext.isOnAnnotationDetailsView) return;
+        if (
+            sampleDetailsToolbarContext.status !== 'cursor' &&
+            sampleDetailsToolbarContext.status !== 'drag'
+        )
+            return;
+        const annotationId = annotationLabelContext.annotationId;
+        const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
+        if (!annotation) return;
+
+        event.preventDefault();
+        const isDeleted = await deleteWithUndo(annotation, refetch);
+        if (isDeleted && annotationLabelContext.annotationId === annotationId) {
+            annotationLabelContext.annotationId = null;
+        }
+    };
+
     /** Space toggles the selection, or starts pan mode while editing. */
     const handleSpaceKeyDown = (event: KeyboardEvent) => {
+        // Opted-out buttons, such as the display adjustments trigger, open on Space natively.
+        if (
+            event.target instanceof HTMLElement &&
+            event.target.closest('[data-ignore-space-shortcut]')
+        )
+            return;
+
         // Space would scroll the page.
         event.preventDefault();
         event.stopPropagation();
@@ -240,6 +282,13 @@
             sampleDetailsToolbarContext.brush.mode = 'brush';
         }
     });
+
+    // Auto-open the side panel when an annotation is created while collapsed.
+    $effect(() => {
+        if (annotationLabelContext.lastCreatedAnnotationId) {
+            openSampleDetailsSidePanel();
+        }
+    });
 </script>
 
 {#if sample}
@@ -248,13 +297,10 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            {#if $isEditingMode}
-                <ImageAdjustments
-                    bind:brightness={$imageBrightness}
-                    bind:contrast={$imageContrast}
-                    bind:maskOpacity={$maskOpacity}
-                />
-            {/if}
+            <div class="flex items-center gap-1">
+                <BreadcrumbHeaderActions {collectionId} />
+                <SidePanelToggleButton />
+            </div>
         </div>
         <Separator class="bg-border-hard" />
 
@@ -296,7 +342,12 @@
                     </CardContent>
                 </Card>
             </div>
-            <div class="relative w-[375px]">
+            <div
+                class={cn(
+                    'relative w-[375px]',
+                    $isSampleDetailsSidePanelCollapsed ? 'hidden' : 'flex'
+                )}
+            >
                 {#if sidePanelItem}
                     {@render sidePanelItem()}
                 {:else}

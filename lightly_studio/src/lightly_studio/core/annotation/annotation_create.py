@@ -10,12 +10,9 @@ from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
 from numpy.typing import NDArray
 from pydantic import BaseModel
-from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.polygon import Polygons
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.resolvers import annotation_label_resolver
 
 
 class Sample2D(Protocol):
@@ -38,10 +35,20 @@ class Sample2D(Protocol):
 class CreateAnnotation(Protocol):
     """Protocol from converting to AnnotationCreate."""
 
+    @property
+    def class_name(self) -> str:
+        """Annotation class name."""
+        ...
+
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, annotation_label_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
-        """Convert to AnnotationCreate."""
+        """Convert to AnnotationCreate.
+
+        Args:
+            annotation_label_id: The ID of the annotation class `class_name`.
+            parent_sample_id: The ID of the annotated sample.
+        """
         ...
 
 
@@ -53,29 +60,16 @@ class CreateAnnotationBase(BaseModel):
     confidence: float | None = None
     """Confidence expressed as probability between 0.0 and 1.0 (inclusive)."""
 
-    def _get_label_id(self, session: Session, dataset_id: UUID) -> UUID:
-        label = annotation_label_resolver.get_by_label_name(
-            session=session, dataset_id=dataset_id, label_name=self.class_name
-        )
-        if label is None:
-            label = annotation_label_resolver.create(
-                session=session,
-                label=AnnotationLabelCreate(
-                    dataset_id=dataset_id, annotation_label_name=self.class_name
-                ),
-            )
-        return label.annotation_label_id
-
 
 class CreateClassification(CreateAnnotationBase):
     """Input model for creating classification annotations."""
 
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, annotation_label_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_label_id=annotation_label_id,
             annotation_type=AnnotationType.CLASSIFICATION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -95,11 +89,11 @@ class CreateObjectDetection(CreateAnnotationBase):
     """Height (px) of the object detection bounding box."""
 
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, annotation_label_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_label_id=annotation_label_id,
             annotation_type=AnnotationType.OBJECT_DETECTION,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -117,11 +111,11 @@ class CreatePolygon(CreateAnnotationBase):
     """Parts of the polygon, each a list of (x, y) vertices in pixels."""
 
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, annotation_label_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_label_id=annotation_label_id,
             annotation_type=AnnotationType.POLYGON,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
@@ -144,11 +138,11 @@ class CreateSegmentationMask(CreateAnnotationBase):
     """Segmentation mask given as a run-length encoding."""
 
     def to_annotation_create(
-        self, session: Session, dataset_id: UUID, parent_sample_id: UUID
+        self, annotation_label_id: UUID, parent_sample_id: UUID
     ) -> AnnotationCreate:
         """Convert to AnnotationCreate."""
         return AnnotationCreate(
-            annotation_label_id=self._get_label_id(session=session, dataset_id=dataset_id),
+            annotation_label_id=annotation_label_id,
             annotation_type=AnnotationType.SEGMENTATION_MASK,
             confidence=self.confidence,
             parent_sample_id=parent_sample_id,
