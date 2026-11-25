@@ -58,7 +58,7 @@
 <Card className="h-full">
     <CardContent className="h-full flex flex-col">
         <div
-            class="flex h-full min-h-0 flex-col space-y-4 overflow-y-auto dark:[color-scheme:dark]"
+            class="flex h-full min-h-0 flex-col space-y-4 overflow-y-auto px-1.5 dark:[color-scheme:dark]"
         >
             {#key sample.sample_id}
                 <SegmentTags
