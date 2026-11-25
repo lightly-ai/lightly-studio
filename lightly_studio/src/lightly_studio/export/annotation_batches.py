@@ -77,6 +77,9 @@ def count_annotations(
 
 def _export_options(annotation_types: Sequence[AnnotationType]) -> list[LoaderOption]:
     if AnnotationType.CLASSIFICATION in annotation_types:
+        if len(annotation_types) > 1:
+            # The other types then load their details with one query per annotation.
+            raise ValueError("Export classification annotations without other annotation types.")
         # CSV uses the source name and excludes classifications with a temporal span.
         return [
             joinedload(AnnotationBaseTable.annotation_label),
