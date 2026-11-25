@@ -84,7 +84,7 @@
 <Collapsible bind:open={() => open, setOpen}>
     <div
         class={cn(
-            'flex items-center gap-2 rounded-sm px-1',
+            'flex items-center gap-2 rounded-sm px-3',
             highlighted && 'bg-primary/10 ring-1 ring-inset ring-primary/40'
         )}
         data-testid="annotation-source-group-header"
