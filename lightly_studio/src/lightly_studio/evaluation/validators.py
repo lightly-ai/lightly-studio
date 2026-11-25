@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from sqlalchemy.orm import aliased
@@ -12,6 +13,13 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import collection_resolver
+
+logger = logging.getLogger(__name__)
+
+_POLYGON_SKIPPING_TASK_LABELS: dict[EvaluationTaskType, str] = {
+    EvaluationTaskType.INSTANCE_SEGMENTATION: "instance segmentation",
+    EvaluationTaskType.SEMANTIC_SEGMENTATION: "semantic segmentation",
+}
 
 TASK_TO_ANNOTATION_TYPE: dict[EvaluationTaskType, AnnotationType] = {
     EvaluationTaskType.OBJECT_DETECTION: AnnotationType.OBJECT_DETECTION,
@@ -52,7 +60,8 @@ def resolve_and_validate_collection(
     Raises:
         ValueError: If task_type is not supported, if the collection does not
             exist, or if it contains annotations of a type other than the type
-            expected for task_type.
+            expected for task_type. Segmentation tasks also accept polygons and
+            skip them with a warning.
     """
     annotation_type = get_annotation_type_for_task(task_type)
     resolved_id = collection_resolver.get_by_name(
@@ -66,38 +75,84 @@ def resolve_and_validate_collection(
     _validate_collection_annotation_type(
         session=session,
         collection_id=resolved_id,
-        expected_type=annotation_type,
+        allowed_types=_allowed_annotation_types(
+            task_type=task_type, annotation_type=annotation_type
+        ),
     )
+    _warn_skipped_polygons(session=session, collection_id=resolved_id, task_type=task_type)
     return resolved_id
+
+
+def _allowed_annotation_types(
+    task_type: EvaluationTaskType,
+    annotation_type: AnnotationType,
+) -> set[AnnotationType]:
+    if task_type in _POLYGON_SKIPPING_TASK_LABELS:
+        return {annotation_type, AnnotationType.POLYGON}
+    return {annotation_type}
+
+
+def _warn_skipped_polygons(
+    session: Session,
+    collection_id: UUID,
+    task_type: EvaluationTaskType,
+) -> None:
+    """Log a warning if a segmentation task collection contains polygons.
+
+    Segmentation evaluation does not support polygons yet and skips them.
+
+    Args:
+        session: Database session.
+        collection_id: ID of the annotation collection to check.
+        task_type: Evaluation task type. Only tasks that skip polygons are checked.
+    """
+    task_label = _POLYGON_SKIPPING_TASK_LABELS.get(task_type)
+    if task_label is None:
+        return
+    # TODO(Michal, 11/2026): Move this query to a resolver.
+    sample_alias = aliased(SampleTable)
+    polygon_count: int = session.exec(
+        select(func.count())
+        .select_from(AnnotationBaseTable)
+        .join(sample_alias, AnnotationBaseTable.sample)
+        .where(col(sample_alias.collection_id) == collection_id)
+        .where(col(AnnotationBaseTable.annotation_type) == AnnotationType.POLYGON)
+    ).one()
+    if polygon_count > 0:
+        logger.warning(
+            f"Skipped {polygon_count} polygon annotations in {task_label} evaluation. "
+            "Polygon evaluation is not supported yet."
+        )
 
 
 def _validate_collection_annotation_type(
     session: Session,
     collection_id: UUID,
-    expected_type: AnnotationType,
+    allowed_types: set[AnnotationType],
 ) -> None:
-    """Raise ValueError if any annotation in the collection differs from expected_type.
+    """Raise ValueError if any annotation in the collection has a type not in allowed_types.
 
     Args:
         session: Database session.
         collection_id: ID of the annotation collection to validate.
-        expected_type: The annotation type every annotation must have.
+        allowed_types: The annotation types that the annotations can have.
 
     Raises:
-        ValueError: If the collection contains annotations of a type other than expected_type.
+        ValueError: If the collection contains annotations of a type not in allowed_types.
     """
+    # TODO(Michal, 11/2026): Move this query to a resolver.
     sample_alias = aliased(SampleTable)
     mismatch_count: int = session.exec(
         select(func.count())
         .select_from(AnnotationBaseTable)
         .join(sample_alias, AnnotationBaseTable.sample)
         .where(col(sample_alias.collection_id) == collection_id)
-        .where(col(AnnotationBaseTable.annotation_type) != expected_type)
+        .where(col(AnnotationBaseTable.annotation_type).not_in(allowed_types))
     ).one()
     if mismatch_count > 0:
         raise ValueError(
             f"Collection {collection_id} contains annotations of types other than "
-            f"{expected_type.value!r}."
+            f"{sorted(t.value for t in allowed_types)}."
         )
 
 

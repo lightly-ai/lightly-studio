@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The "Image Segmentation Mask (COCO)" export is now "Image Segmentation (COCO)" and includes polygons.
+- Instance and semantic segmentation evaluation skips polygon annotations with a warning. Before, it reported an error.
 - BREAKING: In the video query editor, `classification(...)` now matches whole-video classifications. Use `event(...)` for temporal events, or combine both with `OR` to include both kinds.
 - BREAKING: Python SDK: On videos, `ClassificationQuery` now matches whole-video classifications. Use `VideoEventQuery` for temporal events, or combine both queries with `OR(...)` to preserve both kinds of matches.
 - BREAKING: Python SDK: `to_annotation_create(...)` of `CreateClassification`, `CreateObjectDetection`, and `CreateSegmentationMask` takes the annotation class ID in place of `session` and `dataset_id`. To add annotations by class name, use `sample.add_annotations(...)`.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 import pytest
@@ -33,7 +34,7 @@ def test_assert_collection_annotation_type__passes_for_empty_collection(
     _validate_collection_annotation_type(
         session=dataset.session,
         collection_id=collection_id,
-        expected_type=AnnotationType.OBJECT_DETECTION,
+        allowed_types={AnnotationType.OBJECT_DETECTION},
     )
 
 
@@ -62,7 +63,7 @@ def test_assert_collection_annotation_type__passes_when_all_annotations_match(
     _validate_collection_annotation_type(
         session=dataset.session,
         collection_id=collection_id,
-        expected_type=AnnotationType.OBJECT_DETECTION,
+        allowed_types={AnnotationType.OBJECT_DETECTION},
     )
 
 
@@ -92,7 +93,7 @@ def test_assert_collection_annotation_type__raises_on_type_mismatch(
         _validate_collection_annotation_type(
             session=dataset.session,
             collection_id=collection_id,
-            expected_type=AnnotationType.OBJECT_DETECTION,
+            allowed_types={AnnotationType.OBJECT_DETECTION},
         )
 
 
@@ -196,3 +197,83 @@ def test_resolve_and_validate_collection__raises_on_unsupported_task_type(
             collection_name="gt",
             task_type=unsupported_task_type,
         )
+
+
+@pytest.mark.parametrize(
+    ("task_type", "task_label"),
+    [
+        (EvaluationTaskType.INSTANCE_SEGMENTATION, "instance segmentation"),
+        (EvaluationTaskType.SEMANTIC_SEGMENTATION, "semantic segmentation"),
+    ],
+)
+def test_resolve_and_validate_collection__warns_on_skipped_polygons(
+    patch_collection: None,  # noqa: ARG001
+    task_type: EvaluationTaskType,
+    task_label: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        annotation_collection_name="gt",
+        polygons=[[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]],
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_collection_name="gt",
+        annotation_data={"segmentation_mask": [0, 1, 1, 0]},
+    )
+    with caplog.at_level(logging.WARNING):
+        collection_id = resolve_and_validate_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            collection_name="gt",
+            task_type=task_type,
+        )
+
+    assert collection_id is not None
+    assert (
+        f"Skipped 1 polygon annotations in {task_label} evaluation. "
+        "Polygon evaluation is not supported yet." in caplog.text
+    )
+
+
+def test_resolve_and_validate_collection__masks_only_still_ok(
+    patch_collection: None,  # noqa: ARG001
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_collection_name="gt",
+        annotation_data={"segmentation_mask": [0, 1, 1, 0]},
+    )
+    with caplog.at_level(logging.WARNING):
+        collection_id = resolve_and_validate_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            collection_name="gt",
+            task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
+        )
+    assert collection_id is not None
+    assert "polygon" not in caplog.text
