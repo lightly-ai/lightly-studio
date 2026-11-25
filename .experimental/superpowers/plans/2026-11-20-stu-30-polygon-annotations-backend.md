@@ -18,7 +18,7 @@
 
 - `AnnotationType.POLYGON = "polygon"`; `AnnotationFileTask.OBJECT_DETECTION = "object_detection"`, `AnnotationFileTask.INSTANCE_SEGMENTATION = "instance_segmentation"`.
 - Validation: at least 1 part, at least 3 vertices per part, finite numbers. Round to 3 decimals, then compute the box rounded outward.
-- Evaluation error: `"Polygon annotations are not yet supported for instance segmentation evaluation."`; for semantic segmentation the same with "semantic segmentation".
+- Evaluation warning: `"Skipped {count} polygon annotations in instance segmentation evaluation. Polygon evaluation is not supported yet."`; for semantic segmentation the same with "semantic segmentation".
 - User-facing text says "polygon" and "part", never "multipolygon".
 
 ## Decisions the spec left to the builder
@@ -41,7 +41,7 @@ Inputs most likely to break for users. Each one has a test in the task named.
 1. **COCO 2017 with mixed `iscrowd`:** one call loads polygons and masks, and export writes both back with the right `iscrowd`. Tests: Task 13 `test_add_samples_from_coco__instance_segmentation_mixed_crowd`, Task 8 `test_to_coco_instance_segmentation__polygons_and_masks`.
 2. **Vertices outside the image, or a zero-area polygon:** stored as given. The crop is clipped or skipped with a warning, with no crash. Test: Task 3 `test_get_annotation_crops_for_ids__polygon_outside_image`.
 3. **Class change on a track with polygons:** DuckDB deletes and reinserts the detail rows, and the polygons must come back unchanged. Test: Task 3 `test_update_label_by_object_track_id__keeps_polygons`.
-4. **Evaluation on an existing COCO segmentation source:** fails with the polygon error, not a generic type error. Test: Task 7 `test_resolve_and_validate_collection__polygon_source`.
+4. **Evaluation on an existing COCO segmentation source:** runs, skips the polygons and logs the polygon warning. Before PR 8 it also ran and skipped the box-only masks, so users see no error. Test: Task 7 `test_resolve_and_validate_collection__warns_on_skipped_polygons`.
 5. **YOLO segmentation with missing label files or blank lines:** loads without a crash. Tests: Task 10 (labelformat), Task 13 `test_add_samples_from_yolo__instance_segmentation_missing_label_file`.
 
 ---
@@ -61,15 +61,16 @@ Target: at most ~200 added lines of non-test code per PR. Estimates are non-test
 | 6 | `michal-stu-165-06-export-coco-yolo` | 8, 9 | Export to COCO and YOLO | ~150 + generated types |
 | 7 | `michal-stu-165-07-export-dialog` | 14 | Export dialog entries (frontend) | ~40 |
 | 7b | `michal-stu-165-07b-frontend-polygon-guard` | 14b | GUI shows polygons as boxes; undo, copy and move keep polygons (frontend) | ~40 |
-| 8 | `michal-stu-165-08-coco-ingestion` | 10 (bump), 12, 7 | COCO ingestion keeps polygons; evaluation rejects polygon sources | ~85 + `uv.lock` |
+| 7c | `michal-stu-165-07c-evaluation-skip-polygons` | 7 | Segmentation evaluation skips polygons with a warning | ~65 |
+| 8 | `michal-stu-165-08-coco-ingestion` | 10 (bump), 12 | COCO ingestion keeps polygons | ~85 + `uv.lock` |
 | 9 | `michal-stu-165-09-annotation-task` | 11, 13 | `AnnotationFileTask`, `annotation_task`, YOLO segmentation, deprecation | ~100 |
 | 10 | `michal-stu-165-10-docs` | 15 | Docs, examples, glossary | docs only |
 
 - **Don't release between PR 2 and PR 3; merge them close together.** Until PR 3, copying a dataset drops polygon geometry and relabeling a track or polygon fails or drops geometry. Polygons can only be created through the API or Python in that window.
-- **PR 8 carries the evaluation error.** From PR 8 on, existing COCO segmentation calls store polygons, so that is when evaluation starts to see them.
+- **PR 7c must merge before PR 8.** From PR 8 on, existing COCO segmentation calls store polygons. Without 7c, evaluation of these sources fails with a type error. PR 7c is based on `main`; PR 8 is stacked on PR 7c.
 - **PR 6 is the riskiest size.** If the export loader grows past the estimate, split it: COCO (Task 8), then YOLO (Task 9).
 - PRs 3, 4 and 5 depend only on PR 2, and PR 7 only on PR 6, so they can be reviewed in parallel.
-- **PR 7b must merge before PR 8.** From PR 8 on, COCO segmentation data loads as polygons, and without 7b the GUI crashes on them. PR 7b is stacked on PR 7; PR 8 is stacked on PR 7b and keeps only the e2e test changes that its data change causes.
+- **PR 7b must merge before PR 8.** From PR 8 on, COCO segmentation data loads as polygons, and without 7b the GUI crashes on them. PR 7b is stacked on PR 7; PR 8 keeps only the e2e test changes that its data change causes.
 
 ---
 
@@ -286,21 +287,22 @@ def test_polygon_annotation__box_is_read_only(...) -> None:
 
 ---
 
-### Task 7: Evaluation rejects polygon sources
+### Task 7: Evaluation skips polygons
 
 **Files:**
 - Modify: `lightly_studio/src/lightly_studio/evaluation/validators.py`
 - Test: `lightly_studio/tests/evaluation/test_validators.py`
 
 **Interfaces:**
-- Produces: `resolve_and_validate_collection` raises `ValueError(f"Polygon annotations are not yet supported for {task_label} evaluation.")` for `INSTANCE_SEGMENTATION` (`"instance segmentation"`) and `SEMANTIC_SEGMENTATION` (`"semantic segmentation"`) when the collection holds any `POLYGON`; the check runs before `_validate_collection_annotation_type`.
+- Produces: for `INSTANCE_SEGMENTATION` (`"instance segmentation"`) and `SEMANTIC_SEGMENTATION` (`"semantic segmentation"`), `resolve_and_validate_collection` accepts `POLYGON` next to `SEGMENTATION_MASK` and logs the evaluation warning when the collection holds any `POLYGON`. `_validate_collection_annotation_type` takes `allowed_types: set[AnnotationType]` in place of `expected_type`.
+- Evaluation loads only `SEGMENTATION_MASK` annotations, so the metrics need no change.
 
 - [ ] **Step 1: Write failing tests**
-  - `test_resolve_and_validate_collection__polygon_source`: collection with one polygon and one mask, task `INSTANCE_SEGMENTATION` → `ValueError` matching `"Polygon annotations are not yet supported for instance segmentation evaluation."`.
+  - `test_resolve_and_validate_collection__warns_on_skipped_polygons`: collection with one polygon and one mask, task `INSTANCE_SEGMENTATION` → returns the collection ID and logs `"Skipped 1 polygon annotations in instance segmentation evaluation. Polygon evaluation is not supported yet."`.
   - Same for `SEMANTIC_SEGMENTATION` with `"semantic segmentation"`.
-  - `test_resolve_and_validate_collection__masks_only_still_ok`: unchanged behavior.
+  - `test_resolve_and_validate_collection__masks_only_still_ok`: unchanged behavior, no polygon warning.
 - [ ] **Step 2: Run** — FAIL. **Step 3: Implement** with a `func.count()` query like `_validate_collection_annotation_type`, filtered on `annotation_type == POLYGON`. **Step 4: Run** — PASS.
-- [ ] **Step 5: Commit** `feat: reject polygon sources in segmentation evaluation`
+- [ ] **Step 5: Commit** `feat: skip polygons in segmentation evaluation`
 
 ---
 
@@ -521,7 +523,7 @@ Without this task the GUI throws on any polygon in 2 places (`getBoundingBox`, `
   - Deprecated: `Python SDK: annotation_type in the COCO methods. Use annotation_task instead.` and `Python SDK: to_coco_segmentation_masks. Use to_coco_instance_segmentation instead.`
   - Fixed: `Python SDK: COCO polygons are loaded with their vertices, not only their box.`
   - Added (PR 7b): `The GUI shows polygon annotations as boxes. Polygons can't be edited in the GUI yet.`
-  - Changed: `Instance and semantic segmentation evaluation reports an error for annotation sources with polygons. Before, such sources ran and skipped the polygons.`
+  - Changed (PR 7c): `Instance and semantic segmentation evaluation skips polygon annotations with a warning. Before, it reported an error.`
 - [ ] **Step 3: Run** `cd lightly_studio && make static-checks` and `uv run python -W error::DeprecationWarning -c "import lightly_studio"` — no warnings at import.
 - [ ] **Step 4: Commit** `docs: polygon annotations and annotation_task`
 
