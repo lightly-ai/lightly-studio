@@ -96,6 +96,7 @@ def _validate_no_polygons(
     task_label = _POLYGON_UNSUPPORTED_TASK_LABELS.get(task_type)
     if task_label is None:
         return
+    # TODO(Michal, 11/2026): Move this query to a resolver.
     sample_alias = aliased(SampleTable)
     polygon_count: int = session.exec(
         select(func.count())
@@ -123,6 +124,7 @@ def _validate_collection_annotation_type(
     Raises:
         ValueError: If the collection contains annotations of a type other than expected_type.
     """
+    # TODO(Michal, 11/2026): Move this query to a resolver.
     sample_alias = aliased(SampleTable)
     mismatch_count: int = session.exec(
         select(func.count())
