@@ -20,8 +20,11 @@ describe('buildSchemaCompletions', () => {
         expect(labels).not.toContain('frame');
         expect(labels).toContain('width');
         expect(labels).not.toContain('video:');
-        expect(labels).toContain('object_detection');
-        expect(labels).toContain('segmentation_mask');
+        for (const name of ['object_detection', 'classification', 'segmentation_mask']) {
+            expect(items.find((item) => item.label === name)?.insertText).toBe(
+                name + '(class_name = "${1:...}")'
+            );
+        }
     });
 
     it('omits `video:` keyword in video scope', async () => {
