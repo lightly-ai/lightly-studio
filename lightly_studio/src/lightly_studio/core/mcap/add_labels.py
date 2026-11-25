@@ -520,6 +520,8 @@ def _label_ids_for_cuboids(
 ) -> dict[str, UUID]:
     """Get or create annotation classes for the cuboid class names."""
     class_names = {cuboid.class_name for cuboids in cuboids_by_group.values() for cuboid in cuboids}
+    if not class_names:
+        return {}
     labels = active_transport.get_transport().annotations.get_or_create_labels(
         dataset_id=dataset_id, label_names=list(class_names)
     )
