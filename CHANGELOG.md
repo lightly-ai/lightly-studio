@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - The GUI shows polygon annotations as boxes. Polygons can't be edited in the GUI yet.
-- Export polygons to YOLO with the new "Image Instance Segmentation (YOLO)" export.
+- Export polygons to YOLO with the new "Image Segmentation Polygons (YOLO)" export.
 - Python SDK: Export polygons to YOLO with `to_yolo_instance_segmentation`.
 - Python SDK: Load polygon annotations from COCO and YOLO with `annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION`.
 - Filter videos by temporal events in the query editor, for example `event(class_name = "run" AND start_time_s < 5)`.
@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The "Image Segmentation Mask (COCO)" export is now "Image Instance Segmentation (COCO)" and includes polygons.
+- The "Image Segmentation Mask (COCO)" export is now "Image Segmentation (COCO)" and includes polygons.
 - BREAKING: Python SDK: COCO instance segmentation loads polygons (`iscrowd=0`) as polygon annotations with their vertices, not as segmentation masks with only a box. Query them with `PolygonQuery` instead of `SegmentationMaskQuery`; the GUI shows them as boxes for now.
 - Instance and semantic segmentation evaluation reports an error for annotation sources with polygons. Before, such sources ran and skipped the polygons.
 - BREAKING: In the video query editor, `classification(...)` now matches whole-video classifications. Use `event(...)` for temporal events, or combine both with `OR` to include both kinds.

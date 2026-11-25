@@ -20,8 +20,8 @@ const imageExportOptions: ExportOption[] = [
     { value: 'classifications', label: 'Image Classifications (CSV)' },
     { value: 'object_detections_coco', label: 'Image Object Detections (COCO)' },
     { value: 'object_detections_yolo', label: 'Image Object Detections (YOLO)' },
-    { value: 'segmentation', label: 'Image Instance Segmentation (COCO)' },
-    { value: 'instance_segmentation_yolo', label: 'Image Instance Segmentation (YOLO)' },
+    { value: 'segmentation', label: 'Image Segmentation (COCO)' },
+    { value: 'instance_segmentation_yolo', label: 'Image Segmentation Polygons (YOLO)' },
     { value: 'semantic_segmentations', label: 'Image Segmentation Mask (PASCAL VOC)' },
     { value: 'captions', label: 'Image Captions' }
 ];
