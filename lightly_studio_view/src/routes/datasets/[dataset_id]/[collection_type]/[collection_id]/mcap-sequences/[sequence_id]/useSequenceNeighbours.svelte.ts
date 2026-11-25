@@ -66,6 +66,10 @@ export const useSequenceNeighbours = ({
     };
 
     return {
+        /** True when the page follows the batch, false when it was opened from the grid. */
+        get batchOrder() {
+            return batchOrder;
+        },
         get onPreviousSequence() {
             return neighbourHandler({
                 gridSequenceId: adjacent?.previous_sample_id,

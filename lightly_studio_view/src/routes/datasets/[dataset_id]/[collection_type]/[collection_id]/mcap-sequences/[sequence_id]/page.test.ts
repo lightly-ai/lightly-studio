@@ -327,6 +327,21 @@ describe('[collection_type]/[collection_id]/mcap-sequences/[sequence_id] page', 
             }
         });
 
+        it('shows the dataset path in the breadcrumb when opened from the grid', async () => {
+            pageState.state = { nav: 'dataset' };
+            authState.role = 'editor';
+            workflowMocks.file = { ...workflowFile, sample_id: 'sequence-1' };
+            summaryData = { file_name: 'drive_001.mcap', lidar_channels: [], camera_channels: [] };
+            render(Page, { props: { data: mockPageData } });
+
+            const breadcrumb = await screen.findByTestId('workspace-breadcrumb');
+            expect(breadcrumb).toHaveTextContent('Collection 1');
+            expect(breadcrumb).toHaveTextContent('Point clouds');
+            expect(breadcrumb).toHaveTextContent('drive_001.mcap');
+            expect(breadcrumb).not.toHaveTextContent('Roads');
+            expect(breadcrumb).not.toHaveTextContent('Batch 1');
+        });
+
         it('shows no breadcrumb while the batch file loads', async () => {
             render(Page, { props: { data: mockPageData } });
 

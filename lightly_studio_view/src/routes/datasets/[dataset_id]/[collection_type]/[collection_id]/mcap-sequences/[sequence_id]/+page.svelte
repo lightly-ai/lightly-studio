@@ -96,14 +96,14 @@
             ? datasetLinks
             : [projectsHome, ...datasetLinks.slice(1).map(({ label }) => ({ label }))]
     );
-    const sourcePath = $derived(workflow.active ? batchPath : datasetPath);
-
     const neighbours = useSequenceNeighbours({
         getSequenceId: () => sequenceId,
         getCollectionId: () => collectionId,
         getCollectionType: () => collectionType,
         workflow
     });
+    // Opened from the dataset grid, the crumbs lead back to the dataset, also in workflow mode.
+    const sourcePath = $derived(neighbours.batchOrder ? batchPath : datasetPath);
 
     // A finished Submit / Accept / Rework opens the same sequence as the next-sequence button.
     $effect(() => {

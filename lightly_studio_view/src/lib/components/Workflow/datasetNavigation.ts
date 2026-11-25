@@ -33,7 +33,10 @@ export function toBatchSampleURL(sampleURL: string, currentURL: URL): string {
     return `${sampleURL}${currentURL.search}`;
 }
 
-/** Whether prev/next steps through the batch instead of the dataset grid. */
+/**
+ * Whether the sample page follows the batch instead of the dataset grid: prev/next steps
+ * through the batch and the breadcrumb leads back to the batch.
+ */
 export function followsBatchOrder({
     workflowActive,
     state

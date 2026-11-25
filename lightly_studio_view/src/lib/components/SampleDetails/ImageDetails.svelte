@@ -45,10 +45,11 @@
 
     const { image, refetch } = useImage(() => ({ sampleId }));
 
-    // A sample opened from a hosted workflow batch shows the batch instead of the collection.
     const workflow = createWorkflowFileContext(() => getWorkflowParams(page.url, sampleId));
 
-    // Opened from the dataset grid, prev/next follows the grid, also in workflow mode.
+    // A sample opened from a hosted workflow batch steps through and breadcrumbs the batch.
+    // Opened from the dataset grid, prev/next and the breadcrumb follow the dataset, also
+    // in workflow mode.
     const batchOrder = $derived(
         followsBatchOrder({ workflowActive: workflow.active, state: page.state })
     );
@@ -83,7 +84,7 @@
             {/if}
         {/if}
         {#snippet breadcrumb({ collection: rootCollection })}
-            {#if !workflow.active}
+            {#if !batchOrder}
                 <SampleDetailsBreadcrumb {rootCollection} />
             {:else if workflow.file}
                 <WorkflowBreadcrumb file={workflow.file} />
