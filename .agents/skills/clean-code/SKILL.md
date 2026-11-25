@@ -24,9 +24,9 @@ comments. The language guides add the rules for Python, the backend, and the fro
 - Give a complex expression a name. Do not write it inline.
 - Give a literal number a name: use a constant. `0`, `1`, and `-1` are acceptable inline.
 - Do not write a double negative. Write `if is_valid`, not `if not is_invalid`.
-- Do not use user-controlled values as sentinels or special IDs. Give a synthetic value an
-  explicit discriminator and an internal ID namespace that cannot collide. A reserved value is
-  safe only when validation excludes it.
+- Keep synthetic values distinct from user-defined values. Use an explicit marker for branching
+  or separate namespaces for IDs. Reserve a raw value only if validation excludes it from user
+  input.
 
 ```python
 # Bad
