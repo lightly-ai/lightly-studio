@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import warnings
 from collections.abc import Iterable
 from pathlib import Path
 from uuid import UUID
@@ -11,20 +13,25 @@ from labelformat.formats import (
     COCOInstanceSegmentationOutput,
     COCOObjectDetectionOutput,
     PascalVOCSemanticSegmentationOutput,
+    YOLOv8InstanceSegmentationOutput,
     YOLOv8ObjectDetectionOutput,
 )
 from sqlmodel import Session
 
 from lightly_studio.core.sample import Sample
-from lightly_studio.export import coco_captions
+from lightly_studio.export import annotation_batches, coco_captions
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioInstanceSegmentationInput,
     LightlyStudioObjectDetectionInput,
     LightlyStudioPascalVOCInstanceSegmentationInput,
+    LightlyStudioYOLOInstanceSegmentationInput,
     LightlyStudioYOLOObjectDetectionInput,
     SampleToImage,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.type_definitions import PathLike
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_EXPORT_FILENAME = "coco_export.json"
 YOLO_DATASET_CONFIG_FILENAME = "data.yaml"
@@ -121,12 +128,14 @@ class DatasetExport:
         with Path(output_json).open("w") as f:
             json.dump(coco_captions_dict, f, indent=2)
 
-    def to_coco_segmentation_masks(
+    def to_coco_instance_segmentation(
         self,
         output_json: PathLike | None = None,
         annotation_collection_id: UUID | None = None,
     ) -> None:
-        """Exports segmentation masks to a COCO format JSON file.
+        """Exports polygons and segmentation masks to a COCO format JSON file.
+
+        Polygons are written with `iscrowd=0`, segmentation masks as RLE with `iscrowd=1`.
 
         Args:
             output_json: The path to the output COCO JSON file. If not provided,
@@ -144,6 +153,72 @@ class DatasetExport:
             sample_to_image=self._sample_to_image,
         )
         COCOInstanceSegmentationOutput(output_file=Path(output_json)).save(label_input=export_input)
+
+    def to_yolo_instance_segmentation(
+        self,
+        output_folder: PathLike,
+        annotation_collection_id: UUID | None = None,
+    ) -> None:
+        """Exports polygons to YOLO (Ultralytics YOLOv8) instance segmentation format.
+
+        Creates a folder with a ``data.yaml`` dataset config and a ``labels``
+        subfolder containing one ``.txt`` file per image with normalized
+        ``<class_id> <x1> <y1> <x2> <y2> ...`` rows. A polygon with several parts is
+        written as one row, with the parts joined by zero-width bridges. YOLO supports
+        only polygons, so segmentation masks are skipped with a warning.
+
+        Args:
+            output_folder: The folder where YOLO files are written.
+            annotation_collection_id: If provided, only annotations from this collection
+                are exported. If None, all annotations are exported.
+        """
+        # Materialize once: the samples can be a one-shot iterator.
+        samples = list(self.samples)
+        export_input = LightlyStudioYOLOInstanceSegmentationInput(
+            session=self.session,
+            dataset_id=self._dataset_id,
+            samples=samples,
+            annotation_collection_id=annotation_collection_id,
+            sample_to_image=self._sample_to_image,
+        )
+        skipped_mask_count = annotation_batches.count_annotations(
+            session=self.session,
+            samples=samples,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            annotation_collection_id=annotation_collection_id,
+        )
+        if skipped_mask_count > 0:
+            logger.warning(
+                "Skipped %d segmentation mask annotations: "
+                "YOLO instance segmentation supports only polygons.",
+                skipped_mask_count,
+            )
+        YOLOv8InstanceSegmentationOutput(
+            output_file=Path(output_folder) / YOLO_DATASET_CONFIG_FILENAME,
+            output_split=YOLO_DEFAULT_SPLIT,
+        ).save(label_input=export_input)
+
+    def to_coco_segmentation_masks(
+        self,
+        output_json: PathLike | None = None,
+        annotation_collection_id: UUID | None = None,
+    ) -> None:
+        """Deprecated: use `to_coco_instance_segmentation` instead.
+
+        Args:
+            output_json: The path to the output COCO JSON file. If not provided,
+                defaults to "coco_export.json" in the current working directory.
+            annotation_collection_id: If provided, only annotations from this collection
+                are exported. If None, all annotations are exported.
+        """
+        warnings.warn(
+            "to_coco_segmentation_masks is deprecated, use to_coco_instance_segmentation instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.to_coco_instance_segmentation(
+            output_json=output_json, annotation_collection_id=annotation_collection_id
+        )
 
     def to_pascalvoc_segmentation_mask(
         self,

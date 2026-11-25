@@ -542,7 +542,17 @@ def test_export_collection_annotations_prepare__segmentation_mask_coco(
                 width=3,
                 height=2,
                 segmentation_mask=[2, 3, 7, 2, 86],
-            )
+            ),
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.POLYGON,
+                parent_sample_id=image.sample_id,
+                x=1,
+                y=4,
+                width=4,
+                height=4,
+                polygons=[[(1, 4), (5, 4), (5, 8)]],
+            ),
         ],
     )
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
@@ -565,6 +575,7 @@ def test_export_collection_annotations_prepare__segmentation_mask_coco(
     export_job = db_session.get(ExportJobTable, export_key)
     assert export_job is not None
     content = json.loads(Path(export_job.export_path).read_text())
+    content["annotations"].sort(key=lambda annotation: annotation["iscrowd"])
     assert content == {
         "images": [{"id": 0, "file_name": "img1.jpg", "width": 10, "height": 10}],
         "categories": [{"id": 0, "name": "cat"}],
@@ -572,12 +583,74 @@ def test_export_collection_annotations_prepare__segmentation_mask_coco(
             {
                 "image_id": 0,
                 "category_id": 0,
+                "segmentation": [[1.0, 4.0, 5.0, 4.0, 5.0, 8.0]],
+                "bbox": [1.0, 4.0, 4.0, 4.0],
+                "iscrowd": 0,
+            },
+            {
+                "image_id": 0,
+                "category_id": 0,
                 "segmentation": {"counts": [20, 2, 8, 2, 8, 1, 59], "size": [10, 10]},
                 "bbox": [2.0, 0.0, 3.0, 2.0],
                 "iscrowd": 1,
-            }
+            },
         ],
     }
+
+
+def test_export_collection_annotations_prepare__instance_segmentation_yolo(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="img1.jpg",
+        width=100,
+        height=50,
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.POLYGON,
+                parent_sample_id=image.sample_id,
+                x=10,
+                y=5,
+                width=40,
+                height=20,
+                polygons=[[(10, 5), (50, 5), (50, 25)]],
+            )
+        ],
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={
+            "export_format": "instance_segmentation_yolo",
+            "annotation_collection_id": str(annotation_collection_id),
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_job = db_session.get(ExportJobTable, UUID(response.json()["export_key"]))
+    assert export_job is not None
+    export_dir = Path(export_job.export_path)
+    assert (export_dir / "data.yaml").exists()
+    assert (export_dir / "labels" / "img1.txt").read_text() == (
+        "0 0.1 0.1 0.5 0.1 0.5 0.5 0.1 0.1\n"
+    )
 
 
 def test_export_collection_annotations_prepare__pascal_voc(
