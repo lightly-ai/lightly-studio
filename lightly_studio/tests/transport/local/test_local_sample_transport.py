@@ -37,3 +37,17 @@ class TestLocalSampleTransport:
         assert [sample.file_name for sample in page.samples] == ["a.png"]
         assert [sample.file_name for sample in next_page.samples] == ["b.png"]
         assert next_page.next_cursor is None
+
+    def test_get_image_ids_by_paths(self) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+        other_collection_id = create_collection(session=session).collection_id
+        image = create_image(session=session, collection_id=collection_id, file_path_abs="/a.png")
+        create_image(session=session, collection_id=other_collection_id, file_path_abs="/b.png")
+        transport: SampleTransport = LocalSampleTransport()
+
+        ids_by_path = transport.get_image_ids_by_paths(
+            collection_id=collection_id, file_paths=["/a.png", "/b.png", "/c.png"]
+        )
+
+        assert ids_by_path == {"/a.png": image.sample_id}

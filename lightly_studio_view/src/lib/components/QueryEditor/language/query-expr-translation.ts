@@ -148,10 +148,8 @@ function visit(expr: Expression, table: QueryScope): QueryExpr['match_expr'] {
         }
         const subTable = getFunctionScope(expr.name);
         const type = toAnnotationMatchExprType(subTable);
-        return {
-            type,
-            subexpr: visit(expr.args[0], subTable)
-        };
+        const [condition] = expr.args;
+        return condition ? { type, subexpr: visit(condition, subTable) } : { type };
     }
     if (isSampleEvaluationQuery(expr)) {
         return translateSampleEvaluation(expr);

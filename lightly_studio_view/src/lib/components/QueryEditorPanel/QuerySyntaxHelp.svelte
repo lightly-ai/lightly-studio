@@ -45,8 +45,9 @@
                 classifications. Use <code>event(class_name = "run" AND start_time_s &lt; 5)</code> to
                 match one temporal event.
             {:else}
-                Annotation conditions: <code>segmentation_mask(…)</code>,
-                <code>object_detection(…)</code>, <code>classification(…)</code>
+                Match any annotation of a given type with <code>object_detection()</code>,
+                <code>segmentation_mask()</code>, or <code>classification()</code>. Add a condition
+                inside the parentheses to narrow the match.
             {/if}
         </li>
     </ul>

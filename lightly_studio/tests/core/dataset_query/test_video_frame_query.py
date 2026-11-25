@@ -128,6 +128,10 @@ class TestVideoFrameQuery:
     @pytest.mark.parametrize(
         ("expression", "expected_names"),
         [
+            (
+                QueryExpr(match_expr=VideoFrameMatchExpr(subexpr=ObjectDetectionMatchExpr())),
+                {"together.mp4", "apart.mp4"},
+            ),
             (VideoFrameQuery(PERSON, CAR), {"together.mp4"}),
             (
                 QueryExpr(
