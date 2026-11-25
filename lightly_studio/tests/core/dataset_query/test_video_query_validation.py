@@ -17,6 +17,7 @@ from lightly_studio.models.query_expr import (
     QueryExpr,
     SampleEvaluationMatchExpr,
     StringExpr,
+    TagsContainsExpr,
     VideoEventMatchExpr,
     VideoFrameMatchExpr,
 )
@@ -97,3 +98,25 @@ def test_frame_scope() -> None:
         )
     with pytest.raises(QueryExprError, match="frame query"):
         query_translation.to_match_expression(expr=field, sample_type=SampleType.VIDEO)
+
+
+@pytest.mark.parametrize("sample_type", [None, SampleType.IMAGE, SampleType.VIDEO])
+def test_frame_fields_outside_frame_scope(sample_type: SampleType | None) -> None:
+    expr = TagsContainsExpr(field=FieldRef(table="video_frame", name="tags"), tag_name="blurry")
+    with pytest.raises(QueryExprError, match="frame query"):
+        query_translation.to_match_expression(expr=expr, sample_type=sample_type)
+
+
+def test_frame_scope__video_tags() -> None:
+    tags = TagsContainsExpr(field=FieldRef(table="video", name="tags"), tag_name="reviewed")
+    with pytest.raises(QueryExprError, match="frame fields"):
+        query_translation.to_match_expression(
+            expr=VideoFrameMatchExpr(subexpr=tags), sample_type=SampleType.VIDEO
+        )
+
+
+def test_video_frame_scope__event_field() -> None:
+    field = FieldRef(table="event", name="class_name")
+    expr = StringExpr(field=field, operator=EqualityComparisonOperator.EQ, value="run")
+    with pytest.raises(QueryExprError, match="event or frame query"):
+        query_translation.to_match_expression(expr=expr, sample_type=SampleType.VIDEO_FRAME)

@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.image_filter import FilterDimensions
@@ -27,7 +28,7 @@ class VideoFrameFilter(GridFilterBase):
         query = self._apply_video_id(query)
 
         if self.sample_filter:
-            query = self.sample_filter.apply(query)
+            query = self.sample_filter.apply(query=query, sample_type=SampleType.VIDEO_FRAME)
 
         return query
 

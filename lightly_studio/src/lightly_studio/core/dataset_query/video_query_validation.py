@@ -1,6 +1,7 @@
 """Validate video-only expressions before translating them to SQL."""
 
 from lightly_studio.errors import QueryExprError
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
@@ -17,6 +18,8 @@ from lightly_studio.models.query_expr import (
     VideoEventMatchExpr,
     VideoFrameMatchExpr,
 )
+
+_FRAME_TABLES = frozenset({"video_frame"})
 
 
 def validate(expr: MatchExpr, scope: str | None) -> None:
@@ -57,12 +60,21 @@ def _validate_node(expr: MatchExpr, scope: str | None) -> None:
         if expr.subexpr is not None:
             validate(expr=expr.subexpr, scope=child_scope)
     elif scope == "frame":
-        if not isinstance(expr, OrdinalFloatExpr) or expr.field != FieldRef(
-            table="video_frame", name="frame_timestamp_s"
-        ):
-            raise QueryExprError("Frame criteria require annotation queries or frame timestamps.")
-    elif isinstance(field, FieldRef) and field.table in {"event", "video_frame"}:
+        if not _is_frame_field(field=field):
+            raise QueryExprError("Frame criteria require annotation queries or frame fields.")
+    else:
+        _validate_video_field_scope(field=field, scope=scope)
+
+
+def _validate_video_field_scope(field: object, scope: str | None) -> None:
+    if scope == SampleType.VIDEO_FRAME.value and _is_frame_field(field=field):
+        return
+    if isinstance(field, FieldRef) and field.table in {"event", *_FRAME_TABLES}:
         raise QueryExprError("Video fields require their event or frame query.")
+
+
+def _is_frame_field(field: object) -> bool:
+    return isinstance(field, FieldRef) and field.table in _FRAME_TABLES
 
 
 def _validate_event_field(expr: MatchExpr) -> None:
