@@ -12,6 +12,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.image import ImageView
 from lightly_studio.resolvers import (
@@ -237,6 +238,50 @@ def test_read_images__query_expr_filter(
     assert data["total_count"] == 2
     returned_ids = {item["sample_id"] for item in data["data"]}
     assert returned_ids == {str(wide_image.sample_id), str(annotated_image.sample_id)}
+
+
+def test_read_images__any_annotation_of_type(test_client: TestClient, db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    images = {
+        name: create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/{name}.jpg"
+        )
+        for name in ["boxes", "mask", "classification", "raw"]
+    }
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    for name, annotation_type in [
+        ("boxes", AnnotationType.OBJECT_DETECTION),
+        ("boxes", AnnotationType.OBJECT_DETECTION),
+        ("mask", AnnotationType.SEGMENTATION_MASK),
+        ("classification", AnnotationType.CLASSIFICATION),
+    ]:
+        create_annotation(
+            session=db_session,
+            collection_id=collection_id,
+            sample_id=images[name].sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=annotation_type,
+        )
+
+    detection = {"type": "object_detection_match_expr"}
+    for expression, expected in [
+        (detection, ["boxes"]),
+        ({"type": "classification_match_expr"}, ["classification"]),
+        ({"type": "segmentation_mask_match_expr"}, ["mask"]),
+        ({"type": "not", "child": detection}, ["mask", "classification", "raw"]),
+    ]:
+        response = test_client.post(
+            f"/api/collections/{collection_id}/images/list",
+            json={"filters": {"sample_filter": {"query_expr": {"match_expr": expression}}}},
+        )
+        assert response.status_code == HTTP_STATUS_OK
+        result = response.json()
+        assert result["total_count"] == len(expected)
+        assert {row["sample_id"] for row in result["data"]} == {
+            str(images[name].sample_id) for name in expected
+        }
 
 
 def test_read_images__query_expr_nonexistent_field(

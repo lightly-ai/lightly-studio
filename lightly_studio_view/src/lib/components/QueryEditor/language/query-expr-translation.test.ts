@@ -37,6 +37,16 @@ function createParser(): LangiumParser {
 
 const parser = createParser();
 
+it.each(['object_detection', 'classification', 'segmentation_mask'])(
+    'translates %s without a condition',
+    (name) => {
+        expect(parseLightlyQuery(parser, `${name}()`)).toEqual({
+            status: 'ok',
+            queryExpr: { match_expr: { type: `${name}_match_expr` } }
+        });
+    }
+);
+
 it.each(['=', '!=', '<', '<=', '>', '>='])('translates fps %s 29.97', (operator) => {
     expect(parseLightlyQuery(parser, `video: fps ${operator} 29.97`)).toEqual({
         status: 'ok',
@@ -200,9 +210,10 @@ describe('parseLightlyQuery error handling', () => {
         { name: 'trailing boolean operator', source: 'height > 400 AND' },
         { name: 'missing right-hand side', source: 'height >' },
         { name: 'string compared to int field', source: 'height = "tall"' },
-        { name: 'obj detection without arguments', source: 'object_detection()' },
+        { name: 'incomplete detection condition', source: 'object_detection(class_name =)' },
         { name: 'obj detection unknown field', source: 'object_detection(file_name = "a.jpg")' },
-        { name: 'segmentation without arguments', source: 'segmentation_mask()' },
+        { name: 'frame without a condition', source: 'video: frame()' },
+        { name: 'event without a condition', source: 'video: event()' },
         {
             name: 'segmentation unknown field',
             source: 'segmentation_mask(file_name = "a.jpg")'
@@ -317,6 +328,18 @@ interface TranslationTestCase {
 }
 
 const TRANSLATION_TEST_CASES: TranslationTestCase[] = [
+    {
+        name: 'classification without a detection',
+        source: 'NOT object_detection( ) AND classification()',
+        expected: query(
+            and(not({ type: 'object_detection_match_expr' }), { type: 'classification_match_expr' })
+        )
+    },
+    {
+        name: 'video with a detection on any frame',
+        source: 'video: frame(object_detection())',
+        expected: query(frame({ type: 'object_detection_match_expr' }))
+    },
     /* Image table fields */
     {
         name: 'image height greater than',
