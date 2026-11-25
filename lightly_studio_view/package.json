@@ -56,7 +56,6 @@
     "autoprefixer": "^10.4.20",
     "bits-ui": "^1.8.0",
     "clsx": "^2.1.1",
-    "dotenv": "^17.2.1",
     "eslint": "^9.7.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-storybook": "^10.6.5",
@@ -102,13 +101,11 @@
     "monaco-editor": "^0.55.1",
     "paneforge": "^1.0.2",
     "posthog-js": "^1.276.0",
-    "svelte-infinite-loading": "^1.4.0",
     "svelte-sonner": "^1.0.5",
     "svelte-virtual": "^1.0.0-next.22",
     "three": "^0.185.1",
     "uuid": "^13.0.0",
-    "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver": "^9.0.1"
+    "vscode-languageserver-types": "^3.17.5"
   },
   "overrides": {
     "dompurify": "^3.4.17"
