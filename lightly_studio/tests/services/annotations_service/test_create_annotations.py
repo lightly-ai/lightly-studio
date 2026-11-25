@@ -83,7 +83,7 @@ def test_create_annotations__marks_evaluation_run_stale(db_session: Session) -> 
     label = create_annotation_label(
         session=db_session, root_collection_id=collection.collection_id, label_name="cat"
     )
-    run = _create_evaluation_run(session=db_session, collection=collection, gt_name="gt")
+    run = _create_evaluation_run(session=db_session, collection=collection)
 
     annotations_service.create_annotations(
         session=db_session,
@@ -107,7 +107,7 @@ def test_create_annotations__marks_evaluation_run_stale(db_session: Session) -> 
 def test_create_annotations__covered_samples_without_annotations(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    run = _create_evaluation_run(session=db_session, collection=collection, gt_name="gt")
+    run = _create_evaluation_run(session=db_session, collection=collection)
 
     annotation_ids = annotations_service.create_annotations(
         session=db_session,
@@ -131,12 +131,48 @@ def test_create_annotations__covered_samples_without_annotations(db_session: Ses
     assert refreshed.stale_since is None
 
 
-def _create_evaluation_run(
-    session: Session, collection: CollectionTable, gt_name: str
-) -> EvaluationRunTable:
+def test_create_annotations__annotated_and_covered_samples(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    annotated = create_image(session=db_session, collection_id=collection.collection_id)
+    covered = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/b.png"
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    run = _create_evaluation_run(session=db_session, collection=collection)
+
+    annotations_service.create_annotations(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            AnnotationCreate(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.CLASSIFICATION,
+                parent_sample_id=annotated.sample_id,
+            )
+        ],
+        collection_name="gt",
+        covered_sample_ids=[covered.sample_id],
+    )
+
+    gt_collection_id = collection_resolver.get_by_name(
+        session=db_session, name="gt", parent_collection_id=collection.collection_id
+    )
+    assert gt_collection_id is not None
+    covered_sample_ids = annotation_collection_coverage_resolver.list_by_collection_id(
+        session=db_session, annotation_collection_id=gt_collection_id
+    )
+    refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+    assert set(covered_sample_ids) == {annotated.sample_id, covered.sample_id}
+    assert refreshed is not None
+    assert refreshed.stale_since is not None
+
+
+def _create_evaluation_run(session: Session, collection: CollectionTable) -> EvaluationRunTable:
     gt_collection = create_collection(
         session=session,
-        collection_name=gt_name,
+        collection_name="gt",
         sample_type=SampleType.ANNOTATION,
         parent_collection_id=collection.collection_id,
     )
