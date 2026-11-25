@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlalchemy import event
@@ -240,7 +241,24 @@ def test_read_images__query_expr_filter(
     assert returned_ids == {str(wide_image.sample_id), str(annotated_image.sample_id)}
 
 
-def test_read_images__any_annotation_of_type(test_client: TestClient, db_session: Session) -> None:
+@pytest.mark.parametrize(
+    ("expression", "expected"),
+    [
+        pytest.param({"type": "object_detection_match_expr"}, ["boxes"], id="detections"),
+        pytest.param(
+            {"type": "classification_match_expr"}, ["classification"], id="classifications"
+        ),
+        pytest.param({"type": "segmentation_mask_match_expr"}, ["mask"], id="masks"),
+        pytest.param(
+            {"type": "not", "child": {"type": "object_detection_match_expr"}},
+            ["mask", "classification", "raw"],
+            id="no-detections",
+        ),
+    ],
+)
+def test_read_images__any_annotation_of_type(
+    test_client: TestClient, db_session: Session, expression: dict[str, object], expected: list[str]
+) -> None:
     collection_id = create_collection(session=db_session).collection_id
     images = {
         name: create_image(
@@ -265,23 +283,16 @@ def test_read_images__any_annotation_of_type(test_client: TestClient, db_session
             annotation_type=annotation_type,
         )
 
-    detection = {"type": "object_detection_match_expr"}
-    for expression, expected in [
-        (detection, ["boxes"]),
-        ({"type": "classification_match_expr"}, ["classification"]),
-        ({"type": "segmentation_mask_match_expr"}, ["mask"]),
-        ({"type": "not", "child": detection}, ["mask", "classification", "raw"]),
-    ]:
-        response = test_client.post(
-            f"/api/collections/{collection_id}/images/list",
-            json={"filters": {"sample_filter": {"query_expr": {"match_expr": expression}}}},
-        )
-        assert response.status_code == HTTP_STATUS_OK
-        result = response.json()
-        assert result["total_count"] == len(expected)
-        assert {row["sample_id"] for row in result["data"]} == {
-            str(images[name].sample_id) for name in expected
-        }
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/list",
+        json={"filters": {"sample_filter": {"query_expr": {"match_expr": expression}}}},
+    )
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == len(expected)
+    assert {row["sample_id"] for row in result["data"]} == {
+        str(images[name].sample_id) for name in expected
+    }
 
 
 def test_read_images__query_expr_nonexistent_field(
