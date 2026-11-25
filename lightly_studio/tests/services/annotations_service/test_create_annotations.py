@@ -128,7 +128,7 @@ def test_create_annotations__covered_samples_without_annotations(db_session: Ses
     assert annotation_ids == []
     assert covered_sample_ids == [image.sample_id]
     assert refreshed is not None
-    assert refreshed.stale_since is None
+    assert refreshed.stale_since is not None
 
 
 def test_create_annotations__annotated_and_covered_samples(db_session: Session) -> None:

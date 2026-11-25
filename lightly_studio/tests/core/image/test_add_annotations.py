@@ -22,8 +22,12 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.image import add_annotations
-from lightly_studio.models.collection import CollectionCreate, SampleType
-from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
+from lightly_studio.models.evaluation_run import (
+    EvaluationRunCreate,
+    EvaluationRunTable,
+    EvaluationTaskType,
+)
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -147,34 +151,46 @@ def test_add_annotations_from_labelformat__marks_evaluation_run_stale(
             ),
         ],
     )
-    gt_collection = collection_resolver.create(
+    run = _create_evaluation_run(
         session=persistent_session,
-        collection=CollectionCreate(
-            name="gt",
-            sample_type=SampleType.ANNOTATION,
-            parent_collection_id=collection.collection_id,
-        ),
-    )
-    pred_collection = helpers_resolvers.create_collection(
-        session=persistent_session,
-        sample_type=SampleType.ANNOTATION,
-        parent_collection_id=collection.collection_id,
-    )
-    run = evaluation_run_resolver.create(
-        session=persistent_session,
-        evaluation_run_input=EvaluationRunCreate(
-            name="run",
-            gt_annotation_collection_id=gt_collection.collection_id,
-            pred_annotation_collection_id=pred_collection.collection_id,
-            dataset_id=collection.dataset_id,
-            task_type=EvaluationTaskType.OBJECT_DETECTION,
-        ),
+        root_collection=collection,
+        gt_collection_name="gt",
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
     )
     assert run.stale_since is None
 
     add_annotations.add_annotations_from_labelformat(
         root_collection_id=collection.collection_id,
         input_labels=_get_labelformat_input_obj_det(filename="image.jpg"),
+        images_root="images",
+        collection_name="gt",
+    )
+
+    refreshed = evaluation_run_resolver.get_by_id(session=persistent_session, evaluation_id=run.id)
+    assert refreshed is not None
+    assert refreshed.stale_since is not None
+
+
+def test_add_annotations_from_labelformat__marks_evaluation_run_stale_without_annotations(
+    persistent_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=persistent_session)
+    helpers_resolvers.create_images(
+        db_session=persistent_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path=Path("images/a.jpg").absolute().as_posix(), width=100, height=200)],
+    )
+    run = _create_evaluation_run(
+        session=persistent_session,
+        root_collection=collection,
+        gt_collection_name="gt",
+        task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
+    )
+    assert run.stale_since is None
+
+    add_annotations.add_annotations_from_labelformat(
+        root_collection_id=collection.collection_id,
+        input_labels=_get_labelformat_input_invalid_polygon(filenames=["a.jpg"]),
         images_root="images",
         collection_name="gt",
     )
@@ -210,6 +226,37 @@ def test_add_annotations_from_labelformat__one_warning_for_skipped(
         )
 
     assert caplog.text.count("Skipped 3 polygon annotations") == 1
+
+
+def _create_evaluation_run(
+    session: Session,
+    root_collection: CollectionTable,
+    gt_collection_name: str,
+    task_type: EvaluationTaskType,
+) -> EvaluationRunTable:
+    gt_collection = collection_resolver.create(
+        session=session,
+        collection=CollectionCreate(
+            name=gt_collection_name,
+            sample_type=SampleType.ANNOTATION,
+            parent_collection_id=root_collection.collection_id,
+        ),
+    )
+    pred_collection = helpers_resolvers.create_collection(
+        session=session,
+        sample_type=SampleType.ANNOTATION,
+        parent_collection_id=root_collection.collection_id,
+    )
+    return evaluation_run_resolver.create(
+        session=session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run",
+            gt_annotation_collection_id=gt_collection.collection_id,
+            pred_annotation_collection_id=pred_collection.collection_id,
+            dataset_id=root_collection.dataset_id,
+            task_type=task_type,
+        ),
+    )
 
 
 def _get_labelformat_input_obj_det(filename: str) -> LabelformatObjectDetectionInput:

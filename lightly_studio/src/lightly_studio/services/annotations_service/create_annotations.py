@@ -26,8 +26,9 @@ def create_annotations(
 ) -> list[UUID]:
     """Create annotations, record covered samples, and mark evaluation runs stale.
 
-    The evaluation runs of the annotation collection become stale only if the function
-    creates annotations.
+    The evaluation runs of the annotation collection become stale if the function creates
+    annotations or covers samples. A covered sample without annotations also changes the
+    evaluation result.
 
     Args:
         session: Database session for executing the operation.
@@ -63,7 +64,7 @@ def create_annotations(
         # add_many and create_many flush rows before create_many validates them.
         session.rollback()
         raise
-    if annotation_ids:
+    if annotation_ids or covered_sample_ids:
         evaluation_run_resolver.mark_stale_by_collection_id(
             session=session, collection_id=annotation_collection_id
         )
