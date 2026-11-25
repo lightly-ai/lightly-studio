@@ -157,8 +157,6 @@ class TestDatasetExport:
         assert annotations[1]["iscrowd"] == 1
         assert "counts" in annotations[1]["segmentation"]
 
-
-class TestDatasetExportDeprecated:
     def test_to_coco_segmentation_masks__deprecated(
         self,
         tmp_path: Path,
