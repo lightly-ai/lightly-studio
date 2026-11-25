@@ -33,3 +33,10 @@ class SampleTransport(Protocol):
         Callers pass absolute, normalized paths. The lookup compares them exactly to the
         stored image paths. Paths without an image in the collection are not in the result.
         """
+
+    def get_video_ids_by_stems(self, collection_id: UUID) -> dict[str, UUID]:
+        """Get the sample IDs of all videos of a collection by file name stem.
+
+        Raises:
+            ValueError: If two videos of the collection have the same stem.
+        """

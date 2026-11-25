@@ -50,7 +50,6 @@ def test_add_annotations_from_activitynet__adds_events(
     )
 
     missing = add_annotations.add_annotations_from_activitynet(
-        session=persistent_session,
         root_collection_id=collection.collection_id,
         annotations_json=annotations_json,
         collection_name="ground_truth",
