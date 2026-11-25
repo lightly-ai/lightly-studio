@@ -15,6 +15,9 @@ vi.mock('echarts/components', () => ({
 }));
 vi.mock('echarts/renderers', () => ({ CanvasRenderer: {} }));
 
+// Read the import-time call here: `clearMocks` clears it before each test.
+const [registeredModules] = vi.mocked(echarts.use).mock.calls[0];
+
 // The x-axis is a value axis over bin indices; 10px per bin index mirrors the
 // component test's canvas geometry (20 bins over a 200px canvas).
 const makeChart = (): ECharts =>
@@ -27,8 +30,7 @@ describe('echarts registration', () => {
     // components that were registered here. Registering it in the test file
     // alone would make the option look fine while the app rendered no legend.
     it('registers the legend component the comparison series needs', () => {
-        const [registered] = vi.mocked(echarts.use).mock.calls[0];
-        expect(registered).toContain(LegendComponent);
+        expect(registeredModules).toContain(LegendComponent);
     });
 });
 
