@@ -27,14 +27,32 @@ class SampleInclude(str, Enum):
 
 
 class SortKey(BaseModel):
-    """One key of the sort order.
+    """One key of the sort order, on a field.
 
     Attributes:
         field: The field to sort by.
         direction: The sort direction.
     """
 
+    model_config = pydantic.ConfigDict(extra="forbid")
+
     field: FieldRef
+    direction: SortDirection = SortDirection.asc
+
+
+class EvaluationMetricSortKey(BaseModel):
+    """One key of the sort order, on a sample metric of an evaluation run.
+
+    Attributes:
+        run_name: The name of the evaluation run.
+        metric_name: The name of the metric to sort by.
+        direction: The sort direction.
+    """
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    run_name: str
+    metric_name: str
     direction: SortDirection = SortDirection.asc
 
 
@@ -51,7 +69,7 @@ class SampleQueryRequest(BaseModel):
     """
 
     query_expr: QueryExpr | None = None
-    sort: list[SortKey] = []
+    sort: list[SortKey | EvaluationMetricSortKey] = []
     cursor: str | None = None
     limit: int = pydantic.Field(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE)
     offset: int = pydantic.Field(default=0, ge=0)

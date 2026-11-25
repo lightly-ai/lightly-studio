@@ -42,6 +42,7 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.metadata_expression import MetadataComparisonExpression
 from lightly_studio.core.dataset_query.object_detection_query import ObjectDetectionQuery
 from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
@@ -85,7 +86,7 @@ from lightly_studio.models.query_expr import (
     VideoEventMatchExpr,
     VideoFrameMatchExpr,
 )
-from lightly_studio.models.sample_query import SortKey
+from lightly_studio.models.sample_query import EvaluationMetricSortKey, SortKey
 from lightly_studio.models.sort_direction import SortDirection
 
 _ScopedQuery = (
@@ -150,18 +151,26 @@ def to_query_expr(match_expression: MatchExpression, sample_type: SampleType) ->
         raise UnsupportedQueryError(f"The filter is not supported: {error}") from error
 
 
-def to_sort_keys(order_by: Sequence[OrderByExpression], sample_type: SampleType) -> list[SortKey]:
+def to_sort_keys(
+    order_by: Sequence[OrderByExpression], sample_type: SampleType
+) -> list[SortKey | EvaluationMetricSortKey]:
     """Convert order-by expressions on samples of the sample type to sort keys.
 
     Raises:
         UnsupportedQueryError: If a sort is not on a non-nullable sample field of the sample
-            type or on metadata.
+            type, on metadata, or on an evaluation metric.
     """
     return [_to_sort_key(expression=expression, scope=sample_type.value) for expression in order_by]
 
 
-def _to_sort_key(expression: OrderByExpression, scope: str) -> SortKey:
+def _to_sort_key(expression: OrderByExpression, scope: str) -> SortKey | EvaluationMetricSortKey:
     direction = SortDirection.asc if expression.ascending else SortDirection.desc
+    if isinstance(expression, OrderByEvaluationMetricField):
+        return EvaluationMetricSortKey(
+            run_name=expression.evaluation_run_name,
+            metric_name=expression.metric_name,
+            direction=direction,
+        )
     if isinstance(expression, OrderByMetadataField):
         field_ref = FieldRef(table=_METADATA_TABLE, name=expression.field_name)
     elif isinstance(expression, OrderByField):
