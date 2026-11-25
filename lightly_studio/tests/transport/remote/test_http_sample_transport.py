@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -40,3 +42,9 @@ class TestHttpSampleTransport:
 
         with pytest.raises(ValueError, match="not valid"):
             transport.query(collection_id=collection_id, request=SampleQueryRequest(cursor="x"))
+
+    def test_get_image_ids_by_paths(self, test_client: TestClient) -> None:
+        transport: SampleTransport = HttpSampleTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.get_image_ids_by_paths(collection_id=uuid4(), file_paths=["/a.png"])
