@@ -202,9 +202,9 @@ def test_get_object_detection_annotation_create__with_confidence() -> None:
     assert annotation.confidence == 0.95
 
 
-def test_create_label_map(db_session: Session) -> None:
+def test_create_label_map(persistent_session: Session) -> None:
     # Test the creation of new labels and re-use of existing labels
-    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    collection_id = helpers_resolvers.create_collection(session=persistent_session).collection_id
 
     class TestLabels1:
         def get_categories(self) -> Iterable[Category]:
@@ -216,7 +216,6 @@ def test_create_label_map(db_session: Session) -> None:
     label_input = TestLabels1()
 
     label_map_1 = labelformat_helpers.create_label_map(
-        session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input,
     )
@@ -232,7 +231,6 @@ def test_create_label_map(db_session: Session) -> None:
     label_input_2 = TestLabels2()
 
     label_map_2 = labelformat_helpers.create_label_map(
-        session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input_2,
     )
