@@ -71,6 +71,7 @@ from lightly_studio.models.sort_direction import SortDirection
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
 Number = int | float
+FieldExpr = StringExpr | IntegerExpr | DatetimeExpr | OrdinalFloatExpr | EqualityFloatExpr
 
 
 class _EqualityField(Protocol[T_contra]):  # noqa: PLW1641
@@ -229,6 +230,25 @@ def _lookup(
 # ---------------------------------------------------------------------------
 # Public entry points
 # ---------------------------------------------------------------------------
+
+
+def field_tables() -> list[tuple[type[FieldExpr], Mapping[tuple[str, str], object]]]:
+    """Return each field table with the expression type of its fields.
+
+    Some float fields are in the ordinal and in the equality table. The ordinal table comes first.
+    """
+    return [
+        (StringExpr, _STRING_FIELDS),
+        (IntegerExpr, _INTEGER_FIELDS),
+        (DatetimeExpr, _DATETIME_FIELDS),
+        (OrdinalFloatExpr, _ALL_ORDINAL_FLOAT_FIELDS),
+        (EqualityFloatExpr, _EQUALITY_FLOAT_FIELDS),
+    ]
+
+
+def has_tags(table: str) -> bool:
+    """Return whether the samples of the table have tags."""
+    return (table, "tags") in _TAGS_FIELDS
 
 
 def sort_to_order_by(

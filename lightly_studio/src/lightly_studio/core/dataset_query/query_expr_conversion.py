@@ -1,114 +1,123 @@
 """Convert dataset-query expressions to the query format that the transport sends.
 
-Only image sample fields and tags are supported. Other expressions raise
+Only sample fields, tags, and metadata are supported. Other expressions raise
 `UnsupportedQueryError`, and the caller uses the SQL path.
 """
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Sequence
 from typing import Any
 
 from pydantic import ValidationError
 
+from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.field_expression import (
     ComparableFieldExpression,
     OrdinalFieldExpression,
 )
-from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.core.dataset_query.metadata_expression import MetadataComparisonExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
+from lightly_studio.core.dataset_query.query_translation import FieldExpr
 from lightly_studio.core.dataset_query.tags_expression import TagsContainsExpression
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
-    DatetimeExpr,
-    EqualityComparisonOperator,
     FieldRef,
-    IntegerExpr,
     MatchExpr,
+    MetadataComparisonExpr,
     NotExpr,
     OrdinalComparisonOperator,
     OrExpr,
     QueryExpr,
-    StringExpr,
     TagsContainsExpr,
 )
 from lightly_studio.models.sample_query import SortKey
 from lightly_studio.models.sort_direction import SortDirection
-
-_IMAGE_FIELDS: list[tuple[Field, str]] = [
-    (ImageSampleField.file_name, "file_name"),
-    (ImageSampleField.file_path_abs, "file_path_abs"),
-    (ImageSampleField.width, "width"),
-    (ImageSampleField.height, "height"),
-    (ImageSampleField.created_at, "created_at"),
-]
 
 
 class UnsupportedQueryError(NotImplementedError):
     """The transport cannot send this query yet."""
 
 
-def to_query_expr(match_expression: MatchExpression) -> QueryExpr:
-    """Convert a match expression to a `QueryExpr`.
+def to_query_expr(match_expression: MatchExpression, sample_type: SampleType) -> QueryExpr:
+    """Convert a match expression on samples of the sample type to a `QueryExpr`.
 
     Raises:
         UnsupportedQueryError: If the expression uses a field that is not supported.
     """
     try:
-        return QueryExpr(match_expr=_to_match_expr(expression=match_expression))
+        match_expr = _to_match_expr(expression=match_expression, scope=sample_type.value)
+        return QueryExpr(match_expr=match_expr)
     except ValidationError as error:
         raise UnsupportedQueryError(f"The filter is not supported: {error}") from error
 
 
-def to_sort_keys(order_by: Sequence[OrderByExpression]) -> list[SortKey]:
-    """Convert order-by expressions to sort keys.
+def to_sort_keys(order_by: Sequence[OrderByExpression], sample_type: SampleType) -> list[SortKey]:
+    """Convert order-by expressions on samples of the sample type to sort keys.
 
     Raises:
-        UnsupportedQueryError: If a sort is not on an image sample field.
+        UnsupportedQueryError: If a sort is not on a sample field.
     """
     keys = []
     for expression in order_by:
         if not isinstance(expression, OrderByField):
             raise UnsupportedQueryError(f"The sort {type(expression).__name__} is not supported.")
         direction = SortDirection.asc if expression.ascending else SortDirection.desc
-        keys.append(SortKey(field=_field_ref(field=expression.field), direction=direction))
+        field_ref, _ = _lookup_field(field=expression.field, scope=sample_type.value)
+        keys.append(SortKey(field=field_ref, direction=direction))
     return keys
 
 
-def _to_match_expr(expression: MatchExpression) -> MatchExpr:
+def _to_match_expr(expression: MatchExpression, scope: str) -> MatchExpr:
     if isinstance(expression, AND):
-        return AndExpr(children=[_to_match_expr(expression=term) for term in expression.terms])
+        return AndExpr(
+            children=[_to_match_expr(expression=term, scope=scope) for term in expression.terms]
+        )
     if isinstance(expression, OR):
-        return OrExpr(children=[_to_match_expr(expression=term) for term in expression.terms])
+        return OrExpr(
+            children=[_to_match_expr(expression=term, scope=scope) for term in expression.terms]
+        )
     if isinstance(expression, NOT):
-        return NotExpr(child=_to_match_expr(expression=expression.term))
+        return NotExpr(child=_to_match_expr(expression=expression.term, scope=scope))
     if isinstance(expression, TagsContainsExpression):
-        tags = FieldRef(table="image", name="tags")
+        if not query_translation.has_tags(table=scope):
+            raise UnsupportedQueryError(f"Tags of {scope} are not supported.")
+        tags = FieldRef(table=scope, name="tags")
         return TagsContainsExpr(field=tags, tag_name=expression.tag_name)
+    if isinstance(expression, MetadataComparisonExpression):
+        operator = OrdinalComparisonOperator(expression.comparison)
+        return MetadataComparisonExpr(
+            path=expression.path, operator=operator, value=expression.value
+        )
     if isinstance(expression, (ComparableFieldExpression, OrdinalFieldExpression)):
-        return _field_to_match_expr(expression=expression)
+        field_ref, expr_type = _lookup_field(field=expression.field, scope=scope)
+        return expr_type.model_validate(
+            {"field": field_ref, "operator": expression.operator, "value": expression.value}
+        )
     raise UnsupportedQueryError(f"The filter {type(expression).__name__} is not supported.")
 
 
-def _field_to_match_expr(
-    expression: ComparableFieldExpression[Any] | OrdinalFieldExpression[Any],
-) -> MatchExpr:
-    field = _field_ref(field=expression.field)
-    if isinstance(expression, ComparableFieldExpression):
-        operator = EqualityComparisonOperator(expression.operator)
-        return StringExpr(field=field, operator=operator, value=expression.value)
-    ordinal_operator = OrdinalComparisonOperator(expression.operator)
-    if field.name == "created_at":
-        return DatetimeExpr(field=field, operator=ordinal_operator, value=expression.value)
-    return IntegerExpr(field=field, operator=ordinal_operator, value=expression.value)
+def _lookup_field(field: Field, scope: str) -> tuple[FieldRef, type[FieldExpr]]:
+    fields_by_column = _fields_by_column()
+    key = (scope, field.get_sqlmodel_field())
+    if key not in fields_by_column:
+        raise UnsupportedQueryError(f"The field {type(field).__name__} is not supported.")
+    return fields_by_column[key]
 
 
-def _field_ref(field: Field) -> FieldRef:
-    # Fields overload `==`, so the lookup compares identity.
-    for image_field, name in _IMAGE_FIELDS:
-        if field is image_field:
-            return FieldRef(table="image", name=name)
-    raise UnsupportedQueryError(f"The field {type(field).__name__} is not supported.")
+@functools.cache
+def _fields_by_column() -> dict[tuple[str, Any], tuple[FieldRef, type[FieldExpr]]]:
+    """Map (table, column) to the field reference and the expression type of the field."""
+    fields_by_column: dict[tuple[str, Any], tuple[FieldRef, type[FieldExpr]]] = {}
+    for expr_type, fields in query_translation.field_tables():
+        for (table, name), field in fields.items():
+            if isinstance(field, Field):
+                key = (table, field.get_sqlmodel_field())
+                # The first table of a column wins.
+                fields_by_column.setdefault(key, (FieldRef(table=table, name=name), expr_type))
+    return fields_by_column
