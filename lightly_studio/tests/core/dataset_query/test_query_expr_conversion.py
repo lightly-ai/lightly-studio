@@ -8,15 +8,30 @@ import pytest
 
 from lightly_studio.core.dataset_query import query_expr_conversion, query_translation
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
+from lightly_studio.core.dataset_query.classification_query import (
+    ClassificationField,
+    ClassificationQuery,
+)
 from lightly_studio.core.dataset_query.field_expression import OrdinalFieldExpression
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.core.dataset_query.object_detection_query import (
+    ObjectDetectionField,
+    ObjectDetectionQuery,
+)
 from lightly_studio.core.dataset_query.order_by import (
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.core.dataset_query.polygon_query import PolygonField, PolygonQuery
 from lightly_studio.core.dataset_query.query_expr_conversion import UnsupportedQueryError
+from lightly_studio.core.dataset_query.segmentation_mask_query import (
+    SegmentationMaskField,
+    SegmentationMaskQuery,
+)
+from lightly_studio.core.dataset_query.video_event_query import VideoEventField, VideoEventQuery
+from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
 from lightly_studio.core.dataset_query.video_frame_sample_field import VideoFrameSampleField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.models.collection import SampleType
@@ -96,6 +111,42 @@ def test_to_query_expr() -> None:
         (SampleType.VIDEO_FRAME, VideoFrameSampleField.tags.contains("cat")),
         (SampleType.VIDEO, VideoSampleField.metadata["weather"] == "sunny"),
         (SampleType.VIDEO, OR(AND(VideoSampleField.fps < 10), NOT(VideoSampleField.width > 1))),
+        (SampleType.IMAGE, ClassificationQuery()),
+        (SampleType.IMAGE, ClassificationQuery(ClassificationField.class_name == "cat")),
+        (SampleType.IMAGE, ClassificationQuery(ClassificationField.source != "model")),
+        (SampleType.IMAGE, ClassificationQuery(ClassificationField.confidence > 0.5)),
+        (
+            SampleType.IMAGE,
+            ObjectDetectionQuery(
+                ObjectDetectionField.class_name != "cat", ObjectDetectionField.x >= 10
+            ),
+        ),
+        (SampleType.IMAGE, ObjectDetectionQuery(ObjectDetectionField.source == "model")),
+        (SampleType.IMAGE, ObjectDetectionQuery(ObjectDetectionField.confidence <= 0.5)),
+        (SampleType.IMAGE, SegmentationMaskQuery()),
+        (SampleType.IMAGE, SegmentationMaskQuery(SegmentationMaskField.y < 10)),
+        (SampleType.IMAGE, SegmentationMaskQuery(SegmentationMaskField.width > 10)),
+        (SampleType.IMAGE, PolygonQuery(PolygonField.height == 10)),
+        (
+            SampleType.IMAGE,
+            PolygonQuery(OR(PolygonField.class_name == "a", NOT(PolygonField.x < 1))),
+        ),
+        (SampleType.IMAGE, NOT(PolygonQuery(PolygonField.confidence != 0.5))),
+        (SampleType.VIDEO, VideoEventQuery(VideoEventField.class_name == "run")),
+        (SampleType.VIDEO, VideoEventQuery(VideoEventField.source == "model")),
+        (
+            SampleType.VIDEO,
+            VideoEventQuery(VideoEventField.start_time_s >= 1, VideoEventField.end_time_s < 2.5),
+        ),
+        (SampleType.VIDEO, VideoEventQuery(VideoEventField.confidence > 0.5)),
+        (SampleType.VIDEO, VideoFrameQuery(VideoFrameSampleField.frame_timestamp_s > 1.5)),
+        (
+            SampleType.VIDEO,
+            VideoFrameQuery(
+                ObjectDetectionQuery(ObjectDetectionField.width > 10),
+                ClassificationQuery(ClassificationField.class_name == "cat"),
+            ),
+        ),
     ],
 )
 def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression) -> None:
@@ -128,6 +179,15 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
         (SampleType.IMAGE, VideoSampleField.width > 100),
         (SampleType.VIDEO, ImageSampleField.width > 100),
         (SampleType.IMAGE, AND()),
+        (SampleType.IMAGE, ClassificationField.class_name == "cat"),
+        (SampleType.IMAGE, ClassificationQuery(ObjectDetectionField.x > 1)),
+        (SampleType.IMAGE, ClassificationQuery(ImageSampleField.width > 1)),
+        (SampleType.IMAGE, ClassificationQuery(VideoEventField.start_time_s > 1)),
+        (SampleType.IMAGE, ClassificationField.source == "model"),
+        (SampleType.IMAGE, PolygonQuery()),
+        (SampleType.IMAGE, VideoFrameQuery(VideoFrameSampleField.frame_timestamp_s > 1)),
+        (SampleType.VIDEO, VideoEventQuery()),
+        (SampleType.VIDEO, VideoFrameSampleField.frame_timestamp_s > 1),
     ],
 )
 def test_to_query_expr__not_supported(sample_type: SampleType, match: MatchExpression) -> None:
