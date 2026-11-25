@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -16,6 +18,12 @@ class TestHttpSampleTransport:
 
         with pytest.raises(NotImplementedError):
             transport.get_by_ids(sample_ids=[])
+
+    def test_get_image_ids_by_paths(self, test_client: TestClient) -> None:
+        transport: SampleTransport = HttpSampleTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.get_image_ids_by_paths(collection_id=uuid4(), file_paths=["/a.png"])
 
     def test_query(self, test_client: TestClient, db_session: Session) -> None:
         collection_id = create_collection(session=db_session).collection_id
