@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+import dataclasses
+from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -13,6 +14,7 @@ from fastapi.routing import APIRoute
 from sqlmodel import Session
 
 from lightly_studio.api.middleware import RequestTimingMiddleware
+from lightly_studio.api.replaceable import Replaceable
 from lightly_studio.api.routes import (
     healthz,
     images,
@@ -97,93 +99,123 @@ if LIGHTLY_STUDIO_DEBUG:
     logger = logging.getLogger("sqlalchemy.engine")
     logger.setLevel(logging.DEBUG)
 
-"""Create the FastAPI app."""
-app = FastAPI(lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def create_app(
+    routers: Sequence[APIRouter] = (),
+    replace: Replaceable | None = None,
+) -> FastAPI:
+    """Create the FastAPI app.
 
-app.add_middleware(
-    BrotliMiddleware,
-    minimum_size=1024,
-    # Exclude already-compressed media from compression (images, videos, video frames)
-    excluded_handlers=[
-        r"/images/sample/",
-        r"/videos/media/",
-        r"/frames/media/",
-    ],
-)
-
-if LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED:
+    Args:
+        routers: Extra routers. They are served under `/api`, before the webapp catch-all.
+        replace: The replaceable dependencies. Each field that is not its default replaces
+            the default in every route of this app. `None` keeps all defaults.
+    """
+    app = FastAPI(lifespan=lifespan)
+    if replace is not None:
+        _set_replacements(app=app, replace=replace)
     app.add_middleware(
-        RequestTimingMiddleware,
-        error_threshold_ms=LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS,
-        fail_on_error=LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR,
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
+
+    app.add_middleware(
+        BrotliMiddleware,
+        minimum_size=1024,
+        # Exclude already-compressed media from compression (images, videos, video frames)
+        excluded_handlers=[
+            r"/images/sample/",
+            r"/videos/media/",
+            r"/frames/media/",
+        ],
+    )
+
+    if LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED:
+        app.add_middleware(
+            RequestTimingMiddleware,
+            error_threshold_ms=LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS,
+            fail_on_error=LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR,
+        )
+
+    register_exception_handlers(app)
+
+    # api routes
+    app.include_router(_create_api_router())
+
+    # sample serving
+    app.include_router(images.app_router, prefix="/images")
+    app.include_router(video_frames_media.frames_router)
+    app.include_router(video_media.app_router)
+    app.include_router(mcap_sequences.mcap_sequences_router)
+    app.include_router(recordings.recordings_router)
+
+    # health status check
+    app.include_router(healthz.health_router)
+
+    # The extra routers keep their own operation IDs.
+    use_route_names_as_operation_ids(app)
+    for router in routers:
+        app.include_router(router, prefix="/api", tags=["api"])
+
+    # webapp routes, the catch-all router stays last
+    app.include_router(webapp.app_router)
+    return app
 
 
 def use_route_names_as_operation_ids(app: FastAPI) -> None:
     """Use API function name for operation IDs.
 
-    Should be called only after all routes have been added.
+    Call it after the built-in routes are added and before the extra routers.
     """
     for route in app.routes:
         if isinstance(route, APIRoute):
             route.operation_id = route.name  # in this case, 'read_items'
 
 
-register_exception_handlers(app)
+def _set_replacements(app: FastAPI, replace: Replaceable) -> None:
+    """Make FastAPI call each replacement instead of its default."""
+    for field in dataclasses.fields(Replaceable):
+        default = getattr(Replaceable, field.name)
+        replacement = getattr(replace, field.name)
+        if replacement is not default:
+            app.dependency_overrides[default] = replacement
 
-# api routes
-api_router = APIRouter(prefix="/api", tags=["api"])
 
-api_router.include_router(collection.collection_router)
-api_router.include_router(collection_tag.tag_router)
-api_router.include_router(export.export_router)
-api_router.include_router(image.image_router)
-api_router.include_router(sample.sample_router)
-api_router.include_router(annotation_label.annotations_label_router)
-api_router.include_router(annotation.annotations_router)
-api_router.include_router(caption.captions_router)
-api_router.include_router(text_embedding.text_embedding_router)
-api_router.include_router(image_embedding.image_embedding_router)
-api_router.include_router(settings.settings_router)
-api_router.include_router(classifier.classifier_router)
-api_router.include_router(embeddings2d.embeddings2d_router)
-api_router.include_router(features.features_router)
-api_router.include_router(analytics.analytics_router)
-api_router.include_router(assisted_labeling.assisted_labeling_router)
-api_router.include_router(evaluation.evaluation_router)
-api_router.include_router(metadata.metadata_router)
-api_router.include_router(sampling.sampling_router)
-api_router.include_router(operator.operator_router)
-api_router.include_router(frame.frame_router)
-api_router.include_router(video.video_router)
-api_router.include_router(group.group_router)
-api_router.include_router(mcap_sequence.mcap_sequence_router)
-api_router.include_router(enterprise.enterprise_router)
-api_router.include_router(tracks.tracks_router)
-api_router.include_router(version.version_router)
-api_router.include_router(v1_router)
+def _create_api_router() -> APIRouter:
+    """Create a new `/api` router. A new router per call keeps apps independent."""
+    api_router = APIRouter(prefix="/api", tags=["api"])
+    api_router.include_router(collection.collection_router)
+    api_router.include_router(collection_tag.tag_router)
+    api_router.include_router(export.export_router)
+    api_router.include_router(image.image_router)
+    api_router.include_router(sample.sample_router)
+    api_router.include_router(annotation_label.annotations_label_router)
+    api_router.include_router(annotation.annotations_router)
+    api_router.include_router(caption.captions_router)
+    api_router.include_router(text_embedding.text_embedding_router)
+    api_router.include_router(image_embedding.image_embedding_router)
+    api_router.include_router(settings.settings_router)
+    api_router.include_router(classifier.classifier_router)
+    api_router.include_router(embeddings2d.embeddings2d_router)
+    api_router.include_router(features.features_router)
+    api_router.include_router(analytics.analytics_router)
+    api_router.include_router(assisted_labeling.assisted_labeling_router)
+    api_router.include_router(evaluation.evaluation_router)
+    api_router.include_router(metadata.metadata_router)
+    api_router.include_router(sampling.sampling_router)
+    api_router.include_router(operator.operator_router)
+    api_router.include_router(frame.frame_router)
+    api_router.include_router(video.video_router)
+    api_router.include_router(group.group_router)
+    api_router.include_router(mcap_sequence.mcap_sequence_router)
+    api_router.include_router(enterprise.enterprise_router)
+    api_router.include_router(tracks.tracks_router)
+    api_router.include_router(version.version_router)
+    api_router.include_router(v1_router)
+    return api_router
 
-app.include_router(api_router)
 
-# images serving
-app.include_router(images.app_router, prefix="/images")
-app.include_router(video_frames_media.frames_router)
-app.include_router(video_media.app_router)
-app.include_router(mcap_sequences.mcap_sequences_router)
-app.include_router(recordings.recordings_router)
-
-# health status check
-app.include_router(healthz.health_router)
-
-# webapp routes
-app.include_router(webapp.app_router)
-
-use_route_names_as_operation_ids(app)
+app = create_app()
