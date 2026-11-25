@@ -23,6 +23,33 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => globalStorage.current
 }));
 
+vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        readRootCollection: vi.fn()
+    };
+});
+
+vi.mock('$lib/hooks/useCollection/useCollection', () => {
+    return {
+        useCollection: vi.fn(),
+        useCollectionWithChildren: vi.fn()
+    };
+});
+
+vi.mock('$lib/hooks/useHasEmbeddings/useHasEmbeddings', () => ({
+    useHasEmbeddings: vi.fn()
+}));
+
+vi.mock('$lib/hooks/useAuth/useAuth', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        default: vi.fn()
+    };
+});
+
 describe('Header', () => {
     const mockCollection: CollectionView = {
         collection_id: 'test-collection',
@@ -66,21 +93,6 @@ describe('Header', () => {
     const setup = (props: SetupProps = { isEditingMode: false }) => {
         const { setIsEditingModeSpy, executeReversibleActionSpy } = mockPage(props);
 
-        vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => {
-            const actual = await importOriginal();
-            return {
-                ...actual,
-                readRootCollection: vi.fn()
-            };
-        });
-
-        vi.mock('$lib/hooks/useCollection/useCollection', () => {
-            return {
-                useCollection: vi.fn(),
-                useCollectionWithChildren: vi.fn()
-            };
-        });
-
         (useCollectionWithChildren as unknown as vi.Mock).mockReturnValue({
             collection: readable({
                 isSuccess: true,
@@ -93,10 +105,6 @@ describe('Header', () => {
             })
         });
 
-        vi.mock('$lib/hooks/useHasEmbeddings/useHasEmbeddings', () => ({
-            useHasEmbeddings: vi.fn()
-        }));
-
         useHasEmbeddings.mockReturnValue(
             readable({
                 data: true,
@@ -104,14 +112,6 @@ describe('Header', () => {
                 error: null
             })
         );
-
-        vi.mock('$lib/hooks/useAuth/useAuth', async (importOriginal) => {
-            const actual = await importOriginal();
-            return {
-                ...actual,
-                default: vi.fn()
-            };
-        });
 
         (useAuth as unknown as vi.Mock).mockReturnValue({
             user: props.user ?? null,
