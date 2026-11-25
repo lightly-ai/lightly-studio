@@ -12,7 +12,6 @@
     import { goto } from '$app/navigation';
     import AnnotationDetailsNavigation from './AnnotationDetailsNavigation/AnnotationDetailsNavigation.svelte';
     import AnnotationDetailsSelectableBox from './AnnotationDetailsSelectableBox/AnnotationDetailsSelectableBox.svelte';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { page } from '$app/state';
 
     type SampleProperties = {
@@ -57,13 +56,8 @@
         }
     };
 
+    // Viewing an annotation does not change the class for new annotations: only a pick does.
     let annotation: AnnotationView = $derived(annotationDetails.annotation);
-    const { updateLastAnnotationLabel } = useGlobalStorage();
-
-    // Execute before updating the DOM
-    $effect.pre(() => {
-        updateLastAnnotationLabel(collectionId, annotation.annotation_label.annotation_label_name);
-    });
 </script>
 
 <SampleDetailsPanel

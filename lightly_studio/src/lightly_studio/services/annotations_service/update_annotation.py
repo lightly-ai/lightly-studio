@@ -11,8 +11,9 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
-from lightly_studio.services import annotations_service
+from lightly_studio.services import annotations_service, object_track_service
 
 
 class AnnotationUpdate(BaseModel):
@@ -23,13 +24,19 @@ class AnnotationUpdate(BaseModel):
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
     segmentation_mask: list[int] | None = None
+    polygons: Polygons | None = None
     start_time_s: float | None = None
     end_time_s: float | None = None
     cuboid_3d: Cuboid3DCreate | None = None
+    object_track_id: UUID | None = None
+    create_new_track: bool = False
+    update_object_track: bool = False
 
 
 def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> AnnotationBaseTable:
     """Update an annotation.
+
+    A changed cuboid becomes manual and interpolates its track around it.
 
     Args:
         session: Database session for executing the operation.
@@ -39,6 +46,10 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
         The updated annotation.
 
     """
+    _check_time_span_is_complete(
+        start_time_s=annotation_update.start_time_s,
+        end_time_s=annotation_update.end_time_s,
+    )
     result = None
     if annotation_update.label_name is not None:
         result = annotations_service.update_annotation_label(
@@ -59,8 +70,12 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
             annotation_id=annotation_update.annotation_id,
             segmentation_mask=annotation_update.segmentation_mask,
         )
-    if (annotation_update.start_time_s is None) != (annotation_update.end_time_s is None):
-        raise ValueError("Both start_time_s and end_time_s must be provided together.")
+    if annotation_update.polygons is not None:
+        result = annotations_service.update_annotation_polygons(
+            session=session,
+            annotation_id=annotation_update.annotation_id,
+            polygons=annotation_update.polygons,
+        )
     if annotation_update.start_time_s is not None and annotation_update.end_time_s is not None:
         result = annotations_service.update_temporal_span(
             session=session,
@@ -76,6 +91,24 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
             cuboid_3d=annotation_update.cuboid_3d,
         )
 
+    if annotation_update.update_object_track:
+        result = annotations_service.update_annotation_object_track(
+            session=session,
+            annotation_id=annotation_update.annotation_id,
+            collection_id=annotation_update.collection_id,
+            object_track_id=annotation_update.object_track_id,
+            create_new_track=annotation_update.create_new_track,
+        )
+
     if result is None:
         raise ValueError("No updates provided for the annotation.")
+    if annotation_update.cuboid_3d is not None or annotation_update.update_object_track:
+        object_track_service.interpolate_around_cuboid(
+            session=session, annotation_id=annotation_update.annotation_id
+        )
     return result
+
+
+def _check_time_span_is_complete(start_time_s: float | None, end_time_s: float | None) -> None:
+    if (start_time_s is None) != (end_time_s is None):
+        raise ValueError("Both start_time_s and end_time_s must be provided together.")

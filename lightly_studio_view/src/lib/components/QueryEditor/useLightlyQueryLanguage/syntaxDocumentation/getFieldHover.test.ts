@@ -73,3 +73,43 @@ describe('getFieldHover', () => {
         expect(getFieldHover(model as never, { lineNumber: 1, column: 2 } as never)).toBeNull();
     });
 });
+
+it.each([
+    ['tp', 'True positive metric in the selected run.'],
+    ['fp', 'False positive metric in the selected run.'],
+    ['fn', 'False negative metric in the selected run.'],
+    ['disagreement', 'Classification disagreement score in the selected run.'],
+    ['miou', 'Mean intersection over union for semantic segmentation in the selected run.']
+])('documents quoted evaluation metric %s inside nested criteria', async (name, description) => {
+    const { getFieldHover } = await import('./getFieldHover');
+    const text = `sample_evaluation(name = "run1" AND ("${name}" > 0))`;
+    const startColumn = text.indexOf(`"${name}"`) + 2;
+    const model = makeSyntaxDocModel({
+        text,
+        wordAtPosition: { word: name, startColumn, endColumn: startColumn + name.length },
+        includeGetValue: true,
+        includeGetOffsetAt: true
+    });
+    const hover = getFieldHover(model as never, { lineNumber: 1, column: startColumn } as never);
+    expect(hover?.contents).toContainEqual({ value: description });
+});
+
+it('documents video fields without a prefix and preserves the hover range', async () => {
+    const { getFieldHover } = await import('./getFieldHover');
+    const { modelSampleTypes } = await import('../modelQueryScope');
+    const model = makeSyntaxDocModel({
+        text: 'width > 10',
+        wordAtPosition: { word: 'width', startColumn: 1, endColumn: 6 },
+        includeGetValue: true,
+        includeGetOffsetAt: true
+    });
+    modelSampleTypes.set(model as never, 'video');
+    const hover = getFieldHover(model as never, { lineNumber: 1, column: 2 } as never);
+    expect(hover?.contents).toContainEqual({ value: '```\nVideo.width: int\n```' });
+    expect(hover?.range).toMatchObject({
+        startLineNumber: 1,
+        endLineNumber: 1,
+        startColumn: 1,
+        endColumn: 6
+    });
+});

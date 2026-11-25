@@ -36,7 +36,6 @@ describe('createSettingsDialogFormState', () => {
         expect(createSettingsDialogFormState(TEST_SETTINGS)).toEqual({
             shortcutSettings: {
                 hideAnnotations: 'v',
-                goBack: 'Escape',
                 toggleEditMode: 'e',
                 keyToolbarSelection: 's',
                 keyToolbarDrag: 'd',
@@ -63,7 +62,6 @@ describe('createSettingsSavePayload', () => {
             createSettingsSavePayload({
                 shortcutSettings: {
                     hideAnnotations: 'h',
-                    goBack: 'Backspace',
                     toggleEditMode: 't',
                     keyToolbarSelection: 'a',
                     keyToolbarDrag: 'g',
@@ -83,7 +81,6 @@ describe('createSettingsSavePayload', () => {
             })
         ).toEqual({
             key_hide_annotations: 'h',
-            key_go_back: 'Backspace',
             key_toggle_edit_mode: 't',
             grid_view_sample_rendering: 'cover',
             grid_view_thumbnail_quality: 'high',
@@ -156,16 +153,29 @@ describe('SettingsDialogState', () => {
     it('records a shortcut and updates only the targeted key', () => {
         const state = new SettingsDialogState();
         state.hydrate(TEST_SETTINGS);
-        state.startRecording('goBack');
+        state.startRecording('toggleEditMode');
 
         const event = new KeyboardEvent('keydown', { key: 'q' });
         state.handleKeyDown(event);
 
-        expect(state.shortcuts.goBack).toBe('q');
+        expect(state.shortcuts.toggleEditMode).toBe('q');
         // Other shortcuts remain unchanged
         expect(state.shortcuts.hideAnnotations).toBe('v');
-        expect(state.shortcuts.toggleEditMode).toBe('e');
+        expect(state.shortcuts.keyToolbarSelection).toBe('s');
         expect(state.recordingShortcut).toBeNull();
+    });
+
+    it('cancels recording on Escape', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('hideAnnotations');
+
+        const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+        state.handleKeyDown(event);
+
+        expect(state.shortcuts.hideAnnotations).toBe('v');
+        expect(state.recordingShortcut).toBeNull();
+        expect(event.defaultPrevented).toBe(true);
     });
 
     it('ignores keydown when not recording', () => {
@@ -177,7 +187,19 @@ describe('SettingsDialogState', () => {
 
         // Nothing should change
         expect(state.shortcuts.hideAnnotations).toBe('v');
-        expect(state.shortcuts.goBack).toBe('Escape');
+        expect(state.shortcuts.toggleEditMode).toBe('e');
+    });
+
+    it('reports changes against the hydrated settings', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        expect(state.hasChanges).toBe(false);
+
+        state.shortcuts.hideAnnotations = 'z';
+        expect(state.hasChanges).toBe(true);
+
+        state.shortcuts.hideAnnotations = 'v';
+        expect(state.hasChanges).toBe(false);
     });
 
     it('getSavePayload includes both modified and unmodified fields', () => {
@@ -196,7 +218,6 @@ describe('SettingsDialogState', () => {
                 show_sample_filenames: true,
                 image_interpolation: false,
                 enforce_coloring_by_class: true,
-                key_go_back: 'Escape',
                 grid_view_sample_rendering: 'contain'
             })
         );

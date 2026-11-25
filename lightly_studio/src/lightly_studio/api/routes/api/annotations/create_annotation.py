@@ -11,11 +11,11 @@ from pydantic import BaseModel
 
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
-    AnnotationBaseTable,
     AnnotationType,
     AnnotationView,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.create_annotation import AnnotationCreateParams
 
@@ -32,11 +32,14 @@ class AnnotationCreateInput(BaseModel):
     annotation_type: AnnotationType
     annotation_collection_name: str | None = None
     parent_sample_id: UUID
+    object_track_id: UUID | None = None
+    create_new_track: bool = False
     x: int | None = None
     y: int | None = None
     width: int | None = None
     height: int | None = None
     segmentation_mask: list[int] | None = None
+    polygons: Polygons | None = None
     start_time_s: float | None = None
     end_time_s: float | None = None
     cuboid_3d: Cuboid3DCreate | None = None
@@ -52,11 +55,12 @@ def create_annotation(
     ],
     session: SessionDep,
     create_annotation_input: Annotated[AnnotationCreateInput, Body()],
-) -> AnnotationBaseTable:
+) -> AnnotationView:
     """Create a new annotation."""
-    return annotations_service.create_annotation(
+    annotation = annotations_service.create_annotation(
         session=session,
         annotation=AnnotationCreateParams(
             collection_id=collection_id, **create_annotation_input.model_dump()
         ),
     )
+    return AnnotationView.from_annotation_table(annotation=annotation)

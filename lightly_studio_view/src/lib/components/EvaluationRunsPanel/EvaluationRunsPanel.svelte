@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { ArrowLeft, Plus, X } from '@lucide/svelte';
+    import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+    import Plus from '@lucide/svelte/icons/plus';
+    import X from '@lucide/svelte/icons/x';
     import { Button, Spinner, Typography } from '$lib/components';
     import { usePostHog } from '$lib/hooks';
 

@@ -1,11 +1,11 @@
-import { useParentObject3D, useThrelte } from '@threlte/core';
+import { useThrelte } from '@threlte/core';
 import { useOrbitControls } from '@threlte/extras';
 import { onMount } from 'svelte';
 import { get, writable, type Readable } from 'svelte/store';
 import { Raycaster } from 'three';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
-import { createFaceDrag, computePointerResize, readResizeTransform } from './cuboidFaceDrag';
+import { createFaceDrag, computePointerResize } from './cuboidFaceDrag';
 
 type Face = Parameters<typeof createFaceDrag>[0]['face'];
 type ResizePayload = Parameters<
@@ -16,7 +16,18 @@ interface Params {
     getAnnotation: () => Pick<CuboidAnnotation, 'id' | 'frameId' | 'center' | 'rotation' | 'size'>;
     onResizeStart?: () => void;
     onResizeCancel?: () => void;
+    /**
+     * Fires on every pointer move with the in-progress geometry. The consumer renders
+     * the previewed annotation; the hook never scales the Three.js group itself, since
+     * doing both would apply the resize twice and push the opposite face outward.
+     */
+    onResizePreview: (payload: ResizePayload) => void;
     onResizeEnd?: (payload: ResizePayload) => void;
+    /**
+     * Whether a move or rotate gizmo is under the pointer. The gizmos sit inside the cuboid,
+     * so the faces leave the pointer to them.
+     */
+    isGizmoHovered?: () => boolean;
 }
 
 interface FaceResizeReturn {
@@ -32,18 +43,20 @@ export function useCuboidFaceResize({
     getAnnotation,
     onResizeStart,
     onResizeCancel,
-    onResizeEnd
+    onResizePreview,
+    onResizeEnd,
+    isGizmoHovered = () => false
 }: Params): FaceResizeReturn {
-    const { camera, renderer, invalidate } = useThrelte();
-    const parentObject = useParentObject3D();
+    const { camera, renderer } = useThrelte();
     const orbitControls = useOrbitControls();
     const canvas = renderer.domElement;
     const raycaster = new Raycaster();
     const hoveredFace = writable<Face | null>(null);
     let activeDrag: ReturnType<typeof createFaceDrag> | null = null;
+    let lastTransform: ReturnType<typeof computePointerResize> = null;
 
     function onFaceHoverEnter(face: Face): void {
-        if (activeDrag) return;
+        if (activeDrag || isGizmoHovered()) return;
         hoveredFace.set(face);
         canvas.style.cursor = 'grab';
     }
@@ -55,8 +68,9 @@ export function useCuboidFaceResize({
     }
 
     const onFacePointerDown: FaceResizeReturn['onFacePointerDown'] = ({ event, face }) => {
-        if (event.nativeEvent.button !== 0 || !parentObject.current) return;
+        if (event.nativeEvent.button !== 0 || isGizmoHovered()) return;
         onResizeStart?.();
+        lastTransform = null;
         activeDrag = createFaceDrag({
             event,
             face,
@@ -64,14 +78,15 @@ export function useCuboidFaceResize({
             camera: camera.current
         });
         event.stopPropagation();
+        // Keep TransformControls on the same element from taking pointer capture.
+        event.nativeEvent.stopImmediatePropagation();
         canvas.setPointerCapture(event.nativeEvent.pointerId);
         canvas.style.cursor = 'grabbing';
         if (orbitControls.current) orbitControls.current.enabled = false;
     };
 
     function updateDrag(event: PointerEvent): void {
-        const object = parentObject.current;
-        if (!activeDrag || !object) return;
+        if (!activeDrag) return;
         const transform = computePointerResize({
             event,
             canvas,
@@ -80,13 +95,9 @@ export function useCuboidFaceResize({
             raycaster
         });
         if (!transform) return;
-        object.position.set(...transform.center);
-        object.scale.set(
-            transform.size[0] / activeDrag.originalSize[0],
-            transform.size[1] / activeDrag.originalSize[1],
-            transform.size[2] / activeDrag.originalSize[2]
-        );
-        invalidate();
+        lastTransform = transform;
+        const { id, frameId, rotation } = getAnnotation();
+        onResizePreview({ annotationId: id, frameId, ...transform, rotation });
     }
 
     function onPointerMove(event: PointerEvent): void {
@@ -115,20 +126,19 @@ export function useCuboidFaceResize({
         if (!activeDrag) return;
         const { pointerId } = activeDrag;
         activeDrag = null;
+        lastTransform = null;
         if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
         if (orbitControls.current) orbitControls.current.enabled = true;
         canvas.style.cursor = get(hoveredFace) ? 'grab' : '';
     }
 
     function finalizeDrag(): void {
-        const object = parentObject.current;
-        if (activeDrag && object) {
-            const { center, size } = readResizeTransform({
-                object,
-                originalSize: activeDrag.originalSize
-            });
+        if (activeDrag) {
+            const { center, size } = lastTransform ?? {
+                center: activeDrag.originalCenter,
+                size: activeDrag.originalSize
+            };
             const { id, frameId, rotation } = getAnnotation();
-            object.scale.set(1, 1, 1);
             onResizeEnd?.({ annotationId: id, frameId, center, rotation, size });
         } else {
             onResizeCancel?.();
@@ -138,12 +148,6 @@ export function useCuboidFaceResize({
 
     function cancelDrag(): void {
         if (!activeDrag) return;
-        const object = parentObject.current;
-        if (object) {
-            object.position.set(...activeDrag.originalCenter);
-            object.scale.set(1, 1, 1);
-            invalidate();
-        }
         hoveredFace.set(null);
         onResizeCancel?.();
         finishDrag();

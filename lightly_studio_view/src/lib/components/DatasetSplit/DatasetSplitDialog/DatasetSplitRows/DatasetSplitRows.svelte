@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Plus } from '@lucide/svelte';
+    import Plus from '@lucide/svelte/icons/plus';
     import { Button } from '$lib/components';
     import { getSplitCounts } from '../../splitPreview';
     import DatasetSplitRow from '../DatasetSplitRow/DatasetSplitRow.svelte';

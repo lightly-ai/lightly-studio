@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -29,7 +29,7 @@ class SimilarityComputation(BaseModel):
 
 
 MetadataComputation = Annotated[
-    Union[TypicalityComputation, SimilarityComputation], Field(discriminator="kind")
+    TypicalityComputation | SimilarityComputation, Field(discriminator="kind")
 ]
 
 

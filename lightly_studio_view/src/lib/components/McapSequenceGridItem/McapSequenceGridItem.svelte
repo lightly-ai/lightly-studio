@@ -1,6 +1,6 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import { BoxIcon } from '@lucide/svelte';
+    import BoxIcon from '@lucide/svelte/icons/box';
     import type { McapSequenceFrame } from '$lib/api/lightly_studio_local/types.gen';
     import { getMcapSequenceFrameURL } from '$lib/utils';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';

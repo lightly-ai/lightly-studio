@@ -13,7 +13,7 @@ env:
   # Every run restores the uv cache, only main writes one: per-ref copies are
   # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
   # The Python version is part of the uv cache key, so each step passes the one its job runs:
-  # the 3.9 jobs share an entry instead of the release-tooling key, whose deps are ~30MB.
+  # the 3.11 jobs share an entry instead of the release-tooling key, whose deps are ~30MB.
   UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
 
 concurrency:
@@ -100,15 +100,15 @@ jobs:
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
-          python-version: "3.9"
+          version: "0.13.6"
+          python-version: "3.11"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.11"
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -133,13 +133,13 @@ jobs:
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.11"
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
-          python-version: "3.9"
+          version: "0.13.6"
+          python-version: "3.11"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
@@ -177,43 +177,42 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Postgres is only tested on 3.14 because PostgreSQL dialect/driver
-          # behavior doesn't vary by Python version.
-          - python: "3.9"
-            database: DuckDB
-            make_target: test
-          - python: "3.14"
-            database: DuckDB
-            make_target: test
-          - python: "3.14"
-            database: Postgres
-            make_target: test-postgres
+        # Pull requests run one suite, Postgres on the lowest Python. The merge
+        # queue, main, and manual runs test the other three combinations.
+        include: >-
+          ${{ fromJSON(github.event_name == 'pull_request' && '[
+            {"python": "3.11", "database": "Postgres", "make_target": "test-postgres"}
+          ]' || '[
+            {"python": "3.11", "database": "DuckDB", "make_target": "test"},
+            {"python": "3.15", "database": "Postgres", "make_target": "test-postgres"},
+            {"python": "3.15", "database": "DuckDB", "make_target": "test"}
+          ]') }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
           submodules: recursive
 
+      - name: Log runner hardware
+        uses: ./.github/actions/runner-info
+        with:
+          mode: start
+
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
+          version: "0.13.6"
           python-version: ${{ matrix.python }}
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
+          # Other jobs on the same Python install fewer packages and finish first. With a shared
+          # key their small cache wins, and on 3.15 this job then builds packages from source.
+          cache-suffix: backend
 
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
-
-      - name: Set Up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: lightly_studio_view/.nvmrc
-          cache: npm
-          cache-dependency-path: lightly_studio_view/package-lock.json
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -228,11 +227,36 @@ jobs:
           UV_PYTHON: ${{ matrix.python }}
         run: make migration-check-postgresql
 
+      # Catches packaging errors before a release. The wheel is pure Python, so one job is enough.
+      - name: Build Python package
+        if: matrix.python == '3.11'
+        working-directory: lightly_studio
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: uv build --out-dir dist
+
       - name: Run Tests for LightlyStudio
         working-directory: lightly_studio
         env:
           UV_PYTHON: ${{ matrix.python }}
+          # Lists the slowest tests and saves the time of every test.
+          PYTEST_ADDOPTS: --durations=30 --junitxml=pytest-report.xml
         run: make ${{ matrix.make_target }}
+
+      - name: Upload test timings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Pytest Report (${{ matrix.python }}, ${{ matrix.database }})
+          path: lightly_studio/pytest-report.xml
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Log runner memory use
+        if: always()
+        uses: ./.github/actions/runner-info
+        with:
+          mode: end
 
   test-frontend:
     name: Frontend Tests
@@ -248,16 +272,21 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Log runner hardware
+        uses: ./.github/actions/runner-info
+        with:
+          mode: start
+
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.11"
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
-          python-version: "3.9"
+          version: "0.13.6"
+          python-version: "3.11"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
@@ -280,14 +309,26 @@ jobs:
           make export-schema
           make export-version
 
-      # `make build` installs deps (build: install) before building.
-      - name: Build app
+      # Tests need only the generated sources, not `vite build`. Other jobs build the app.
+      - name: Install dependencies and generate sources
         working-directory: lightly_studio_view
-        run: make build
+        run: |
+          npm ci
+          npm run generate-language
+          npm run generate-api-client
 
       - name: Run Tests for lightly_studio_view
         working-directory: lightly_studio_view
-        run: make test
+        # Lists the slowest imports, they take most of the test time.
+        run: >-
+          make test VITEST_ARGS="--experimental.importDurations.print
+          --experimental.importDurations.limit=30"
+
+      - name: Log runner memory use
+        if: always()
+        uses: ./.github/actions/runner-info
+        with:
+          mode: end
 
   check-docs:
     name: Build Docs
@@ -304,15 +345,15 @@ jobs:
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
-          python-version: "3.9"
+          version: "0.13.6"
+          python-version: "3.11"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.11"
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -375,7 +416,7 @@ jobs:
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
+          version: "0.13.6"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
@@ -393,9 +434,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The floor and the ceiling of `requires-python`; nothing in the package is version
-        # specific.
-        python: ["3.9", "3.14"]
+        # The lowest Python that CI runs and the ceiling of `requires-python`; nothing in the
+        # package is version specific.
+        python: ["3.11", "3.15"]
     # This job runs Makefile targets the pull request itself supplies. The repository default is
     # a write-scoped token, so it is pinned to read-only and kept out of .git/config, the same
     # way check-release-tooling is.
@@ -413,7 +454,7 @@ jobs:
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
+          version: "0.13.6"
           python-version: ${{ matrix.python }}
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}

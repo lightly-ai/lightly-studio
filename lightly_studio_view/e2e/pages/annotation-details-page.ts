@@ -93,6 +93,8 @@ export class AnnotationDetailsPage {
     }
 
     async gotoNextAnnotationByKeyboard() {
+        // The arrow key listener mounts together with the arrow button.
+        await expect(this.getNextButton()).toBeVisible({ timeout: 10000 });
         const currentUrl = this.page.url();
         await this.page.keyboard.press('ArrowRight');
         await expect(this.page).not.toHaveURL(currentUrl, { timeout: 10000 });
@@ -108,6 +110,8 @@ export class AnnotationDetailsPage {
     }
 
     async gotoPrevAnnotationByKeyboard() {
+        // The arrow key listener mounts together with the arrow button.
+        await expect(this.getPrevButton()).toBeVisible({ timeout: 10000 });
         const currentUrl = this.page.url();
         await this.page.keyboard.press('ArrowLeft');
         await expect(this.page).not.toHaveURL(currentUrl, { timeout: 10000 });
@@ -130,8 +134,7 @@ export class AnnotationDetailsPage {
                 response.status() === 200
         );
 
-        await this.page.getByTestId('menu-trigger').click();
-        await this.page.getByTestId('menu-settings').click();
+        await this.page.getByTestId('breadcrumb-settings-button').click();
         await this.page.getByRole('tab', { name: 'Annotations' }).click();
 
         const toggle = this.page.locator('#show-annotation-text-labels');
@@ -147,7 +150,11 @@ export class AnnotationDetailsPage {
     }
 
     async clickEditLabelButton() {
-        await this.page.getByTestId('header-editing-mode-button').click();
+        await this.page.getByTestId('breadcrumb-edit-button').click();
+    }
+
+    async clickFinishEditingButton() {
+        await this.page.getByTestId('breadcrumb-finish-editing-button').click();
     }
 
     async setLabel(label: string) {
@@ -287,7 +294,7 @@ export class AnnotationDetailsPage {
                 response.status() === 200
         );
 
-        await this.page.getByTestId('header-reverse-action-button').click();
+        await this.page.getByTestId('breadcrumb-undo-button').click();
 
         await responsePromise;
         await this.page.waitForLoadState('networkidle');

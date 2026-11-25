@@ -9,12 +9,17 @@ from lightly_studio import ImageDataset
 from lightly_studio.core.annotation.object_detection import ObjectDetectionAnnotation
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.core.image import image_dataset
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.database import db_manager
 from lightly_studio.embed.embedder_registry import EmbedderRegistry, NoEmbedderReason
-from lightly_studio.models.collection import SampleType
+from lightly_studio.models.collection import (
+    CollectionCreate,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 from lightly_studio.resolvers import image_resolver, tag_resolver
+from lightly_studio.transport import active_transport
+from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation,
@@ -56,6 +61,23 @@ class TestDataset:
         with pytest.raises(ValueError, match="already exists"):
             ImageDataset.create(name="test_dataset")
 
+    def test_create__transport(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+    ) -> None:
+        view = ImageDataset.create(name="dataset1")._inner
+        transport = mocker.Mock()
+        transport.collections.create.return_value = view
+        mocker.patch.object(active_transport._active, "transport", transport)
+
+        dataset = ImageDataset.create(name="dataset1")
+
+        assert dataset.collection_id == view.collection_id
+        transport.collections.create.assert_called_once_with(
+            collection=CollectionCreate(name="dataset1", sample_type=SampleType.IMAGE)
+        )
+
     def test_create__sample_type(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -79,6 +101,26 @@ class TestDataset:
         # Load non-existent dataset
         with pytest.raises(ValueError, match="Dataset with name 'non_existent' not found"):
             ImageDataset.load(name="non_existent")
+
+    def test_load__remote(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+    ) -> None:
+        dataset = ImageDataset.create(name="dataset1")
+        view = CollectionWithoutChildrenView.model_validate(dataset._inner)
+        transport = mocker.Mock()
+        transport.collections.get_by_name.return_value = view
+        mocker.patch.object(active_transport._active, "transport", transport)
+        get_engine = mocker.spy(db_manager, "get_engine")
+
+        loaded = ImageDataset.load(name="dataset1")
+
+        assert (loaded.name, loaded.collection_id) == ("dataset1", dataset.collection_id)
+        transport.collections.get_by_name.assert_called_once_with(
+            name="dataset1", parent_collection_id=None
+        )
+        get_engine.assert_not_called()
 
     def test_load__default_name(
         self,
@@ -445,8 +487,7 @@ def test_generate_embeddings(
 
     assert len(image1.sample.embeddings) == 0
 
-    image_dataset._generate_embeddings_image(
-        session=session,
+    LocalIngestionTransport().embed_images(
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
     )
@@ -468,8 +509,7 @@ def test_generate_embeddings__no_generator(
     image1 = create_image(session=session, collection_id=dataset.collection_id)
     assert len(image1.sample.embeddings) == 0
 
-    image_dataset._generate_embeddings_image(
-        session=session,
+    LocalIngestionTransport().embed_images(
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
     )
@@ -485,8 +525,7 @@ def test_generate_embeddings__empty_sample_ids(
     session = db_manager.persistent_session()
     dataset = create_collection(session=session)
 
-    image_dataset._generate_embeddings_image(
-        session=session,
+    LocalIngestionTransport().embed_images(
         collection_id=dataset.collection_id,
         sample_ids=[],
     )
@@ -503,8 +542,7 @@ def test_generate_embeddings__rerun_embeds_missing_samples(
     image1 = create_image(
         session=session, collection_id=dataset.collection_id, file_path_abs="/path/to/1.png"
     )
-    image_dataset._generate_embeddings_image(
-        session=session,
+    LocalIngestionTransport().embed_images(
         collection_id=dataset.collection_id,
         sample_ids=[image1.sample_id],
     )
@@ -513,8 +551,7 @@ def test_generate_embeddings__rerun_embeds_missing_samples(
         session=session, collection_id=dataset.collection_id, file_path_abs="/path/to/2.png"
     )
 
-    image_dataset._generate_embeddings_image(
-        session=session,
+    LocalIngestionTransport().embed_images(
         collection_id=dataset.collection_id,
         sample_ids=[],
     )

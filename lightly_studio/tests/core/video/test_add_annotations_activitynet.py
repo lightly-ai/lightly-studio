@@ -15,10 +15,12 @@ from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
-def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_path: Path) -> None:
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+def test_add_annotations_from_activitynet__adds_events(
+    persistent_session: Session, tmp_path: Path
+) -> None:
+    collection = create_collection(session=persistent_session, sample_type=SampleType.VIDEO)
     video = create_video(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         video=VideoStub(path="/data/videos/v_action1.mp4", duration_s=30.0),
     )
@@ -48,7 +50,7 @@ def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_
     )
 
     missing = add_annotations.add_annotations_from_activitynet(
-        session=db_session,
+        session=persistent_session,
         root_collection_id=collection.collection_id,
         annotations_json=annotations_json,
         collection_name="ground_truth",
@@ -57,7 +59,7 @@ def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_
     assert missing == ["v_missing"]
 
     annotations = annotation_resolver.get_all_by_parent_sample_ids(
-        session=db_session,
+        session=persistent_session,
         parent_sample_ids=[video.sample_id],
     )
     assert len(annotations) == 2
@@ -83,5 +85,5 @@ def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_
     }
     assert labels == {"Running", "Jumping"}
 
-    loaded_video = video_resolver.get_by_id(session=db_session, sample_id=video.sample_id)
+    loaded_video = video_resolver.get_by_id(session=persistent_session, sample_id=video.sample_id)
     assert loaded_video is not None

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
-    import { Hand } from '@lucide/svelte';
+    import Hand from '@lucide/svelte/icons/hand';
 
     type Props = { onclick: () => void };
 

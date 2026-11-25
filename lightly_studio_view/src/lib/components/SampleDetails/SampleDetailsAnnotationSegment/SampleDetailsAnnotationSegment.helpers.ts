@@ -53,6 +53,44 @@ export const groupAnnotationsBySource = (
     return groups;
 };
 
+/** ID prefix of the group for a typed source that has no annotation, so no ID, yet. */
+const PENDING_SOURCE_ID_PREFIX = 'pending:';
+
+/**
+ * Lists a group for every source, so any source can be picked as the target, also one without
+ * annotations on this sample. Groups keep the order of `sources`, then unknown sources, then
+ * the target source when it is typed but not created yet.
+ */
+export const listAllSourceGroups = (
+    groups: AnnotationSourceGroup[],
+    sources: AnnotationCollectionView[],
+    targetSource: string | null
+): AnnotationSourceGroup[] => {
+    const groupsById = new Map(groups.map((group) => [group.id, group]));
+    const sourceIds = new Set(sources.map((source) => source.collection_id));
+    const sourceGroups = sources.map(
+        (source) =>
+            groupsById.get(source.collection_id) ?? {
+                id: source.collection_id,
+                name: source.name,
+                annotations: []
+            }
+    );
+    const unknownGroups = groups.filter((group) => !sourceIds.has(group.id));
+    const isTargetPending =
+        targetSource !== null && !sources.some((source) => source.name === targetSource);
+    const pendingGroups = isTargetPending
+        ? [
+              {
+                  id: `${PENDING_SOURCE_ID_PREFIX}${targetSource}`,
+                  name: targetSource,
+                  annotations: []
+              }
+          ]
+        : [];
+    return [...sourceGroups, ...unknownGroups, ...pendingGroups];
+};
+
 /**
  * Whether every annotation in the list is hidden.
  */
@@ -81,17 +119,17 @@ export const isSourceGroupInitiallyOpen = (
         annotations.some((annotation) => annotation.sample_id === lastCreatedAnnotationId));
 
 /**
- * Returns the next hidden set after toggling a source's visibility: hides all of the
- * source's annotations unless they are already all hidden, in which case it shows
- * them all. The given hidden set is not mutated.
+ * Returns the next hidden set after toggling a list of annotations, e.g. a source or the whole
+ * panel: hides all of them unless they are already all hidden, in which case it shows them all.
+ * The given hidden set is not mutated.
  */
-export const toggleSourceVisibility = (
-    sourceAnnotations: AnnotationView[],
+export const toggleAnnotationsVisibility = (
+    annotations: AnnotationView[],
     hiddenAnnotationIds: Set<string>
 ): Set<string> => {
-    const hideAll = !areAllAnnotationsHidden(sourceAnnotations, hiddenAnnotationIds);
+    const hideAll = !areAllAnnotationsHidden(annotations, hiddenAnnotationIds);
     const next = new Set(hiddenAnnotationIds);
-    for (const annotation of sourceAnnotations) {
+    for (const annotation of annotations) {
         if (hideAll) {
             next.add(annotation.sample_id);
         } else {
@@ -117,4 +155,38 @@ export const computeSeededHiddenIds = (
         annotations
             .filter((annotation) => !isSourceVisible(annotation.annotation_collection_id))
             .map((annotation) => annotation.sample_id)
+    );
+
+/**
+ * Returns the next hidden set after toggling one annotation. The given set is not mutated.
+ */
+export const toggleAnnotationVisibility = (
+    annotationId: string,
+    hiddenAnnotationIds: Set<string>
+): Set<string> => {
+    const next = new Set(hiddenAnnotationIds);
+    if (next.has(annotationId)) {
+        next.delete(annotationId);
+    } else {
+        next.add(annotationId);
+    }
+    return next;
+};
+
+/**
+ * Whether a source starts shown on a sample: the visibility the user set on an earlier sample
+ * wins over the grid source filter.
+ */
+export const isSourceShown = (
+    storedHidden: boolean | undefined,
+    isGridVisible: boolean
+): boolean => (storedHidden === undefined ? isGridVisible : !storedHidden);
+
+/** Returns the group that holds the annotation, if any. */
+export const findGroupOfAnnotation = <Group extends Pick<AnnotationSourceGroup, 'annotations'>>(
+    groups: Group[],
+    annotationId: string
+): Group | undefined =>
+    groups.find((group) =>
+        group.annotations.some((annotation) => annotation.sample_id === annotationId)
     );

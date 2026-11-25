@@ -135,9 +135,9 @@ describe('useEmbeddingFilterForImages', () => {
     });
 
     it('does not clear another collection video region during a collection transition', () => {
-        const { updateFilterParams, updateEmbeddingRegion, videoFilter } = useVideoFilters();
+        const { updateFilterParams, updatePlotSelection, videoFilter } = useVideoFilters();
         updateFilterParams({ collection_id: 'coll-2', filters: {} });
-        updateEmbeddingRegion({ polygon: [{ x: 0, y: 0 }] });
+        updatePlotSelection({ embeddingRegion: { polygon: [{ x: 0, y: 0 }] }, sampleIds: [] });
         setPlotSelectionCount('coll-1', 2);
 
         const { clearFilter, effectiveCount } = useEmbeddingFilterForVideos(
@@ -179,9 +179,9 @@ describe('useEmbeddingFilterForVideos', () => {
     });
 
     it('setVisibility(false) clears the region and selection count', () => {
-        const { updateFilterParams, updateEmbeddingRegion } = useVideoFilters();
+        const { updateFilterParams, updatePlotSelection } = useVideoFilters();
         updateFilterParams({ collection_id: 'coll-1', filters: {} });
-        updateEmbeddingRegion({ polygon: [{ x: 0, y: 0 }] });
+        updatePlotSelection({ embeddingRegion: { polygon: [{ x: 0, y: 0 }] }, sampleIds: [] });
         setPlotSelectionCount('coll-1', 2);
         const { isVisible, effectiveCount, setVisibility } = useEmbeddingFilterForVideos(
             collectionId,

@@ -1,13 +1,18 @@
 <script lang="ts">
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
-    import { cn, formatConfidence } from '$lib/utils';
+    import { cn, formatConfidence, trackClassCreatedInPicker } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { Trash2, Eye, EyeOff, Lock, Unlock } from '@lucide/svelte';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
+    import Eye from '@lucide/svelte/icons/eye';
+    import EyeOff from '@lucide/svelte/icons/eye-off';
+    import Lock from '@lucide/svelte/icons/lock';
+    import Unlock from '@lucide/svelte/icons/unlock';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
@@ -17,7 +22,7 @@
     import { useAnnotationCollectionsFilter } from '$lib/hooks';
 
     const {
-        annotation: annotationProp,
+        annotation,
         isSelected = false,
         onClick,
         onUpdate,
@@ -64,7 +69,9 @@
 
     const getAnnotationDimensions = (annotation: AnnotationView) => {
         const annotationWithDimensions =
-            annotation.object_detection_details || annotation.segmentation_details;
+            annotation.object_detection_details ||
+            annotation.segmentation_details ||
+            annotation.polygon_details;
         if (annotationWithDimensions) {
             const { width, height } = annotationWithDimensions;
             return `${Math.round(width)}x${Math.round(height)}px`;
@@ -75,6 +82,7 @@
     const { isEditingMode } = page.data.globalStorage;
     const collectionId = $derived(page.params.collection_id!);
     const result = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
     const items = $derived(getSelectionItems(result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 
@@ -84,23 +92,19 @@
     const { multipleSourcesVisible } = useAnnotationCollectionsFilter();
     const showLabelColorLegend = $derived(!(colorBySource ?? $multipleSourcesVisible));
 
-    const annotationId = $derived(annotationProp.sample_id);
+    const annotationId = $derived(annotation.sample_id);
 
-    const {
-        annotation: annotationResp,
-        updateAnnotation,
-        refetch
-    } = useAnnotation(() => ({
+    // The parent passes the full annotation, so only use the hook to save edits.
+    const { updateAnnotation, refetch } = useAnnotation(() => ({
         collectionId,
         annotationId,
-        onUpdate
+        onUpdate,
+        enabled: false
     }));
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         getCollectionId: () => page.params.collection_id!
     });
-
-    const annotation = $derived(annotationResp.data || annotationProp);
 
     const annotationLabelName = $derived(annotation.annotation_label.annotation_label_name);
 
@@ -161,10 +165,14 @@
                                     }}
                                 >
                                     <SelectList
+                                        onCreate={trackClassCreatedInPicker}
+                                        allowCreate={canCreateClass}
                                         {items}
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"
-                                        placeholder="Select or create a class"
+                                        placeholder={canCreateClass
+                                            ? 'Select or create a class'
+                                            : 'Select a class'}
                                         className="h-8 w-full min-w-0 px-3"
                                         contentClassName="w-full min-w-0"
                                         onSelect={async (item) => {
@@ -192,7 +200,10 @@
                                         }}
                                     >
                                         {#snippet notFound({ inputValue })}
-                                            <LabelNotFound label={inputValue} />
+                                            <LabelNotFound
+                                                label={inputValue}
+                                                allowCreate={canCreateClass}
+                                            />
                                         {/snippet}
                                     </SelectList>
                                 </div>
@@ -214,7 +225,7 @@
                                     content="Unlock annotation. Allows new brush strokes to paint over this mask again."
                                 >
                                     <Lock
-                                        class="size-4 text-muted-foreground"
+                                        class="size-4 text-primary"
                                         onclick={(e) => {
                                             e.stopPropagation();
                                             onToggleLock?.(e);

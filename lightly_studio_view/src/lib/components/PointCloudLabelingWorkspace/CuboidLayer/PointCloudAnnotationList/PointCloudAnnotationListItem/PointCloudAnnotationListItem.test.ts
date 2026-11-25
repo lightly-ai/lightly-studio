@@ -3,6 +3,26 @@ import { describe, expect, it, vi, type Mock } from 'vitest';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
 import PointCloudAnnotationListItem from './PointCloudAnnotationListItem.svelte';
 
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: vi.fn(() => ({ data: [] }))
+}));
+
+vi.mock(
+    '$lib/components/PointCloudLabelingWorkspace/pointCloudWorkspaceLayoutContext.svelte',
+    () => ({
+        usePointCloudWorkspaceLayoutContext: () => () => ({ datasetId: 'dataset-1' })
+    })
+);
+vi.mock('$lib/hooks/useTracks/useTracks.svelte', () => ({
+    useTracks: () => ({ data: [], refetch: vi.fn() })
+}));
+vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
+    useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() })
+}));
+vi.mock('$lib/hooks/useUpdateTrackMutation/useUpdateTrackMutation.svelte', () => ({
+    useUpdateTrackMutation: () => ({ updateParentTrack: vi.fn(), isPending: false })
+}));
+
 const cuboid = createAnnotationFixture();
 
 const defaultProps = {
@@ -18,14 +38,28 @@ describe('PointCloudAnnotationListItem', () => {
         render(PointCloudAnnotationListItem, { props: defaultProps });
 
         expect(screen.getByText('Vehicle')).toBeInTheDocument();
-        expect(screen.getByRole('button')).toBeInTheDocument();
+        expect(screen.getByTestId('point-cloud-annotation-list-row')).toBeInTheDocument();
     });
 
     it('calls onToggle with the cuboid id when the row is clicked', () => {
         const onToggle = vi.fn();
         render(PointCloudAnnotationListItem, { props: { ...defaultProps, onToggle } });
 
-        fireEvent.click(screen.getByRole('button'));
+        fireEvent.click(screen.getByTestId('point-cloud-annotation-list-row'));
+
+        expect(onToggle).toHaveBeenCalledWith(cuboid.id);
+    });
+
+    it('calls onToggle with the cuboid id when the row is clicked in edit mode', () => {
+        const onToggle = vi.fn();
+        render(PointCloudAnnotationListItem, {
+            props: { ...defaultProps, editable: true, isSelected: true, onToggle }
+        });
+
+        const row = screen.getByTestId('point-cloud-annotation-list-row');
+        expect(row).toHaveAttribute('aria-expanded', 'true');
+
+        fireEvent.click(row);
 
         expect(onToggle).toHaveBeenCalledWith(cuboid.id);
     });

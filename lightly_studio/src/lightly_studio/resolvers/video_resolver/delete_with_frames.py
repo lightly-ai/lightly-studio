@@ -9,6 +9,7 @@ from sqlmodel import Session, col, delete, select
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.resolvers import embedding_plot_resolver
 from lightly_studio.utils import batching
 
 
@@ -34,6 +35,8 @@ def delete_with_frames(session: Session, video_sample_id: UUID) -> None:
         ).all()
     )
     sample_ids = [*frame_sample_ids, video_sample_id]
+
+    embedding_plot_resolver.mark_dirty(session=session, sample_ids=sample_ids)
 
     # 1. Frame (and video) embeddings reference sample.sample_id.
     for batch in batching.batched(items=sample_ids):

@@ -76,14 +76,14 @@ jobs:
         if: steps.changes.outputs.python == 'true' || steps.changes.outputs.frontend == 'true'
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.11"
 
       - name: Set Up uv
         if: steps.changes.outputs.python == 'true' || steps.changes.outputs.frontend == 'true'
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
-          python-version: "3.9"
+          version: "0.13.6"
+          python-version: "3.11"
           enable-cache: true
           save-cache: false
 
@@ -110,13 +110,6 @@ jobs:
           cache-dependency-path: |
             fast_track/package-lock.json
             lightly_studio_view/package-lock.json
-
-      # Build the webapp so backend guardrails can import the app: pytest's conftest imports
-      # the full app, and the webapp route raises at import time unless the dist exists.
-      - name: Build webapp for backend guardrails
-        if: steps.changes.outputs.backend == 'true'
-        working-directory: lightly_studio
-        run: make build-lightly_studio_view
 
       # The backend/coverage guardrail only reads a report; the suite runs here. A failing
       # suite must not kill the job — the guardrail turns it into a fail verdict, and the

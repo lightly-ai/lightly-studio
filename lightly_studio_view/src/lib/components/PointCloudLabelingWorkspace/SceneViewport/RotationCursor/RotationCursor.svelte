@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Rotate3d } from '@lucide/svelte';
+    import Rotate3d from '@lucide/svelte/icons/rotate-3d';
     interface Props {
         target?: HTMLDivElement;
         cursorX: number;

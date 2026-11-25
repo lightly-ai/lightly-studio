@@ -8,13 +8,27 @@ from lightly_studio.resolvers.collection_resolver.create_group_components import
     create_group_components,
 )
 from lightly_studio.resolvers.collection_resolver.delete import delete
+from lightly_studio.resolvers.collection_resolver.delete_dependent_rows import (
+    delete_dependent_rows,
+)
+from lightly_studio.resolvers.collection_resolver.delete_subtree import delete_subtree
 from lightly_studio.resolvers.collection_resolver.export import (
     export,
     get_filtered_samples_count,
 )
 from lightly_studio.resolvers.collection_resolver.get_all import get_all
+from lightly_studio.resolvers.collection_resolver.get_all_by_parent import get_all_by_parent
 from lightly_studio.resolvers.collection_resolver.get_annotation_collections import (
     get_annotation_collections,
+)
+from lightly_studio.resolvers.collection_resolver.get_annotation_collections_by_dataset_id import (
+    get_annotation_collections_by_dataset_id,
+)
+from lightly_studio.resolvers.collection_resolver.get_annotation_counts_by_collection_ids import (
+    get_annotation_counts_by_collection_ids,
+)
+from lightly_studio.resolvers.collection_resolver.get_annotation_source_by_name import (
+    get_annotation_source_by_name,
 )
 from lightly_studio.resolvers.collection_resolver.get_annotation_types_by_collection_ids import (
     get_annotation_types_by_collection_ids,
@@ -45,6 +59,8 @@ from lightly_studio.resolvers.collection_resolver.get_parent_collection_by_sampl
 from lightly_studio.resolvers.collection_resolver.get_parent_collection_id import (
     get_parent_collection_id,
 )
+from lightly_studio.resolvers.collection_resolver.get_subtree import get_subtree
+from lightly_studio.resolvers.collection_resolver.get_table_by_name import get_table_by_name
 from lightly_studio.resolvers.collection_resolver.update import update
 
 __all__ = [
@@ -52,9 +68,15 @@ __all__ = [
     "create",
     "create_group_components",
     "delete",
+    "delete_dependent_rows",
+    "delete_subtree",
     "export",
     "get_all",
+    "get_all_by_parent",
     "get_annotation_collections",
+    "get_annotation_collections_by_dataset_id",
+    "get_annotation_counts_by_collection_ids",
+    "get_annotation_source_by_name",
     "get_annotation_types_by_collection_ids",
     "get_by_id",
     "get_by_name",
@@ -67,5 +89,7 @@ __all__ = [
     "get_parent_collection_by_sample_id",
     "get_parent_collection_id",
     "get_root_collection",
+    "get_subtree",
+    "get_table_by_name",
     "update",
 ]

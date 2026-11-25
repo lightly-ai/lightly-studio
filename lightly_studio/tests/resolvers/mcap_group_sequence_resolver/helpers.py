@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 from sqlmodel import Session
@@ -106,7 +106,8 @@ def add_mcap_ticks_to_sequence(
     session: Session,
     fixture: McapSequenceFixture,
     ticks: list[tuple[int, int | None]],
-) -> None:
+) -> list[UUID]:
+    """Adds one group per tick to the sequence and returns the group IDs."""
     group_ids = [
         create_mcap_tick(
             session=session,
@@ -128,6 +129,17 @@ def add_mcap_ticks_to_sequence(
             for sequence_number, group_id in enumerate(group_ids)
         ],
     )
+    return group_ids
+
+
+def add_mcap_sequence(session: Session, fixture: McapSequenceFixture) -> McapSequenceFixture:
+    """Creates one more sequence in the collection and with the schema of the fixture."""
+    sample_id = mcap_group_sequence_resolver.create(
+        session=session,
+        collection_id=fixture.sequence_collection.collection_id,
+        recording_id=fixture.recording_id,
+    )
+    return replace(fixture, sample_id=sample_id)
 
 
 def create_mcap_tick(

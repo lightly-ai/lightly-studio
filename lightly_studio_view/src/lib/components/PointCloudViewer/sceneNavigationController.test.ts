@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PerspectiveCamera, Vector3 } from 'three';
+import { OrthographicCamera, PerspectiveCamera, Vector3 } from 'three';
 import { createSceneNavigationController } from './sceneNavigationController';
 import { navigateScene, startSceneNavigation, stopSceneNavigation } from './sceneNavigation';
 
@@ -96,6 +96,44 @@ describe('scene navigation controller', () => {
         }
     );
 
+    it.each([
+        { action: 'forward' as const, sign: 1 },
+        { action: 'backward' as const, sign: -1 }
+    ])('moves a perspective camera $action along its view direction', ({ action, sign }) => {
+        const position = camera.position.clone();
+        const view = controls.target.clone().sub(position).normalize();
+        navigateScene(action);
+        advance(180);
+        const move = camera.position.clone().sub(position);
+        expect(move.clone().normalize().dot(view)).toBeCloseTo(sign);
+        expect(controls.target.distanceTo(move)).toBeCloseTo(0);
+    });
+
+    it('keeps sideways movement level when the camera looks down', () => {
+        const position = camera.position.clone();
+        navigateScene('right');
+        advance(180);
+        expect(camera.position.z).toBeCloseTo(position.z);
+        expect(controls.target.z).toBeCloseTo(0);
+    });
+
+    it('anchors the orbit target before a held action and before a step', () => {
+        const anchorTarget = vi.fn();
+        controller.dispose();
+        controller = createSceneNavigationController({
+            camera,
+            controls: controls as never,
+            invalidate: vi.fn(),
+            anchorTarget
+        });
+
+        startSceneNavigation('forward');
+        stopSceneNavigation('forward');
+        expect(anchorTarget).toHaveBeenCalledOnce();
+        navigateScene('rotate-left');
+        expect(anchorTarget).toHaveBeenCalledTimes(2);
+    });
+
     it('cancels all held actions and removes the subscription on disposal', () => {
         startSceneNavigation('left');
         startSceneNavigation('rotate-right');
@@ -114,5 +152,45 @@ describe('scene navigation controller', () => {
         stopSceneNavigation('right');
         advance(20);
         expect(controls.enableDamping).toBe(false);
+    });
+
+    it('only responds to navigation addressed to its viewport', () => {
+        controller.dispose();
+        const navigationId = Symbol('top');
+        controller = createSceneNavigationController({
+            camera,
+            controls: controls as never,
+            invalidate: vi.fn(),
+            navigationId
+        });
+        navigateScene('right', Symbol('main'));
+        expect(frames.size).toBe(0);
+        navigateScene('right', navigationId);
+        advance(180);
+        expect(controls.target.length()).toBeGreaterThan(0);
+    });
+
+    it('moves a top projection along its screen axes and keeps its orientation', () => {
+        controller.dispose();
+        const topCamera = new OrthographicCamera(-2, 2, 1, -1);
+        topCamera.position.set(0, 0, 10);
+        topCamera.lookAt(controls.target);
+        topCamera.zoom = 2;
+        const rotation = topCamera.quaternion.clone();
+        controller = createSceneNavigationController({
+            camera: topCamera,
+            controls: controls as never,
+            invalidate: vi.fn()
+        });
+        navigateScene('forward');
+        advance(180);
+        expect(controls.target.y).toBeCloseTo(0.08);
+        expect(controls.target.z).toBeCloseTo(0);
+        navigateScene('right');
+        advance(180);
+        expect(controls.target.x).toBeCloseTo(0.08);
+        navigateScene('rotate-left');
+        expect(frames.size).toBe(0);
+        expect(topCamera.quaternion.equals(rotation)).toBe(true);
     });
 });

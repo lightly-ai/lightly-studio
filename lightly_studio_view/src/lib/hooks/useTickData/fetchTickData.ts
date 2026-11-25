@@ -30,18 +30,16 @@ export async function fetchTickData(
     { datasetId, sequenceId, seqNumber, displayFrameId }: TickDataParams,
     signal?: AbortSignal
 ): Promise<TickData> {
-    const { data, response } = await getTickData({
+    const { data } = await getTickData({
         path: { dataset_id: datasetId, sequence_id: sequenceId, seq_number: seqNumber },
         query: {
             camera_height: CAMERA_HEIGHT_PX,
             ...(displayFrameId ? { target_frame_id: displayFrameId } : {})
         },
         parseAs: 'arrayBuffer',
-        signal
+        signal,
+        throwOnError: true
     });
-    if (!response.ok || !data) {
-        throw new Error(`Could not load tick ${seqNumber} (${response.status}).`);
-    }
     // parseAs: 'arrayBuffer' makes data an ArrayBuffer at runtime, but the type is unknown.
     const payloads = decodeTickPayloads(data as ArrayBuffer);
     const pointClouds = await Promise.all(

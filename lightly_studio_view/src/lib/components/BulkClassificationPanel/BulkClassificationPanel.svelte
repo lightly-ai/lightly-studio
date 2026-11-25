@@ -1,7 +1,11 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { Card, CardContent, Segment } from '$lib/components';
     import ConfirmApplyDialog from './ConfirmApplyDialog/ConfirmApplyDialog.svelte';
     import NamePickerField from './NamePickerField/NamePickerField.svelte';
+
+    const canCreateClass = useCanCreateAnnotationClass();
 
     interface Props {
         selectedCount: number;
@@ -52,6 +56,8 @@
                         placeholder="Select an annotation class"
                         selectedName={className}
                         names={classNames}
+                        onCreate={trackClassCreatedInPicker}
+                        allowCreate={canCreateClass}
                         disabled={isApplying}
                         onSelect={onClassSelect}
                     />

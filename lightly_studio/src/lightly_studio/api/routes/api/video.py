@@ -1,6 +1,6 @@
 """API routes for collection videos."""
 
-from typing import Annotated, Optional
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
@@ -11,6 +11,7 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models import sort
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.sort import VideoSortFieldExpr
+from lightly_studio.models.unannotated_sample_count import UnannotatedSampleCount
 from lightly_studio.models.video import VideoFieldsBoundsView, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
@@ -24,15 +25,15 @@ video_router = APIRouter(tags=["video"])
 class VideoFieldsBoundsBody(BaseModel):
     """The body to retrieve the fields bounds."""
 
-    annotations_frames_labels_id: Optional[list[UUID]] = None
+    annotations_frames_labels_id: list[UUID] | None = None
 
 
 class ReadVideosRequest(BaseModel):
     """Request body for reading videos."""
 
-    filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
-    text_embedding: Optional[list[float]] = Field(None, description="Text embedding to search for")
-    sort_by: Optional[list[VideoSortFieldExpr]] = Field(
+    filter: VideoFilter | None = Field(None, description="Filter parameters for videos")
+    text_embedding: list[float] | None = Field(None, description="Text embedding to search for")
+    sort_by: list[VideoSortFieldExpr] | None = Field(
         None, description="Sort expressions for ordering"
     )
 
@@ -40,16 +41,16 @@ class ReadVideosRequest(BaseModel):
 class ReadVideoSampleIdsRequest(BaseModel):
     """Request body for reading matching video sample ids."""
 
-    filter: Optional[VideoFilter] = Field(None, description="Filter parameters for videos")
+    filter: VideoFilter | None = Field(None, description="Filter parameters for videos")
 
 
 class ReadVideoCountAnnotationsRequest(BaseModel):
     """Request body for reading video annotations counter."""
 
-    filter: Optional[VideoFilter] = Field(
+    filter: VideoFilter | None = Field(
         None, description="Filter parameters for video annotations counter"
     )
-    annotation_type: Optional[AnnotationType] = Field(
+    annotation_type: AnnotationType | None = Field(
         None,
         description="Restrict counts to a single annotation type (e.g. classification).",
     )
@@ -79,6 +80,24 @@ def count_video_frame_annotations_by_video_collection(
         collection_id=collection_id,
         filters=body.filter,
         annotation_type=body.annotation_type,
+    )
+
+
+class ReadCountUnannotatedVideosRequest(BaseModel):
+    """Request body for counting the videos without annotations."""
+
+    filter: VideoFilter | None = None
+
+
+@video_router.post("/collections/{collection_id}/video/unannotated/count")
+def count_unannotated_videos(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    body: ReadCountUnannotatedVideosRequest,
+) -> UnannotatedSampleCount:
+    """Count the videos without annotations, in total and for the filter."""
+    return video_resolver.count_unannotated_videos(
+        session=session, collection_id=collection_id, video_filter=body.filter
     )
 
 
@@ -133,7 +152,7 @@ def get_video_sample_ids(
 def get_video_by_id(
     session: SessionDep,
     sample_id: Annotated[UUID, Path(title="Sample ID")],
-) -> Optional[VideoView]:
+) -> VideoView | None:
     """Retrieve a video for a given collection ID by its ID.
 
     Args:
@@ -147,13 +166,13 @@ def get_video_by_id(
 
 
 @video_router.post(
-    "/collections/{collection_id}/video/bounds", response_model=Optional[VideoFieldsBoundsView]
+    "/collections/{collection_id}/video/bounds", response_model=VideoFieldsBoundsView | None
 )
 def get_fields_bounds(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="collection Id")],
     body: VideoFieldsBoundsBody,
-) -> Optional[VideoFieldsBoundsView]:
+) -> VideoFieldsBoundsView | None:
     """Retrieve the fields bounds for a given collection ID by its ID.
 
     Args:

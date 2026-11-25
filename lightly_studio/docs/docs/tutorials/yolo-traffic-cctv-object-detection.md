@@ -18,7 +18,7 @@ You will:
 
 To follow this tutorial, make sure you have:
 
-- Python 3.10 or newer
+- Python 3.11–3.15
 - Enough disk space for LightlyStudio, the YOLO plugin and the dataset (~200MB)
 - You run on a Windows, Linux or MacOS device
 - A GPU is not required

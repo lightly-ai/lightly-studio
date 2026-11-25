@@ -11,11 +11,11 @@ Load the skill that matches the path you edit:
 - `lightly_studio/**/*.py`, `lightly_studio_serve/**/*.py` → [python-guide](./.agents/skills/python-guide/SKILL.md): Python style.
 - `lightly_studio/src/lightly_studio/**` → also [backend-guide](./.agents/skills/backend-guide/SKILL.md): FastAPI and SQLModel.
 - `lightly_studio_view/**` (`.ts`, `.svelte`) → [frontend-guide](./.agents/skills/frontend-guide/SKILL.md): TypeScript and SvelteKit.
+- Each `.py`, `.ts`, and `.svelte` file in the repository → also [clean-code](./.agents/skills/clean-code/SKILL.md): names, function shape, errors, comments.
 - `CHANGELOG.md`, `lightly_studio_serve/CHANGELOG.md` → [changelog](./.agents/skills/changelog/SKILL.md): changelog entries.
 
 When the task matches, also load:
 
-- [best-practices](./.agents/skills/best-practices/SKILL.md): a new function, module, or component.
 - [glossary](./.agents/skills/glossary/SKILL.md): names for anything that users see.
 - [pull-requests](./.agents/skills/pull-requests/SKILL.md): a pull request.
 - [Contributing](./CONTRIBUTING.md): setup and tests.
@@ -33,9 +33,9 @@ make static-checks
 uv run pytest <affected_tests>
 ```
 
-Run `uv run pytest -n 8` for the full testsuite, use sparingly. To also rebuild the
-frontend, run `make build-lightly_studio_view`. It takes several minutes, avoid if not needed.
-Avoid `make test`, it is for CI, it rebuilds the frontend and takes long.
+Run `make test` for the full testsuite, use sparingly. The tests need only a mock webapp, which
+`make test` creates. To build the real frontend, run `make build-lightly_studio_view`. It takes
+several minutes, avoid if not needed.
 
 Read `lightly_studio/Makefile` for detailed commands.
 
@@ -57,3 +57,7 @@ and make as many of them as necessary. Use succinct language in the comments.
 
 Exceptions from the guidelines:
 - We allow direct function imports from `tests.helpers_resolvers`, `tests.resolvers.video.helpers`, and `tests.resolvers.evaluation_sample_metric_resolver.helpers` in Python
+
+## Superpowers
+
+Save superpowers docs under `.experimental/superpowers/` instead of `docs/superpowers/`.

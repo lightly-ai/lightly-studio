@@ -1,23 +1,26 @@
 <script lang="ts">
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import { Card, CardContent } from '$lib/components';
     import { Segment } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
-    import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
+    import DeleteAnnotations from './DeleteAnnotations/DeleteAnnotations.svelte';
 
     type Props = {
-        selectedAnnotations: Array<AnnotationView>;
+        selectedCount: number;
         onSelect: (item: { value: string; label: string }) => void;
         disabled?: boolean;
         isLoading?: boolean;
         collectionId: string;
     };
 
-    const { selectedAnnotations, onSelect, disabled, isLoading, collectionId }: Props = $props();
+    const { selectedCount, onSelect, disabled, isLoading, collectionId }: Props = $props();
 
     const result = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
 
     const items = $derived(getSelectionItems(result.data || []));
 </script>
@@ -27,24 +30,27 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-hidden dark:[color-scheme:dark]"
         >
-            <Segment title={`Selected annotations: ${selectedAnnotations.length}`}>
+            <Segment title={`Selected annotations: ${selectedCount}`}>
                 <div class="flex flex-col space-y-4">
                     <div class="text-md mb-2">
                         You can edit annotation classes for multiple annotations at once.
                     </div>
                     <SelectList
+                        onCreate={trackClassCreatedInPicker}
+                        allowCreate={canCreateClass}
                         {items}
                         name="annotation-label"
-                        placeholder="Select or create a class"
+                        placeholder={canCreateClass ? 'Select or create a class' : 'Select a class'}
                         label="Select a class"
                         {onSelect}
                         {isLoading}
                         {disabled}
                     >
                         {#snippet notFound({ inputValue })}
-                            <LabelNotFound label={inputValue} />
+                            <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
                         {/snippet}
                     </SelectList>
+                    <DeleteAnnotations {collectionId} disabled={isLoading} />
                 </div>
             </Segment>
         </div>

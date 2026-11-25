@@ -4,7 +4,8 @@
   separate from text-input UI and can be tested/reused independently.
 -->
 <script lang="ts">
-    import { Image as ImageIcon, X } from '@lucide/svelte';
+    import ImageIcon from '@lucide/svelte/icons/image';
+    import X from '@lucide/svelte/icons/x';
     import { cn } from '$lib/utils';
 
     interface Props {

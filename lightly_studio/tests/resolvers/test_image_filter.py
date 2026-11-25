@@ -3,17 +3,27 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from sqlmodel import Session, col, select
 
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionCell
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.query_expr import (
+    EqualityComparisonOperator,
+    FieldRef,
+    QueryExpr,
+    StringExpr,
+)
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import tag_resolver
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
     ImageFilter,
 )
+from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     ImageStub,
@@ -246,3 +256,61 @@ class TestImageFilter:
         assert [sample.sample_id for sample in result] == [
             sample.sample_id for sample in expected_samples
         ]
+
+    @pytest.mark.parametrize(
+        "image_filter",
+        [
+            ImageFilter(),
+            ImageFilter(sample_filter=SampleFilter()),
+            ImageFilter(width=FilterDimensions()),
+            ImageFilter(height=FilterDimensions()),
+            ImageFilter(sample_filter=SampleFilter(tag_ids=[])),
+            ImageFilter(sample_filter=SampleFilter(sample_ids=[])),
+            ImageFilter(sample_filter=SampleFilter(metadata_filters=[])),
+        ],
+    )
+    def test_apply__no_op_returns_same_query(self, image_filter: ImageFilter) -> None:
+        probe = select(SampleTable.sample_id)
+
+        assert image_filter.apply(query=probe) is probe
+
+    @pytest.mark.parametrize(
+        "image_filter",
+        [
+            ImageFilter(width=FilterDimensions(min=1)),
+            ImageFilter(sample_filter=SampleFilter(region_sample_ids=[])),
+            ImageFilter(sample_filter=SampleFilter(annotations_filter=AnnotationsFilter())),
+            ImageFilter(sample_filter=SampleFilter(tag_ids=[uuid4()])),
+            ImageFilter(height=FilterDimensions(max=1)),
+            ImageFilter(sample_filter=SampleFilter(sample_ids=[uuid4()])),
+            ImageFilter(sample_filter=SampleFilter(has_captions=True)),
+            ImageFilter(sample_filter=SampleFilter(has_captions=False)),
+            ImageFilter(
+                sample_filter=SampleFilter(
+                    metadata_filters=[MetadataFilter(key="city", op="==", value="Zurich")]
+                )
+            ),
+            ImageFilter(
+                sample_filter=SampleFilter(
+                    confusion_cell=ConfusionCell(
+                        evaluation_run_id=uuid4(), gt_label="car", pred_label="truck"
+                    )
+                )
+            ),
+            ImageFilter(
+                sample_filter=SampleFilter(
+                    query_expr=QueryExpr(
+                        match_expr=StringExpr(
+                            field=FieldRef(table="image", name="file_name"),
+                            operator=EqualityComparisonOperator.EQ,
+                            value="a.png",
+                        )
+                    )
+                )
+            ),
+        ],
+    )
+    def test_apply__filtering_returns_new_query(self, image_filter: ImageFilter) -> None:
+        probe = select(SampleTable.sample_id)
+
+        assert image_filter.apply(query=probe) is not probe

@@ -113,6 +113,24 @@ describe('EvaluationRunItem', () => {
         expect(screen.getByRole('switch')).toBeChecked();
     });
 
+    it.each([
+        [true, 'Computed'],
+        [false, 'Not computed']
+    ])('renders the average precision setting %s as %s', (computeAveragePrecision, text) => {
+        const run: EvaluationRunView = {
+            ...baseRun,
+            evaluation_run_configuration: {
+                ...baseRun.evaluation_run_configuration,
+                compute_average_precision: computeAveragePrecision
+            }
+        };
+        render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });
+
+        const details = screen.getByTestId('evaluation-run-details');
+        expect(details).toHaveTextContent('Average precision');
+        expect(details).toHaveTextContent(text);
+    });
+
     it('shows a placeholder and allows rerunning without adjustable parameters', async () => {
         const run: EvaluationRunView = { ...baseRun, evaluation_run_configuration: {} };
         render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });

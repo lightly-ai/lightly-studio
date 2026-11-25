@@ -29,7 +29,7 @@ export class VideosPage {
     }
 
     getLabelsMenuItem(labelName: string) {
-        return this.page.getByTestId('label-menu-label-name').getByText(labelName, { exact: true });
+        return this.page.getByTestId('labels-menu-name').getByText(labelName, { exact: true });
     }
 
     async clickLabel(label: string) {
@@ -88,7 +88,7 @@ export class VideosPage {
     }
 
     getTagsMenuItem(tagName: string) {
-        return this.page.getByTestId('tags-menu-label').getByText(tagName, { exact: true });
+        return this.page.getByTestId('tags-menu-name').getByText(tagName, { exact: true });
     }
 
     async pressTag(tagName: string): Promise<void> {
@@ -98,7 +98,7 @@ export class VideosPage {
             (response) => response.url().includes('/video') && response.status() === 200
         );
 
-        const tagLabels = this.page.getByTestId('tags-menu-label');
+        const tagLabels = this.page.getByTestId('tags-menu-name');
         const labelCount = await tagLabels.count();
         for (let i = 0; i < labelCount; i++) {
             const labelText = await tagLabels.nth(i).textContent();

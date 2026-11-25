@@ -3,7 +3,10 @@
     import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
     import { ToolbarTooltip } from '$lib/components/ToolbarTooltip';
-    import { Hand, Lasso, SquareDashed, type IconProps } from '@lucide/svelte';
+    import type { IconProps } from '@lucide/svelte';
+    import Hand from '@lucide/svelte/icons/hand';
+    import Lasso from '@lucide/svelte/icons/lasso';
+    import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import {
         SELECTION_TOOLS,
         createSelectionToolController,
@@ -15,8 +18,8 @@
     interface Props {
         // The element embedding-atlas renders into. Its hidden toolbar is what the pill drives.
         plotContainer: HTMLElement | null;
-        // Owned by the parent on purpose: every filter change unmounts the plot while the new
-        // embeddings load, and local state would drop the user's tool back to pan each time.
+        // Owned by the parent, which keeps it in the plot view store: local state would drop the
+        // user's tool back to pan each time the plot closes.
         activeTool: ToolMode;
     }
 

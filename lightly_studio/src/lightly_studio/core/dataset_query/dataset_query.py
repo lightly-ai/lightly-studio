@@ -3,26 +3,33 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
-from typing import Generic, cast
+from typing import Generic, Self, cast
 from uuid import UUID
 
 from sqlalchemy import orm
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
-from typing_extensions import Self, TypeVar
+from typing_extensions import TypeVar  # default= needs Python 3.13.
 
+from lightly_studio.core.dataset_query import transport_query
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
-from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.database import db_manager
+from lightly_studio.models.collection import (
+    CollectionTable,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.resolvers import tag_resolver
 from lightly_studio.sampling.sample import Sampling
+from lightly_studio.transport import active_transport
 
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
@@ -132,19 +139,23 @@ class DatasetQuery(Generic[T]):
     """
 
     def __init__(
-        self, dataset: CollectionTable, session: Session, sample_class: type[T] | None = None
+        self,
+        dataset: CollectionTable | CollectionWithoutChildrenView,
+        session: Session | None = None,
+        sample_class: type[T] | None = None,
     ) -> None:
         """Initialize with dataset and database session.
 
         Args:
             dataset: The dataset to query.
-            session: Database session for executing queries.
+            session: Database session for executing queries. None uses the persistent session
+                when a query needs SQL.
             sample_class: The class of type `T`.
         """
         # TODO(lukas 12/2025): it would be great to assert that sample_class is the same as
         # self.dataset.sample_type.
         self.dataset = dataset
-        self.session = session
+        self._session = session
         self.match_expression: MatchExpression | None = None
         self.order_by_expressions: list[OrderByExpression] | None = None
         self._slice: _SliceType | None = None
@@ -155,6 +166,11 @@ class DatasetQuery(Generic[T]):
             self._sample_class = cast(type[T], ImageSample)
         else:
             self._sample_class = sample_class
+
+    @property
+    def session(self) -> Session:
+        """The database session of the SQL path."""
+        return db_manager.persistent_session() if self._session is None else self._session
 
     def match(self, match_expression: MatchExpression) -> Self:
         """Store a field condition for filtering.
@@ -274,6 +290,13 @@ class DatasetQuery(Generic[T]):
         Returns:
             Iterator of Sample objects from the database.
         """
+        request = self._transport_request()
+        if request is not None:
+            samples = transport_query.iter_samples(
+                collection_id=self.dataset.collection_id, request=request, limit=self._limit()
+            )
+            yield from cast(Iterator[T], samples)
+            return
         # Reuse the joined base sample so wrapper construction needs no per-sample query.
         if self.dataset.sample_type == SampleType.IMAGE:
             image_query: SelectOfScalar[ImageTable] = (
@@ -327,6 +350,24 @@ class DatasetQuery(Generic[T]):
                 f"Iter is not implemented for sample type {self.dataset.sample_type}"
             )
 
+    def _transport_request(self) -> SampleQueryRequest | None:
+        """Get the request for the transport, or None to use SQL."""
+        return transport_query.build_request(
+            sample_type=self.dataset.sample_type,
+            match_expression=self.match_expression,
+            order_by=self.order_by_expressions or [],
+            filters_sample_ids=self._sample_ids_subquery is not None,
+            offset=0 if self._slice is None else self._slice.start or 0,
+        )
+
+    def _limit(self) -> int | None:
+        """Get the maximum number of samples of the slice, or None without a limit."""
+        if self._slice is None or self._slice.stop is None:
+            return None
+        stop: int = self._slice.stop
+        start: int = self._slice.start or 0
+        return max(stop - start, 0)
+
     def _compose_query(self, query: SelectOfScalar[Table]) -> SelectOfScalar[Table]:
         """Applies match expressions, slicing, etc., to the query."""
         # Apply filter if present
@@ -379,18 +420,10 @@ class DatasetQuery(Generic[T]):
         Args:
             tag_name: Name of the tag to add to matching samples.
         """
-        # Get or create the tag
-        tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=self.session, collection_id=self.dataset.collection_id, tag_name=tag_name
-        )
-
-        # Execute query to get matching samples
-        samples = self.to_list()
-        sample_ids = [sample.sample_id for sample in samples]
-
-        # Use resolver to bulk assign tag (handles validation and edge cases)
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=self.session, tag_id=tag.tag_id, sample_ids=sample_ids
+        active_transport.get_transport().tags.add_to_samples(
+            collection_id=self.dataset.collection_id,
+            tag_name=tag_name,
+            sample_ids=[sample.sample_id for sample in self],
         )
 
     def split(self, tag_sizes: Mapping[str, int], seed: int | None = None) -> dict[str, int]:
@@ -409,14 +442,10 @@ class DatasetQuery(Generic[T]):
         """
         if self.dataset.sample_type not in {SampleType.IMAGE, SampleType.VIDEO}:
             raise ValueError("Splitting is only supported for image and video datasets.")
-        return tag_resolver.split_samples(
-            session=self.session,
+        return active_transport.get_transport().tags.split_samples(
             collection_id=self.dataset.collection_id,
             sample_ids=[sample.sample_id for sample in self],
-            splits=[
-                tag_resolver.SplitDefinition(tag_name=name, relative_size=size)
-                for name, size in tag_sizes.items()
-            ],
+            tag_sizes=tag_sizes,
             seed=seed,
         )
 

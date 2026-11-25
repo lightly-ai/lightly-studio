@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Generator, Sequence
+from collections.abc import Callable, Generator, Sequence
 from typing import Any
 from uuid import UUID
 
@@ -21,6 +21,7 @@ from lightly_studio.api.app import app
 from lightly_studio.api.routes.api import analytics
 from lightly_studio.database import db_manager
 from lightly_studio.database.db_manager import DatabaseBackend, DatabaseEngine
+from lightly_studio.dataset import env
 from lightly_studio.embed import embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
@@ -44,6 +45,8 @@ from lightly_studio.resolvers import (
     tag_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.transport import active_transport
+from lightly_studio.transport.remote.http_transport import HttpTransport
 from tests.helpers_resolvers import (
     ImageStub,
     create_images,
@@ -171,6 +174,12 @@ def db_session(
     """Create a test database manager session."""
     with _db_engine.session() as session:
         yield session
+
+
+@pytest.fixture
+def persistent_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the local transports write through."""
+    return db_manager.persistent_session()
 
 
 @pytest.fixture
@@ -447,10 +456,6 @@ def annotations_test_data(
                 annotation.width = 150
                 annotation.height = 250
                 annotation.segmentation_mask = [1, 2, 3, 4]
-            elif annotation_type == AnnotationType.CLASSIFICATION:
-                # Classification annotations carry an optional temporal span.
-                annotation.start_time_s = 1.5
-                annotation.end_time_s = 4.0
             if i % 2 == 0:
                 annotations_to_create_first_collection.append(annotation)
             else:
@@ -547,6 +552,30 @@ def assert_contains_properties(
 
 
 @pytest.fixture
+def connect_transport(
+    request: pytest.FixtureRequest, mocker: MockerFixture
+) -> Generator[Callable[[], None], None, None]:
+    """Get a function that connects the Python API through `LocalTransport` or `HttpTransport`.
+
+    A test parametrizes the fixture indirectly with "local" or "remote". The test seeds the
+    database first and then calls the function, because remote mode blocks the local database.
+    Remote mode runs the Studio app in process with `TestClient`.
+    """
+
+    def connect() -> None:
+        if request.param == "local":
+            mocker.patch.object(env, "LIGHTLY_STUDIO_TRANSPORT_QUERIES", True)
+            return
+        session = db_manager.persistent_session()
+        app.dependency_overrides[db_manager._session_dependency] = lambda: session
+        active_transport.set_transport(transport=HttpTransport(client=TestClient(app)))
+
+    yield connect
+    active_transport.set_transport(transport=None)
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
 def patch_collection(
     mocker: MockerFixture,
     _db_engine: DatabaseEngine,
@@ -585,9 +614,12 @@ def _truncate_tables(session: Session, backend: DatabaseBackend) -> None:
 
 
 def _truncate_tables_postgres(session: Session) -> None:
-    """Reset all tables on Postgres with TRUNCATE ... CASCADE."""
-    for table in reversed(SQLModel.metadata.sorted_tables):
-        session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
+    """Reset all tables on Postgres with one TRUNCATE ... CASCADE.
+
+    One statement for all tables is much faster than one statement per table.
+    """
+    table_names = ", ".join(f'"{table.name}"' for table in SQLModel.metadata.sorted_tables)
+    session.execute(sqlalchemy.text(f"TRUNCATE TABLE {table_names} CASCADE"))
     session.commit()
 
 

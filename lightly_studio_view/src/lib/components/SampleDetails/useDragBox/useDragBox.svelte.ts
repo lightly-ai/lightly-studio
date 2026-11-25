@@ -27,10 +27,14 @@ export const useDragBox = (
         box = isDragBox(next) ? next : null;
     };
 
-    const onPointerCancel = (event: RectPointerEvent) => {
-        event.currentTarget.releasePointerCapture(event.pointerId);
+    const cancel = () => {
         start = null;
         box = null;
+    };
+
+    const onPointerCancel = (event: RectPointerEvent) => {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        cancel();
     };
 
     // Returns the drawn box, or the start point if the drag was a click.
@@ -47,6 +51,7 @@ export const useDragBox = (
         onPointerDown,
         onPointerMove,
         onPointerUp,
-        onPointerCancel
+        onPointerCancel,
+        cancel
     };
 };

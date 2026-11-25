@@ -11,7 +11,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/svelte-query', () => ({
     createMutation: () => ({ mutateAsync: mocks.mutateAsync })
 }));
-vi.mock('$lib/hooks', () => ({
+vi.mock('$lib/hooks', async () => ({
+    isAnnotationSourceBlocked: (
+        await import('$lib/hooks/useAnnotationTarget/annotationSourceGuard')
+    ).isAnnotationSourceBlocked,
     useSaveAnnotationPreviews: () => ({ saveAnnotationPreviews: mocks.saveAnnotationPreviews })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: mocks.toastError } }));
@@ -36,11 +39,11 @@ const deferred = () => {
 
 let cleanup = () => {};
 
-const setup = (initialPrompt = 'cars') => {
+const setup = (initialPrompt = 'cars', blockedReason: string | null = null) => {
     const params = $state<{ sampleId: string; prompt: string; annotationClass: string | null }>({
         sampleId: 'sample-1',
         prompt: initialPrompt,
-        annotationClass: null
+        annotationClass: 'car'
     });
     const onSaved = vi.fn();
     let instances!: ReturnType<typeof useFindInstances>;
@@ -53,6 +56,7 @@ const setup = (initialPrompt = 'cars') => {
             saveAs: 'box',
             annotationClass: params.annotationClass,
             annotationSource: 'source',
+            annotationSourceBlockedReason: blockedReason,
             onSaved
         }));
     });
@@ -97,6 +101,7 @@ describe('useFindInstances', () => {
         const { instances } = setup('  ');
         instances.addBox({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 });
 
+        expect(instances.canGenerate).toBe(false);
         await instances.generate();
 
         expect(mocks.mutateAsync).not.toHaveBeenCalled();
@@ -113,6 +118,29 @@ describe('useFindInstances', () => {
 
         expect(instances.predictions).toEqual([]);
         expect(instances.boxes).toEqual([box]);
+    });
+
+    it('keeps the results when a box is drawn', async () => {
+        const { instances } = setup();
+        await generateResults(instances);
+
+        instances.addBox({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 });
+
+        expect(instances.predictions).toEqual([first, second]);
+    });
+
+    it('drops a response that arrives after a box is drawn', async () => {
+        const { instances } = setup();
+        const request = deferred();
+        mocks.mutateAsync.mockReturnValueOnce(request.promise);
+        const generating = instances.generate();
+
+        instances.addBox({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 });
+        request.resolve({ predictions: [first] });
+        await generating;
+
+        expect(instances.predictions).toEqual([]);
+        expect(instances.isGenerating).toBe(false);
     });
 
     it('keeps the response when the prompt changes right before a request', async () => {
@@ -184,6 +212,17 @@ describe('useFindInstances', () => {
         expect(mocks.toastError).not.toHaveBeenCalled();
     });
 
+    it('saves nothing while no annotation source can take new annotations', async () => {
+        const { instances } = setup('cars', 'Pick where new annotations go.');
+        await generateResults(instances);
+
+        await instances.save();
+
+        expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
+        expect(mocks.toastError).toHaveBeenCalledWith('Pick where new annotations go.');
+        expect(instances.predictions).toHaveLength(2);
+    });
+
     it('saves the instances and removes each saved one', async () => {
         const { instances } = setup();
         await generateResults(instances);
@@ -199,8 +238,8 @@ describe('useFindInstances', () => {
                 saveAs: 'box',
                 annotationSource: 'source',
                 previews: [
-                    { preview: first, className: 'cars' },
-                    { preview: second, className: 'cars' }
+                    { preview: first, className: 'car' },
+                    { preview: second, className: 'car' }
                 ]
             })
         );
@@ -253,6 +292,7 @@ describe('useFindInstances', () => {
         const firstSave = instances.save();
         const secondSave = instances.save();
         expect(instances.canSave).toBe(false);
+        expect(instances.canGenerate).toBe(false);
         saving.resolve(undefined);
         await Promise.all([firstSave, secondSave]);
 
@@ -268,13 +308,42 @@ describe('useFindInstances', () => {
         const save = instances.save();
         instances.removePrediction(instances.predictions[0]);
 
+        expect(instances.isSaving).toBe(true);
         expect(instances.predictions).toEqual([first, second]);
         saving.resolve(undefined);
         await save;
     });
 
+    it('does not save without a class', async () => {
+        const { instances, params } = setup();
+        params.annotationClass = null;
+        await generateResults(instances);
+
+        expect(instances.canSave).toBe(false);
+        await instances.save();
+
+        expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
+    });
+
+    it('marks a search without instances until the next box or prompt', async () => {
+        const { instances, params } = setup();
+        mocks.mutateAsync.mockResolvedValueOnce({ predictions: [] });
+        await instances.generate();
+        expect(instances.isEmptyResult).toBe(true);
+
+        instances.addBox({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 });
+        expect(instances.isEmptyResult).toBe(false);
+
+        mocks.mutateAsync.mockResolvedValueOnce({ predictions: [] });
+        await instances.generate();
+        params.prompt = 'trucks';
+        flushSync();
+        expect(instances.isEmptyResult).toBe(false);
+    });
+
     it('saves with a class picked after the results were generated', async () => {
         const { instances, params } = setup('car');
+        params.annotationClass = null;
         await generateResults(instances);
         params.annotationClass = 'truck';
         flushSync();

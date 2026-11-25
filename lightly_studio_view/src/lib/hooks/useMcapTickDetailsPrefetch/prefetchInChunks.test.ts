@@ -5,7 +5,7 @@ describe('prefetchInChunks', () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());
 
-    it('loads only requested indexes when one chunk contains separate ranges', async () => {
+    it('preserves loading priority when a chunk wraps to earlier ticks', async () => {
         const prefetchRange = vi.fn().mockResolvedValue(undefined);
         await prefetchInChunks({
             requestId: 'request-1',
@@ -18,8 +18,8 @@ describe('prefetchInChunks', () => {
         expect(prefetchRange).toHaveBeenCalledExactlyOnceWith({
             requestId: 'request-1',
             ranges: [
-                { startIndex: 2, endIndex: 3 },
-                { startIndex: 10, endIndex: 11 }
+                { startIndex: 10, endIndex: 11 },
+                { startIndex: 2, endIndex: 3 }
             ]
         });
     });

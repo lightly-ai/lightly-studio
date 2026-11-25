@@ -67,8 +67,9 @@ def get_tick_data(  # noqa: PLR0913
     """Returns the point clouds and camera frames of one tick.
 
     All channels of the tick are read with one pass over the MCAP file. A lidar
-    decodes only its message at the locator log time. A camera continues the decoder
-    of its GOP, see `get_camera_frame.camera_jpeg`. A point cloud is encoded as an
+    decodes only its message at the locator log time. An image camera decodes only its
+    message, and a video camera continues the decoder of its GOP, see
+    `get_camera_frame.camera_jpeg`. A point cloud is encoded as an
     Arrow IPC stream, a camera frame as a JPEG.
 
     Args:
@@ -296,7 +297,8 @@ def _camera_payloads(  # noqa: PLR0913
 
 def _keyframe_ns(camera: McapTable) -> int:
     """Returns the keyframe log time of a camera locator."""
-    assert camera.keyframe_log_time_ns is not None
+    if camera.keyframe_log_time_ns is None:
+        raise RuntimeError("Expected `camera.keyframe_log_time_ns` to be set.")
     return camera.keyframe_log_time_ns
 
 

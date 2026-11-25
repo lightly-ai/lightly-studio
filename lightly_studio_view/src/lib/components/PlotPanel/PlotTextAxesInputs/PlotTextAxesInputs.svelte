@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Input } from '$lib/components/ui/input';
     import { Button } from '$lib/components/ui/button';
-    import { ArrowRight } from '@lucide/svelte';
+    import ArrowRight from '@lucide/svelte/icons/arrow-right';
     import { cn } from '$lib/utils';
     import { createEmptyTextAxesDraft, toTextAxes } from './textAxesDraft';
 

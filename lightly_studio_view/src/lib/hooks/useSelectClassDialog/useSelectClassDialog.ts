@@ -1,8 +1,15 @@
 import { writable, type Writable } from 'svelte/store';
 
+interface TrackSelection {
+    objectTrackId: string | null;
+    isNewTrack: boolean;
+}
+
 interface SelectClassResult {
     /** The chosen (or newly typed) class label. */
     label: string;
+    /** The chosen track, if any. */
+    track?: TrackSelection;
 }
 
 interface SelectClassDialog {
@@ -11,7 +18,7 @@ interface SelectClassDialog {
     /** Opens the dialog and resolves with the chosen class, or `null` if cancelled. */
     requestLabel: () => Promise<SelectClassResult | null>;
     /** Wire to the dialog's `onConfirm`. */
-    handleConfirm: (label: string) => void;
+    handleConfirm: (label: string, track?: TrackSelection) => void;
     /** Wire to the dialog's `onCancel`. */
     handleCancel: () => void;
 }
@@ -46,7 +53,7 @@ export function useSelectClassDialog(): SelectClassDialog {
     return {
         open,
         requestLabel,
-        handleConfirm: (label) => settle({ label }),
+        handleConfirm: (label, track) => settle({ label, track }),
         handleCancel: () => settle(null)
     };
 }

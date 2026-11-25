@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Union
+from typing import Annotated, Literal, Self, TypeAlias
 
 import pydantic
 from pydantic import BaseModel, Field, StrictBool, StrictFloat, StrictInt, StrictStr
 from pydantic_core import PydanticCustomError
-from typing_extensions import Literal, Self, TypeAlias
 
 
 class EqualityComparisonOperator(str, Enum):
@@ -116,10 +115,127 @@ class MetadataComparisonExpr(BaseModel):
         return self
 
 
+class EvaluationMetricComparisonExpr(BaseModel):
+    """Compare a persisted metric within a sample or annotation evaluation.
+
+    Attributes:
+        metric_name: Persisted metric name, including custom metric names.
+        operator: Numeric comparison operator.
+        value: Finite numeric threshold; strings and booleans are rejected.
+    """
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    type: Literal["evaluation_metric_comparison_expr"] = "evaluation_metric_comparison_expr"
+    metric_name: StrictStr
+    operator: OrdinalComparisonOperator
+    value: StrictInt | Annotated[StrictFloat, Field(allow_inf_nan=False)]
+
+
+class EvaluationMetricAndExpr(BaseModel):
+    """Require every child metric predicate to match within one sample evaluation."""
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    type: Literal["and"] = "and"
+    children: list[SampleEvaluationMetricExpr] = Field(min_length=1)
+
+
+class EvaluationMetricOrExpr(BaseModel):
+    """Require at least one child metric predicate within one sample evaluation."""
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    type: Literal["or"] = "or"
+    children: list[SampleEvaluationMetricExpr] = Field(min_length=1)
+
+
+class EvaluationMetricNotExpr(BaseModel):
+    """Negate a metric predicate within one sample evaluation."""
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    type: Literal["not"] = "not"
+    child: SampleEvaluationMetricExpr
+
+
+SampleEvaluationMetricExpr: TypeAlias = Annotated[
+    EvaluationMetricComparisonExpr
+    | EvaluationMetricAndExpr
+    | EvaluationMetricOrExpr
+    | EvaluationMetricNotExpr,
+    Field(discriminator="type"),
+]
+
+
+class SampleEvaluationMatchExpr(BaseModel):
+    """Match evaluated samples in a named run using ANDed metric criteria.
+
+    An empty criteria list matches all samples evaluated by the run. Each criterion
+    can combine metric comparisons with AND, OR, and NOT.
+    """
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    type: Literal["sample_evaluation_match_expr"] = "sample_evaluation_match_expr"
+    run_name: StrictStr
+    criteria: list[SampleEvaluationMetricExpr] = Field(default_factory=list)
+
+
+class ConfusionMatchExpr(BaseModel):
+    """Match a confusion cell in a named run.
+
+    All metric criteria must match the same ground-truth/prediction annotation pair.
+    Equal class names select the corresponding diagonal cell.
+    """
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    type: Literal["confusion_match_expr"] = "confusion_match_expr"
+    run_name: StrictStr
+    ground_truth: StrictStr
+    prediction: StrictStr
+    criteria: list[EvaluationMetricComparisonExpr] = Field(default_factory=list)
+
+
+class FalsePositiveMatchExpr(BaseModel):
+    """Match an unmatched prediction of the selected class in a named run."""
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    type: Literal["false_positive_match_expr"] = "false_positive_match_expr"
+    run_name: StrictStr
+    prediction: StrictStr
+
+
+class FalseNegativeMatchExpr(BaseModel):
+    """Match an unmatched ground-truth annotation of the selected class in a named run."""
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    type: Literal["false_negative_match_expr"] = "false_negative_match_expr"
+    run_name: StrictStr
+    ground_truth: StrictStr
+
+
 class ClassificationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching classification annotation."""
 
     type: Literal["classification_match_expr"] = "classification_match_expr"
+    subexpr: MatchExpr | None = None
+
+
+class VideoEventMatchExpr(BaseModel):
+    """Match a temporal classification annotation on a video."""
+
+    type: Literal["video_event_match_expr"] = "video_event_match_expr"
+    subexpr: MatchExpr
+
+
+class VideoFrameMatchExpr(BaseModel):
+    """Match a video with one frame that satisfies all criteria."""
+
+    type: Literal["video_frame_match_expr"] = "video_frame_match_expr"
     subexpr: MatchExpr
 
 
@@ -127,13 +243,20 @@ class ObjectDetectionMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
     type: Literal["object_detection_match_expr"] = "object_detection_match_expr"
-    subexpr: MatchExpr
+    subexpr: MatchExpr | None = None
 
 
 class SegmentationMaskMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching segmentation mask annotation."""
 
     type: Literal["segmentation_mask_match_expr"] = "segmentation_mask_match_expr"
+    subexpr: MatchExpr | None = None
+
+
+class PolygonMatchExpr(BaseModel):
+    """Leaf node checking if a sample has a matching polygon annotation."""
+
+    type: Literal["polygon_match_expr"] = "polygon_match_expr"
     subexpr: MatchExpr
 
 
@@ -159,29 +282,41 @@ class NotExpr(BaseModel):
 
 
 MatchExpr: TypeAlias = Annotated[
-    Union[
-        StringExpr,
-        IntegerExpr,
-        DatetimeExpr,
-        OrdinalFloatExpr,
-        EqualityFloatExpr,
-        TagsContainsExpr,
-        MetadataComparisonExpr,
-        ClassificationMatchExpr,
-        ObjectDetectionMatchExpr,
-        SegmentationMaskMatchExpr,
-        AndExpr,
-        OrExpr,
-        NotExpr,
-    ],
+    StringExpr
+    | IntegerExpr
+    | DatetimeExpr
+    | OrdinalFloatExpr
+    | EqualityFloatExpr
+    | TagsContainsExpr
+    | MetadataComparisonExpr
+    | SampleEvaluationMatchExpr
+    | ConfusionMatchExpr
+    | FalsePositiveMatchExpr
+    | FalseNegativeMatchExpr
+    | ClassificationMatchExpr
+    | VideoEventMatchExpr
+    | VideoFrameMatchExpr
+    | ObjectDetectionMatchExpr
+    | SegmentationMaskMatchExpr
+    | PolygonMatchExpr
+    | AndExpr
+    | OrExpr
+    | NotExpr,
     Field(discriminator="type"),
 ]
 
 
 # Rebuild models with recursive references between them.
+EvaluationMetricAndExpr.model_rebuild()
+EvaluationMetricOrExpr.model_rebuild()
+EvaluationMetricNotExpr.model_rebuild()
+SampleEvaluationMatchExpr.model_rebuild()
 ClassificationMatchExpr.model_rebuild()
+VideoEventMatchExpr.model_rebuild()
+VideoFrameMatchExpr.model_rebuild()
 ObjectDetectionMatchExpr.model_rebuild()
 SegmentationMaskMatchExpr.model_rebuild()
+PolygonMatchExpr.model_rebuild()
 AndExpr.model_rebuild()
 OrExpr.model_rebuild()
 NotExpr.model_rebuild()
@@ -191,3 +326,40 @@ class QueryExpr(BaseModel):
     """Top-level model representing a complete query expression."""
 
     match_expr: MatchExpr
+
+    @pydantic.model_validator(mode="after")
+    def validate_evaluation_scope(self) -> Self:  # noqa: N804
+        """Evaluation filters apply to samples, not nested annotation queries."""
+        _validate_evaluation_scope(expr=self.match_expr, in_annotation=False)
+        return self
+
+
+def _validate_evaluation_scope(expr: MatchExpr, in_annotation: bool) -> None:
+    if isinstance(
+        expr,
+        (
+            SampleEvaluationMatchExpr,
+            ConfusionMatchExpr,
+            FalsePositiveMatchExpr,
+            FalseNegativeMatchExpr,
+        ),
+    ):
+        if in_annotation:
+            raise ValueError("Evaluation filters cannot be nested inside annotation queries.")
+    elif isinstance(
+        expr,
+        (
+            ClassificationMatchExpr,
+            ObjectDetectionMatchExpr,
+            SegmentationMaskMatchExpr,
+            PolygonMatchExpr,
+            VideoEventMatchExpr,
+        ),
+    ):
+        if expr.subexpr is not None:
+            _validate_evaluation_scope(expr=expr.subexpr, in_annotation=True)
+    elif isinstance(expr, (AndExpr, OrExpr)):
+        for child in expr.children:
+            _validate_evaluation_scope(expr=child, in_annotation=in_annotation)
+    elif isinstance(expr, NotExpr):
+        _validate_evaluation_scope(expr=expr.child, in_annotation=in_annotation)

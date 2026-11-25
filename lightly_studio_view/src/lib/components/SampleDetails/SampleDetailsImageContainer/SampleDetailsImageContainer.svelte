@@ -1,8 +1,9 @@
 <script lang="ts">
-    import { LoaderCircle } from '@lucide/svelte';
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { ZoomableContainer } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { afterNavigate } from '$app/navigation';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import SampleDetailsAnnotation from '../SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
@@ -11,15 +12,10 @@
     import SampleObjectDetectionRect from '../SampleObjectDetectionRect/SampleObjectDetectionRect.svelte';
     import SampleSlicRect from '../SampleSlicRect/SampleSlicRect.svelte';
     import { select } from 'd3-selection';
-    import {
-        countVisibleSources,
-        getColorByLabel,
-        resolveEffectiveColorBySource
-    } from '$lib/utils';
-    import { useSettings } from '$lib/hooks';
+    import { countVisibleSources, getLabelColor, resolveEffectiveColorBySource } from '$lib/utils';
+    import { useSettings, useStickyClassName } from '$lib/hooks';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
-    import { AnnotationSourcePill } from '$lib/components';
     import SlicToolPopUp from '../SlicToolPopUp/SlicToolPopUp.svelte';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
@@ -30,7 +26,14 @@
     import AssistedLabelingPopUps from '$lib/components/SampleDetails/AssistedLabelingPopUps/AssistedLabelingPopUps.svelte';
     import AssistedLabelingOverlays from '$lib/components/SampleDetails/AssistedLabelingOverlays/AssistedLabelingOverlays.svelte';
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
-    import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
+    import {
+        getDrawerLabel,
+        isPanEnabled,
+        reuseUnchangedAnnotations
+    } from './SampleDetailsImageContainer.helpers';
+    import { getPreviewMaskOpacity } from '../previewMaskOpacity';
+    import { AnnotationCardLayer } from '$lib/components/SampleDetails/AnnotationCard';
+    import { DisplayAdjustmentsPopover } from '$lib/components/DisplayAdjustmentsPopover';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -67,7 +70,8 @@
         annotationType
     }: SampleDetailsImageContainerProps = $props();
 
-    const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
+    const { isEditingMode, imageBrightness, imageContrast, maskOpacity } = useGlobalStorage();
+    const { customLabelColorsStore } = useCustomLabelColors();
     // Same as the CSS filter `brightness(b) contrast(c)`.
     const filterSlope = $derived($imageBrightness * $imageContrast);
     const filterIntercept = $derived(0.5 - 0.5 * $imageContrast);
@@ -78,20 +82,28 @@
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
+    let annotationLayer: SVGGElement | null = $state(null);
     const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
-    // Source identity stays stable when annotations are temporarily hidden.
-    const showSourceLabels = $derived(countVisibleSources(sample.annotations) >= 2);
+    // Hiding sources down to one brings class colors back; source names follow the same count.
+    const showSourceLabels = $derived(
+        countVisibleSources(sample.annotations, hideAnnotationsIds) >= 2
+    );
     const assistedLabeling = useAssistedLabelingTools(() => ({
         collectionId,
         sampleId,
         refetch
     }));
+    let previousAnnotations: AnnotationView[] = [];
+    const annotations = $derived.by(() => {
+        previousAnnotations = reuseUnchangedAnnotations(previousAnnotations, sample.annotations);
+        return previousAnnotations;
+    });
     // The local hidden set is the single source of truth for visibility on the
     // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
-        return sample.annotations
+        return annotations
             .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
             .sort((a, b) => {
                 if (a.sample_id === annotationLabelContext.annotationId) return 1;
@@ -100,7 +112,6 @@
             });
     });
 
-    // Use all sources in this sample so visibility changes do not recolor annotations.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
             multipleSourcesVisible: showSourceLabels,
@@ -108,10 +119,26 @@
         })
     );
 
+    const stickyClass = useStickyClassName(() => collectionId);
+    const drawerLabel = $derived(
+        getDrawerLabel({
+            isAnnotationSelected: !!selectedAnnotationId,
+            contextLabel: annotationLabel,
+            stickyClass: stickyClass.current
+        })
+    );
+    const drawerCustomColor = $derived(
+        drawerLabel ? $customLabelColorsStore[drawerLabel] : undefined
+    );
+    // Blue without a class. The 'default' class has no palette color, only a custom one.
     const drawerStrokeColor = $derived(
-        annotationLabel !== 'default' && annotationLabel
-            ? getColorByLabel(annotationLabel, 1).color
-            : 'rgb(0, 0, 255)'
+        drawerLabel && drawerLabel !== 'default'
+            ? getLabelColor($customLabelColorsStore, drawerLabel)
+            : (drawerCustomColor?.color ?? 'rgb(0, 0, 255)')
+    );
+    // Matches the opacity of the saved mask, see SampleAnnotation.
+    const previewMaskOpacity = $derived(
+        getPreviewMaskOpacity({ maskOpacity: $maskOpacity, labelAlpha: drawerCustomColor?.alpha })
     );
 
     $effect(() => {
@@ -234,7 +261,7 @@
     panEnabled={isPanEnabled({
         isDrawing: annotationLabelContext.isDrawing,
         isErasing: annotationLabelContext.isErasing,
-        status: sampleDetailsToolbarContext.status
+        blocksPan: assistedLabeling.blocksPan
     })}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}
@@ -252,11 +279,6 @@
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
-        {#if $isEditingMode && !annotationLabelContext.isOnAnnotationDetailsView}
-            <div class="mb-1">
-                <AnnotationSourcePill {collectionId} />
-            </div>
-        {/if}
         {#if shouldShowBrushToolPopup}
             <BrushToolPopUp />
         {/if}
@@ -266,15 +288,18 @@
         <AssistedLabelingPopUps {collectionId} {assistedLabeling} />
     {/snippet}
     {#snippet zoomPanelRightContent()}
-        {#if $isPending}
-            <div
-                class="pointer-events-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-muted/80 px-2.5 text-sm text-muted-foreground shadow-md backdrop-blur-sm"
-                data-testid="finish-brush-loading-indicator"
-            >
-                <LoaderCircle class="size-4 animate-spin" />
-                <span>Saving</span>
-            </div>
-        {/if}
+        <div class="flex items-center gap-2">
+            {#if $isPending}
+                <div
+                    class="pointer-events-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-muted/80 px-2.5 text-sm text-muted-foreground shadow-md backdrop-blur-sm"
+                    data-testid="finish-brush-loading-indicator"
+                >
+                    <LoaderCircle class="size-4 animate-spin" />
+                    <span>Saving</span>
+                </div>
+            {/if}
+            <DisplayAdjustmentsPopover />
+        </div>
     {/snippet}
     {#snippet zoomableContent({ scale })}
         <!-- SVG filter, because Safari does not scale an <img> with a CSS filter in a <foreignObject> -->
@@ -295,7 +320,7 @@
             <img src={imageUrl} alt="" draggable="false" style="height: 100%; width: 100%;" />
         </foreignObject>
 
-        <g class:invisible={$isHidden}>
+        <g bind:this={annotationLayer} class:invisible={$isHidden}>
             {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
                 <!-- The SampleSegmentationMaskRect or SampleEraserRect component will render the preview while drawing a segmentation mask-->
                 <g
@@ -303,7 +328,7 @@
                         annotation.sample_id === annotationLabelContext.annotationId}
                 >
                     <SampleDetailsAnnotation
-                        annotationId={annotation.sample_id}
+                        {annotation}
                         {sampleId}
                         {collectionId}
                         {isResizable}
@@ -356,6 +381,7 @@
                     {sample}
                     {mousePosition}
                     {drawerStrokeColor}
+                    previewOpacity={previewMaskOpacity}
                     onFinishErasePendingChange={handlePendingChange}
                 />
             {:else if sampleDetailsToolbarContext.status === 'brush' && isSegmentationType(annotationTypeInCurrentView)}
@@ -367,6 +393,7 @@
                     {brushRadius}
                     {refetch}
                     {drawerStrokeColor}
+                    previewOpacity={previewMaskOpacity}
                     {sample}
                     annotationType={annotationTypeInCurrentView}
                     onFinishBrushPendingChange={handlePendingChange}
@@ -405,6 +432,14 @@
         {/if}
     {/snippet}
 </ZoomableContainer>
+<AnnotationCardLayer
+    {collectionId}
+    annotations={actualAnnotationsToShow}
+    {selectedAnnotationId}
+    {refetch}
+    getLayer={() => annotationLayer}
+    {colorBySource}
+/>
 
 <style>
     .hidden {

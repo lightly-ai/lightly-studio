@@ -1,20 +1,44 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import SelectClassDialog from './SelectClassDialog.svelte';
+import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+import { createRawSnippet, type ComponentProps } from 'svelte';
+
+vi.mock('$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass', () => ({
+    useCanCreateAnnotationClass: vi.fn(() => true)
+}));
+
+const defaultTrackProps = {
+    showTrackSelect: true,
+    tracks: [{ object_track_id: 'track-1', object_track_number: 1, annotation_class_name: 'cat' }]
+};
+
+// bits-ui Select uses pointer-capture and scrollIntoView APIs that jsdom doesn't implement.
+const originalHasPointerCapture = Element.prototype.hasPointerCapture;
+const originalSetPointerCapture = Element.prototype.setPointerCapture;
+const originalReleasePointerCapture = Element.prototype.releasePointerCapture;
+const originalScrollIntoView = Element.prototype.scrollIntoView;
+
+beforeAll(() => {
+    Element.prototype.hasPointerCapture = vi.fn(() => false);
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+    Element.prototype.scrollIntoView = vi.fn();
+});
+
+afterAll(() => {
+    Element.prototype.hasPointerCapture = originalHasPointerCapture;
+    Element.prototype.setPointerCapture = originalSetPointerCapture;
+    Element.prototype.releasePointerCapture = originalReleasePointerCapture;
+    Element.prototype.scrollIntoView = originalScrollIntoView;
+});
 
 describe('SelectClassDialog', () => {
-    beforeAll(() => {
-        Element.prototype.scrollIntoView = vi.fn();
-    });
-
     const renderDialog = (
-        propOverrides: {
-            open?: boolean;
-            labels?: string[];
-        } = {}
+        propOverrides: Partial<ComponentProps<typeof SelectClassDialog>> = {}
     ) => {
         const onConfirm = vi.fn();
         const onCancel = vi.fn();
@@ -130,5 +154,164 @@ describe('SelectClassDialog', () => {
         renderDialog();
 
         expect(screen.queryByTestId('annotation-source-trigger')).not.toBeInTheDocument();
+    });
+
+    it('hides class creation below editor', async () => {
+        vi.mocked(useCanCreateAnnotationClass).mockReturnValue(false);
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog();
+        const input = await screen.findByTestId('select-list-input');
+
+        await user.type(input, 'zebra');
+
+        expect(screen.queryByText(/Create:/)).not.toBeInTheDocument();
+        expect(screen.getByText('No annotation class found.')).toBeInTheDocument();
+        expect(screen.getByText('Choose an existing class.')).toBeInTheDocument();
+
+        await user.type(input, '{Enter}');
+        expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('keeps class creation for editors', async () => {
+        vi.mocked(useCanCreateAnnotationClass).mockReturnValue(true);
+        const user = userEvent.setup();
+        renderDialog();
+
+        await user.type(await screen.findByTestId('select-list-input'), 'zebra');
+
+        expect(screen.getByText(/Create:/)).toBeInTheDocument();
+    });
+
+    it('does not show track select by default', () => {
+        renderDialog();
+
+        expect(screen.queryByTestId('track-select')).not.toBeInTheDocument();
+    });
+
+    it('shows track select when showTrackSelect is true', () => {
+        renderDialog(defaultTrackProps);
+
+        expect(screen.getByTestId('track-select')).toBeInTheDocument();
+        expect(screen.getByText('Track')).toBeInTheDocument();
+    });
+
+    it('includes track selection in onConfirm when showTrackSelect is enabled', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog(defaultTrackProps);
+
+        // Select a class
+        await user.click(await screen.findByRole('option', { name: 'cat' }));
+
+        // Select a track
+        await user.click(
+            within(screen.getByTestId('track-select')).getByTestId('select-list-trigger')
+        );
+        await user.click(screen.getByRole('option', { name: 'cat - 1' }));
+
+        // Confirm
+        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+        await waitFor(() => expect(confirmButton).toBeEnabled());
+        await user.click(confirmButton);
+
+        expect(onConfirm).toHaveBeenCalledWith('cat', {
+            objectTrackId: 'track-1',
+            isNewTrack: false
+        });
+    });
+
+    it('does not confirm when Enter is pressed on a class while track select is shown', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog(defaultTrackProps);
+        const input = await screen.findByTestId('select-list-input');
+
+        await user.type(input, 'do');
+        await waitFor(() =>
+            expect(screen.getByRole('option', { name: 'dog' })).toHaveAttribute(
+                'aria-selected',
+                'true'
+            )
+        );
+        await user.keyboard('{Enter}');
+
+        expect(onConfirm).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled();
+    });
+
+    it('filters tracks by the selected class name', async () => {
+        const user = userEvent.setup();
+        const tracks = [
+            { object_track_id: 'track-1', object_track_number: 1, annotation_class_name: 'cat' },
+            { object_track_id: 'track-2', object_track_number: 2, annotation_class_name: 'dog' },
+            { object_track_id: 'track-3', object_track_number: 3, annotation_class_name: null }
+        ];
+        renderDialog({ showTrackSelect: true, tracks });
+
+        await user.click(await screen.findByRole('option', { name: 'cat' }));
+
+        await user.click(
+            within(screen.getByTestId('track-select')).getByTestId('select-list-trigger')
+        );
+        const trackLabels = screen.getAllByRole('option').map((o) => o.textContent?.trim());
+        expect(trackLabels).toContain('cat - 1');
+        expect(trackLabels).toContain('Track 3');
+        expect(trackLabels).not.toContain('dog - 2');
+    });
+
+    it('resets track selection when class changes', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog(defaultTrackProps);
+
+        // Select "cat" class
+        await user.click(await screen.findByRole('option', { name: 'cat' }));
+
+        // Select a track
+        await user.click(
+            within(screen.getByTestId('track-select')).getByTestId('select-list-trigger')
+        );
+        await user.click(screen.getByRole('option', { name: 'cat - 1' }));
+
+        // Change to a different class - this should reset the track
+        // First trigger in DOM order is the class SelectList
+        await user.click(screen.getAllByTestId('select-list-trigger')[0]);
+        await user.click(await screen.findByRole('option', { name: 'dog' }));
+
+        // Confirm
+        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+        await waitFor(() => expect(confirmButton).toBeEnabled());
+        await user.click(confirmButton);
+
+        expect(onConfirm).toHaveBeenCalledWith('dog', {
+            objectTrackId: null,
+            isNewTrack: false
+        });
+    });
+
+    it('does not confirm while the caller does not allow it', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog({ canConfirm: false });
+
+        await user.type(await screen.findByTestId('select-list-input'), 'fish{Enter}');
+
+        expect(onConfirm).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    });
+
+    it('preselects the initial class', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog({ initialLabel: 'dog' });
+
+        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+        await waitFor(() => expect(confirmButton).toBeEnabled());
+        await user.click(confirmButton);
+
+        expect(onConfirm).toHaveBeenCalledWith('dog');
+    });
+
+    it('renders extra content above a closed class list', () => {
+        const extra = createRawSnippet(() => ({ render: () => '<p>Extra section</p>' }));
+        renderDialog({ extra });
+
+        expect(screen.getByText('Extra section')).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'cat' })).not.toBeInTheDocument();
     });
 });

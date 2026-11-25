@@ -38,7 +38,8 @@ def sampling_via_database_sequences(
     """
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
-    assert sequence_length is not None
+    if sequence_length is None:
+        raise RuntimeError("Expected `sequence_length` to be set.")
     preselected_id_set = set(preselected_sample_ids)
     # Candidate and preselected frames are chunked separately.
     preselected_sequences = _load_sequences(
@@ -135,7 +136,8 @@ def _validate_sequence_sampling(
             or if any non-diversity strategy is configured.
     """
     sequence_length = config.selected_sequence_length
-    assert sequence_length is not None
+    if sequence_length is None:
+        raise RuntimeError("Expected `sequence_length` to be set.")
     collection_resolver.check_collection_type(
         session=session,
         collection_id=config.collection_id,

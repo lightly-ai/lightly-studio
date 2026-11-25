@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Button, Segment } from '$lib/components';
-    import { TagsIcon, X } from '@lucide/svelte';
+    import TagsIcon from '@lucide/svelte/icons/tags';
+    import X from '@lucide/svelte/icons/x';
     import { useTags, useAddTagToSample } from '$lib/hooks';
     import { useRemoveTagFromSample } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
@@ -18,9 +19,10 @@
         collectionId: string;
         sampleId: string;
         onRefetch?: () => void;
+        title?: string;
     }
 
-    let { tags, collectionId, sampleId, onRefetch = () => {} }: Props = $props();
+    let { tags, collectionId, sampleId, onRefetch = () => {}, title = 'Tags' }: Props = $props();
 
     const { user } = useAuth();
     const canManageTags = $derived(hasMinimumRole(user?.role, 'labeler'));
@@ -87,7 +89,7 @@
     }
 </script>
 
-<Segment title="Tags" icon={TagsIcon}>
+<Segment {title} icon={TagsIcon}>
     <div class="flex flex-wrap gap-1">
         {#each tags as tag, index (tag.tag_id ?? `${tag.name}-${index}`)}
             <div class="inline-flex items-center gap-1 rounded-lg bg-card px-2 py-1 text-xs">

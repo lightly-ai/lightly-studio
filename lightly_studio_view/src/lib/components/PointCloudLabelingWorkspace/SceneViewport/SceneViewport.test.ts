@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { fireEvent, render } from '@testing-library/svelte';
 import { readonly, writable } from 'svelte/store';
 import SceneViewport from './SceneViewport.svelte';
+import SceneViewportGroupHarness from './SceneViewportGroupHarness.svelte';
 
 const transforms = {
     annotations: readonly(writable([])),
     reconcile: vi.fn(),
     begin: vi.fn(),
+    preview: vi.fn(),
     cancel: vi.fn(),
-    commit: vi.fn()
+    commit: vi.fn(),
+    discard: vi.fn()
 };
 
 vi.mock('@threlte/core', () => ({ Canvas: () => {} }));
@@ -18,10 +21,6 @@ vi.mock('./SceneNavigationControls.svelte', () => ({ default: () => {} }));
 vi.mock('$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte', () => ({
     default: () => {}
 }));
-vi.mock(
-    '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte',
-    () => ({ default: () => {} })
-);
 vi.mock('$lib/components/PointCloudLabelingWorkspace/GroundPlane/GroundPlane.svelte', () => ({
     default: () => {}
 }));
@@ -41,7 +40,10 @@ describe('SceneViewport arrow-key navigation', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        render(SceneViewport, { props: { transforms, onPreviousTick, onNextTick } });
+        const { getByTestId } = render(SceneViewport, {
+            props: { transforms, onPreviousTick, onNextTick }
+        });
+        fireEvent.pointerEnter(getByTestId('workspace-scene-viewport'));
     });
 
     it('calls the previous and next handlers and prevents the default action', () => {
@@ -90,4 +92,25 @@ describe('SceneViewport arrow-key navigation', () => {
         expect(onNextTick).toHaveBeenCalledOnce();
         element.remove();
     });
+});
+
+it('transfers navigation exclusively between the hovered and focused viewports', async () => {
+    const onMainNext = vi.fn();
+    const onTopNext = vi.fn();
+    const { getAllByTestId, getByRole } = render(SceneViewportGroupHarness, {
+        props: { transforms, onMainNext, onTopNext }
+    });
+    const [main, top] = getAllByTestId('workspace-scene-viewport');
+    await fireEvent.pointerEnter(main);
+    await fireEvent.pointerEnter(top);
+    expect(main.getAttribute('aria-current')).toBeNull();
+    expect(top.getAttribute('aria-current')).toBe('true');
+    press(window, 'ArrowRight');
+    expect(onTopNext).toHaveBeenCalledOnce();
+    expect(onMainNext).not.toHaveBeenCalled();
+    await fireEvent.focusIn(getByRole('button', { name: 'Scene settings' }));
+    expect(top.getAttribute('aria-current')).toBeNull();
+    press(window, 'ArrowRight');
+    expect(onMainNext).toHaveBeenCalledOnce();
+    expect(onTopNext).toHaveBeenCalledOnce();
 });

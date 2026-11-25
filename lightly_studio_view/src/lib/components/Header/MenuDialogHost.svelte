@@ -30,6 +30,8 @@
         collection.sample_type == 'video' || collection.sample_type == 'video_frame'
     );
 
+    const isSequenceCollection = $derived(collection.sample_type == 'sequence');
+
     const { isDialogOpen: isClassifiersDialogOpen } = useClassifiersMenu();
     const { datasetSplitCollectionId, closeDatasetSplitDialog } = useDatasetSplitDialog();
     const { isSamplingDialogOpen } = useSamplingDialog();
@@ -66,7 +68,7 @@
     {/await}
 {/if}
 
-{#if (isImageCollection || isVideoCollection) && $isExportDialogOpen}
+{#if (isImageCollection || isVideoCollection || isSequenceCollection) && $isExportDialogOpen}
     {#await import('$lib/components/ExportSamples/ExportSamples.svelte') then { default: ExportSamples }}
         <ExportSamples />
     {/await}

@@ -149,6 +149,176 @@ export function groupAnnotationsBySource({
     return groups;
 }
 
+interface GroupAnnotationsWithEmptySourcesParams extends GroupAnnotationsBySourceParams {
+    /** A typed source name that is not created yet. It gets an empty group. */
+    pendingSourceName: string | null;
+}
+
+/** The ID of the group of a typed source that is not created yet. */
+export const PENDING_SOURCE_ID = 'pending-source';
+
+/** The state and action of the picker for the source that new cuboids go to. */
+export interface SourcePicker {
+    /** The source new cuboids go to. */
+    targetSourceName: string | null;
+    /** A typed source name that is not created yet. */
+    pendingSourceName: string | null;
+    /** Whether no source is picked among several. */
+    needsPick: boolean;
+    onPick: (name: string, options?: { isNew?: boolean }) => void;
+}
+
+/** Whether new cuboids can go to the source of a group: not to the unknown-source group. */
+export function isPickableSource(sourceId: string, sources: readonly AnnotationSource[]): boolean {
+    return sourceId === PENDING_SOURCE_ID || sources.some(({ id }) => id === sourceId);
+}
+
+/**
+ * Groups cuboids by their annotation source and lists every source, also sources without
+ * cuboids, so that the user can pick any of them for new cuboids.
+ */
+export function groupAnnotationsWithEmptySources({
+    cuboids,
+    sources,
+    pendingSourceName
+}: GroupAnnotationsWithEmptySourcesParams): AnnotationGroup[] {
+    const filled = groupAnnotationsBySource({ cuboids, sources });
+    const groups: AnnotationGroup[] = sources.map(
+        (source) =>
+            filled.find((group) => group.sourceId === source.id) ?? {
+                sourceId: source.id,
+                sourceName: source.name,
+                cuboids: []
+            }
+    );
+    const isPendingNew =
+        pendingSourceName && !sources.some((source) => source.name === pendingSourceName);
+    if (isPendingNew) {
+        groups.push({ sourceId: PENDING_SOURCE_ID, sourceName: pendingSourceName, cuboids: [] });
+    }
+    const unknown = filled.filter((group) => !sources.some(({ id }) => id === group.sourceId));
+    return [...groups, ...unknown];
+}
+
+/** A node in the annotation tree, holding a cuboid and its direct subtree. */
+interface AnnotationTreeNode {
+    /** The cuboid at this node, or null for absent parent group headers. */
+    readonly cuboid: CuboidAnnotation | null;
+    readonly children: readonly AnnotationTreeNode[];
+    /** Total annotations in this subtree, including this node when it has a cuboid. */
+    readonly subtreeSize: number;
+}
+
+function buildVirtualGroupNode(children: AnnotationTreeNode[]): AnnotationTreeNode {
+    return {
+        cuboid: null,
+        children,
+        subtreeSize: children.reduce((sum, c) => sum + c.subtreeSize, 0)
+    };
+}
+
+interface BuildAnnotationForestParams {
+    cuboids: readonly CuboidAnnotation[];
+}
+
+interface GroupOrphansUnderAbsentParentsParams {
+    orphans: readonly CuboidAnnotation[];
+    buildNode: (cuboid: CuboidAnnotation) => AnnotationTreeNode;
+}
+
+/**
+ * Groups orphans whose parent is absent from the frame into virtual parent nodes.
+ *
+ * Orphans are grouped by `parentTrackNumber` under a node with `cuboid: null`.
+ */
+function groupOrphansUnderAbsentParents({
+    orphans,
+    buildNode
+}: GroupOrphansUnderAbsentParentsParams): AnnotationTreeNode[] {
+    const orphansByParentTrack = new Map<number, CuboidAnnotation[]>();
+
+    for (const orphan of orphans) {
+        const group = orphansByParentTrack.get(orphan.parentTrackNumber!);
+        if (group) {
+            group.push(orphan);
+        } else {
+            orphansByParentTrack.set(orphan.parentTrackNumber!, [orphan]);
+        }
+    }
+
+    const absentParentGroups: AnnotationTreeNode[] = [];
+    for (const [, groupCuboids] of orphansByParentTrack) {
+        absentParentGroups.push(buildVirtualGroupNode(groupCuboids.map(buildNode)));
+    }
+
+    return absentParentGroups;
+}
+
+/**
+ * Converts a flat, pre-sorted list of cuboids into a forest of annotation trees.
+ *
+ * All roots (with or without children) become individual top-level tree nodes,
+ * sorted by trackNumber ascending with nulls last.
+ * Orphans whose parent is absent from the frame are grouped under a virtual
+ * parent node (cuboid: null) and appended after the roots.
+ */
+export function buildAnnotationForest({
+    cuboids
+}: BuildAnnotationForestParams): AnnotationTreeNode[] {
+    const knownTrackNumbers = new Set<number>(
+        cuboids
+            .filter((c): c is CuboidAnnotation & { trackNumber: number } => c.trackNumber !== null)
+            .map((c) => c.trackNumber)
+    );
+
+    const childrenByParentTrack = new Map<number, CuboidAnnotation[]>();
+    const roots: CuboidAnnotation[] = [];
+    const orphans: CuboidAnnotation[] = [];
+
+    for (const cuboid of cuboids) {
+        if (cuboid.parentTrackNumber === null) {
+            roots.push(cuboid);
+        } else if (knownTrackNumbers.has(cuboid.parentTrackNumber)) {
+            const group = childrenByParentTrack.get(cuboid.parentTrackNumber);
+            if (group) {
+                group.push(cuboid);
+            } else {
+                childrenByParentTrack.set(cuboid.parentTrackNumber, [cuboid]);
+            }
+        } else {
+            orphans.push(cuboid);
+        }
+    }
+
+    function buildNode(cuboid: CuboidAnnotation): AnnotationTreeNode {
+        const directChildren =
+            cuboid.trackNumber !== null
+                ? (childrenByParentTrack.get(cuboid.trackNumber) ?? [])
+                : [];
+        const children = directChildren.map(buildNode);
+        return {
+            cuboid,
+            children,
+            subtreeSize: 1 + children.reduce((sum, c) => sum + c.subtreeSize, 0)
+        };
+    }
+
+    roots.sort(byTrackNumber);
+
+    const absentParentGroups = groupOrphansUnderAbsentParents({
+        orphans,
+        buildNode
+    });
+
+    return [...roots.map(buildNode), ...absentParentGroups];
+}
+
+/** Returns true when the subtree rooted at {@link node} contains a cuboid with the given ID. */
+export function subtreeContainsId(node: AnnotationTreeNode, id: string): boolean {
+    if (node.cuboid?.id === id) return true;
+    return node.children.some((child) => subtreeContainsId(child, id));
+}
+
 /**
  * Resolves the display name for a cuboid's annotation class.
  * Falls back to the raw class ID when the class is not found.

@@ -1,12 +1,13 @@
 """Utility functions for building database queries."""
 
-from typing import Literal, Optional
+from typing import Literal
 from uuid import UUID
 
-from sqlalchemy import or_
+from sqlalchemy import ColumnElement, not_, or_
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.range import FloatRange
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -20,12 +21,12 @@ class VideoFilter(GridFilterBase):
     """Encapsulates filter parameters for querying videos."""
 
     filter_type: Literal["video"] = "video"
-    width: Optional[FilterDimensions] = None
-    height: Optional[FilterDimensions] = None
-    fps: Optional[FloatRange] = None
-    duration_s: Optional[FloatRange] = None
-    sample_filter: Optional[SampleFilter] = None
-    frame_annotation_filter: Optional[AnnotationsFilter] = None
+    width: FilterDimensions | None = None
+    height: FilterDimensions | None = None
+    fps: FloatRange | None = None
+    duration_s: FloatRange | None = None
+    sample_filter: SampleFilter | None = None
+    frame_annotation_filter: AnnotationsFilter | None = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -34,7 +35,7 @@ class VideoFilter(GridFilterBase):
         query = self._apply_duration_filters(query)
 
         if self.sample_filter:
-            query = self.sample_filter.apply(query)
+            query = self.sample_filter.apply(query=query, sample_type=SampleType.VIDEO)
         if self.frame_annotation_filter is not None:
             query = self._apply_annotation_filter(query)
 
@@ -83,31 +84,41 @@ class VideoFilter(GridFilterBase):
         return query
 
     def _apply_annotation_filter(self, query: QueryType) -> QueryType:
-        """For videos, annotation filters match frame or direct video annotations."""
-        assert self.frame_annotation_filter is not None
+        """For videos, annotation filters match frame or direct video annotations.
 
-        frame_filtered_video_ids_subquery = select(VideoFrameTable.parent_sample_id)
-        frame_filtered_video_ids_subquery = (
-            self.frame_annotation_filter.apply_to_parent_sample_query(
-                query=frame_filtered_video_ids_subquery,
-                sample_id_column=col(VideoFrameTable.sample_id),
+        A video is unannotated only if neither the video nor one of its frames has an
+        annotation in the selected annotation sources.
+        """
+        annotations_filter = self.frame_annotation_filter
+        if annotations_filter is None:
+            raise RuntimeError("Expected `self.frame_annotation_filter` to be set.")
+
+        is_matching = _has_video_or_frame_parent_in(
+            parent_sample_ids=annotations_filter.select_matching_parent_sample_ids()
+        )
+        if not annotations_filter.include_unannotated_samples:
+            return query.where(is_matching)
+        is_unannotated = not_(
+            _has_video_or_frame_parent_in(
+                parent_sample_ids=annotations_filter.select_annotated_parent_sample_ids()
             )
         )
-
-        video_filtered_video_ids_subquery = select(VideoTable.sample_id)
-        video_filtered_video_ids_subquery = (
-            self.frame_annotation_filter.apply_to_parent_sample_query(
-                query=video_filtered_video_ids_subquery,
-                sample_id_column=col(VideoTable.sample_id),
-            )
-        )
-
-        return query.where(
-            or_(
-                col(VideoTable.sample_id).in_(frame_filtered_video_ids_subquery),
-                col(VideoTable.sample_id).in_(video_filtered_video_ids_subquery),
-            )
-        )
+        if not annotations_filter.has_annotation_predicates():
+            return query.where(is_unannotated)
+        return query.where(or_(is_matching, is_unannotated))
 
     def _select_sample_ids(self) -> SelectOfScalar[UUID]:
         return select(VideoTable.sample_id).join(VideoTable.sample)
+
+
+def _has_video_or_frame_parent_in(
+    parent_sample_ids: SelectOfScalar[UUID],
+) -> ColumnElement[bool]:
+    """Whether the video or one of its frames is in the given parent sample ids."""
+    frame_video_ids = select(VideoFrameTable.parent_sample_id).where(
+        col(VideoFrameTable.sample_id).in_(parent_sample_ids)
+    )
+    return or_(
+        col(VideoTable.sample_id).in_(frame_video_ids),
+        col(VideoTable.sample_id).in_(parent_sample_ids),
+    )

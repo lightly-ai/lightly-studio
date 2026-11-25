@@ -1,4 +1,13 @@
 import { derived, writable, type Readable } from 'svelte/store';
+import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
+
+// The plot narrows the grid with a drawn region or with single picked samples, never both.
+export interface PlotSelection {
+    embeddingRegion: EmbeddingRegion | null;
+    sampleIds: string[];
+}
+
+export const EMPTY_PLOT_SELECTION: PlotSelection = { embeddingRegion: null, sampleIds: [] };
 
 // Per-collection count of items currently selected by the embedding-plot lasso/rectangle.
 const selectionCountByCollection = writable<Record<string, number>>({});

@@ -1,6 +1,8 @@
 <script lang="ts">
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import SmartSelectOverlay from '$lib/components/SampleDetails/SmartSelectOverlay/SmartSelectOverlay.svelte';
+    import FindInstancesOverlay from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.svelte';
+    import { LabelWithModelOverlay } from '$lib/components/SampleDetails/LabelWithModelOverlay';
     import type { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
 
     interface Props {
@@ -31,6 +33,24 @@
             isPanning={assistedLabeling.isPanning}
             saveAs={assistedLabeling.state.saveAs}
             smartSelect={assistedLabeling.smartSelect}
+        />
+    {:else if assistedLabeling.activeTool === 'find-instances'}
+        <FindInstancesOverlay
+            bind:interactionRect
+            {sample}
+            {scale}
+            isPanning={assistedLabeling.isPanning}
+            saveAs={assistedLabeling.state.saveAs}
+            isDrawingBox={assistedLabeling.state.isDrawingInstancesBox}
+            onDrawEnd={assistedLabeling.endInstancesBoxDrawing}
+            instances={assistedLabeling.instances}
+        />
+    {:else if assistedLabeling.activeTool === 'label-with-model'}
+        <LabelWithModelOverlay
+            {sample}
+            {scale}
+            saveAs={assistedLabeling.modelSaveAs}
+            labelWithModel={assistedLabeling.labelWithModel}
         />
     {/if}
 {/key}

@@ -7,6 +7,9 @@ import {
 } from '../language/lightly-query-module';
 import { detectScopeAt } from '../language/lightly-query-schema';
 import { getMetadataQueryContext } from '$lib/components/QueryEditor/language';
+import { getEvaluationCompletionContext } from './getEvaluationCompletionContext';
+import { getModelQuerySource } from './modelQueryScope';
+import { getQuotedMetricRange } from './getQuotedMetricRange';
 import {
     buildSchemaCompletions,
     lspToMonacoCompletion,
@@ -51,7 +54,8 @@ async function getCompletions(
     } = services;
     if (!provider) return { suggestions: [] };
 
-    const doc = await syncLangiumDocument(model, services);
+    const { text, lineOffset } = getModelQuerySource(model);
+    const doc = await syncLangiumDocument(model, services, text);
 
     const word = model.getWordUntilPosition(position);
     const { lineNumber, column } = position;
@@ -65,19 +69,36 @@ async function getCompletions(
     const result: LspCompletionList | undefined = await provider.getCompletion(doc, {
         textDocument: { uri: doc.uri.toString() },
         // Monaco positions are 1-based; LSP expects 0-based line/character.
-        position: { line: lineNumber - 1, character: column - 1 }
+        position: { line: lineNumber - 1 + lineOffset, character: column - 1 }
     });
 
-    const scope = detectScopeAt(model.getValue(), model.getOffsetAt(position));
+    const scope = detectScopeAt(
+        text,
+        model.getOffsetAt(position) + text.length - model.getValue().length
+    );
 
     const metadataContext = getMetadataQueryContext({
         text: model.getValue(),
         offset: model.getOffsetAt(position) - (position.column - word.startColumn)
     });
-    const isSupported = (item: monaco.languages.CompletionItem) =>
-        shouldShowSuggestion(item, metadataContext);
+    const evaluationContext =
+        scope === 'sample_evaluation'
+            ? getEvaluationCompletionContext({
+                  text: model.getValue(),
+                  offset: model.getOffsetAt(position)
+              })
+            : undefined;
+    const isSupported = (item: monaco.languages.CompletionItem) => {
+        const label = completionLabel(item);
+        if (evaluationContext === 'selector') {
+            if (label.startsWith('"') || ['AND', 'OR', 'NOT'].includes(label)) return false;
+        }
+        if (evaluationContext === 'run' && label.startsWith('"')) return false;
+        if (evaluationContext && evaluationContext !== 'selector' && label === 'name') return false;
+        return shouldShowSuggestion(item, metadataContext);
+    };
     const lspSuggestions = (result?.items ?? [])
-        .map((item) => lspToMonacoCompletion(item, fallbackRange, scope))
+        .map((item) => lspToMonacoCompletion(item, fallbackRange, scope, lineOffset))
         // Use the schema snippet instead of Langium's bare metadata keyword.
         .filter((item) => completionLabel(item) !== 'metadata')
         .filter(isSupported);
@@ -93,7 +114,28 @@ async function getCompletions(
         includeBooleanLiterals: metadataContext === 'boolean'
     }).filter((suggestion) => !seen.has(completionLabel(suggestion)));
 
-    return { suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported) };
+    const metricRange =
+        scope === 'sample_evaluation'
+            ? getQuotedMetricRange({
+                  text: model.getValue(),
+                  offset: model.getOffsetAt(position),
+                  position
+              })
+            : undefined;
+    const metricQuote = metricRange
+        ? model.getValue()[model.getOffsetAt(position) - column + metricRange.startColumn]
+        : undefined;
+    return {
+        suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported).map((item) =>
+            metricRange && completionLabel(item).startsWith('"')
+                ? {
+                      ...item,
+                      range: metricRange,
+                      filterText: `${metricQuote}${completionLabel(item).slice(1, -1)}${metricQuote}`
+                  }
+                : item
+        )
+    };
 }
 
 /**

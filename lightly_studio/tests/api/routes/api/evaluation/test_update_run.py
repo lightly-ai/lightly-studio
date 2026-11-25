@@ -54,7 +54,9 @@ def test_update_run(
     assert created.status_code == 201
     run_id = created.json()["evaluation_run_id"]
     before = test_client.get(url).json()
-    settings = {"config": {"iou_threshold": 0.75, "classwise": False}}
+    settings = {
+        "config": {"iou_threshold": 0.75, "classwise": False, "compute_average_precision": False}
+    }
     changes = dict(changes)
     dataset_id = changes.pop("dataset_id", str(root.dataset_id))
     target_id = changes.pop("run_id", run_id)

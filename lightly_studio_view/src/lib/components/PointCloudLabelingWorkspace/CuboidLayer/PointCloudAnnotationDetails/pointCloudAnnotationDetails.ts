@@ -56,7 +56,7 @@ interface CreateAnnotationDetailsParams {
  * Formats the details displayed in the annotation detail panel.
  *
  * Returns per-axis arrays so callers can render each component in its own
- * column. {@link createCuboidTooltip} uses this to produce its flat strings.
+ * column.
  *
  * @param params - The cuboid whose geometry to format.
  * @returns Display-ready annotation data with fixed precision per axis component.

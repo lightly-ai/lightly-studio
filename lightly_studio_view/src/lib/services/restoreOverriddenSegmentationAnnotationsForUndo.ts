@@ -4,6 +4,7 @@ import type {
     AnnotationView,
     CreateAnnotationResponse
 } from '$lib/api/lightly_studio_local';
+import { ApiError } from '$lib/api/ApiError';
 import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
 
 type AnnotationLabelOption = {
@@ -18,11 +19,7 @@ type AnnotationViewWithOptionalLabelId = AnnotationView & {
 };
 
 const isAnnotationNotFoundError = (error: unknown) => {
-    if (typeof error === 'object' && error !== null) {
-        const status = (error as { status?: unknown }).status;
-        if (status === 404) return true;
-    }
-
+    if (error instanceof ApiError) return error.status === 404;
     if (!(error instanceof Error)) return false;
 
     const message = error.message.toLowerCase();

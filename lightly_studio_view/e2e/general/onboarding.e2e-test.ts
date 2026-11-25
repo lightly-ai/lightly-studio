@@ -30,8 +30,8 @@ async function reachImageStep(page: Page) {
 }
 
 test('image tour follows a double-click into sample details', async ({ page }) => {
+    // No navigation click: the tour invitation's backdrop can cover the menu.
     await page.goto('/');
-    await page.getByTestId('navigation-menu-images').click();
     await expect(page.getByTestId('sample-grid-item').first()).toBeVisible();
 
     await expect(page.getByRole('complementary', { name: 'Image tour invitation' })).toBeVisible();
@@ -46,7 +46,7 @@ test('image tour follows a double-click into sample details', async ({ page }) =
     await expect(page.getByText('Inspect and annotate', { exact: true })).not.toBeVisible();
 });
 
-test('tour can open a sample with its accessible action and replay from detail', async ({
+test('tour can open a sample with its accessible action and replay from the grid', async ({
     page
 }) => {
     await page.goto('/');
@@ -56,6 +56,7 @@ test('tour can open a sample with its accessible action and replay from detail',
     await expect(page.getByText('Inspect and annotate', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Done' }).click();
 
+    await page.goBack();
     await page.getByTestId('menu-trigger').click();
     await page.getByTestId('menu-show-tour').click();
     await expect(page.getByText('Browse your collection', { exact: true })).toBeVisible();

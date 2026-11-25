@@ -1,19 +1,33 @@
 <script lang="ts">
     import ZoomableContainer from './ZoomableContainer.svelte';
 
-    let {
-        boundingBox,
-        autoFocusEnabled = true,
-        autoFocusKey
-    }: {
+    interface Props {
         boundingBox?: { x: number; y: number; width: number; height: number };
         autoFocusEnabled?: boolean;
         autoFocusKey?: string;
-    } = $props();
+        panEnabled?: boolean;
+        zoomEnabled?: boolean;
+    }
+
+    let {
+        boundingBox,
+        autoFocusEnabled = true,
+        autoFocusKey,
+        panEnabled = true,
+        zoomEnabled = true
+    }: Props = $props();
 </script>
 
 <div class="h-[600px] w-[800px]">
-    <ZoomableContainer width={1000} height={800} {boundingBox} {autoFocusEnabled} {autoFocusKey}>
+    <ZoomableContainer
+        width={1000}
+        height={800}
+        {boundingBox}
+        {autoFocusEnabled}
+        {autoFocusKey}
+        {panEnabled}
+        {zoomEnabled}
+    >
         {#snippet zoomableContent()}
             <rect width="1000" height="800" fill="transparent" />
         {/snippet}

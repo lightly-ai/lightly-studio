@@ -59,7 +59,7 @@ describe('getMenuItem', () => {
         expect(item).toBeNull();
     });
 
-    it('SEQUENCE returns a point-clouds menu item', () => {
+    it('SEQUENCE returns an MCAP sequences menu item', () => {
         const item = getMenuItem({
             datasetId: 'dataset-id',
             currentCollectionId: undefined,
@@ -69,7 +69,7 @@ describe('getMenuItem', () => {
         if (!item) throw new Error('expected a menu item');
         expect(item.title).toBe('Point clouds');
         expect(item.id).toBe('sequence-col-id');
-        expect(item.href).toBe('/datasets/dataset-id/sequence/col-id/point-clouds');
+        expect(item.href).toBe('/datasets/dataset-id/sequence/col-id/mcap-sequences');
     });
 
     it('uses groupComponentName as title when provided', () => {

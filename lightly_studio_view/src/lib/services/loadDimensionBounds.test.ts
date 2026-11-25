@@ -1,6 +1,7 @@
 import { loadDimensionBounds } from './loadDimensionBounds';
 import * as sdk from '$lib/api/lightly_studio_local/sdk.gen';
 import { vi } from 'vitest';
+import { ApiError } from '$lib/api/ApiError';
 
 type GetImageDimensionsReturn = Awaited<ReturnType<typeof sdk.getImageDimensions>>;
 
@@ -59,12 +60,12 @@ describe('loadDimensionBounds', () => {
     it('should return an error when loading fails', async () => {
         vi.spyOn(sdk, 'getImageDimensions').mockResolvedValue({
             data: null,
-            error: 'Not Found'
+            error: new ApiError('Not Found', 404)
         } as unknown as GetImageDimensionsReturn);
 
         await expect(loadDimensionBounds({ collection_id: '1' })).resolves.toEqual({
             data: undefined,
-            error: 'Error loading dimension bounds: Error: "Not Found"'
+            error: 'Error loading dimension bounds: Not Found'
         });
     });
 
@@ -76,7 +77,7 @@ describe('loadDimensionBounds', () => {
 
         await expect(loadDimensionBounds({ collection_id: '1' })).resolves.toEqual({
             data: undefined,
-            error: 'Error loading dimension bounds: Error: No dimension bounds data'
+            error: 'Error loading dimension bounds: No dimension bounds data'
         });
     });
 
@@ -85,7 +86,7 @@ describe('loadDimensionBounds', () => {
 
         await expect(loadDimensionBounds({ collection_id: '1' })).resolves.toEqual({
             data: undefined,
-            error: 'Error loading dimension bounds: oops'
+            error: 'Error loading dimension bounds: Unknown error'
         });
     });
 });

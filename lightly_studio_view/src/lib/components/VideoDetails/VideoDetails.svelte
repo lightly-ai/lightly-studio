@@ -4,6 +4,7 @@
         CardContent,
         MetadataSegment,
         SegmentTags,
+        SidePanelToggleButton,
         VideoDetailsNavigation,
         VideoFrameDetails,
         VideoPlayer
@@ -31,11 +32,12 @@
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { getCreateLabelErrorMessage, useCreateLabel } from '$lib/hooks';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { onMount, untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
+    import { cn } from '$lib/utils/shadcn';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
         type PrerenderedAnnotation
@@ -63,7 +65,7 @@
     );
 
     // Reuse the global "Edit annotations" toggle to enable event editing.
-    const { isEditingMode } = useGlobalStorage();
+    const { isEditingMode, isSampleDetailsSidePanelCollapsed } = useGlobalStorage();
 
     // Events live on the video's own collection; labels are shared per dataset.
     const eventCollectionId = untrack(
@@ -133,7 +135,9 @@
             onVideoUpdate();
             toast.success('Event created successfully');
         } catch (error) {
-            toast.error('Failed to create event. Please try again.');
+            toast.error(
+                getCreateLabelErrorMessage(error, 'Failed to create event. Please try again.')
+            );
             console.error('Error creating event:', error);
         }
     }
@@ -267,8 +271,16 @@
 </script>
 
 <div class="flex h-full min-h-0 w-full flex-col">
+    <div class="flex shrink-0 justify-end pb-2">
+        <SidePanelToggleButton />
+    </div>
     <div class="flex min-h-0 flex-1 gap-4">
-        <Card className="flex h-full min-h-0 w-[60vw] flex-col overflow-hidden">
+        <Card
+            className={cn(
+                'flex h-full min-h-0 flex-col overflow-hidden',
+                $isSampleDetailsSidePanelCollapsed ? 'flex-1' : 'w-[60vw]'
+            )}
+        >
             <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div
                     bind:this={videoFrameContainerEl}
@@ -315,7 +327,12 @@
             </CardContent>
         </Card>
 
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Card
+            className={cn(
+                'min-h-0 flex-1 flex-col overflow-hidden',
+                $isSampleDetailsSidePanelCollapsed ? 'hidden' : 'flex'
+            )}
+        >
             <CardContent className="h-full overflow-y-auto">
                 {#if video?.sample?.sample_id}
                     <SegmentTags

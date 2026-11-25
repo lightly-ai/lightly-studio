@@ -7,10 +7,12 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from lightly_studio_serve.types import ImageCrop
-from sqlmodel import Session, col, select
+from sqlalchemy import ColumnElement, func, select
+from sqlmodel import Session, col
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.image import ImageTable
 
@@ -35,8 +37,9 @@ def get_annotation_crops_for_ids(
     """Build valid image crops for the given annotation IDs.
 
     The bounding box is read from whichever detail table holds it: object-detection
-    annotations store it in ``ObjectDetectionAnnotationTable`` and segmentation
-    annotations in ``SegmentationAnnotationTable`` (both expose ``x/y/width/height``).
+    annotations store it in ``ObjectDetectionAnnotationTable``, segmentation annotations
+    in ``SegmentationAnnotationTable`` and polygon annotations in ``PolygonAnnotationTable``
+    (all expose ``x/y/width/height``).
 
     Crops whose box does not overlap the source image are skipped with a warning, so the
     returned list may be shorter than ``annotation_sample_ids``.
@@ -48,12 +51,18 @@ def get_annotation_crops_for_ids(
     Returns:
         Resolved annotation crops ready for embedding.
     """
-    rows = session.exec(
+    # Only the bounds are selected, so the polygon vertices and the segmentation masks
+    # are not loaded. The sqlmodel select is typed for at most 4 columns.
+    rows = session.execute(
         select(
-            AnnotationBaseTable,
-            ImageTable,
-            ObjectDetectionAnnotationTable,
-            SegmentationAnnotationTable,
+            col(AnnotationBaseTable.sample_id),
+            col(ImageTable.file_path_abs),
+            col(ImageTable.width),
+            col(ImageTable.height),
+            _coalesce_detail_column(column_name="x"),
+            _coalesce_detail_column(column_name="y"),
+            _coalesce_detail_column(column_name="width"),
+            _coalesce_detail_column(column_name="height"),
         )
         .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
         .outerjoin(
@@ -64,35 +73,31 @@ def get_annotation_crops_for_ids(
             SegmentationAnnotationTable,
             col(SegmentationAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
         )
+        .outerjoin(
+            PolygonAnnotationTable,
+            col(PolygonAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
+        )
         .where(col(AnnotationBaseTable.sample_id).in_(annotation_sample_ids))
         .order_by(col(ImageTable.file_path_abs))
     ).all()
 
     annotation_crops: list[AnnotationCrop] = []
-    for annotation, image, object_detection, segmentation in rows:
+    for sample_id, file_path_abs, image_width, image_height, x, y, width, height in rows:
         # An annotation has a detail row in exactly one table, set by its type in
-        # create_many, so at most one of these joins matches.
-        box_source = object_detection or segmentation
-        if box_source is None:
-            logger.warning(
-                "Skipping annotation crop %s without a bounding box.", annotation.sample_id
-            )
+        # create_many, so the bounds are NULL only if no join matches.
+        if x is None:
+            logger.warning("Skipping annotation crop %s without a bounding box.", sample_id)
             continue
         image_crop = _create_valid_image_crop(
-            filepath=image.file_path_abs,
-            image_size=(image.width, image.height),
-            box=(
-                box_source.x,
-                box_source.y,
-                box_source.width,
-                box_source.height,
-            ),
+            filepath=file_path_abs,
+            image_size=(image_width, image_height),
+            box=(x, y, width, height),
         )
         if image_crop is None:
-            logger.warning("Skipping invalid annotation crop %s.", annotation.sample_id)
+            logger.warning("Skipping invalid annotation crop %s.", sample_id)
             continue
         annotation_crops.append(
-            AnnotationCrop(annotation_sample_id=annotation.sample_id, image_crop=image_crop)
+            AnnotationCrop(annotation_sample_id=sample_id, image_crop=image_crop)
         )
 
     return annotation_crops
@@ -131,4 +136,13 @@ def _create_valid_image_crop(
         y=y_min,
         width=crop_width,
         height=crop_height,
+    )
+
+
+def _coalesce_detail_column(column_name: str) -> ColumnElement[int]:
+    """Return the bounds column from whichever detail table holds the annotation."""
+    return func.coalesce(
+        getattr(ObjectDetectionAnnotationTable, column_name),
+        getattr(SegmentationAnnotationTable, column_name),
+        getattr(PolygonAnnotationTable, column_name),
     )

@@ -3,6 +3,8 @@ import { Object3D } from 'three';
 import {
     buildCuboidTransformPayload,
     captureTransformSnapshot,
+    getCuboidEditModes,
+    getCuboidGizmoOptions,
     restoreTransformSnapshot
 } from './cuboidTransform';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
@@ -37,6 +39,7 @@ const ANNOTATION: CuboidAnnotation = {
     trackId: null,
     trackNumber: null,
     parentTrackNumber: null,
+    parentTrackClassName: null,
     keyframeId: null,
     center: [1, 2, 3],
     size: [2, 3, 4],
@@ -44,6 +47,14 @@ const ANNOTATION: CuboidAnnotation = {
 };
 
 describe('buildCuboidTransformPayload', () => {
+    it('keeps dimensions positive when a scale handle crosses the cuboid center', () => {
+        const result = buildCuboidTransformPayload(
+            ANNOTATION,
+            fakeObj([1, 2, 3], [0, 0, 0, 1], [-1, 0, 2])
+        );
+        expect(result.size).toEqual([0.01, 0.01, 8]);
+        expect(result.center).toEqual([1, 2, 3]);
+    });
     it('uses annotation.size when no currentSize is provided', () => {
         const obj = fakeObj([5, 6, 7], [0, 0, 0, 1], [1.5, 2, 0.5]);
 
@@ -83,6 +94,48 @@ describe('buildCuboidTransformPayload', () => {
             first.size
         );
         expect(second.size).toEqual([6, 3, 4]);
+    });
+});
+
+describe('getCuboidGizmoOptions', () => {
+    it.each([
+        ['top', false, false, true],
+        ['side', true, false, false],
+        ['front', false, true, false]
+    ] as const)(
+        'restricts %s rotation to the world axis perpendicular to the view',
+        (mode, showX, showY, showZ) => {
+            expect(getCuboidGizmoOptions('rotate', mode)).toEqual({
+                space: 'world',
+                showX,
+                showY,
+                showZ
+            });
+        }
+    );
+    it('keeps only the yaw ring in perspective', () => {
+        expect(getCuboidGizmoOptions('rotate', 'perspective')).toEqual({
+            space: 'local',
+            showX: false,
+            showY: false,
+            showZ: true
+        });
+    });
+});
+
+describe('getCuboidEditModes', () => {
+    it('shows all handles for the select tool while editing', () => {
+        expect(getCuboidEditModes({ tool: 'select', isEditingMode: true })).toEqual([
+            'translate',
+            'rotate',
+            'resize'
+        ]);
+    });
+    it('shows no handles while creating a cuboid', () => {
+        expect(getCuboidEditModes({ tool: 'create-cuboid', isEditingMode: true })).toEqual([]);
+    });
+    it('shows no handles outside editing mode', () => {
+        expect(getCuboidEditModes({ tool: 'select', isEditingMode: false })).toEqual([]);
     });
 });
 

@@ -2,10 +2,8 @@
     import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
     import PointCloudAnnotationDetails from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationDetails';
-    import { Typography } from '$lib/components/Typography';
-    import { ChevronDown, Trash2 } from '@lucide/svelte';
+    import PointCloudAnnotationHeader from './PointCloudAnnotationHeader';
     import { cn } from '$lib/utils';
-    import { Tooltip } from '$lib/components/ui/tooltip';
 
     interface Props {
         /** Cuboid displayed by this row. */
@@ -20,12 +18,28 @@
         annotationSourceName?: string;
         /** When true, numeric fields in the detail panel become editable. */
         editable?: boolean;
+        /** Track IDs already assigned to other annotations on the same frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
         /** Toggles the row's expanded state. */
         onToggle: (cuboidId: string) => void;
         /** Called when the user commits a geometry change in the detail panel. */
         onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
+        /** Called when the user selects a new annotation class for this cuboid. */
+        onLabelChange?: (
+            annotationId: string,
+            labelName: string,
+            annotationSourceId: string
+        ) => void;
+        /** Called after the annotation's track assignment changes. */
+        onTrackChange?: () => Promise<void>;
         /** Deletes this cuboid annotation. */
         onDelete?: (cuboidId: string) => void;
+        /** Whether the cuboid is hidden in the scene. */
+        isHidden?: boolean;
+        /** True while the source is hidden, so the row toggle cannot show the cuboid. */
+        isVisibilityLocked?: boolean;
+        /** Hides or shows the track of this cuboid. */
+        onToggleVisibility?: (cuboid: CuboidAnnotation) => void;
     }
 
     let {
@@ -35,9 +49,15 @@
         isSelected,
         annotationSourceName,
         editable = false,
+        occupiedTrackIds,
         onToggle,
         onCuboidTransform,
-        onDelete
+        onLabelChange,
+        onTrackChange,
+        onDelete,
+        isHidden = false,
+        isVisibilityLocked = false,
+        onToggleVisibility
     }: Props = $props();
 
     function handleAnnotationChange(
@@ -56,50 +76,34 @@
 <div
     class={cn(
         'rounded-sm transition-colors',
-        isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50'
+        isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
+        isHidden && 'opacity-60'
     )}
 >
-    <div class="flex w-full items-center">
-        <button
-            type="button"
-            class="flex flex-1 items-center gap-2 px-4 py-3 text-left"
-            onclick={() => onToggle(cuboid.id)}
-            aria-expanded={isSelected}
-            data-testid="point-cloud-annotation-list-row"
-        >
-            <span
-                class="size-3 shrink-0 rounded-sm"
-                style="background-color: {color}"
-                aria-hidden="true"
-            ></span>
-            <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
-            {#if onDelete}
-                <Tooltip content="Delete annotation">
-                    <Trash2
-                        class="size-4 shrink-0 text-muted-foreground hover:text-destructive"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            onDelete(cuboid.id);
-                        }}
-                        data-testid="point-cloud-annotation-delete-button"
-                    />
-                </Tooltip>
-            {/if}
-            <ChevronDown
-                class={cn(
-                    'size-4 shrink-0 text-muted-foreground transition-transform',
-                    isSelected && 'rotate-180'
-                )}
-            />
-        </button>
-    </div>
+    <PointCloudAnnotationHeader
+        collectionId={cuboid.annotationSourceId}
+        {color}
+        {className}
+        trackNumber={cuboid.trackNumber}
+        {isSelected}
+        {editable}
+        onToggle={() => onToggle(cuboid.id)}
+        onLabelChange={(className) =>
+            onLabelChange?.(cuboid.id, className, cuboid.annotationSourceId)}
+        onDelete={onDelete ? () => onDelete(cuboid.id) : undefined}
+        {isHidden}
+        {isVisibilityLocked}
+        onToggleVisibility={onToggleVisibility ? () => onToggleVisibility(cuboid) : undefined}
+    />
     {#if isSelected}
-        <div class="px-4 pb-4 pt-1">
+        <div class="px-2 pb-3 pt-1">
             <PointCloudAnnotationDetails
                 {annotationSourceName}
-                annotation={cuboid}
+                annotation={{ ...cuboid, annotationClassName: className }}
                 {editable}
+                {occupiedTrackIds}
                 onAnnotationChange={handleAnnotationChange}
+                {onTrackChange}
             />
         </div>
     {/if}

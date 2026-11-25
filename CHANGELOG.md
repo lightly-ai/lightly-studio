@@ -8,24 +8,216 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-
-- The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 - Python SDK: Find object-detection boxes with zero size or outside the image with `dataset.validate()`.
+- Find images with any bounding box, segmentation mask, or classification in the query editor with `object_detection()`, `segmentation_mask()`, or `classification()`.
+- The GUI shows polygon annotations as boxes. Polygons can't be edited in the GUI yet.
+- Export polygons to YOLO with the new "Image Segmentation Polygons (YOLO)" export.
+- Python SDK: Export polygons to YOLO with `to_yolo_instance_segmentation`.
+- Filter videos by temporal events in the query editor, for example `event(class_name = "run" AND start_time_s < 5)`.
+- Undo cuboid edits in the point cloud workspace with Ctrl/Cmd + Z: delete, move, resize, rotate and class change. An undone delete restores the cuboid in its object track.
+- Use `frame(...)` in the video query editor to match annotations and timestamps on the same frame.
+- Filter the point cloud sequences by annotation class in the filter panel. A sequence matches when one of its frames has an annotation of that class.
+- The embedding plot shows a hint for what Shift + click does on the hovered point: pick, add, or remove.
+- Python SDK: MCAP datasets can use cameras that record JPEG or PNG `CompressedImage` messages, not only H.264 or H.265 video. The camera frames show in the viewer and are used for embeddings.
+- Filter images and videos without annotations with the "No annotations" option in the annotation class filter. Combine it with classes to also see the samples of those classes.
+- The frames between the manually placed 3D cuboids of an object track get interpolated cuboids automatically. When you add a cuboid to a track or move one, the frames between it and the manual cuboids before and after it are interpolated again.
+- Show frame tags on the point cloud timeline with the "Show frame tags" checkbox. Each tag gets a row with bars over the frames that have the tag.
+- Filter video collections by categorical metadata.
+- The embedding plot asks before it computes a plot for 250,000 or more samples, and shows a timer while the plot computes.
+- The GUI query filter shows a warning when a query uses a tag that does not exist.
+- Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
+- Pressing Delete or Backspace deletes the selected annotation in editing mode.
+- Edit, Undo, Plugins and Settings actions are now in the breadcrumb row on sample detail pages.
 
 ### Changed
 
-- The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
-- Reorganised the settings dialog into a tabbed layout.
+- The "Image Segmentation Mask (COCO)" export is now "Image Segmentation (COCO)" and includes polygons.
+- BREAKING: In the video query editor, `classification(...)` now matches whole-video classifications. Use `event(...)` for temporal events, or combine both with `OR` to include both kinds.
+- BREAKING: Python SDK: On videos, `ClassificationQuery` now matches whole-video classifications. Use `VideoEventQuery` for temporal events, or combine both queries with `OR(...)` to preserve both kinds of matches.
+- BREAKING: Python SDK: `to_annotation_create(...)` of `CreateClassification`, `CreateObjectDetection`, and `CreateSegmentationMask` takes the annotation class ID in place of `session` and `dataset_id`. To add annotations by class name, use `sample.add_annotations(...)`.
+- Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
+- Each metadata field in the filter panel has a checkbox. A collapsed field shows a short summary of its filter, for example a range or "2 of 3" values. Active fields move to the top, and the metadata filter chips are removed.
+- The embedding plot keeps showing its points while new ones load after a filter change, with a small spinner instead of the full loading screen. A selection drawn before the new points arrive is ignored.
+- In edit mode, the lock icon of a locked annotation in the sample details shows in the primary color, so locked annotations are easier to see.
 
 ### Deprecated
+
+- Python SDK: `to_coco_segmentation_masks`. Use `to_coco_instance_segmentation` instead.
 
 ### Removed
 
 ### Fixed
+- In the sample details, the outline of the selected annotation source and of the "Source name" input is no longer cut off at the sides.
 
-- In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
+- Images with many annotations open faster when LightlyStudio runs on a remote server.
+
+- Dialogs, menus, and messages now show in the full-screen point cloud workspace, so you can pick a class, delete a track, change view settings, switch edit mode, and undo edits there. The full-screen workspace has the same layout and colors as the app.
+
+- The embedding plot selection is cleared when you switch to another tab, so the grid no longer stays narrowed after the Plot filter chip is gone.
+
+- A hidden "Excluded by filters" class in the embedding plot stays hidden after you draw a selection.
+
+- Hidden classes in the embedding plot legend stay hidden after a filter change, also when the legend order changes.
+
+- The embedding plot keeps its hidden classes, zoom and active tool when you close it or switch tabs.
 
 ### Security
+
+## \[1.4.0\] - 2026-11-18
+
+### Added
+
+- Filtering
+    - Reapply any of the last 10 queries used in a collection from the query history.
+    - Search any filter list, select all its values, or clear the selection.
+    - Shift-click individual points in the embedding plot to show the selected images, annotations, or videos in the grid.
+
+- Video queries
+    - Python SDK: Use `VideoFrameQuery` to find videos where annotations and timestamps match on the same frame. Use `VideoEventQuery` to find events by annotation class, annotation source, confidence, or start and end times.
+    - Filter videos in the GUI query editor by duration, frame rate, tags, metadata, or video annotations. For example, `fps >= 29.97` finds videos at or above 29.97 frames per second.
+
+- Labeling
+    - Choose an annotation source in the Annotations panel when labeling images. Choose “New source” to create one with your first annotation.
+    - Python SDK: Register a custom labeling model with `register_labeling_model()`. Use the REST API to list available models and preview their predictions on an image.
+
+- Documentation
+    - The Enterprise guide explains how to use custom embeddings.
+
+### Changed
+
+- Filtering
+    - Find image dimensions and numeric and categorical metadata together in the Metadata section. Expand a field to filter by it, or search by name when there are more than eight fields.
+
+### Removed
+
+- BREAKING: LightlyStudio no longer supports Python 3.10. Upgrade to Python 3.11–3.15 before installing this release.
+
+### Fixed
+
+- Filtering and annotations
+    - Applying an empty query or one containing only comments clears the query filter.
+    - Annotation class counts load faster in the image sidebar, both with an annotation source selected and with no filters applied.
+    - Grids with annotated samples load faster, and images with many annotations open faster in the detail view.
+    - You can delete annotations that have metadata.
+
+- Evaluation and export
+    - Object detection and instance segmentation evaluations run faster, and evaluation results save faster.
+    - Bounding box, segmentation mask, and classification exports finish faster.
+    - Deleting a dataset now succeeds even if an exported file cannot be removed.
+
+## \[1.3.0\] - 2026-11-12
+
+### Added
+
+- Annotations
+    - A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
+    - Annotation class colors are saved in the dataset and shared by all users of it.
+
+- Filtering
+    - Filter samples by evaluation run and per-sample metrics in the GUI query filter using `sample_evaluation(...)`.
+    - Type exact minimum and maximum filter values alongside the sliders for numeric metadata, image and video dimensions, video frame numbers, FPS, and duration.
+    - Typing `(`, `[`, `"` or `'` in the query editor wraps the selected text in that pair.
+
+- Evaluation
+    - Python SDK: Compute per-class and mean average precision for object detection with `compute_average_precision=True` in `ObjectDetectionEvaluationConfig`. Read the results with `dataset.evaluate().metrics(run_id)`, averaged over IoU thresholds 0.50 to 0.95 and at each threshold.
+
+- Embedding plot
+    - The embedding plot shows the active plot filter and lets you clear it right on the plot.
+
+- Other
+    - Python SDK: Added Python 3.15 support.
+
+### Changed
+
+- Annotations
+    - The class for new annotations is remembered per collection across browser sessions and follows class renames and deletions. Selecting an existing annotation no longer changes it.
+    - Users with the labeler or viewer role can only choose existing annotation classes in the labeling tools.
+    - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data. Enterprise users are not affected.
+
+- Embedding plot
+    - Embedding plots color faster when no filters are active and when coloring image and crop embeddings by annotation class.
+
+- Other
+    - Python SDK: BREAKING: Upgraded scikit-learn to 1.9.1 on Python 3.11 and newer. Retrain saved random-forest classifiers created with scikit-learn 1.7.2 before loading them in the upgraded environment.
+    - Python SDK: BREAKING: `multi_strategies` accepts only the built-in sampling strategies, and `SamplingStrategy` is removed. Type strategy lists as `Sequence[Strategy]` from `lightly_studio.sampling.sampling_config`.
+
+### Fixed
+
+- Annotations
+    - Renaming an annotation class that has annotations no longer fails on DuckDB. If your DuckDB database was created before this version, re-index your data to get the fix.
+    - Smart select stays active when you select a segmentation mask or change its class in the sample details sidebar.
+    - Zooming with the mouse wheel or trackpad works while the Smart select tool is active.
+    - Parts of a segmentation mask stroke that land on locked annotations no longer trim other annotations' masks.
+
+- Filtering
+    - The browser no longer freezes when a collection has an integer metadata field with a very wide range, such as an ID.
+    - The value counts of categorical metadata now match the filters of the images grid.
+
+## \[1.2.1\] - 2026-11-02
+
+### Added
+
+- Point clouds
+    - Explore and edit annotations in synchronized top, side, and front views alongside the 3D scene. Expand any view for a closer look while keeping zoom and navigation synchronized.
+    - Edit the location, dimensions, and rotation of a cuboid in the annotation details panel.
+    - Resize a cuboid with handles on its faces.
+    - Change the class of a cuboid in the annotation list.
+    - Show the points and annotations on the camera images of the camera strip, and enlarge a camera image for a closer look.
+    - Collapse the camera strip to give the scene more space.
+    - Accumulate point clouds from neighboring ticks in the 3D scene. Set how many ticks to include in the scene settings.
+    - Color the point cloud from the camera images with the new "Camera RGB" color mode.
+    - Adjust point size, navigation helpers, and annotation tooltips in the scene settings.
+    - Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate files from the export dialog, as a download or to S3.
+    - Python SDK: Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate files with `McapDataset.export_annotations_to_folder`.
+
+- Annotations
+    - Label with the "Smart select" and "Find all instances" assisted labeling tools in the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
+    - Delete selected annotations in bulk from the annotation grid.
+    - Set the opacity of segmentation masks with the "Mask opacity" slider in the sample details view.
+    - Reset brightness, contrast, and mask opacity to their defaults with one button in the sample details view.
+
+- Filtering
+    - See histograms of the image width and height in the distribution panel of image datasets, and compare them by tag. Select a range on a histogram to filter the images by width or height.
+    - Use metadata and boolean values in the query editor, with hover help and a metadata filter example.
+
+- Other
+    - Python SDK: `connect()` trusts the custom CA certificates of an S3-compatible storage when the enterprise instance provides them.
+
+### Changed
+
+- Embedding plot
+    - Saved embedding plots now load in milliseconds instead of seconds on datasets with over 100k samples.
+
+- Settings
+    - The settings dialog is organized in tabs.
+    - "Save changes" in the settings dialog is enabled only when there are changes to save.
+
+- Other
+    - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
+    - DuckDB database files retain a format readable by DuckDB 1.x when created or updated with DuckDB 2.x.
+
+### Removed
+
+- BREAKING: Dropped Python 3.9 support. Upgrade to Python 3.10–3.14.
+
+### Fixed
+
+- Annotations
+    - Labeling with superpixels no longer skips cells or leaves pixels behind.
+    - Existing selections no longer disappear while you paint with superpixels, and selecting many cells is faster.
+    - Brush, eraser, and box drawing previews now use the custom color of the label.
+    - In the annotation grid, changing the class after "Select all" now changes every selected annotation, not only the first 100. The selected annotations count and undo also cover all of them.
+    - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
+
+- Filtering
+    - The header of the filters panel, with the button to hide the panel, stays visible when you scroll the filters. You no longer have to scroll back to the top to hide the panel.
+    - In the distribution panel, metadata bars now include images without annotations. Before, those images showed as filtered out even with no filters set.
+    - The distribution panel keeps the selected plot when you open a sample and go back to the grid.
+
+- Other
+    - In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
+    - Exporting from the export dialog no longer fails on Windows.
+    - Python SDK: `add_samples_from_coco` now shows the real cause when it cannot read the annotations file from cloud storage.
 
 ## \[1.2.0\] - 2026-10-23
 

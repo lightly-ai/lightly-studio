@@ -8,6 +8,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.tag import TagTable
@@ -31,18 +32,16 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 
 def test_update_annotation_label_classification(
     db_session: Session,
-    annotations_test_data: AnnotationsTestData,
+    video_event: AnnotationBaseTable,
 ) -> None:
     """Test updating a classification label preserves its temporal span."""
-    annotations = annotation_resolver.get_all(
-        db_session,
-    ).annotations
-    first_annotation = annotations[0]
-    annotation_id = first_annotation.sample_id
-    current_annotation_label_id = first_annotation.annotation_label_id
-    new_label = annotations_test_data.annotation_labels[1]
-
-    assert current_annotation_label_id != new_label.annotation_label_id
+    annotation_id = video_event.sample_id
+    assert video_event.parent_sample is not None
+    new_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=video_event.parent_sample.collection_id,
+        label_name="running",
+    )
 
     # Update the label of the first annotation
     annotation_resolver.update_annotation_label(
@@ -193,6 +192,48 @@ def test_update_annotation_label_segmentation_mask(
             "width": width,
             "height": height,
             "segmentation_mask": segmentation_mask,
+        },
+    )
+
+
+def test_update_annotation_label__polygon(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    old_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    new_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+    )
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=old_label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(1.5, 2.0), (11.0, 2.0), (11.0, 22.25)]],
+    )
+    annotation_id = annotation.sample_id
+
+    annotation_resolver.update_annotation_label(
+        session=db_session,
+        annotation_id=annotation_id,
+        annotation_label_id=new_label.annotation_label_id,
+    )
+
+    updated_annotation = annotation_resolver.get_by_id(
+        session=db_session, annotation_id=annotation_id
+    )
+    assert updated_annotation is not None
+    assert updated_annotation.annotation_label_id == new_label.annotation_label_id
+    assert_contains_properties(
+        updated_annotation.polygon_details,
+        {
+            "x": 1,
+            "y": 2,
+            "width": 10,
+            "height": 21,
+            "polygons": [[[1.5, 2.0], [11.0, 2.0], [11.0, 22.25]]],
         },
     )
 

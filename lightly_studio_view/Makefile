@@ -66,15 +66,20 @@ else
 	npm run format'
 endif
 
+# Extra arguments for Vitest, for example `make test VITEST_ARGS="--bail=1"`.
+VITEST_ARGS ?=
+# Passed through the environment and `eval` so that quoted arguments survive.
+export VITEST_ARGS
+
 .PHONY: test
 test:
 ifeq ($(OS),Windows_NT)
-	npm run test:unit -- --run
+	npm run test:unit -- --run $(VITEST_ARGS)
 else
 	bash -c 'export NVM_DIR="$${HOME}/.nvm"; \
 	[ -s "$$NVM_DIR/nvm.sh" ] && . "$$NVM_DIR/nvm.sh"; \
 	nvm use; \
-	npm run test:unit -- --run'
+	eval "npm run test:unit -- --run $$VITEST_ARGS"'
 endif
 
 # Full-suite line coverage for the Fast Track coverage guardrail, which reads

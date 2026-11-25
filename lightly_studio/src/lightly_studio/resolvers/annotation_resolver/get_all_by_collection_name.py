@@ -7,8 +7,8 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
-from lightly_studio.resolvers.collection_resolver import get_by_name
 
 from .get_all import GetAllAnnotationsResult, get_all
 
@@ -33,7 +33,7 @@ def get_all_by_collection_name(
     Raises:
         ValueError: If the collection with the given name does not exist.
     """
-    collection_id = get_by_name(
+    collection_id = collection_resolver.get_by_name(
         session=session, name=collection_name, parent_collection_id=parent_collection_id
     )
     if collection_id is None:

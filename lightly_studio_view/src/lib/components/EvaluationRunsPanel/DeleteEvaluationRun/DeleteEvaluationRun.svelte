@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Trash2 } from '@lucide/svelte';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import { useDeleteEvaluationRun } from './useDeleteEvaluationRun.svelte';
 
     interface Props {

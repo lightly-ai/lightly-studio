@@ -76,6 +76,52 @@ def test_update_annotation__cuboid_3d_geometry(
     assert result.cuboid_3d_details.sz == 8.0
 
 
+def test_update_annotation__cuboid_3d_geometry_clears_interpolated(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    interpolated = Cuboid3DCreate(
+        frame_id="odom",
+        px=1.0,
+        py=0.0,
+        pz=0.5,
+        qx=0.0,
+        qy=0.0,
+        qz=0.0,
+        qw=1.0,
+        sx=2.0,
+        sy=1.0,
+        sz=1.5,
+        interpolated=True,
+    )
+    annotation = annotations_service.create_annotation(
+        session=db_session,
+        annotation=AnnotationCreateParams(
+            annotation_label_id=annotation_labels[0].annotation_label_id,
+            annotation_type=AnnotationType.CUBOID_3D,
+            collection_id=collection.collection_id,
+            parent_sample_id=samples[0].sample_id,
+            cuboid_3d=interpolated,
+        ),
+    )
+
+    result = annotations_service.update_annotation(
+        session=db_session,
+        annotation_update=AnnotationUpdate(
+            annotation_id=annotation.sample_id,
+            collection_id=annotation.annotation_collection_id,
+            cuboid_3d=Cuboid3DCreate(
+                **{**interpolated.model_dump(exclude={"interpolated"}), "px": 2.0}
+            ),
+        ),
+    )
+
+    assert result.cuboid_3d_details is not None
+    assert result.cuboid_3d_details.interpolated is False
+
+
 def test_update_annotation__cuboid_3d_type_mismatch(
     db_session: Session,
     collection: CollectionTable,

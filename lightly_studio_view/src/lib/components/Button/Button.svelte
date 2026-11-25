@@ -16,6 +16,7 @@
 
     interface BaseProps {
         icon?: Component<IconProps>;
+        iconClass?: string;
         iconAfter?: Component<IconProps>;
         iconAfterClass?: string;
         variant?: ButtonVariant;
@@ -32,6 +33,7 @@
 
     let {
         icon: Icon,
+        iconClass,
         iconAfter: IconAfter,
         iconAfterClass,
         variant = 'ghost',
@@ -98,7 +100,7 @@
         {...restButtonProps}
     >
         {#if Icon}
-            <Icon class="size-4" />
+            <Icon class={cn('size-4', iconClass)} />
         {/if}
         {#if children}
             {#if collapseAt === 'never'}

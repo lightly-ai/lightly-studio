@@ -3,6 +3,7 @@ import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PointCloudWorkspaceContext } from './provider/types';
 import Harness from './UsePointCloudTickNavigationHarness.svelte';
+import type { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
 
 interface QueryState {
     data: unknown;
@@ -19,6 +20,7 @@ function createWorkspace(
     } = {}
 ) {
     return {
+        status: 'ready',
         isPlaying: true,
         playbackIntervalMs: 100,
         ticks: [{ seq_number: 0 }, { seq_number: 1 }],
@@ -182,17 +184,20 @@ describe('usePointCloudTickNavigation', () => {
     it('resumes when the next tick finishes buffering and clears the timer on unmount', async () => {
         vi.useFakeTimers();
         const workspace = createWorkspace();
+        let navigation: ReturnType<typeof usePointCloudTickNavigation> | undefined;
         const view = render(Harness, {
             workspace,
             tickNumber: 1,
             isTickBuffered: () => false,
-            onReady: () => undefined
+            onReady: (value) => (navigation = value)
         });
         flushSync();
+        expect(navigation?.isWaitingForData).toBe(true);
         await vi.advanceTimersByTimeAsync(200);
         expect(workspace.goToNextFrame).not.toHaveBeenCalled();
 
         await view.rerender({ isTickBuffered: () => true });
+        expect(navigation?.isWaitingForData).toBe(false);
         await vi.advanceTimersByTimeAsync(100);
         expect(workspace.goToNextFrame).toHaveBeenCalledOnce();
 
@@ -201,6 +206,27 @@ describe('usePointCloudTickNavigation', () => {
         view.unmount();
         await vi.advanceTimersByTimeAsync(100);
         expect(workspace.goToNextFrame).toHaveBeenCalledOnce();
+    });
+
+    it('clears the waiting state when playback is paused before buffering finishes', async () => {
+        vi.useFakeTimers();
+        const workspace = createWorkspace();
+        let navigation: ReturnType<typeof usePointCloudTickNavigation> | undefined;
+        const view = render(Harness, {
+            workspace,
+            tickNumber: 1,
+            isTickBuffered: () => false,
+            onReady: (value) => (navigation = value)
+        });
+        flushSync();
+        expect(navigation?.isWaitingForData).toBe(true);
+
+        await view.rerender({ workspace: { ...workspace, isPlaying: false } });
+        await view.rerender({ isTickBuffered: () => true });
+        await vi.advanceTimersByTimeAsync(200);
+
+        expect(navigation?.isWaitingForData).toBe(false);
+        expect(workspace.goToNextFrame).not.toHaveBeenCalled();
     });
 
     it('does not wait for a buffer when no buffering check is provided', () => {

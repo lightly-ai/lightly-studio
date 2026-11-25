@@ -32,5 +32,6 @@ it('initializes and reuses toolbar state and applies tool settings', () => {
 
 it('tells the assisted labeling statuses apart', () => {
     expect(isAssistedLabelingStatus('smart-select')).toBe(true);
+    expect(isAssistedLabelingStatus('find-instances')).toBe(true);
     expect(isAssistedLabelingStatus('brush')).toBe(false);
 });

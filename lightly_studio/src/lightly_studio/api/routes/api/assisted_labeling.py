@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 import functools
 from concurrent.futures import ThreadPoolExecutor
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 
-from lightly_studio.assisted_labeling import fal_sam3_provider
+from lightly_studio.assisted_labeling import fal_sam3_provider, labeling_model_lookup
 from lightly_studio.assisted_labeling.provider import ProviderImage
 from lightly_studio.database import db_manager
 from lightly_studio.models.assisted_labeling import (
@@ -18,6 +19,10 @@ from lightly_studio.models.assisted_labeling import (
     InstancesAnnotationResponse,
     InteractiveAnnotationRequest,
     InteractiveAnnotationResponse,
+    LabelingModelsView,
+    LabelingModelView,
+    ModelAnnotationRequest,
+    ModelAnnotationResponse,
 )
 from lightly_studio.services import assisted_labeling_service
 from lightly_studio.utils import executor
@@ -25,6 +30,9 @@ from lightly_studio.utils import executor
 assisted_labeling_router = APIRouter(prefix="/annotate", tags=["annotate"])
 
 PROVIDER_MAX_WORKERS = 8
+# A labeling model computes on this machine and can fill the GPU memory. Its own pool keeps
+# a slow model from blocking the SAM3 requests.
+MODEL_MAX_WORKERS = 2
 
 
 @assisted_labeling_router.get("/status")
@@ -38,20 +46,63 @@ def get_assisted_labeling_status() -> AssistedLabelingStatusView:
 @assisted_labeling_router.post("/interactive")
 async def create_interactive_annotation_preview(
     request: InteractiveAnnotationRequest,
+    x_user_email: Annotated[str | None, Header()] = None,
 ) -> InteractiveAnnotationResponse:
-    """Returns a single-object preview from points or boxes. Saves nothing."""
+    """Returns a single-object preview from points or boxes. Saves nothing.
+
+    `X-User-Email` is set by the auth proxy of a hosted deployment and attributes the
+    usage to the user.
+    """
     return await asyncio.get_running_loop().run_in_executor(
-        _get_provider_executor(), functools.partial(_create_interactive_preview, request=request)
+        _get_provider_executor(),
+        functools.partial(
+            _create_interactive_preview,
+            request=request,
+            user_email=_to_user_email(x_user_email=x_user_email),
+        ),
     )
 
 
 @assisted_labeling_router.post("/instances")
 async def create_instances_annotation_preview(
     request: InstancesAnnotationRequest,
+    x_user_email: Annotated[str | None, Header()] = None,
 ) -> InstancesAnnotationResponse:
-    """Returns previews of all instances that match a text prompt. Saves nothing."""
+    """Returns previews of all instances that match a text prompt. Saves nothing.
+
+    `X-User-Email` is set by the auth proxy of a hosted deployment and attributes the
+    usage to the user.
+    """
     return await asyncio.get_running_loop().run_in_executor(
-        _get_provider_executor(), functools.partial(_create_instances_preview, request=request)
+        _get_provider_executor(),
+        functools.partial(
+            _create_instances_preview,
+            request=request,
+            user_email=_to_user_email(x_user_email=x_user_email),
+        ),
+    )
+
+
+@assisted_labeling_router.get("/models")
+def get_labeling_models() -> LabelingModelsView:
+    """Returns the labeling models that the GUI can run."""
+    snapshot = labeling_model_lookup.get_runner_snapshot()
+    return LabelingModelsView(
+        models=[
+            LabelingModelView(id=runner.model_id, task=runner.task, class_names=runner.class_names)
+            for runner in snapshot.runners
+        ],
+        has_loading_models=snapshot.has_loading_models,
+    )
+
+
+@assisted_labeling_router.post("/models/predict")
+async def create_model_annotation_preview(
+    request: ModelAnnotationRequest,
+) -> ModelAnnotationResponse:
+    """Returns previews of the annotations that a labeling model predicts. Saves nothing."""
+    return await asyncio.get_running_loop().run_in_executor(
+        _get_model_executor(), functools.partial(_create_model_preview, request=request)
     )
 
 
@@ -61,21 +112,41 @@ def _get_provider_executor() -> ThreadPoolExecutor:
     )
 
 
+def _get_model_executor() -> ThreadPoolExecutor:
+    return executor.get_media_executor(
+        thread_name_prefix="labeling_model", max_workers=MODEL_MAX_WORKERS
+    )
+
+
 def _create_interactive_preview(
-    request: InteractiveAnnotationRequest,
+    request: InteractiveAnnotationRequest, user_email: str | None
 ) -> InteractiveAnnotationResponse:
     image = _load_image(collection_id=request.collection_id, sample_id=request.sample_id)
     return assisted_labeling_service.create_interactive_preview(
-        provider=fal_sam3_provider.get_provider(), image=image, request=request
+        provider=fal_sam3_provider.get_provider(),
+        image=image,
+        request=request,
+        user_email=user_email,
     )
 
 
 def _create_instances_preview(
-    request: InstancesAnnotationRequest,
+    request: InstancesAnnotationRequest, user_email: str | None
 ) -> InstancesAnnotationResponse:
     image = _load_image(collection_id=request.collection_id, sample_id=request.sample_id)
     return assisted_labeling_service.create_instances_preview(
-        provider=fal_sam3_provider.get_provider(), image=image, request=request
+        provider=fal_sam3_provider.get_provider(),
+        image=image,
+        request=request,
+        user_email=user_email,
+    )
+
+
+def _create_model_preview(request: ModelAnnotationRequest) -> ModelAnnotationResponse:
+    runner = labeling_model_lookup.get_runner(model_id=request.model_id)
+    image = _load_image(collection_id=request.collection_id, sample_id=request.sample_id)
+    return assisted_labeling_service.create_model_preview(
+        runner=runner, image=image, threshold=request.threshold
     )
 
 
@@ -85,3 +156,10 @@ def _load_image(collection_id: UUID, sample_id: UUID) -> ProviderImage:
         return assisted_labeling_service.load_provider_image(
             session=session, collection_id=collection_id, sample_id=sample_id
         )
+
+
+def _to_user_email(x_user_email: str | None) -> str | None:
+    """Returns the forwarded user email, or None if the header is missing or blank."""
+    if x_user_email is None:
+        return None
+    return x_user_email.strip() or None

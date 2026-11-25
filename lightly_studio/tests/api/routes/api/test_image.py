@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlalchemy import event
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
@@ -11,10 +13,13 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.image import ImageView
 from lightly_studio.resolvers import (
     collection_resolver,
     image_resolver,
+    tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
@@ -26,11 +31,14 @@ from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
+    ImageStub,
     create_annotation,
     create_annotation_label,
     create_annotations,
     create_collection,
     create_image,
+    create_images,
+    create_tag,
 )
 from tests.resolvers.video.helpers import VideoStub, create_video
 
@@ -233,6 +241,60 @@ def test_read_images__query_expr_filter(
     assert returned_ids == {str(wide_image.sample_id), str(annotated_image.sample_id)}
 
 
+@pytest.mark.parametrize(
+    ("expression", "expected"),
+    [
+        pytest.param({"type": "object_detection_match_expr"}, ["boxes"], id="detections"),
+        pytest.param(
+            {"type": "classification_match_expr"}, ["classification"], id="classifications"
+        ),
+        pytest.param({"type": "segmentation_mask_match_expr"}, ["mask"], id="masks"),
+        pytest.param(
+            {"type": "not", "child": {"type": "object_detection_match_expr"}},
+            ["mask", "classification", "raw"],
+            id="no-detections",
+        ),
+    ],
+)
+def test_read_images__any_annotation_of_type(
+    test_client: TestClient, db_session: Session, expression: dict[str, object], expected: list[str]
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    images = {
+        name: create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/{name}.jpg"
+        )
+        for name in ["boxes", "mask", "classification", "raw"]
+    }
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    for name, annotation_type in [
+        ("boxes", AnnotationType.OBJECT_DETECTION),
+        ("boxes", AnnotationType.OBJECT_DETECTION),
+        ("mask", AnnotationType.SEGMENTATION_MASK),
+        ("classification", AnnotationType.CLASSIFICATION),
+    ]:
+        create_annotation(
+            session=db_session,
+            collection_id=collection_id,
+            sample_id=images[name].sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=annotation_type,
+        )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/list",
+        json={"filters": {"sample_filter": {"query_expr": {"match_expr": expression}}}},
+    )
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == len(expected)
+    assert {row["sample_id"] for row in result["data"]} == {
+        str(images[name].sample_id) for name in expected
+    }
+
+
 def test_read_images__query_expr_nonexistent_field(
     test_client: TestClient,
     db_session: Session,
@@ -350,6 +412,107 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
         collection_id=collection_id,
         annotation_label_ids=None,
     )
+
+
+def test_get_image_histograms(test_client: TestClient, db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[
+            ImageStub(path="/a.png", width=100, height=200),
+            ImageStub(path="/b.png", width=300, height=200),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/histograms",
+        json={
+            "filters": {"filter_type": "image", "height": {"min": 0, "max": 10}},
+            "bin_count": 2,
+            "fields": ["width"],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    # The height filter excludes both images, which are 200 px high.
+    assert response.json() == {"width": {"bin_edges": [100.0, 200.0, 300.0], "counts": [0, 0]}}
+
+
+def test_get_image_histograms__without_body(test_client: TestClient, db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/a.png",
+        width=100,
+        height=50,
+    )
+
+    response = test_client.post(f"/api/collections/{collection_id}/images/histograms")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "width": {"bin_edges": [100.0, 100.0], "counts": [1]},
+        "height": {"bin_edges": [50.0, 50.0], "counts": [1]},
+    }
+
+
+def test_get_image_histograms__unknown_field_returns_422(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/histograms", json={"fields": ["depth"]}
+    )
+
+    assert response.status_code == 422
+
+
+def test_read_image__batched_annotation_details(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image_id = create_image(session=db_session, collection_id=collection_id).sample_id
+    label_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    ).annotation_label_id
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(sample_id=image_id, annotation_label_id=label_id, x=10),
+            AnnotationDetails(sample_id=image_id, annotation_label_id=label_id, x=12),
+        ],
+    )
+    tag = create_tag(
+        session=db_session, collection_id=annotations[0].sample.collection_id, tag_name="review"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[annotations[0].sample_id]
+    )
+    db_session.expunge_all()
+    image = image_resolver.get_by_id(session=db_session, sample_id=image_id)
+    assert image is not None
+    expected = ImageView.from_image_table(image=image).model_dump(mode="json")
+    db_session.expunge_all()
+
+    connection = db_session.connection()
+    record_statement = mocker.stub()
+    event.listen(connection, "before_cursor_execute", record_statement)
+    try:
+        response = test_client.get(f"/api/images/{image_id}")
+    finally:
+        event.remove(connection, "before_cursor_execute", record_statement)
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == expected
+    box_detail_queries = sum(
+        "FROM object_detection_annotation" in call.args[2]
+        for call in record_statement.call_args_list
+    )
+    assert box_detail_queries == 1
 
 
 def test_count_image_annotations_by_collection__with_image_filter(
@@ -604,6 +767,67 @@ def test_count_image_annotations_by_collection__count_mode_samples_with_filter(
     assert result["person"] == (1, 1)
 
 
+def test_count_image_annotations_by_collection__sources_only_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/to/image_a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/to/image_b.png"
+    )
+    car_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    person_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="person"
+    )
+    source_a = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_a.sample_id, annotation_label_id=car_label.annotation_label_id
+            ),
+            AnnotationDetails(
+                sample_id=image_b.sample_id, annotation_label_id=car_label.annotation_label_id
+            ),
+        ],
+        collection_name="source_a",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_b.sample_id, annotation_label_id=person_label.annotation_label_id
+            ),
+        ],
+        collection_name="source_b",
+    )
+
+    # The frontend sends unused annotation filter fields as explicit nulls.
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/annotations/count",
+        json={
+            "filter": {
+                "sample_filter": {
+                    "annotations_filter": {
+                        "collection_ids": [str(source_a[0].annotation_collection_id)],
+                        "annotation_label_ids": None,
+                    }
+                }
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [{"label_name": "car", "current_count": 2, "total_count": 2}]
+
+
 def test_count_image_annotations_by_collection__count_mode_invalid(
     test_client: TestClient,
     db_session: Session,
@@ -617,6 +841,23 @@ def test_count_image_annotations_by_collection__count_mode_invalid(
     )
 
     assert response.status_code == 422
+
+
+def test_count_unannotated_images(test_client: TestClient, db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="unannotated_1.png"), ImageStub(path="unannotated_2.png")],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/images/unannotated/count",
+        json={"filter": {"sample_filter": {"sample_ids": [str(images[0].sample_id)]}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"current_count": 1, "total_count": 2}
 
 
 def test_get_image_sample_ids(

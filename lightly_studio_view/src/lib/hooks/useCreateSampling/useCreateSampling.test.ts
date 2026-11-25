@@ -6,6 +6,7 @@ import {
 import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCreateSampling } from './useCreateSampling';
+import { ApiError } from '$lib/api/ApiError';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     createSampling: vi.fn(),
@@ -192,7 +193,7 @@ describe('useCreateSampling', () => {
     it('API error in createSampling toasts error and returns false', async () => {
         vi.mocked(createSampling).mockResolvedValue({
             data: null,
-            error: { error: 'sampling failed' }
+            error: new ApiError('sampling failed', 400)
         } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
@@ -418,7 +419,7 @@ describe('useCreateSampling', () => {
     it('API error in createSampling for class_balancing toasts error and returns false', async () => {
         vi.mocked(createSampling).mockResolvedValue({
             data: null,
-            error: { error: 'balance failed' }
+            error: new ApiError('balance failed', 400)
         } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();

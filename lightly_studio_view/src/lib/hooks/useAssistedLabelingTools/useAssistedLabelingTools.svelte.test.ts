@@ -6,8 +6,14 @@ import { useAssistedLabelingTools } from './useAssistedLabelingTools.svelte';
 const mocks = vi.hoisted(() => ({
     context: { status: 'smart-select' as string, panFrom: undefined as string | undefined },
     status: { disabledReason: null as string | null },
+    models: { models: [] as { id: string; task: string }[], isAvailable: true },
+    clearLabelWithModel: vi.fn(),
     isEditingMode: undefined as unknown as Writable<boolean>,
-    clearSmartSelect: vi.fn()
+    clearSmartSelect: vi.fn(),
+    clearInstances: vi.fn(),
+    getSmartSelectParams: undefined as unknown as () => Record<string, unknown>,
+    getInstancesParams: undefined as unknown as () => Record<string, unknown>,
+    stickyClass: { current: 'person' as string | undefined }
 }));
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
@@ -17,26 +23,56 @@ vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => (
         setStatus: (status: string) => (mocks.context.status = status)
     })
 }));
+// The selected annotation's class, which new annotations must not take.
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => ({ context: { annotationLabel: null } })
+    useAnnotationLabelContext: () => ({ context: { annotationLabel: 'dog' } })
+}));
+vi.mock('$lib/hooks/useStickyClass/useStickyClassName.svelte', () => ({
+    useStickyClassName: () => mocks.stickyClass
 }));
 vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
     useAssistedLabelingStatus: () => mocks.status
+}));
+vi.mock('$lib/hooks/useLabelingModels', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useLabelingModels')>()),
+    useLabelingModels: () => mocks.models
+}));
+vi.mock('$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte', () => ({
+    useLabelWithModel: () => ({ clear: mocks.clearLabelWithModel })
 }));
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => ({ isEditingMode: mocks.isEditingMode })
 }));
 vi.mock('$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte', () => ({
-    useSmartSelect: () => ({ clear: mocks.clearSmartSelect })
+    useSmartSelect: (getParams: () => Record<string, unknown>) => {
+        mocks.getSmartSelectParams = getParams;
+        return { clear: mocks.clearSmartSelect };
+    }
+}));
+vi.mock('$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte', () => ({
+    useFindInstances: (getParams: () => Record<string, unknown>) => {
+        mocks.getInstancesParams = getParams;
+        return { clear: mocks.clearInstances };
+    }
 }));
 
 let cleanup = () => {};
 
-const setup = () => {
-    const context = $state<typeof mocks.context>({ status: 'smart-select', panFrom: undefined });
+const setup = (initialStatus = 'smart-select') => {
+    const context = $state<typeof mocks.context>({ status: initialStatus, panFrom: undefined });
     const status = $state<typeof mocks.status>({ disabledReason: null });
+    const stickyClass = $state<typeof mocks.stickyClass>({ current: 'person' });
+    mocks.stickyClass = stickyClass;
+    const models = $state<typeof mocks.models>({
+        models: [
+            { id: 'detector', task: 'object_detection' },
+            { id: 'segmenter', task: 'instance_segmentation' }
+        ],
+        isAvailable: true
+    });
     mocks.context = context;
     mocks.status = status;
+    mocks.models = models;
     mocks.isEditingMode = writable(true);
     let tools!: ReturnType<typeof useAssistedLabelingTools>;
     cleanup = $effect.root(() => {
@@ -47,7 +83,7 @@ const setup = () => {
         }));
     });
     flushSync();
-    return { context, status, tools };
+    return { context, status, models, tools };
 };
 
 describe('useAssistedLabelingTools', () => {
@@ -89,5 +125,114 @@ describe('useAssistedLabelingTools', () => {
         status.disabledReason = 'missing key';
         flushSync();
         expect(context.status).toBe('cursor');
+    });
+
+    it('ends box drawing and drops the prompts when the find all instances tool is left', () => {
+        const { context, tools } = setup('find-instances');
+        tools.state.isDrawingInstancesBox = true;
+        tools.state.instancesPrompt = 'cars';
+        flushSync();
+        expect(tools.state.isDrawingInstancesBox).toBe(true);
+        expect(mocks.clearInstances).not.toHaveBeenCalled();
+
+        context.status = 'cursor';
+        flushSync();
+
+        expect(tools.state.isDrawingInstancesBox).toBe(false);
+        expect(tools.state.instancesPrompt).toBe('');
+        expect(mocks.clearInstances).toHaveBeenCalledOnce();
+    });
+
+    it('resets the inputs after saving and keeps find all instances active', () => {
+        const { tools } = setup('find-instances');
+        tools.state.instancesPrompt = 'cars';
+        tools.state.isDrawingInstancesBox = true;
+
+        const onSaved = mocks.getInstancesParams().onSaved as () => void;
+        onSaved();
+
+        expect(tools.state.instancesPrompt).toBe('');
+        expect(tools.state.isDrawingInstancesBox).toBe(false);
+        expect(mocks.clearInstances).toHaveBeenCalledOnce();
+        expect(tools.activeTool).toBe('find-instances');
+    });
+
+    it('passes the tool settings and falls back to the sticky class as class', () => {
+        const { tools } = setup();
+        expect(mocks.getSmartSelectParams()).toMatchObject({
+            sampleId: 'sample-1',
+            annotationClass: 'person'
+        });
+        expect(mocks.getInstancesParams()).toMatchObject({ annotationClass: 'person' });
+
+        // A class picked elsewhere, for example on the canvas chip, is the new default.
+        mocks.stickyClass.current = 'deer';
+        flushSync();
+        expect(tools.smartSelectClass).toBe('deer');
+        expect(tools.instancesClass).toBe('deer');
+
+        tools.state.smartSelectClass = 'car';
+        tools.state.instancesClass = 'bus';
+        tools.state.instancesPrompt = 'buses';
+        tools.state.maxInstances = 5;
+        flushSync();
+
+        expect(tools.smartSelectClass).toBe('car');
+        expect(tools.instancesClass).toBe('bus');
+        expect(mocks.getSmartSelectParams()).toMatchObject({ annotationClass: 'car' });
+        expect(mocks.getInstancesParams()).toMatchObject({
+            collectionId: 'collection-1',
+            prompt: 'buses',
+            maxInstances: 5,
+            annotationClass: 'bus'
+        });
+    });
+
+    it('blocks panning for smart select and while drawing a find instances box', () => {
+        const { context, tools } = setup();
+        expect(tools.blocksPan).toBe(true);
+
+        context.status = 'find-instances';
+        flushSync();
+        expect(tools.blocksPan).toBe(false);
+
+        tools.state.isDrawingInstancesBox = true;
+        flushSync();
+        expect(tools.blocksPan).toBe(true);
+    });
+
+    it('falls back to the cursor tool when the labeling models are unavailable', () => {
+        const { context, status, models } = setup('label-with-model');
+        status.disabledReason = 'Set the FAL_KEY environment variable.';
+        flushSync();
+        expect(context.status).toBe('label-with-model');
+
+        models.isAvailable = false;
+        flushSync();
+        expect(context.status).toBe('cursor');
+    });
+
+    it('drops the model results when the auto-label tool is left', () => {
+        const { context } = setup('label-with-model');
+        mocks.clearLabelWithModel.mockClear();
+
+        context.status = 'cursor';
+        flushSync();
+
+        expect(mocks.clearLabelWithModel).toHaveBeenCalled();
+    });
+
+    it('selects the first model and saves detections as boxes', () => {
+        const { tools } = setup('label-with-model');
+        tools.state.saveAs = 'mask';
+        flushSync();
+
+        expect(tools.selectedModel?.id).toBe('detector');
+        expect(tools.modelSaveAs).toBe('box');
+
+        tools.state.modelId = 'segmenter';
+        flushSync();
+        expect(tools.selectedModel?.id).toBe('segmenter');
+        expect(tools.modelSaveAs).toBe('mask');
     });
 });

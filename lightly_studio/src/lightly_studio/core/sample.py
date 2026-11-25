@@ -13,20 +13,13 @@ from sqlmodel import Session
 from lightly_studio.core.annotation import CreateAnnotation
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import (
-    annotation_resolver,
-    caption_resolver,
-    collection_resolver,
-    evaluation_run_resolver,
-    metadata_resolver,
-    tag_resolver,
-)
+from lightly_studio.transport import active_transport
 
 from .annotation import Annotation
 from .annotation.classification import ClassificationAnnotation
 from .annotation.object_detection import ObjectDetectionAnnotation
+from .annotation.polygon import PolygonAnnotation
 from .annotation.segmentation_mask import SegmentationMaskAnnotation
 
 
@@ -101,18 +94,9 @@ class Sample(ABC):
         Args:
             name: The name of the tag to add.
         """
-        session = self.get_object_session()
-
-        # Get or create the tag for this dataset.
-        tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session, collection_id=self.collection_id, tag_name=name
+        active_transport.get_transport().tags.add_to_samples(
+            collection_id=self.collection_id, tag_name=name, sample_ids=[self.sample_id]
         )
-
-        # Add the tag to the sample if not already associated.
-        if tag not in self.sample_table.tags:
-            tag_resolver.add_tag_to_sample(
-                session=session, tag_id=tag.tag_id, sample=self.sample_table
-            )
 
     def remove_tag(self, name: str) -> None:
         """Remove a tag from this sample.
@@ -120,18 +104,9 @@ class Sample(ABC):
         Args:
             name: The name of the tag to remove.
         """
-        session = self.get_object_session()
-
-        # Find the tag by name for this dataset.
-        existing_tag = tag_resolver.get_by_name(
-            session=session, tag_name=name, collection_id=self.collection_id
+        active_transport.get_transport().tags.remove_from_samples(
+            collection_id=self.collection_id, tag_name=name, sample_ids=[self.sample_id]
         )
-
-        # Remove the tag from the sample if it exists and is associated
-        if existing_tag is not None and existing_tag in self.sample_table.tags:
-            tag_resolver.remove_tag_from_sample(
-                session=session, tag_id=existing_tag.tag_id, sample=self.sample_table
-            )
 
     @property
     def tags(self) -> set[str]:
@@ -140,7 +115,10 @@ class Sample(ABC):
         Returns:
             A set of tag names as strings.
         """
-        return {tag.name for tag in self.sample_table.tags}
+        tag_names = active_transport.get_transport().tags.get_names_by_sample_ids(
+            sample_ids=[self.sample_id]
+        )
+        return set(tag_names.get(self.sample_id, []))
 
     @tags.setter
     def tags(self, tags: Iterable[str]) -> None:
@@ -195,9 +173,7 @@ class Sample(ABC):
         Args:
             captions: The texts of the captions to add.
         """
-        session = self.get_object_session()
-        caption_resolver.create_many(
-            session=session,
+        active_transport.get_transport().captions.add(
             parent_collection_id=self.collection_id,
             captions=[
                 CaptionCreate(
@@ -211,7 +187,8 @@ class Sample(ABC):
     @property
     def captions(self) -> list[str]:
         """Returns the text of all captions."""
-        return [caption.text for caption in self.sample_table.captions]
+        captions = active_transport.get_transport().captions.get(parent_sample_ids=[self.sample_id])
+        return [caption.text for caption in captions]
 
     @captions.setter
     def captions(self, captions: Iterable[str]) -> None:
@@ -220,17 +197,15 @@ class Sample(ABC):
         Args:
             captions: Iterable of caption texts to associate with this sample.
         """
-        session = self.get_object_session()
+        caption_transport = active_transport.get_transport().captions
 
         # Delete all existing captions for this sample
-        caption_sample_ids = [c.sample_id for c in self.sample_table.captions]
-        for caption_sample_id in caption_sample_ids:
-            caption_resolver.delete_caption(session=session, sample_id=caption_sample_id)
+        existing_captions = caption_transport.get(parent_sample_ids=[self.sample_id])
+        caption_transport.delete(caption_ids=[c.sample_id for c in existing_captions])
 
         # Create new captions from the provided texts
         if captions:
-            caption_resolver.create_many(
-                session=session,
+            caption_transport.add(
                 parent_collection_id=self.collection_id,
                 captions=[
                     CaptionCreate(parent_sample_id=self.sample_id, text=text) for text in captions
@@ -243,17 +218,21 @@ class Sample(ABC):
         annotations: list[Annotation] = []
         for annotation in self.sample_table.annotations:
             if annotation.annotation_type == AnnotationType.OBJECT_DETECTION:
-                assert annotation.object_detection_details is not None, (
-                    "Invalid sample annotation data"
-                )
+                if annotation.object_detection_details is None:
+                    raise RuntimeError("Invalid sample annotation data")
                 annotations.append(
                     ObjectDetectionAnnotation(inner=annotation.object_detection_details)
                 )
             elif annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
-                assert annotation.segmentation_details is not None, "Invalid sample annotation data"
+                if annotation.segmentation_details is None:
+                    raise RuntimeError("Invalid sample annotation data")
                 annotations.append(
                     SegmentationMaskAnnotation(inner=annotation.segmentation_details)
                 )
+            elif annotation.annotation_type == AnnotationType.POLYGON:
+                if annotation.polygon_details is None:
+                    raise RuntimeError("Invalid sample annotation data")
+                annotations.append(PolygonAnnotation(inner=annotation.polygon_details))
             elif annotation.annotation_type == AnnotationType.CLASSIFICATION:
                 annotations.append(ClassificationAnnotation(annotation_base=annotation))
             else:
@@ -285,37 +264,27 @@ class Sample(ABC):
                 Reusing the same source name appends to that source. If `None`, a
                 default source is used.
         """
-        session = self.get_object_session()
-        collection = collection_resolver.get_by_id(
-            session=session, collection_id=self.collection_id
-        )
+        annotations = list(annotations)
+        transport = active_transport.get_transport()
+        collection = transport.collections.get_by_id(collection_id=self.collection_id)
         if collection is None:
             raise RuntimeError("Collection linked to sample not present")
-        dataset_id = collection.dataset_id
-
-        annotation_creates = [
-            annotation.to_annotation_create(
-                session=session,
-                dataset_id=dataset_id,
-                parent_sample_id=self.sample_id,
-            )
-            for annotation in annotations
-        ]
-        annotation_resolver.create_many(
-            session=session,
+        labels = transport.annotations.get_or_create_labels(
+            dataset_id=collection.dataset_id,
+            label_names=[annotation.class_name for annotation in annotations],
+        )
+        label_ids = {label.annotation_label_name: label.annotation_label_id for label in labels}
+        transport.annotations.create(
             parent_collection_id=self.collection_id,
-            annotations=annotation_creates,
+            annotations=[
+                annotation.to_annotation_create(
+                    annotation_label_id=label_ids[annotation.class_name],
+                    parent_sample_id=self.sample_id,
+                )
+                for annotation in annotations
+            ],
             collection_name=annotation_source,
-        )
-        annotation_collection_id = collection_resolver.get_or_create_child_collection(
-            session=session,
-            collection_id=self.collection_id,
-            sample_type=SampleType.ANNOTATION,
-            name=annotation_source,
-        )
-        evaluation_run_resolver.mark_stale_by_collection_id(
-            session=session,
-            collection_id=annotation_collection_id,
+            covered_sample_ids=[],
         )
 
     def delete_annotation(self, annotation: Annotation) -> None:
@@ -324,16 +293,8 @@ class Sample(ABC):
         Args:
             annotation: The annotation to delete.
         """
-        session = self.get_object_session()
-        annotation_id = annotation.annotation_base.sample_id
-        collection_id = annotation.annotation_base.annotation_collection_id
-        annotation_resolver.delete_annotation(
-            session=session,
-            annotation_id=annotation_id,
-        )
-        evaluation_run_resolver.mark_stale_by_collection_id(
-            session=session,
-            collection_id=collection_id,
+        active_transport.get_transport().annotations.delete(
+            annotation_ids=[annotation.annotation_base.sample_id]
         )
 
 
@@ -357,9 +318,9 @@ class SampleMetadata:
         Returns:
             The metadata value for the given key, or None if the key doesn't exist.
         """
-        if self._sample.sample_table.metadata_dict is None:
-            return None
-        return self._sample.sample_table.metadata_dict.get_value(key)
+        sample_id = self._sample.sample_id
+        metadata = active_transport.get_transport().metadata.get(sample_ids=[sample_id])
+        return metadata.get(sample_id, {}).get(key)
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set a metadata key-value pair.
@@ -368,12 +329,8 @@ class SampleMetadata:
             key: The metadata key.
             value: The metadata value.
         """
-        session = self._sample.get_object_session()
-        metadata_resolver.set_value_for_sample(
-            session=session,
-            sample_id=self._sample.sample_id,
-            key=key,
-            value=value,
+        active_transport.get_transport().metadata.update(
+            sample_metadata=[(self._sample.sample_id, {key: value})]
         )
 
     def update(
@@ -398,8 +355,6 @@ class SampleMetadata:
         if not new_metadata:
             return
 
-        session = self._sample.get_object_session()
-        metadata_resolver.bulk_update_metadata(
-            session=session,
-            sample_metadata=[(self._sample.sample_id, new_metadata)],
+        active_transport.get_transport().metadata.update(
+            sample_metadata=[(self._sample.sample_id, new_metadata)]
         )

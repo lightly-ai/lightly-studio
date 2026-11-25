@@ -53,8 +53,8 @@ class CaptionCreate(SQLModel):
     text: str
 
     # Optional temporal bounds for the caption's sample.
-    start_time_s: Optional[float] = None
-    end_time_s: Optional[float] = None
+    start_time_s: float | None = None
+    end_time_s: float | None = None
 
 
 class CaptionView(SQLModel):
@@ -63,4 +63,4 @@ class CaptionView(SQLModel):
     parent_sample_id: UUID
     sample_id: UUID
     text: str
-    temporal_span_details: Optional[TemporalSpanView] = None
+    temporal_span_details: TemporalSpanView | None = None

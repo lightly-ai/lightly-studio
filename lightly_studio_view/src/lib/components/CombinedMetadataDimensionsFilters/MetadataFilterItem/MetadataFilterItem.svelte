@@ -1,7 +1,8 @@
 <script lang="ts">
     import { Slider } from '$lib/components/ui/slider/index.js';
+    import MetadataFieldHeader from '$lib/components/MetadataFieldHeader/MetadataFieldHeader.svelte';
     import type { MetadataBounds, MetadataValues } from '$lib/services/types';
-    import { formatFloat, formatInteger } from '$lib/utils';
+    import { NumericRangeInputs } from '$lib/components/NumericRangeInputs';
     import { fromTick, getSliderTickCount, toTick } from './MetadataFilterItem.helpers';
 
     type MetadataBound = MetadataBounds[string];
@@ -9,14 +10,40 @@
 
     interface MetadataFilterItemProps {
         metadataKey: string;
+        displayName?: string;
+        unit?: string;
         bound: MetadataBound;
         value: MetadataValue;
+        isInteger: boolean;
         onValueCommit: (metadataKey: string, newValues: number[]) => void;
+        /** Whether the slider shows. */
+        expanded?: boolean;
+        /** Lets the user show or hide the slider from the field header. */
+        onToggleExpanded?: () => void;
+        /** Shows a checkbox before the title. `true` when the range filters. */
+        checked?: boolean;
+        /** Short value of the active filter, shown in the header. */
+        summary?: string;
+        /** Resets the range to its bounds when the checkbox is unchecked. */
+        onClear?: () => void;
     }
 
-    const { metadataKey, bound, value, onValueCommit }: MetadataFilterItemProps = $props();
+    const {
+        metadataKey,
+        displayName,
+        unit,
+        bound,
+        value,
+        isInteger,
+        onValueCommit,
+        expanded = true,
+        onToggleExpanded,
+        checked,
+        summary,
+        onClear
+    }: MetadataFilterItemProps = $props();
 
-    const isInteger = $derived(Number.isInteger(bound.min) && Number.isInteger(bound.max));
+    const label = $derived(displayName ?? metadataKey);
     const ticks = $derived(getSliderTickCount(bound, isInteger));
 
     const sliderValue = $derived([
@@ -34,27 +61,39 @@
                 : value.max
         ]);
     };
-
-    const formatValue = (sliderValue: number): string => {
-        return isInteger ? formatInteger(sliderValue) : formatFloat(sliderValue);
-    };
 </script>
 
 <div class="space-y-1">
-    <h2 class="text-md capitalize">{metadataKey.replace(/_/g, ' ')}</h2>
-    <div class="flex justify-between text-sm text-diffuse-foreground">
-        <span>{formatValue(value.min)}</span>
-        <span>{formatValue(value.max)}</span>
-    </div>
-    <div class="relative p-2">
-        <Slider
-            type="multiple"
-            class="filter-{metadataKey}"
-            min={0}
-            max={ticks}
-            step={1}
-            value={sliderValue}
-            onValueCommit={handleValueCommit}
-        />
-    </div>
+    <MetadataFieldHeader
+        title={label}
+        {expanded}
+        {onToggleExpanded}
+        {checked}
+        {summary}
+        {onClear}
+    />
+    {#if expanded}
+        <!-- Indented under the chevron. -->
+        <div class={onToggleExpanded ? 'pl-6' : undefined}>
+            <NumericRangeInputs
+                {label}
+                {bound}
+                {value}
+                {unit}
+                integer={isInteger}
+                onValueCommit={(values) => onValueCommit(metadataKey, values)}
+            />
+            <div class="relative p-2">
+                <Slider
+                    type="multiple"
+                    class="filter-{metadataKey}"
+                    min={0}
+                    max={ticks}
+                    step={1}
+                    value={sliderValue}
+                    onValueCommit={handleValueCommit}
+                />
+            </div>
+        </div>
+    {/if}
 </div>

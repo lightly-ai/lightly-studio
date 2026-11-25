@@ -9,6 +9,7 @@
     let {
         label,
         icon,
+        iconClass,
         iconAfter,
         iconAfterClass,
         variant,
@@ -20,6 +21,7 @@
     }: {
         label?: string;
         icon?: Component<IconProps>;
+        iconClass?: string;
         iconAfter?: Component<IconProps>;
         iconAfterClass?: string;
         variant?: ButtonVariant;
@@ -34,6 +36,7 @@
 {#if label !== undefined}
     <Button
         {icon}
+        {iconClass}
         {iconAfter}
         {iconAfterClass}
         {variant}
@@ -48,6 +51,7 @@
 {:else}
     <Button
         {icon}
+        {iconClass}
         {iconAfter}
         {iconAfterClass}
         {variant}

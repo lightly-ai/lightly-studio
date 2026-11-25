@@ -2,6 +2,8 @@ import type { QueryClient } from '@tanstack/svelte-query';
 import { getTickDataOptions } from '$lib/hooks/useTickData/getTickDataOptions';
 import { getTickDetailsOptions } from '$lib/hooks/useTickDetails/getTickDetailsOptions';
 
+const PREFETCH_TIMEOUT_MS = 30_000;
+
 interface McapTickPrefetchParams {
     /** Dataset that owns the sequence. */
     datasetId: string;
@@ -19,12 +21,23 @@ export async function prefetchMcapTick(
     client: QueryClient,
     { datasetId, sequenceId, seqNumber, displayFrameId }: McapTickPrefetchParams
 ): Promise<void> {
-    await Promise.all([
-        client.ensureQueryData(
-            getTickDetailsOptions({ datasetId, sequenceId, seqNumber, displayFrameId })
-        ),
-        client.ensureQueryData(
-            getTickDataOptions({ datasetId, sequenceId, seqNumber, displayFrameId })
-        )
-    ]);
+    const details = getTickDetailsOptions({ datasetId, sequenceId, seqNumber, displayFrameId });
+    const data = getTickDataOptions({ datasetId, sequenceId, seqNumber, displayFrameId });
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+            reject(new Error('Loading frame timed out. Please try again.'));
+            // Cancel the cached requests so a retry starts fresh rather than joining a hung fetch.
+            void client.cancelQueries({ queryKey: details.queryKey, exact: true });
+            void client.cancelQueries({ queryKey: data.queryKey, exact: true });
+        }, PREFETCH_TIMEOUT_MS);
+    });
+    try {
+        await Promise.race([
+            Promise.all([client.ensureQueryData(details), client.ensureQueryData(data)]),
+            timeout
+        ]);
+    } finally {
+        clearTimeout(timeoutId);
+    }
 }

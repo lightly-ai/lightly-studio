@@ -17,8 +17,12 @@
         selectedClassNames: string[];
         onClassBarClick: (item: CategoryCount) => void;
         onClose: () => void;
-        // The host keeps the bin count so that it stays when the panel closes and opens again.
+        // The host keeps these settings so that they stay when the panel closes and opens again.
         histogramBinCount: number;
+        /** The source that the user picked, for example `classes` or `metadata`. */
+        selectedSourceId: string | undefined;
+        /** The group that the user picked, for example a metadata key. */
+        selectedGroupId: string | undefined;
     }
 
     let {
@@ -27,12 +31,19 @@
         selectedClassNames,
         onClassBarClick,
         onClose,
-        histogramBinCount = $bindable()
+        histogramBinCount = $bindable(),
+        selectedSourceId = $bindable(),
+        selectedGroupId = $bindable()
     }: Props = $props();
 
     const { allSourcesHidden } = useAnnotationCollectionsFilter();
-    const { filterParams } = useVideoFilters();
-    const filters = $derived(buildVideoDistributionFilters($filterParams));
+    const { filterParams, videoQueryExpression } = useVideoFilters();
+    const filters = $derived(
+        buildVideoDistributionFilters(
+            $filterParams,
+            $filterParams?.collection_id === collectionId ? $videoQueryExpression : null
+        )
+    );
 
     let activeDistributionSourceId = $state<string | undefined>(undefined);
     let activeDistributionGroupId = $state<string | undefined>(undefined);
@@ -71,10 +82,13 @@
     onBarClick={onClassBarClick}
     onHistogramRangeSelect={metadataDistribution.onHistogramRangeSelect}
     onCategoricalValueToggle={metadataDistribution.onCategoricalValueToggle}
+    onCategoricalValuesSet={metadataDistribution.onCategoricalValuesSet}
     onCategoricalValuesClear={metadataDistribution.onCategoricalValuesClear}
     onCategoricalRetry={metadataDistribution.onCategoricalRetry}
     {histogramBinCount}
     onHistogramBinCountChange={(binCount) => (histogramBinCount = binCount)}
+    bind:selectedSourceId
+    bind:selectedGroupId
     onGroupChange={(sourceId, groupId) => {
         activeDistributionSourceId = sourceId;
         activeDistributionGroupId = groupId;

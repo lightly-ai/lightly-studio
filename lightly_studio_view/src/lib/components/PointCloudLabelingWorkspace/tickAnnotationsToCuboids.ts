@@ -17,6 +17,7 @@ export function tickAnnotationsToCuboids(annotations: Readonly<TickDetailView['a
                 trackId: annotation.object_track_id ?? null,
                 trackNumber: annotation.object_track_number ?? null,
                 parentTrackNumber: annotation.parent_object_track_number ?? null,
+                parentTrackClassName: annotation.parent_object_track_class_name ?? null,
                 keyframeId: null,
                 center: [details.px, details.py, details.pz] as const,
                 size: [details.sx, details.sy, details.sz] as const,

@@ -1,6 +1,6 @@
 """Utility functions for building database queries."""
 
-from typing import Literal, Optional
+from typing import Literal
 from uuid import UUID
 
 from sqlmodel import col, select
@@ -16,9 +16,9 @@ from lightly_studio.type_definitions import QueryType
 class VideoFrameFilter(GridFilterBase):
     """Encapsulates filter parameters for querying video frames."""
 
-    frame_number: Optional[FilterDimensions] = None
-    video_id: Optional[UUID] = None
-    sample_filter: Optional[SampleFilter] = None
+    frame_number: FilterDimensions | None = None
+    video_id: UUID | None = None
+    sample_filter: SampleFilter | None = None
     filter_type: Literal["video_frame"] = "video_frame"
 
     def apply(self, query: QueryType) -> QueryType:

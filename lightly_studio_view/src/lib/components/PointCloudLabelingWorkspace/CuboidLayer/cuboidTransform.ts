@@ -1,6 +1,7 @@
 import type { Object3D } from 'three';
 import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
 import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
+import { MIN_CUBOID_SIZE } from './CuboidFaceResize/cuboidFaceResize';
 
 export function captureTransformSnapshot(obj: Object3D) {
     return {
@@ -19,11 +20,39 @@ export function restoreTransformSnapshot(
     obj.scale.copy(snapshot.scale);
 }
 
-export const GIZMO_MODES: Partial<Record<Domain.WorkspaceTool, 'translate' | 'rotate' | 'scale'>> =
-    {
-        translate: 'translate',
-        rotate: 'rotate'
+const EDIT_MODES = ['translate', 'rotate', 'resize'] as const;
+
+/**
+ * Returns the edit handles to show on a selected cuboid. Every view shows all handles, so a
+ * selected cuboid is editable without a tool change.
+ */
+export function getCuboidEditModes({
+    tool,
+    isEditingMode
+}: {
+    tool: Domain.WorkspaceTool;
+    isEditingMode: boolean;
+}): (typeof EDIT_MODES)[number][] {
+    if (!isEditingMode || tool === 'create-cuboid') return [];
+    return [...EDIT_MODES];
+}
+
+/**
+ * Returns the axes of a gizmo. Rotation is limited to one axis: the yaw in perspective, and the
+ * world axis perpendicular to the view in orthographic views.
+ */
+export function getCuboidGizmoOptions(mode: string, cameraMode: Domain.CameraMode) {
+    if (mode !== 'rotate')
+        return { space: 'local' as const, showX: true, showY: true, showZ: true };
+    if (cameraMode === 'perspective')
+        return { space: 'local' as const, showX: false, showY: false, showZ: true };
+    return {
+        space: 'world' as const,
+        showX: cameraMode === 'side',
+        showY: cameraMode === 'front',
+        showZ: cameraMode === 'top'
     };
+}
 
 type CuboidTransformPayload = Parameters<
     ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform']
@@ -50,9 +79,9 @@ export function buildCuboidTransformPayload(
     const rotation: Domain.Quaternion = [q.x, q.y, q.z, q.w];
     const baseSize = currentSize ?? annotation.size;
     const size: Domain.Vector3 = [
-        baseSize[0] * obj.scale.x,
-        baseSize[1] * obj.scale.y,
-        baseSize[2] * obj.scale.z
+        Math.max(baseSize[0] * obj.scale.x, MIN_CUBOID_SIZE),
+        Math.max(baseSize[1] * obj.scale.y, MIN_CUBOID_SIZE),
+        Math.max(baseSize[2] * obj.scale.z, MIN_CUBOID_SIZE)
     ];
     obj.scale.set(1, 1, 1);
     return { annotationId: annotation.id, frameId: annotation.frameId, center, rotation, size };

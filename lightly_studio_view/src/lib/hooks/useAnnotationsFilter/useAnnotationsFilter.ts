@@ -1,10 +1,10 @@
 import { derived, get, readonly, writable, type Readable } from 'svelte/store';
-import type { AnnotationsFilter } from '$lib/api/lightly_studio_local';
+import type { AnnotationsFilter, UnannotatedSampleCount } from '$lib/api/lightly_studio_local';
 import type { Annotation } from '$lib/types';
 import type { AnnotationLabel } from '$lib/services/types';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useTags } from '../useTags/useTags';
-import { usePostHog } from '$lib/hooks';
+import { usePostHog, useUnannotatedSamplesFilter } from '$lib/hooks';
 
 /**
  * Low-level hook: manages selected annotation label IDs and produces an AnnotationsFilter.
@@ -15,6 +15,7 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
     const {
         selectedAnnotationFilterIds,
         setSelectedAnnotationFilterIds: toggleSelectedAnnotationFilterId,
+        replaceSelectedAnnotationFilterIds,
         clearSelectedAnnotationFilterIds
     } = useGlobalStorage();
 
@@ -65,6 +66,7 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
         annotationLabelIds: readonly(annotationLabelIds),
         annotationFilter: readonly(annotationFilter),
         toggleSelectedAnnotationFilterId,
+        replaceSelectedAnnotationFilterIds,
         clearSelectedAnnotationFilterIds
     };
 }
@@ -94,6 +96,7 @@ export function useAnnotationsFilter({
         annotationLabelIds,
         annotationFilter,
         toggleSelectedAnnotationFilterId,
+        replaceSelectedAnnotationFilterIds,
         clearSelectedAnnotationFilterIds
     } = useSelectedAnnotationsFilter(collectionId);
 
@@ -104,6 +107,12 @@ export function useAnnotationsFilter({
 
     const setAnnotationCounts = (counts: AnnotationCount[] | undefined) => {
         annotationCountsStore.set(counts);
+    };
+
+    const { includeUnannotatedSamples } = useUnannotatedSamplesFilter();
+    const unannotatedSampleCountStore = writable<UnannotatedSampleCount | undefined>(undefined);
+    const setUnannotatedSampleCount = (count: UnannotatedSampleCount | undefined) => {
+        unannotatedSampleCountStore.set(count);
     };
 
     // Name -> ID mapping
@@ -153,13 +162,27 @@ export function useAnnotationsFilter({
 
     // UI-ready rows for LabelsMenu
     const annotationFilterRows: Readable<Annotation[]> = derived(
-        [annotationCountsStore, selectedAnnotationFilterNames],
-        ([$counts, $selectedNames]) => {
+        [
+            annotationCountsStore,
+            selectedAnnotationFilterNames,
+            unannotatedSampleCountStore,
+            includeUnannotatedSamples
+        ],
+        ([$counts, $selectedNames, $unannotatedCount, $includeUnannotated]) => {
             if (!$counts) return [];
-            return $counts.map((annotation) => ({
+            const classRows = $counts.map((annotation) => ({
                 ...annotation,
                 selected: $selectedNames.includes(annotation.label_name)
             }));
+            // Without annotation classes, every sample is unannotated and the row filters nothing.
+            if (!$unannotatedCount || classRows.length === 0) return classRows;
+            const noAnnotationsRow = {
+                label_name: 'No annotations',
+                ...$unannotatedCount,
+                selected: $includeUnannotated,
+                isNoAnnotationsRow: true
+            };
+            return [noAnnotationsRow, ...classRows];
         }
     );
 
@@ -185,6 +208,27 @@ export function useAnnotationsFilter({
         });
     };
 
+    // Replace the selection with exactly these label names. Also drops IDs that are not in
+    // the label map, e.g. from another dataset, so they cannot keep filtering the grid.
+    const setAnnotationFilterSelection = (labelNames: string[], collectionId?: string) => {
+        const labelsMap = get(annotationFilterLabels);
+        const previous = new Set(get(selectedAnnotationFilterIds));
+        const next = new Set(labelNames.map((name) => labelsMap[name]).filter(Boolean));
+        replaceSelectedAnnotationFilterIds(next);
+
+        const idToName = new Map(Object.entries(labelsMap).map(([name, id]) => [id, name]));
+        const track = (labelId: string, action: 'selected' | 'unselected') =>
+            trackEvent('grid_filter_toggled', {
+                collection_id: collectionId,
+                filter_type: 'annotation_label',
+                filter_value: idToName.get(labelId) ?? labelId,
+                action,
+                active_count: next.size
+            });
+        next.forEach((labelId) => !previous.has(labelId) && track(labelId, 'selected'));
+        previous.forEach((labelId) => !next.has(labelId) && track(labelId, 'unselected'));
+    };
+
     return {
         selectedAnnotationFilterIds,
         selectedAnnotationFilterIdsArray,
@@ -194,8 +238,11 @@ export function useAnnotationsFilter({
         annotationFilterLabels,
         selectedAnnotationFilterNames,
         setAnnotationCounts,
+        setUnannotatedSampleCount,
+        includeUnannotatedSamples,
         pruneInvalidSelections,
         toggleAnnotationFilterSelection,
+        setAnnotationFilterSelection,
         toggleSelectedAnnotationFilterId,
         clearSelectedAnnotationFilterIds
     };

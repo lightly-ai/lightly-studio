@@ -221,6 +221,26 @@ describe('useKeyboardPan', () => {
         unmount();
     });
 
+    it('pans when a button outside the container has focus and the pointer is over the container', () => {
+        const { container, panByPixels, unmount } = setupKeyboardPan();
+
+        const outsideButton = document.createElement('button');
+        document.body.appendChild(outsideButton);
+        outsideButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        container.dispatchEvent(new MouseEvent('mouseenter'));
+
+        const spaceDownEvent = dispatchKeyboardEvent(outsideButton, 'keydown', {
+            key: ' ',
+            code: 'Space'
+        });
+        dispatchKeyboardEvent(outsideButton, 'keydown', { key: 'w', code: 'KeyW' });
+
+        expect(spaceDownEvent.defaultPrevented).toBe(true);
+        expect(panByPixels).toHaveBeenNthCalledWith(1, 0, 10);
+
+        unmount();
+    });
+
     it('ignores keyboard pan hotkeys from text input targets', () => {
         const { container, panByPixels, unmount } = setupKeyboardPan();
         const input = document.createElement('input');

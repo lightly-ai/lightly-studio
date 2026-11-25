@@ -1,6 +1,6 @@
 """Count video frames annotations."""
 
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session, asc, col, func, select
@@ -19,7 +19,7 @@ from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_co
 def get_video_frames_count_annotation_views(
     session: Session,
     collection_id: UUID,
-    filters: Optional[VideoFrameFilter] = None,
+    filters: VideoFrameFilter | None = None,
 ) -> list[CountAnnotationsView]:
     """Count the annotations by video frames."""
     unfiltered_query = (

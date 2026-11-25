@@ -1,11 +1,3 @@
-/** Format a duration in seconds as `m:ss` (e.g. 65 → "1:05"). */
-export function formatTime(timeS: number): string {
-    const totalSeconds = Math.max(0, Math.floor(timeS));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
 /** Clamp a percentage to the 0–100 range. */
 export function clampPercent(value: number): number {
     return Math.min(100, Math.max(0, value));

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computeCuboidVertices, createCuboidWireframeGeometry } from './cuboidGeometry';
+import {
+    computeCuboidVertices,
+    createCuboidRectangleGeometry,
+    createCuboidWireframeGeometry
+} from './cuboidGeometry';
 
 describe('cuboidGeometry', () => {
     it('computes world-space vertices from centre, size, and rotation', () => {
@@ -45,5 +49,16 @@ describe('cuboidGeometry', () => {
         } finally {
             geometry.dispose();
         }
+    });
+});
+
+describe('createCuboidRectangleGeometry', () => {
+    it('flattens the depth axis into a four-edge rectangle', () => {
+        const geometry = createCuboidRectangleGeometry([4, 2, 6], 0);
+        geometry.computeBoundingBox();
+
+        expect(geometry.attributes.instanceStart.count).toBe(4);
+        expect(geometry.boundingBox?.min.toArray()).toEqual([0, -1, -3]);
+        expect(geometry.boundingBox?.max.toArray()).toEqual([0, 1, 3]);
     });
 });

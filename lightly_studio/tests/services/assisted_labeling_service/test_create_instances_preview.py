@@ -25,6 +25,7 @@ def test_create_instances_preview__text() -> None:
     image = helpers.make_image(width=4, height=2)
 
     response = assisted_labeling_service.create_instances_preview(
+        user_email=None,
         provider=provider,
         image=image,
         request=_request(image=image, text_prompt="dog", max_instances=2),
@@ -47,6 +48,7 @@ def test_create_instances_preview__boxes() -> None:
     image = helpers.make_image(width=100, height=50)
 
     assisted_labeling_service.create_instances_preview(
+        user_email=None,
         provider=provider,
         image=image,
         request=_request(
@@ -75,6 +77,7 @@ def test_create_instances_preview__max_instances() -> None:
     image = helpers.make_image(width=4, height=2)
 
     response = assisted_labeling_service.create_instances_preview(
+        user_email=None,
         provider=provider,
         image=image,
         request=_request(image=image, text_prompt="dog", max_instances=2),
@@ -93,6 +96,7 @@ def test_create_instances_preview__single_instance() -> None:
     image = helpers.make_image(width=4, height=2)
 
     response = assisted_labeling_service.create_instances_preview(
+        user_email=None,
         provider=provider,
         image=image,
         request=_request(

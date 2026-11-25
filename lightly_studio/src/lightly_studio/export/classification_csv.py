@@ -7,8 +7,11 @@ from collections.abc import Iterable
 from pathlib import Path
 from uuid import UUID
 
+from sqlmodel import Session
+
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.video.video_sample import VideoSample
+from lightly_studio.export import annotation_batches
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 CSV_FIELDNAMES = (
@@ -20,6 +23,7 @@ CSV_FIELDNAMES = (
 
 
 def write_classifications_csv(
+    session: Session,
     samples: Iterable[ImageSample | VideoSample],
     output_csv: Path,
     annotation_collection_id: UUID | None,
@@ -27,6 +31,7 @@ def write_classifications_csv(
     """Write whole-sample classification annotations as long-form CSV.
 
     Args:
+        session: The database session.
         samples: Image or video samples whose classifications are exported.
         output_csv: Destination CSV file.
         annotation_collection_id: If provided, only annotations from this annotation
@@ -35,17 +40,15 @@ def write_classifications_csv(
     with output_csv.open("w", encoding="utf-8", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=CSV_FIELDNAMES)
         writer.writeheader()
-        for sample in samples:
-            for annotation in sample.sample_table.annotations:
-                if annotation.annotation_type != AnnotationType.CLASSIFICATION:
-                    continue
+        for sample, annotations in annotation_batches.iter_sample_annotations(
+            session=session,
+            samples=samples,
+            annotation_types=[AnnotationType.CLASSIFICATION],
+            annotation_collection_id=annotation_collection_id,
+        ):
+            for annotation in annotations:
                 # TODO(Igor, 08/2026): Add support for exporting temporal spans.
                 if annotation.temporal_span_details is not None:
-                    continue
-                if (
-                    annotation_collection_id is not None
-                    and annotation.annotation_collection_id != annotation_collection_id
-                ):
                     continue
                 writer.writerow(
                     {

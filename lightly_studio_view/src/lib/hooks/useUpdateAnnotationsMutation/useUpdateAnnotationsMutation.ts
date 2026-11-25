@@ -27,8 +27,10 @@ export const useUpdateAnnotationsMutation = ({
         invalidateEvaluationRunsQueries();
     };
 
-    const updateAnnotations = async (inputs: AnnotationUpdateInput[]) => {
-        const collectionId = getCollectionId();
+    const updateAnnotations = async (
+        inputs: AnnotationUpdateInput[],
+        collectionId: string = getCollectionId()
+    ) => {
         await mutation.mutateAsync({
             path: {
                 collection_id: collectionId

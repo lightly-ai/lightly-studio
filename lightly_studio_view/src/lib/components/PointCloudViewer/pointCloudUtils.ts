@@ -10,7 +10,8 @@ export type ColorMode =
     | 'density'
     | 'height-distance'
     | 'height-density'
-    | 'rgb';
+    | 'rgb'
+    | 'camera-rgb';
 
 /** Neutral gray used as a fallback color for points without explicit data. */
 const NEUTRAL_GRAY = 0.5;
@@ -47,13 +48,13 @@ interface BuildColorBufferParams {
 export function buildColorBuffer(params: BuildColorBufferParams): void {
     const { colorMode, colors, count, pointColors } = params;
 
-    if (colorMode === 'rgb' && pointColors) {
-        colors.fill(NEUTRAL_GRAY, 0, count * 3);
+    if ((colorMode === 'rgb' || colorMode === 'camera-rgb') && pointColors) {
         colors.set(pointColors.subarray(0, count * 3), 0);
+        colors.fill(NEUTRAL_GRAY, Math.min(pointColors.length, count * 3), count * 3);
         return;
     }
 
-    if (colorMode === 'none' || colorMode === 'rgb') {
+    if (colorMode === 'none' || colorMode === 'rgb' || colorMode === 'camera-rgb') {
         colors.fill(NEUTRAL_GRAY, 0, count * 3);
         return;
     }
@@ -74,17 +75,22 @@ function getGradientMetrics(mode: ColorMode): GradientMetric[] {
 /** Color points by one or more normalized spatial metrics. */
 function fillGradient(params: BuildColorBufferParams, metrics: GradientMetric[]): void {
     const { count, colors } = params;
-    const normalizedValues = metrics.map((metric) => {
+    const gradients = metrics.map((metric) => {
         const values = getMetricValues(params, metric);
         const [minVal, maxVal] =
             metric === 'intensity' && params.intensityRange
                 ? params.intensityRange
                 : computeRange((i) => values[i], count);
         const invRange = maxVal === minVal ? 0 : 1 / (maxVal - minVal);
-        return values.map((value) => Math.max(0, Math.min(1, (value - minVal) * invRange)));
+        return { values, minVal, invRange };
     });
     for (let i = 0; i < count; i++) {
-        const t = normalizedValues.reduce((sum, values) => sum + values[i], 0) / metrics.length;
+        let sum = 0;
+        for (let metric = 0; metric < gradients.length; metric++) {
+            const { values, minVal, invRange } = gradients[metric];
+            sum += Math.fround(Math.max(0, Math.min(1, (values[i] - minVal) * invRange)));
+        }
+        const t = sum / gradients.length;
         turboInto(metrics[0] === 'intensity' ? Math.sqrt(t) : t, colors, i * 3);
     }
 }
@@ -147,6 +153,9 @@ export function computeActiveBounds(positions: Float32Array, count: number): Box
 
 /**
  * Compute camera placement from a precomputed bounding box.
+ *
+ * The orbit target sits on the floor of the bounds rather than at their center, so
+ * zooming and panning stay anchored to the ground instead of a point in mid-air.
  */
 export function computeCameraPlacement(bounds: Box3): CameraPlacement {
     if (bounds.isEmpty()) {
@@ -157,9 +166,10 @@ export function computeCameraPlacement(bounds: Box3): CameraPlacement {
     const size = bounds.getSize(new Vector3());
     const maxDim = Math.max(size.x, size.y, size.z, 1);
     const distance = maxDim * 1.5;
+    const floor = bounds.min.z;
 
     return {
-        position: [center.x + distance * 0.5, center.y + distance * 0.5, center.z + distance],
-        target: [center.x, center.y, center.z]
+        position: [center.x + distance * 0.5, center.y + distance * 0.5, floor + distance],
+        target: [center.x, center.y, floor]
     };
 }

@@ -1,5 +1,7 @@
 <script lang="ts">
     import SmartSelectPopUp from '$lib/components/SampleDetails/SmartSelectPopUp/SmartSelectPopUp.svelte';
+    import FindInstancesPopUp from '$lib/components/SampleDetails/FindInstancesPopUp/FindInstancesPopUp.svelte';
+    import { LabelWithModelPopUp } from '$lib/components/SampleDetails/LabelWithModelPopUp';
     import type { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
 
     interface Props {
@@ -11,6 +13,7 @@
 
     const toolState = $derived(assistedLabeling.state);
     const smartSelect = $derived(assistedLabeling.smartSelect);
+    const instances = $derived(assistedLabeling.instances);
 </script>
 
 {#if assistedLabeling.activeTool === 'smart-select' && !assistedLabeling.isPanning}
@@ -21,9 +24,37 @@
         annotationClass={assistedLabeling.smartSelectClass}
         onAnnotationClassChange={(value) => (toolState.smartSelectClass = value)}
         canSave={smartSelect.canSave}
+        isSaving={smartSelect.isSaving}
         isPending={smartSelect.isPending}
         needsPositivePoint={smartSelect.needsPositivePoint}
         onSave={() => void smartSelect.save()}
         onClear={smartSelect.clear}
+    />
+{:else if assistedLabeling.activeTool === 'find-instances' && !assistedLabeling.isPanning}
+    <FindInstancesPopUp
+        {collectionId}
+        prompt={toolState.instancesPrompt}
+        onPromptChange={(value) => (toolState.instancesPrompt = value)}
+        maxInstances={toolState.maxInstances}
+        onMaxInstancesChange={(value) => (toolState.maxInstances = value)}
+        annotationClass={assistedLabeling.instancesClass}
+        onAnnotationClassChange={(value) => (toolState.instancesClass = value)}
+        saveAs={toolState.saveAs}
+        onSaveAsChange={(value) => (toolState.saveAs = value)}
+        isDrawingBox={toolState.isDrawingInstancesBox}
+        onDrawBoxChange={(value) => (toolState.isDrawingInstancesBox = value)}
+        {instances}
+        onClear={assistedLabeling.clearInstances}
+    />
+{:else if assistedLabeling.activeTool === 'label-with-model' && !assistedLabeling.isPanning}
+    <LabelWithModelPopUp
+        models={assistedLabeling.labelingModels}
+        model={assistedLabeling.selectedModel}
+        onModelChange={(value) => (toolState.modelId = value)}
+        threshold={toolState.modelThreshold}
+        onThresholdChange={(value) => (toolState.modelThreshold = value)}
+        saveAs={assistedLabeling.modelSaveAs}
+        onSaveAsChange={(value) => (toolState.saveAs = value)}
+        labelWithModel={assistedLabeling.labelWithModel}
     />
 {/if}

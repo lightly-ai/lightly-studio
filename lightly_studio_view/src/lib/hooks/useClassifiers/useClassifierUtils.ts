@@ -48,7 +48,7 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
                 parseAs: 'blob'
             });
 
-            const contentDisposition = response.response.headers.get('content-disposition');
+            const contentDisposition = response.response?.headers.get('content-disposition');
             const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
             const filename = filenameMatch?.[1] ?? `classifier_${classifierId}.pkl`;
 

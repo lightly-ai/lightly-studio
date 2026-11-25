@@ -48,8 +48,8 @@
 </script>
 
 <!--
-    Keep keys from the app shortcuts on window. Let Escape through: Svelte skips
-    the Bits UI document listener that closes the dialog after stopPropagation.
+    Keep keys from the app shortcuts on window. Let Escape through unless it cancels
+    recording: Svelte skips the Bits UI listener that closes the dialog after stopPropagation.
 -->
 <svelte:document
     onkeydown={(e) => {
@@ -76,8 +76,17 @@
                 <SettingsTabs bind:value={activeTab} {dialogState} />
 
                 <Dialog.Footer
-                    class="flex-row justify-end space-x-2 border-t border-border px-6 py-4"
+                    class="flex-row items-center justify-end space-x-2 border-t border-border px-6 py-4"
                 >
+                    {#if activeTab === 'annotation-classes'}
+                        <p class="mr-auto text-xs text-muted-foreground">
+                            Changes to annotation classes save immediately.
+                        </p>
+                    {:else if activeTab === 'annotation-sources'}
+                        <p class="mr-auto text-xs text-muted-foreground">
+                            Changes to annotation sources save immediately.
+                        </p>
+                    {/if}
                     <Button
                         variant="outline"
                         buttonProps={{ type: 'button', onclick: () => setOpen(false) }}
@@ -86,7 +95,9 @@
                     </Button>
                     <Button
                         variant="default"
-                        buttonProps={{ type: 'submit', disabled: dialogState.isSaving }}
+                        buttonProps={{ type: 'submit' }}
+                        isPending={dialogState.isSaving}
+                        disabledReason={dialogState.hasChanges ? undefined : 'No changes to save'}
                     >
                         {dialogState.isSaving ? 'Saving...' : 'Save changes'}
                     </Button>

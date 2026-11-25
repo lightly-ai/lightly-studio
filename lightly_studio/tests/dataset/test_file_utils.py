@@ -5,22 +5,21 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 import requests
-from pytest_mock import MockerFixture
+from pytest_mock import MockerFixture, MockType
 
 from lightly_studio.dataset.file_utils import download_file_if_does_not_exist
 
 
-def _mock_response(mocker: MockerFixture) -> MagicMock:
+def _mock_response(mocker: MockerFixture) -> MockType:
     """Helper to create a mock requests response."""
-    mock_resp = MagicMock()
-    mock_resp.raise_for_status = MagicMock()
+    mock_resp: MockType = mocker.MagicMock()
+    mock_resp.raise_for_status = mocker.MagicMock()
     mock_resp.raw = io.BytesIO(b"test")
-    mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-    mock_resp.__exit__ = MagicMock(return_value=False)
+    mock_resp.__enter__ = mocker.MagicMock(return_value=mock_resp)
+    mock_resp.__exit__ = mocker.MagicMock(return_value=False)
     mocker.patch.object(requests, "get", return_value=mock_resp)
     return mock_resp
 

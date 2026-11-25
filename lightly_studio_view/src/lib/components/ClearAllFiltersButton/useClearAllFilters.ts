@@ -5,6 +5,7 @@ import {
     useGlobalStorage,
     useImageFilters,
     useTags,
+    useUnannotatedSamplesFilter,
     useVideoFramesBounds
 } from '$lib/hooks';
 import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
@@ -95,14 +96,19 @@ function useTagAndLabelFilters(collectionId: string, includeLabels = true): Filt
         collection_id: collectionId,
         autoLoad: false
     });
+    const { includeUnannotatedSamples, setIncludeUnannotatedSamples } =
+        useUnannotatedSamplesFilter();
     return {
         isActive: derived(
-            [tagsSelected, storage.selectedAnnotationFilterIds],
-            ([$tags, $labels]) => $tags.size > 0 || (includeLabels && $labels.size > 0)
+            [tagsSelected, storage.selectedAnnotationFilterIds, includeUnannotatedSamples],
+            ([$tags, $labels, $includeUnannotated]) =>
+                $tags.size > 0 || (includeLabels && ($labels.size > 0 || $includeUnannotated))
         ),
         clear: () => {
             clearTagsSelected();
-            if (includeLabels) storage.clearSelectedAnnotationFilterIds();
+            if (!includeLabels) return;
+            storage.clearSelectedAnnotationFilterIds();
+            setIncludeUnannotatedSamples(false);
         }
     };
 }

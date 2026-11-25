@@ -2,7 +2,7 @@
     import type { BreadcrumbLevel } from './types';
     import { findNavigationPath, buildBreadcrumbLevels } from './utils';
     import { page } from '$app/state';
-    import { LayoutDashboard } from '@lucide/svelte';
+    import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
     import { type CollectionView } from '$lib/api/lightly_studio_local';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';

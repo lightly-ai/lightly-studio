@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import aliased, joinedload, load_only
+from sqlalchemy.orm import aliased, joinedload, load_only, selectinload
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
@@ -26,11 +26,13 @@ from lightly_studio.models.annotation.annotation_base import (
     VideoAnnotationView,
     VideoFrameAnnotationView,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver, embedding_region_resolver
+from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 from lightly_studio.resolvers.annotations import annotation_ordering
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
@@ -143,11 +145,19 @@ def get_all_with_payload(
 
     rows = session.exec(annotations_query).all()
 
+    annotations_list = [row[0] for row in rows]
+    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
+        session=session, annotations=annotations_list
+    )
+
     return AnnotationWithPayloadAndCountView(
         total_count=total_count,
         next_cursor=next_cursor,
         annotations=_build_annotation_views(
-            rows=rows, sample_type=sample_type, has_distance=distance_expr is not None
+            rows=rows,
+            sample_type=sample_type,
+            has_distance=distance_expr is not None,
+            parent_track_class_names=parent_track_class_names,
         ),
     )
 
@@ -156,6 +166,7 @@ def _build_annotation_views(
     rows: Sequence[Any],
     sample_type: SampleType,
     has_distance: bool,
+    parent_track_class_names: Mapping[UUID, str],
 ) -> list[AnnotationWithPayloadView]:
     """Turn query rows into views, unpacking the distance column when present.
 
@@ -175,6 +186,7 @@ def _build_annotation_views(
                 annotation=AnnotationView.from_annotation_table(
                     annotation=annotation,
                     order_value=order_by_module.get_order_value(row=row),
+                    parent_track_class_names=parent_track_class_names,
                 ),
                 parent_sample_data=_serialize_annotation_payload(payload=payload),
                 similarity_score=similarity_score,
@@ -198,6 +210,11 @@ def _build_base_query(
             )
             .join(SampleFromImage, col(SampleFromImage.sample_id) == col(ImageTable.sample_id))
             .options(
+                selectinload(AnnotationBaseTable.sample).selectinload(SampleTable.tags),
+                selectinload(AnnotationBaseTable.object_detection_details),
+                selectinload(AnnotationBaseTable.cuboid_3d_details),
+                selectinload(AnnotationBaseTable.segmentation_details),
+                selectinload(AnnotationBaseTable.polygon_details),
                 load_only(
                     ImageTable.file_path_abs,  # type: ignore[arg-type]
                     ImageTable.sample_id,  # type: ignore[arg-type]
@@ -219,11 +236,21 @@ def _build_base_query(
             )
             .join(VideoFrameTable.video)
             .options(
+                selectinload(AnnotationBaseTable.sample).selectinload(SampleTable.tags),
+                selectinload(AnnotationBaseTable.object_detection_details),
+                selectinload(AnnotationBaseTable.cuboid_3d_details),
+                selectinload(AnnotationBaseTable.segmentation_details),
+                selectinload(AnnotationBaseTable.polygon_details),
                 load_only(VideoFrameTable.sample_id),  # type: ignore[arg-type]
                 joinedload(VideoFrameTable.video).load_only(
                     VideoTable.height,  # type: ignore[arg-type]
                     VideoTable.width,  # type: ignore[arg-type]
                     VideoTable.file_path_abs,  # type: ignore[arg-type]
+                ),
+            )
+            .options(
+                joinedload(AnnotationBaseTable.object_track).joinedload(
+                    ObjectTrackTable.parent_object_track
                 ),
             )
         )

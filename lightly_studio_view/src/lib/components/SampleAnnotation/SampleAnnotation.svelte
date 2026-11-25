@@ -6,10 +6,12 @@
         SampleAnnotationSegmentationRLE
     } from '$lib/components';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { useCustomSourceColors } from '$lib/hooks';
+    import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-    import type { Annotation } from '$lib/services/types';
+    import { isPolygonAnnotation, type Annotation } from '$lib/services/types';
     import type { BoundingBox } from '$lib/types';
-    import { getColorByLabel, withAlpha } from '$lib/utils';
+    import { getColorByLabel, getColorBySource, withAlpha } from '$lib/utils';
     import { getConstrainedCoordinates } from '$lib/utils/getConstrainedCoordinates';
     import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
     import { getBoundingBox, rleToSvgPath } from './utils';
@@ -23,11 +25,14 @@
         scale = 1,
         constraintBox,
         onBoundingBoxChanged,
+        onDragStart,
+        onDragStop,
         highlight = 'auto',
         prerenderedDataUrl,
         prerenderedHeight,
         colorBySource,
-        isSelectable = false
+        isSelectable = false,
+        maskOpacity = IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity
     }: {
         annotation: Annotation;
         showLabel?: boolean;
@@ -37,6 +42,9 @@
         scale?: number;
         constraintBox?: BoundingBox;
         onBoundingBoxChanged?: (newBbox: BoundingBox) => void;
+        // A move or resize of the box starts or stops.
+        onDragStart?: () => void;
+        onDragStop?: () => void;
         highlight?: 'active' | 'disabled' | 'auto';
         prerenderedDataUrl?: string;
         prerenderedHeight?: number;
@@ -46,54 +54,65 @@
         // Renders a click target shaped like the mask when its bounding box is hidden.
         // Only set it inside a selectable parent, so other overlays stay click-through.
         isSelectable?: boolean;
+        // Opacity of the segmentation mask before the custom label alpha is applied.
+        maskOpacity?: number;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
+    const { customSourceColorsStore } = useCustomSourceColors();
     const { multipleSourcesVisible, collectionIdToName } = useAnnotationCollectionsFilter();
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
-    const colorLabel = $derived.by(() => {
+    // The source name when coloring by source, otherwise undefined.
+    const colorSource: string | undefined = $derived.by(() => {
         const bySource = colorBySource ?? $multipleSourcesVisible;
-        if (!bySource) return label;
-        return $collectionIdToName[annotation.annotation_collection_id] ?? label;
+        if (!bySource) return undefined;
+        return $collectionIdToName[annotation.annotation_collection_id];
     });
 
+    const customColor = $derived(
+        colorSource !== undefined
+            ? $customSourceColorsStore[colorSource]
+            : $customLabelColorsStore[label]
+    );
+    const getColor = (alpha: number) =>
+        colorSource !== undefined
+            ? getColorBySource(colorSource, alpha)
+            : getColorByLabel(label, alpha);
+
     const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
+    // TODO(Michal, 11/2026): Polygons are read-only in the GUI until polygon editing is added.
+    const isPolygon = $derived(isPolygonAnnotation(annotation));
 
     const annotationId = $derived(annotation.sample_id);
 
-    const colorText = $derived(getColorByLabel(colorLabel, 1));
+    const colorText = $derived(getColor(1));
 
     const colorStroke = $derived.by(() => {
-        const color =
-            $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 1).color;
+        const color = customColor?.color ?? getColor(1).color;
         if (highlight === 'disabled') return withAlpha(color, 0.1);
         return color;
     });
 
     const colorFill = $derived.by(() => {
-        const color =
-            $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 0.4).color;
-
+        const color = customColor?.color ?? getColor(0.4).color;
         if (highlight === 'disabled') return withAlpha(color, 0.1);
         if (highlight === 'active') return withAlpha(color, 0);
         return color;
     });
 
-    const segmentationMaskOpacity = $derived.by(() => {
+    const maskImageOpacity = $derived.by(() => {
         if (highlight === 'disabled') {
-            return 0.15;
+            return 0.25 * maskOpacity;
         }
 
-        const alpha = $customLabelColorsStore[colorLabel]?.alpha ?? 1.0;
-        return alpha * 0.6;
+        const alpha = customColor?.alpha ?? 1.0;
+        return alpha * maskOpacity;
     });
 
     // Do not fill the bounding box if the annotation contains a segmentation mask.
-    const boundingBoxOpacity = $derived(
-        segmentationMask ? 0 : ($customLabelColorsStore[colorLabel]?.alpha ?? 1.0) * 0.4
-    );
+    const boundingBoxOpacity = $derived(segmentationMask ? 0 : (customColor?.alpha ?? 1.0) * 0.4);
 
     let boundingBox = $state<BoundingBox>(untrack(() => getBoundingBox(annotation)));
 
@@ -109,7 +128,7 @@
             : newBbox;
     };
 
-    const onDragEnd = (newBbox: BoundingBox) => {
+    const onBboxCommit = (newBbox: BoundingBox) => {
         const finalBbox = constraintBox
             ? getConstrainedCoordinates(newBbox, constraintBox, true)
             : newBbox;
@@ -152,15 +171,15 @@
             segmentation={segmentationMask}
             width={imageWidth}
             {colorFill}
-            opacity={segmentationMaskOpacity}
+            opacity={maskImageOpacity}
             {prerenderedDataUrl}
             {prerenderedHeight}
         />
     {/if}
 
     {#if showBoundingBox}
-        <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
-        {#if isResizable && constraintBox && !segmentationMask}
+        <!--Disable resizable rectangle for segmentation masks and polygons since we don’t support it yet.-->
+        {#if isResizable && constraintBox && !segmentationMask && !isPolygon}
             <ResizableRectangle
                 bind:bbox={boundingBox}
                 {colorStroke}
@@ -169,7 +188,9 @@
                 {scale}
                 {onResize}
                 {onMove}
-                {onDragEnd}
+                {onDragStart}
+                {onDragStop}
+                {onBboxCommit}
             />
         {:else}
             <SampleAnnotationBox

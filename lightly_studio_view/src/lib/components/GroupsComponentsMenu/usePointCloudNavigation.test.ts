@@ -22,7 +22,7 @@ describe('usePointCloudNavigation', () => {
             })
         ).toBe(true);
         expect(gotoMock).toHaveBeenCalledWith(
-            '/datasets/dataset/group/collection/point-clouds/sample?group_id=group',
+            '/datasets/dataset/group/collection/mcap-sequences/sample?group_id=group',
             { invalidateAll: true }
         );
     });

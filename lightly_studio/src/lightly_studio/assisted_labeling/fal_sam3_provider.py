@@ -23,6 +23,7 @@ from lightly_studio.assisted_labeling.provider import (
     Prediction,
     ProviderError,
     ProviderImage,
+    ProviderNotCalledError,
     ProviderUnavailableError,
     SegmentationPrompt,
 )
@@ -66,6 +67,9 @@ class FalSam3Provider:
     needs a restart.
     """
 
+    vendor = "fal"
+    model = ENDPOINT
+
     def __init__(self) -> None:
         """Creates the provider."""
         self._client: SyncClient | None = None
@@ -84,7 +88,10 @@ class FalSam3Provider:
     def segment(self, image: ProviderImage, prompt: SegmentationPrompt) -> list[Prediction]:
         """Runs SAM 3 on fal.ai and returns the predicted masks."""
         client = self._get_client()
-        image_url = self._get_image_url(client=client, image=image)
+        try:
+            image_url = self._get_image_url(client=client, image=image)
+        except ProviderError as error:
+            raise ProviderNotCalledError(str(error)) from error
         # fal-client retries connection errors and status 408, 409 and 429. With
         # `start_timeout`, it does not retry timeouts of `run`, but it retries upload timeouts.
         import fal_client  # noqa: PLC0415

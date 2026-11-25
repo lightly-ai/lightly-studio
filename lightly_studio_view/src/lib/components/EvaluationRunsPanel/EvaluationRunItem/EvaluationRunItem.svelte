@@ -2,7 +2,7 @@
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
     import { Typography } from '$lib/components';
     import { formatDate } from '$lib/utils';
-    import { TriangleAlert } from '@lucide/svelte';
+    import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
     import EvaluationRunSummary from './EvaluationRunSummary/EvaluationRunSummary.svelte';
     import EvaluationRunConfiguration from './EvaluationRunConfiguration/EvaluationRunConfiguration.svelte';
     import { slide } from 'svelte/transition';

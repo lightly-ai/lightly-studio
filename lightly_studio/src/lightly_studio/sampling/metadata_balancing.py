@@ -6,12 +6,12 @@ import enum
 import logging
 from collections import Counter
 from collections.abc import Mapping, Sequence
+from typing import TypeAlias
 from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
 from sqlmodel import Session
-from typing_extensions import TypeAlias
 
 from lightly_studio.models.metadata import CATEGORICAL_TYPE_NAMES
 from lightly_studio.resolvers.metadata_resolver import sample as sample_metadata_resolver

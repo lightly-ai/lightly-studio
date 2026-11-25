@@ -3,6 +3,9 @@
 from lightly_studio.services.annotations_service.create_annotation import (
     create_annotation,
 )
+from lightly_studio.services.annotations_service.create_annotations import (
+    create_annotations,
+)
 from lightly_studio.services.annotations_service.delete_annotation import (
     delete_annotation,
 )
@@ -21,6 +24,12 @@ from lightly_studio.services.annotations_service.update_annotation_cuboid_3d imp
 from lightly_studio.services.annotations_service.update_annotation_label import (
     update_annotation_label,
 )
+from lightly_studio.services.annotations_service.update_annotation_object_track import (
+    update_annotation_object_track,
+)
+from lightly_studio.services.annotations_service.update_annotation_polygons import (
+    update_annotation_polygons,
+)
 from lightly_studio.services.annotations_service.update_annotations import (
     update_annotations,
 )
@@ -33,12 +42,15 @@ from lightly_studio.services.annotations_service.update_temporal_span import (
 
 __all__ = [
     "create_annotation",
+    "create_annotations",
     "delete_annotation",
     "get_annotation_by_id",
     "update_annotation",
     "update_annotation_bounding_box",
     "update_annotation_cuboid_3d",
     "update_annotation_label",
+    "update_annotation_object_track",
+    "update_annotation_polygons",
     "update_annotations",
     "update_segmentation_mask",
     "update_temporal_span",

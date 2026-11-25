@@ -71,7 +71,7 @@ describe('useClassifiers Hook', () => {
             const testError = new Error('Test error');
 
             // Mock error state
-            vi.spyOn(sdk, 'getAllClassifiers').mockRejectedValueOnce(testError);
+            vi.spyOn(sdk, 'getAllClassifiers').mockReset().mockRejectedValueOnce(testError);
 
             const { error, classifiers } = useClassifiers();
 

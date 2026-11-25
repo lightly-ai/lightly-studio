@@ -13,9 +13,10 @@ from __future__ import annotations
 
 import ipaddress
 import warnings
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated, Any, Callable
+from typing import Annotated, Any
 
 import uvicorn
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, Request, UploadFile, status

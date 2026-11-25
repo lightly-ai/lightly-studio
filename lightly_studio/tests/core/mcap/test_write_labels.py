@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
 import pytest
 
 from lightly_studio.core.mcap import add_labels, add_mcaps
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 from lightly_studio.database import db_manager
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver, tag_resolver
 from tests.core.mcap import helpers
@@ -71,6 +73,109 @@ def test_write_sequence_labels(
     )
     assert track is not None
     assert track.source_track_id == 7
+
+
+def test_write_sequence_labels__overwrite_deletes_empty_tracks(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, _ = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    # Track 8 is a parent track without cuboids of its own.
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(_cuboid(timestamp_ns=timestamp_ns, track_id=7, parent_track_id=8),),
+    )
+
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(_cuboid(timestamp_ns=timestamp_ns, track_id=1),),
+        overwrite=True,
+    )
+
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    # The new track reuses the number of a deleted track.
+    assert [(track.source_track_id, track.object_track_number) for track in tracks] == [(1, 1)]
+
+
+def test_write_sequence_labels__reuses_free_track_numbers(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, _ = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    object_track_resolver.create_many(
+        session=db_manager.persistent_session(),
+        tracks=[ObjectTrackCreate(object_track_number=2, dataset_id=dataset.dataset_id)],
+    )
+
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(
+            _cuboid(timestamp_ns=timestamp_ns, track_id=1),
+            _cuboid(timestamp_ns=timestamp_ns, track_id=7),
+        ),
+    )
+
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    number_by_source_track = {track.source_track_id: track.object_track_number for track in tracks}
+    assert number_by_source_track == {None: 2, 1: 1, 7: 3}
+
+
+def test_write_sequence_labels__overwrite_keeps_annotations_of_invalid_labels(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, group_ids = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(_cuboid(timestamp_ns=timestamp_ns, track_id=1),),
+    )
+    # Tracks 7 and 8 parent each other.
+    invalid_cuboids = (
+        _cuboid(timestamp_ns=timestamp_ns, track_id=7, parent_track_id=8),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=8, parent_track_id=7),
+    )
+
+    with pytest.raises(ValueError, match="A parent track must not have a parent track itself"):
+        _write_cuboids(dataset=dataset, sequence=sequence, cuboids=invalid_cuboids, overwrite=True)
+
+    assert len(_cuboid_annotations(group_ids=group_ids)) == 1
+
+
+def test_write_sequence_labels__overwrite_keeps_annotations_without_matched_labels(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, group_ids = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(_cuboid(timestamp_ns=timestamp_ns, track_id=1),),
+    )
+    # No tick has this timestamp.
+    unmatched_cuboids = (_cuboid(timestamp_ns=timestamp_ns + 1, track_id=1),)
+
+    with pytest.raises(ValueError, match="matches a tick of the sequence"):
+        _write_cuboids(
+            dataset=dataset, sequence=sequence, cuboids=unmatched_cuboids, overwrite=True
+        )
+
+    assert len(_cuboid_annotations(group_ids=group_ids)) == 1
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    assert len(tracks) == 1
 
 
 def test_write_sequence_labels__frame_tags(
@@ -151,6 +256,34 @@ def test_write_sequence_labels__links_parent_tracks(
     assert sorted(track.object_track_number for track in tracks) == [1, 2, 3, 4]
 
 
+def test_write_sequence_labels__untracked_cuboids_get_own_tracks(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, group_ids = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    # Track 7 has a parent 8. The untracked ids must not reuse 7 or 8.
+    cuboids = (
+        _cuboid(timestamp_ns=timestamp_ns, track_id=7, parent_track_id=8),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=None, px=5.0),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=None, px=6.0),
+    )
+
+    _write_cuboids(dataset=dataset, sequence=sequence, cuboids=cuboids)
+
+    annotations = _cuboid_annotations(group_ids=group_ids)
+    assert len({annotation.object_track_id for annotation in annotations}) == 3
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    untracked_tracks = [track for track in tracks if track.source_track_id is None]
+    source_ids = {track.source_track_id for track in tracks if track.source_track_id is not None}
+    assert len(untracked_tracks) == 2
+    assert source_ids == {7, 8}
+    assert all(track.parent_object_track_id is None for track in untracked_tracks)
+    assert sorted(track.object_track_number for track in tracks) == [1, 2, 3, 4]
+
+
 def test_write_sequence_labels__conflicting_parent_tracks(
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
@@ -202,7 +335,8 @@ def _index_recording(tmp_path: Path) -> tuple[McapDataset, McapSequence, list[UU
     mcap_path = helpers.write_mcap(tmp_path / "recording.mcap")
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -214,7 +348,7 @@ def _index_recording(tmp_path: Path) -> tuple[McapDataset, McapSequence, list[UU
 
 
 def _cuboid(
-    timestamp_ns: int, track_id: int, px: float = 4.0, parent_track_id: int | None = None
+    timestamp_ns: int, track_id: int | None, px: float = 4.0, parent_track_id: int | None = None
 ) -> CuboidLabel:
     return CuboidLabel(
         timestamp_ns=timestamp_ns,
@@ -226,4 +360,27 @@ def _cuboid(
         position=(px, 0.0, 0.5),
         rotation=(0.0, 0.0, 0.0, 1.0),
         size=(2.0, 1.0, 1.5),
+    )
+
+
+def _write_cuboids(
+    dataset: McapDataset,
+    sequence: McapSequence,
+    cuboids: tuple[CuboidLabel, ...],
+    overwrite: bool = False,
+) -> None:
+    add_labels.write_sequence_labels(
+        dataset=dataset,
+        sequence=sequence,
+        annotation_mcap_uri="memory://foo_labeled.mcap",
+        messages=[(cuboids[0].timestamp_ns, SceneUpdateLabels(cuboids=cuboids))],
+        overwrite=overwrite,
+    )
+
+
+def _cuboid_annotations(group_ids: list[UUID]) -> Sequence[AnnotationBaseTable]:
+    return annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_manager.persistent_session(),
+        parent_sample_ids=group_ids,
+        annotation_types=[AnnotationType.CUBOID_3D],
     )

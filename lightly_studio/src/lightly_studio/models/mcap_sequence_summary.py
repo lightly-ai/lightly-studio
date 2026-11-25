@@ -13,6 +13,8 @@ from lightly_studio.models.mcap_group_component_definition import (
 )
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceInfoView
 from lightly_studio.models.recording import RecordingFormat
+from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.tag import TagView
 
 
 class ReferenceFrameView(BaseModel):
@@ -56,6 +58,9 @@ class MCAPSequenceSummary(BaseModel):
     """
 
     recording_id: UUID = Field(description="The MCAP sequence this summary describes.")
+    collection_id: UUID = Field(
+        description="The SEQUENCE collection of the sequence sample. Its tags belong to it."
+    )
     file_name: str = Field(
         description="The recording's file name, e.g. `run-2026-04-18.mcap`, from its bag path."
     )
@@ -74,11 +79,15 @@ class MCAPSequenceSummary(BaseModel):
         description="Coordinate frames the scene can be shown in, in menu order. "
         "The first is the default. Set when the recording is indexed."
     )
+    tags: list[TagView] = Field(
+        description="Sample tags of the sequence, the same tags as in the sequences grid."
+    )
 
     @classmethod
     def from_info(
         cls,
         info: McapGroupSequenceInfoView,
+        sample: SampleTable,
         start_log_time_ns: int | None,
         channel_ids_by_component: dict[str, int],
     ) -> MCAPSequenceSummary:
@@ -87,6 +96,7 @@ class MCAPSequenceSummary(BaseModel):
         Args:
             info: The sequence's recording and component schema, e.g. from
                 `mcap_group_sequence_resolver.get_info`.
+            sample: The sequence sample. Gives the collection and the tags of the sequence.
             start_log_time_ns: The earliest log time across all indexed ticks, or
                 `None` if no ticks have been indexed yet.
             channel_ids_by_component: The channel id for each component, keyed by
@@ -115,6 +125,7 @@ class MCAPSequenceSummary(BaseModel):
 
         return cls(
             recording_id=info.recording.recording_id,
+            collection_id=sample.collection_id,
             file_name=_file_name_from_uri(info.recording.uri),
             format=info.recording.format,
             start_log_time_ns=start_log_time_ns,
@@ -123,6 +134,7 @@ class MCAPSequenceSummary(BaseModel):
             reference_frames=[
                 ReferenceFrameView(name=frame_id) for frame_id in info.reference_frame_ids
             ],
+            tags=[TagView.model_validate(tag) for tag in sample.tags],
         )
 
 

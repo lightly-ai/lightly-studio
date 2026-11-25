@@ -1,6 +1,6 @@
 .PHONY: test
 test:
-	$(MAKE) -C lightly_studio test-ci
+	$(MAKE) -C lightly_studio test
 	$(MAKE) -C lightly_studio_serve test
 	$(MAKE) -C lightly_studio_view test
 

@@ -1,10 +1,10 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import { page } from '$app/stores';
-    import { derived as storeDerived } from 'svelte/store';
+    import { page } from '$app/state';
+    import { toStore } from 'svelte/store';
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { LoaderCircle as Loader2 } from '@lucide/svelte';
+    import Loader2 from '@lucide/svelte/icons/loader-circle';
     import {
         executeOperator,
         getOperatorParameters,
@@ -25,6 +25,8 @@
     } from '$lib/hooks/useOperatorContext/useOperatorContext';
     import type { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useClearAllFilters } from '$lib/components/ClearAllFiltersButton';
+    import { isImagesRoute, isVideoFramesRoute, isVideosRoute } from '$lib/routes';
     import { useQueryClient } from '@tanstack/svelte-query';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 
@@ -43,26 +45,36 @@
     let executionError = $state<string | undefined>(undefined);
     let executionSuccess = $state<string | undefined>(undefined);
 
-    const pageContext = storeDerived(
-        page,
-        ($p) =>
+    const pageContext = toStore(
+        () =>
             ({
-                routeId: $p.route.id,
-                collectionId: $p.params.collection_id!,
-                sampleId: $p.params.sampleId || $p.params.sample_id || null,
-                annotationId: $p.params.annotationId || null,
-                sampleType: ($p.params.collection_type as SampleType) ?? null
+                routeId: page.route.id,
+                collectionId: page.params.collection_id!,
+                sampleId: page.params.sampleId || page.params.sample_id || null,
+                annotationId: page.params.annotationId || null,
+                sampleType: (page.params.collection_type as SampleType) ?? null
             }) satisfies PageContext
     );
 
     const queryClient = useQueryClient();
     const { setPluginExecuting } = useOperatorsDialog();
 
-    const collectionId = $page.params.collection_id!;
-
-    const { tagsSelected } = useTags({ collection_id: collectionId });
-
-    const { scopeLabel, contextFilter } = useOperatorContext(pageContext, tagsSelected);
+    // The dialog stays mounted across navigation, so the hooks are created again whenever the
+    // collection or the grid changes.
+    const collectionId = $derived(page.params.collection_id!);
+    const isImages = $derived(isImagesRoute(page.route.id));
+    const isVideos = $derived(isVideosRoute(page.route.id));
+    const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
+    const { scopeLabel, contextFilter } = $derived.by(() => {
+        const { tagsSelected } = useTags({ collection_id: collectionId, autoLoad: false });
+        const { hasActiveFilters } = useClearAllFilters({
+            collectionId,
+            isImages,
+            isVideos,
+            isVideoFrames
+        });
+        return useOperatorContext(pageContext, tagsSelected, hasActiveFilters);
+    });
 
     function resetExecutionState() {
         executionError = undefined;

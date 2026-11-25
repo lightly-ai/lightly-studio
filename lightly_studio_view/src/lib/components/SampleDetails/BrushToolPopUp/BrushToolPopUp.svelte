@@ -3,7 +3,8 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils/isInputElement';
-    import { Brush, Eraser } from '@lucide/svelte';
+    import Brush from '@lucide/svelte/icons/brush';
+    import Eraser from '@lucide/svelte/icons/eraser';
     import { onDestroy, onMount } from 'svelte';
     import FinishAnnotationButton from '../FinishAnnotationButton/FinishAnnotationButton.svelte';
 
@@ -101,7 +102,7 @@
     "
     >
         <div class="px-2 py-2 text-left">
-            <h3 class="text-sm font-semibold text-foreground">Brush Tool</h3>
+            <h3 class="text-sm font-semibold text-foreground">Mask brush</h3>
         </div>
 
         <div class="px-2">

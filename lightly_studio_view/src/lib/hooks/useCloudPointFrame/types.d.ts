@@ -11,6 +11,8 @@ export interface CloudPointFrameParams {
     sequenceId: string;
     /** Zero-based tick position in the sequence. */
     seqNumber: number;
+    /** Optional ordered tick numbers to accumulate around `seqNumber`. */
+    accumulationTickNumbers?: number[];
     /** Frame to express the points in. Omit to keep each sensor frame. */
     displayFrameId?: string;
     /** Lidar channels to merge. Omit to merge every lidar channel of the tick. */

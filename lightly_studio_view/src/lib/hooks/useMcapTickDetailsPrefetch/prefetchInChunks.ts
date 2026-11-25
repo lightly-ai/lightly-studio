@@ -1,5 +1,5 @@
 import type { PrefetchRangesRequest } from './types';
-import { getBufferedTickRanges } from './getBufferedTickRanges';
+import { getTickRanges } from './getTickRanges';
 
 interface PrefetchInChunksParams {
     /** Buffering session identifier. */
@@ -32,7 +32,7 @@ export async function prefetchInChunks({
         const chunk = indexes.slice(offset, offset + chunkSize);
         await prefetchRange({
             requestId,
-            ranges: getBufferedTickRanges(new Set(chunk))
+            ranges: getTickRanges(chunk)
         });
         if (offset + chunkSize < indexes.length) await wait(delayMs);
     }

@@ -38,11 +38,11 @@ import argparse
 import os
 import time
 import tracemalloc
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Callable
+from typing import Any
 from uuid import UUID
 
 import numpy as np

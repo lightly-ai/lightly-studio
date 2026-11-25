@@ -1,8 +1,12 @@
-import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from '$app/state';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation.svelte';
+
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
 
 vi.mock('$app/state', async () => {
     const { writable } = await import('svelte/store');
@@ -16,8 +20,12 @@ vi.mock('$app/state', async () => {
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: () => ({ data: [] })
 }));
+const mocks = vi.hoisted(() => ({
+    useAnnotation: vi.fn(),
+    refetch: vi.fn()
+}));
 vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
-    useAnnotation: () => ({ annotation: {}, updateAnnotation: vi.fn(), refetch: vi.fn() })
+    useAnnotation: mocks.useAnnotation
 }));
 vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
     useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() })
@@ -50,6 +58,23 @@ const defaultProps = {
 };
 
 describe('SampleDetailsSidePanelAnnotation', () => {
+    beforeEach(() => {
+        page.data.globalStorage.isEditingMode.set(false);
+        mocks.refetch.mockReset();
+        mocks.useAnnotation.mockReset().mockReturnValue({
+            updateAnnotation: vi.fn().mockResolvedValue(undefined),
+            refetch: mocks.refetch
+        });
+    });
+
+    it('shows the annotation it gets without fetching it again', () => {
+        render(SampleDetailsSidePanelAnnotation, defaultProps);
+
+        expect(screen.getByLabelText('Select hole annotation')).toBeInTheDocument();
+        const params = mocks.useAnnotation.mock.calls[0][0]();
+        expect(params).toMatchObject({ annotationId: 'annotation', enabled: false });
+    });
+
     it.each([false, true])('keeps confidence visible with editing=%s', async (editing) => {
         page.data.globalStorage.isEditingMode.set(editing);
         const props = { ...defaultProps, annotation: { ...annotation, confidence: 0.41 } };
@@ -61,5 +86,20 @@ describe('SampleDetailsSidePanelAnnotation', () => {
         expect(screen.getByText('Confidence: 0')).toBeInTheDocument();
         await rerender({ ...props, annotation: { ...annotation, confidence: null } });
         expect(screen.queryByText(/Confidence:/)).not.toBeInTheDocument();
+    });
+
+    it('requests an unlock when the lock icon of a locked segmentation mask is clicked', async () => {
+        page.data.globalStorage.isEditingMode.set(true);
+        const onToggleLock = vi.fn();
+        const { container } = render(SampleDetailsSidePanelAnnotation, {
+            ...defaultProps,
+            annotation: { ...annotation, annotation_type: 'segmentation_mask' },
+            isLocked: true,
+            onToggleLock
+        });
+
+        await fireEvent.click(container.querySelector('svg.lucide-lock')!);
+
+        expect(onToggleLock).toHaveBeenCalledOnce();
     });
 });

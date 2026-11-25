@@ -1,6 +1,10 @@
 <script lang="ts">
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
-    import { useOnboarding } from '$lib/hooks';
+    import {
+        useAnnotationCollectionsFilter,
+        useOnboarding,
+        useUnannotatedSamplesFilter
+    } from '$lib/hooks';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import {
         useMetadataFilters,
@@ -52,6 +56,11 @@
     );
 
     const { dimensionsValues: dimensions } = useDimensions();
+    const { includeUnannotatedSamples } = useUnannotatedSamplesFilter();
+    const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
+        useAnnotationCollectionsFilter();
+    // Without sources, every image is unannotated, so the "No annotations" filter matches all.
+    const filtersUnannotatedImages = $derived($includeUnannotatedSamples && !$allSourcesHidden);
     const { metadataValues, categoricalMetadataValues } = $derived.by(() =>
         useMetadataFilters(collection_id)
     );
@@ -73,6 +82,9 @@
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
+            include_unannotated_samples: filtersUnannotatedImages || undefined,
+            // An image counts as unannotated when the selected sources have no annotation on it.
+            collection_ids: filtersUnannotatedImages ? $selectedAnnotationSourceIds : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined
         },
@@ -179,6 +191,7 @@
             JSON.stringify(createMetadataFilters($metadataValues, $categoricalMetadataValues)),
             $textEmbedding?.queryText || '',
             confusionCell ? JSON.stringify(confusionCell) : '',
+            filtersUnannotatedImages ? `unannotated:${$selectedAnnotationSourceIds.join(',')}` : '',
             JSON.stringify($imageSortBy)
         ];
 

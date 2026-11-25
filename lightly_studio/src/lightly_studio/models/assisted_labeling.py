@@ -6,6 +6,7 @@ from typing import Annotated
 from uuid import UUID
 
 import pydantic
+from lightly_studio_serve.labeling import ModelTask
 from pydantic import BaseModel, StringConstraints
 from pydantic_core import PydanticCustomError
 
@@ -27,6 +28,12 @@ DEFAULT_MAX_INSTANCES = 16
 MAX_INSTANCES_LIMIT = 32
 MAX_INSTANCES_BOXES = 100
 MAX_INSTANCES_TEXT_PROMPT_LENGTH = 200
+DEFAULT_MODEL_THRESHOLD = 0.5
+MAX_MODEL_ID_LENGTH = 200
+# A labeling model can predict hundreds of objects. The GUI saves one annotation per preview.
+# A mask preview holds a run-length encoding of the full image, so the limit also keeps the
+# response small.
+MAX_MODEL_PREVIEWS = 300
 
 # The validators raise `PydanticCustomError` instead of `ValueError`, because the error
 # context of a `ValueError` is not JSON serializable in the 422 response.
@@ -143,3 +150,70 @@ class InstancesAnnotationResponse(BaseModel):
     """Instance previews sorted by descending score."""
 
     predictions: list[AnnotationPreview]
+
+
+class LabelingModelView(BaseModel):
+    """A labeling model that the GUI can run.
+
+    Attributes:
+        id: Unique ID of the model.
+        task: The kind of annotations that the model predicts.
+        class_names: Names of the annotation classes that the model can predict.
+    """
+
+    id: str
+    task: ModelTask
+    class_names: list[str]
+
+
+class LabelingModelsView(BaseModel):
+    """The labeling models that the GUI can run.
+
+    Attributes:
+        models: The registered labeling models that are ready. Empty if no model is
+            registered. Excludes models that are still loading.
+        has_loading_models: True if a registered model is still loading. The GUI requests
+            the models again while this is True.
+    """
+
+    models: list[LabelingModelView]
+    has_loading_models: bool
+
+
+class ModelAnnotationRequest(BaseModel):
+    """Request for previews of the annotations that a labeling model predicts.
+
+    Attributes:
+        model_id: ID of the labeling model to run.
+        threshold: Minimum confidence score of a preview.
+    """
+
+    collection_id: UUID
+    sample_id: UUID
+    model_id: Annotated[str, StringConstraints(min_length=1, max_length=MAX_MODEL_ID_LENGTH)]
+    threshold: float = pydantic.Field(
+        default=DEFAULT_MODEL_THRESHOLD, ge=0, le=1, allow_inf_nan=False
+    )
+
+
+class ModelAnnotationPreview(BaseModel):
+    """A predicted annotation that is not saved.
+
+    Attributes:
+        class_name: Name of the predicted annotation class.
+        bbox: Bounding box in pixels.
+        segmentation_mask: Full-image row-wise run-length encoding of the mask, in the
+            format of the annotation create endpoint. None if the model predicts no mask.
+        score: Confidence score, from 0 to 1.
+    """
+
+    class_name: str
+    bbox: AnnotationPreviewBox
+    segmentation_mask: list[int] | None
+    score: float
+
+
+class ModelAnnotationResponse(BaseModel):
+    """Previews of the predicted annotations sorted by descending score."""
+
+    predictions: list[ModelAnnotationPreview]

@@ -3,9 +3,11 @@ from __future__ import annotations
 from sqlalchemy import inspect
 from sqlmodel import Session
 
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
-from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
-from lightly_studio.resolvers import image_resolver, sample_embedding_resolver
+from lightly_studio.resolvers import (
+    image_resolver,
+)
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
 from lightly_studio.resolvers.image_resolver import ImageExportPreload
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -17,6 +19,7 @@ from tests.helpers_resolvers import (
     create_embedding_model,
     create_image,
     create_sample_embedding,
+    create_saved_plot,
 )
 
 
@@ -124,24 +127,16 @@ def test_get_for_export__with_embedding_region_filter(db_session: Session) -> No
     )
 
     # Seed 2D coordinates: inside1 and inside2 within (0,0)-(10,10), outside at (100, 100).
-    cache_key, sample_ids_in_order = sample_embedding_resolver.get_hash_by_collection_id(
+    create_saved_plot(
         session=db_session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
+        coordinates={
+            image_inside1.sample_id: (1.0, 1.0),
+            image_inside2.sample_id: (5.0, 5.0),
+            image_outside.sample_id: (100.0, 100.0),
+        },
     )
-    inside1_i = sample_ids_in_order.index(image_inside1.sample_id)
-    inside2_i = sample_ids_in_order.index(image_inside2.sample_id)
-    outside_i = sample_ids_in_order.index(image_outside.sample_id)
-    x = [0.0, 0.0, 0.0]
-    y = [0.0, 0.0, 0.0]
-    x[inside1_i] = 1.0
-    y[inside1_i] = 1.0
-    x[inside2_i] = 5.0
-    y[inside2_i] = 5.0
-    x[outside_i] = 100.0
-    y[outside_i] = 100.0
-    db_session.add(TwoDimEmbeddingTable(hash=cache_key, x=x, y=y))
-    db_session.commit()
 
     region = EmbeddingRegion(
         polygon=[
@@ -200,7 +195,7 @@ def test_get_for_export__without_preload_relationships_are_unloaded(db_session: 
     )
 
     assert len(result) == 1
-    sample_state = inspect(result[0].sample_table)
+    sample_state = inspect(result[0].sample)
     assert sample_state is not None
     assert "annotations" in sample_state.unloaded
     assert "captions" in sample_state.unloaded
@@ -243,15 +238,16 @@ def test_get_for_export__preloaded_data_accessible(db_session: Session) -> None:
     )
 
     assert len(result) == 1
-    sample_state = inspect(result[0].sample_table)
+    sample_state = inspect(result[0].sample)
     assert sample_state is not None
     assert "annotations" not in sample_state.unloaded
     assert "captions" not in sample_state.unloaded
-    annotation_state = inspect(result[0].sample_table.annotations[0])
+    annotation_state = inspect(result[0].sample.annotations[0])
     assert annotation_state is not None
     assert "annotation_label" not in annotation_state.unloaded
     assert "object_detection_details" not in annotation_state.unloaded
-    annotations = result[0].annotations
+    image_sample = ImageSample(inner=result[0])
+    annotations = image_sample.annotations
     assert len(annotations) == 1
     assert annotations[0].class_name == "cat"
-    assert result[0].captions == ["a cat sitting on a mat"]
+    assert [caption.text for caption in result[0].sample.captions] == ["a cat sitting on a mat"]

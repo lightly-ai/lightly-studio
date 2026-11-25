@@ -11,11 +11,16 @@ from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
     DatetimeExpr,
+    EqualityComparisonOperator,
+    EvaluationMetricComparisonExpr,
+    FieldRef,
     MetadataComparisonExpr,
     NotExpr,
     OrdinalComparisonOperator,
+    OrdinalFloatExpr,
     QueryExpr,
     StringExpr,
+    VideoEventMatchExpr,
 )
 
 
@@ -97,7 +102,34 @@ class TestMetadataComparisonExpr:
         assert QueryExpr.model_validate_json(query.model_dump_json()) == query
 
 
+class TestEvaluationMetricComparisonExpr:
+    @pytest.mark.parametrize("operator", ["==", "!=", "<", "<=", ">", ">="])
+    @pytest.mark.parametrize("value", [0, -2, 0.5])
+    def test_model_validate(self, operator: str, value: int | float) -> None:
+        metric = EvaluationMetricComparisonExpr.model_validate(
+            {"metric_name": "custom metric", "operator": operator, "value": value}
+        )
+        assert type(metric.value) is type(value)
+        assert (
+            EvaluationMetricComparisonExpr.model_validate_json(metric.model_dump_json()) == metric
+        )
+
+    @pytest.mark.parametrize("value", [True, False, "1", None, [], {}, float("inf"), float("nan")])
+    def test_model_validate__invalid_value(self, value: object) -> None:
+        with pytest.raises(ValidationError):
+            EvaluationMetricComparisonExpr.model_validate(
+                {"metric_name": "iou", "operator": ">", "value": value}
+            )
+
+
 class TestQueryExpr:
+    @pytest.mark.parametrize(
+        "node_type", ["video_event_match_expr", "video_frame_match_expr", "polygon_match_expr"]
+    )
+    def test_model_validate__requires_subexpression(self, node_type: str) -> None:
+        with pytest.raises(ValidationError, match="subexpr"):
+            QueryExpr.model_validate({"match_expr": {"type": node_type}})
+
     def test_model_validate__and_with_image_and_annotation_nodes(self) -> None:
         """Compose an AND of a leaf image filter and a nested annotation match."""
         tree = QueryExpr.model_validate(
@@ -190,3 +222,17 @@ class TestQueryExpr:
                     }
                 }
             )
+
+    @pytest.mark.parametrize(
+        "name", ["class_name", "source", "confidence", "start_time_s", "end_time_s"]
+    )
+    def test_model_validate__video_event_round_trip(self, name: str) -> None:
+        field = FieldRef(table="event", name=name)
+        criterion = (
+            StringExpr(field=field, operator=EqualityComparisonOperator.EQ, value="run")
+            if name in {"class_name", "source"}
+            else OrdinalFloatExpr(field=field, operator=OrdinalComparisonOperator.GTE, value=0.5)
+        )
+        query = QueryExpr(match_expr=VideoEventMatchExpr(subexpr=NotExpr(child=criterion)))
+        restored = QueryExpr.model_validate_json(query.model_dump_json())
+        assert restored == query

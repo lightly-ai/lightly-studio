@@ -12,7 +12,10 @@ test('user can navigate to sample details', async ({ page, samplesPage, sampleDe
     await expect(page.getByTestId('labels-menu-item').first()).toBeVisible();
 
     // Expect to have all labels from the COCO collection
-    const labelsCount = await page.getByTestId('labels-menu-item').count();
+    const labelsCount = await page
+        .getByTestId('labels-menu-item')
+        .filter({ hasNotText: 'No annotations' })
+        .count();
     expect(labelsCount).toBe(cocoDataset.totalLabels);
 
     // Double-click on the first sample to navigate to sample details

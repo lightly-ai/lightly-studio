@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { cn } from '$lib/utils';
-    import { X } from '@lucide/svelte';
+    import X from '@lucide/svelte/icons/x';
     import type { Snippet } from 'svelte';
 
     interface Props {

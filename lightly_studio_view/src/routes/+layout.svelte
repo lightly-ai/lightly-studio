@@ -6,35 +6,14 @@
     import { onMount } from 'svelte';
     import '../app.css';
     import { Toaster } from 'svelte-sonner';
-    import { client } from '$lib/api/lightly_studio_local/client.gen';
     import { PluginExecutingOverlay } from '$lib/components/PluginExecutingOverlay';
-
-    interface ApiErrorWithStatus {
-        error?: string;
-        status?: number;
-    }
-
-    // Add error interceptor to preserve HTTP status code on errors.
-    client.interceptors.error.use((error: unknown, response: Response) => {
-        if (response && typeof error === 'object' && error !== null) {
-            (error as ApiErrorWithStatus).status = response.status;
-        }
-        return error;
-    });
+    import { shouldRetryQuery } from '$lib/api/shouldRetryQuery';
 
     const queryClient = new QueryClient({
         defaultOptions: {
             queries: {
                 enabled: browser,
-                // Don't retry client errors (4xx).
-                // Only retry network errors and 5xx server errors up to 3 times.
-                retry: (failureCount, error: unknown) => {
-                    const status = (error as ApiErrorWithStatus)?.status;
-                    if (status && status >= 400 && status < 500) {
-                        return false;
-                    }
-                    return failureCount < 3;
-                }
+                retry: shouldRetryQuery
             }
         }
     });

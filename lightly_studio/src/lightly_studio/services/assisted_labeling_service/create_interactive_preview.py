@@ -22,8 +22,15 @@ def create_interactive_preview(
     provider: AssistedLabelingProvider,
     image: ProviderImage,
     request: InteractiveAnnotationRequest,
+    user_email: str | None,
 ) -> InteractiveAnnotationResponse:
     """Returns the preview of the highest-scoring mask. Saves nothing.
+
+    Args:
+        provider: The provider to call.
+        image: The image to segment.
+        request: The preview request.
+        user_email: Email of the user who triggered the call, if known.
 
     Raises:
         ProviderUnavailableError: If the provider is not configured.
@@ -39,7 +46,14 @@ def create_interactive_preview(
         text=None,
         max_masks=1,
     )
-    predictions = run_provider.segment(provider=provider, image=image, prompt=prompt)
+    predictions = run_provider.segment(
+        provider=provider,
+        image=image,
+        prompt=prompt,
+        operation=run_provider.OPERATION_INTERACTIVE,
+        collection_id=request.collection_id,
+        user_email=user_email,
+    )
     previews = to_annotation_preview.to_sorted_annotation_previews(
         predictions=predictions, width=image.width, height=image.height
     )

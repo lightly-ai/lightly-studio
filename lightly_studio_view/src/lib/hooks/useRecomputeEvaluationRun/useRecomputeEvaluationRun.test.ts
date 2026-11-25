@@ -8,6 +8,7 @@ import { updateRun } from '$lib/api/lightly_studio_local';
 import { toast } from 'svelte-sonner';
 import { ANNOTATIONS_INFINITE_QUERY_KEY_ROOT } from '$lib/hooks/useAnnotationsInfinite';
 import { useRecomputeEvaluationRun } from './useRecomputeEvaluationRun.svelte';
+import { ApiError } from '$lib/api/ApiError';
 
 vi.mock('@tanstack/svelte-query', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@tanstack/svelte-query')>();
@@ -94,7 +95,7 @@ describe('useRecomputeEvaluationRun', () => {
     it('shows the server error message on failure', () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onError: (error: unknown) => void }) => {
-                opts.onError({ error: 'Run not found' });
+                opts.onError(new ApiError('Run not found', 404));
             }
         } as unknown as ReturnType<typeof createMutation>);
 

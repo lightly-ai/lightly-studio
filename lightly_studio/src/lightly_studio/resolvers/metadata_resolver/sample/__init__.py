@@ -6,6 +6,7 @@ from .bulk_update_metadata import (
 from .get_by_sample_id import (
     get_by_sample_id,
 )
+from .get_by_sample_ids import get_by_sample_ids
 from .get_metadata_values_for_key import (
     get_metadata_values_for_key,
 )
@@ -15,6 +16,7 @@ from .set_value_for_sample import set_value_for_sample
 __all__ = [
     "bulk_update_metadata",
     "get_by_sample_id",
+    "get_by_sample_ids",
     "get_metadata_values_for_key",
     "get_value_for_sample",
     "set_value_for_sample",

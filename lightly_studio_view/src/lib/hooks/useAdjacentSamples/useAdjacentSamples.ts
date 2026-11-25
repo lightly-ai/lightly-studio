@@ -5,6 +5,7 @@ import type {
     AnnotationEvaluationMetricSortExpr,
     AnnotationsFilter,
     ImageFilter,
+    McapSequenceFilter,
     SampleType,
     VideoFilter,
     VideoFrameAdjacentFilter,
@@ -41,6 +42,8 @@ export type AdjacentSamplesRequestBody =
     | {
           sample_type: Extract<SampleType, 'sequence'>;
           collection_id: string;
+          filters?: ({ filter_type: 'mcap_sequence' } & McapSequenceFilter) | null;
+          text_embedding?: number[];
       };
 
 type AdjacentSamplesParams = {

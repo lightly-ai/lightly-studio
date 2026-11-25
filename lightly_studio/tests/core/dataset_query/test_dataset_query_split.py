@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import pytest
-from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
 
+pytestmark = pytest.mark.usefixtures("patch_collection")
 
-def test_split__partitions_the_current_filtered_query(db_session: Session) -> None:
+
+def test_split__partitions_the_current_filtered_query() -> None:
+    db_session = db_manager.persistent_session()
     dataset = create_collection(session=db_session)
     narrow = create_image(
         session=db_session,
@@ -58,7 +61,8 @@ def test_split__partitions_the_current_filtered_query(db_session: Session) -> No
         {"train": -1, "test": 1},
     ],
 )
-def test_split__rejects_invalid_tag_sizes(db_session: Session, tag_sizes: dict[str, int]) -> None:
+def test_split__rejects_invalid_tag_sizes(tag_sizes: dict[str, int]) -> None:
+    db_session = db_manager.persistent_session()
     dataset = create_collection(session=db_session)
     create_image(session=db_session, collection_id=dataset.collection_id)
     create_image(session=db_session, collection_id=dataset.collection_id)
@@ -67,7 +71,8 @@ def test_split__rejects_invalid_tag_sizes(db_session: Session, tag_sizes: dict[s
         DatasetQuery(dataset=dataset, session=db_session).split(tag_sizes=tag_sizes)
 
 
-def test_split__rejects_empty_or_too_small_query_result(db_session: Session) -> None:
+def test_split__rejects_empty_or_too_small_query_result() -> None:
+    db_session = db_manager.persistent_session()
     dataset = create_collection(session=db_session)
 
     with pytest.raises(ValueError, match="empty"):
@@ -80,7 +85,8 @@ def test_split__rejects_empty_or_too_small_query_result(db_session: Session) -> 
         )
 
 
-def test_split__rejects_existing_tag_without_creating_other_tags(db_session: Session) -> None:
+def test_split__rejects_existing_tag_without_creating_other_tags() -> None:
+    db_session = db_manager.persistent_session()
     dataset = create_collection(session=db_session)
     create_image(session=db_session, collection_id=dataset.collection_id)
     create_image(session=db_session, collection_id=dataset.collection_id)
@@ -101,7 +107,8 @@ def test_split__rejects_existing_tag_without_creating_other_tags(db_session: Ses
     )
 
 
-def test_split__same_seed_assigns_the_same_samples(db_session: Session) -> None:
+def test_split__same_seed_assigns_the_same_samples() -> None:
+    db_session = db_manager.persistent_session()
     dataset = create_collection(session=db_session)
     for index in range(8):
         create_image(
@@ -130,7 +137,8 @@ def test_split__same_seed_assigns_the_same_samples(db_session: Session) -> None:
     assert tagged_sample_ids[0] == tagged_sample_ids[1]
 
 
-def test_split__rejects_unsupported_sample_type(db_session: Session) -> None:
+def test_split__rejects_unsupported_sample_type() -> None:
+    db_session = db_manager.persistent_session()
     dataset = create_collection(session=db_session, sample_type=SampleType.VIDEO_FRAME)
 
     with pytest.raises(ValueError, match="only supported for image and video"):

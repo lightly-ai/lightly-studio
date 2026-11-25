@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     FLOAT_SLIDER_TICKS,
+    MAX_INTEGER_SLIDER_TICKS,
     fromTick,
     getSliderTickCount,
     toTick
@@ -17,6 +18,12 @@ describe('MetadataFilterItem.helpers', () => {
 
         it('uses one tick per integer for integer fields', () => {
             expect(getSliderTickCount({ min: 0, max: 1712 }, true)).toBe(1712);
+        });
+
+        it('caps the tick count for very wide integer fields', () => {
+            const anomalyIds = { min: 113638904, max: 142404784 };
+
+            expect(getSliderTickCount(anomalyIds, true)).toBe(MAX_INTEGER_SLIDER_TICKS);
         });
 
         it('never returns fewer than one tick for a degenerate range', () => {
@@ -105,6 +112,15 @@ describe('MetadataFilterItem.helpers', () => {
             for (let value = bound.min; value <= bound.max; value++) {
                 expect(fromTick(toTick(value, bound, ticks), bound, ticks, true)).toBe(value);
             }
+        });
+
+        it('returns integers and exact bounds for a capped integer field', () => {
+            const bound = { min: 113638904, max: 142404784 };
+            const ticks = getSliderTickCount(bound, true);
+
+            expect(fromTick(0, bound, ticks, true)).toBe(bound.min);
+            expect(fromTick(ticks, bound, ticks, true)).toBe(bound.max);
+            expect(Number.isInteger(fromTick(ticks / 3, bound, ticks, true))).toBe(true);
         });
     });
 });

@@ -1,5 +1,10 @@
 import * as monaco from 'monaco-editor';
-import { SCOPES, TOP_LEVEL_KEYWORDS, BOOLEAN_KEYWORDS } from '../../language/lightly-query-schema';
+import {
+    SCOPES,
+    TOP_LEVEL_KEYWORDS,
+    VIDEO_KEYWORDS,
+    BOOLEAN_KEYWORDS
+} from '../../language/lightly-query-schema';
 import { ALLOWED_NESTED_KEYWORDS } from './completionAdapterShared';
 
 interface BuildSchemaCompletionsParams {
@@ -18,21 +23,28 @@ export function buildSchemaCompletions({
     const { title, fields } = SCOPES[scope];
 
     for (const field of fields) {
+        const insertText = field.insertText ?? field.name;
         items.push({
-            label: field.name,
+            label: insertText,
             kind: monaco.languages.CompletionItemKind.Field,
             detail: `${title}.${field.name}: ${field.type}`,
             documentation: { value: field.description },
-            insertText: field.name,
+            insertText,
             range
         });
     }
 
     const keywords = [
         ...TOP_LEVEL_KEYWORDS,
+        ...(scope === 'video' ? VIDEO_KEYWORDS : []),
         ...(includeBooleanLiterals ? BOOLEAN_KEYWORDS : [])
     ].filter((kw) => {
         if (scope === 'image' || scope === 'video') return kw.name !== 'video:';
+        if (
+            scope === 'frame' &&
+            ['classification', 'object_detection', 'segmentation_mask'].includes(kw.name)
+        )
+            return true;
         return ALLOWED_NESTED_KEYWORDS.has(kw.name);
     });
 

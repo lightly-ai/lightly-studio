@@ -1,11 +1,12 @@
 <script lang="ts">
-    import { BookOpen, Mail } from '@lucide/svelte';
+    import BookOpen from '@lucide/svelte/icons/book-open';
+    import Mail from '@lucide/svelte/icons/mail';
     import { page } from '$app/state';
     import { version, git_sha, is_tagged_commit } from '$lib/version.json';
     import {
         isAnnotationsRoute,
         isCaptionsRoute,
-        isPointCloudsRoute,
+        isMcapSequencesRoute,
         isVideoFramesRoute,
         isVideosRoute
     } from '$lib/routes';
@@ -33,7 +34,7 @@
             return 'videos';
         } else if (isCaptionsRoute(page.route.id)) {
             return 'captions';
-        } else if (isPointCloudsRoute(page.route.id)) {
+        } else if (isMcapSequencesRoute(page.route.id)) {
             return count === 1 ? 'MCAP sequence' : 'MCAP sequences';
         } else {
             return 'images';

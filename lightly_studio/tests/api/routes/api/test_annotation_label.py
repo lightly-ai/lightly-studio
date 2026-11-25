@@ -1,15 +1,38 @@
 from __future__ import annotations
 
+import uuid
+from typing import Any
+
+import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
-from lightly_studio.resolvers import annotation_label_resolver
-from tests.helpers_resolvers import create_annotation_label, create_collection
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricCreate
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.resolvers import (
+    annotation_label_resolver,
+    evaluation_class_metric_resolver,
+    evaluation_run_resolver,
+)
+from tests.helpers_resolvers import (
+    AnnotationDetails,
+    create_annotation,
+    create_annotation_label,
+    create_annotations,
+    create_collection,
+    create_image,
+)
+from tests.resolvers.evaluation_sample_metric_resolver import (
+    helpers as evaluation_sample_metric_helpers,
+)
 
 
 def test_create_annotation_label(db_session: Session, test_client: TestClient) -> None:
@@ -34,7 +57,12 @@ def test_create_annotation_label(db_session: Session, test_client: TestClient) -
 def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    create_annotation_label(session=db_session, root_collection_id=collection_id, label_name="cat")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    label.color = "#ff8040"
+    label.alpha = 0.5
+    db_session.commit()
 
     labels_result = test_client.get(f"/api/collections/{collection_id!s}/annotation_labels")
     assert labels_result.status_code == HTTP_STATUS_OK
@@ -42,6 +70,8 @@ def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> 
     assert len(labels_result.json()) == 1
     label = labels_result.json()[0]
     assert label["annotation_label_name"] == "cat"
+    assert label["color"] == "#ff8040"
+    assert label["alpha"] == 0.5
 
 
 def test_get_annotation_label(db_session: Session, test_client: TestClient) -> None:
@@ -81,6 +111,149 @@ def test_update_annotation_label(db_session: Session, test_client: TestClient) -
     assert label["annotation_label_name"] == "dog"
 
 
+def test_update_annotation_label__duplicate_name(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    dog_id = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+    ).annotation_label_id
+
+    result = test_client.put(
+        f"/api/annotation_labels/{dog_id!s}",
+        json={"annotation_label_name": "cat", "dataset_id": str(collection.dataset_id)},
+    )
+
+    assert result.status_code == HTTP_STATUS_CONFLICT
+    # The test client shares the session, which the failed update left in a failed state.
+    db_session.rollback()
+
+
+def test_update_annotation_label__keeps_color(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session)
+    label_id = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    ).annotation_label_id
+    test_client.put(
+        f"/api/annotation_labels/{label_id!s}/color",
+        json={"color": "#ff8040", "alpha": 0.5},
+    )
+
+    result = test_client.put(
+        f"/api/annotation_labels/{label_id!s}",
+        json={"annotation_label_name": "dog", "dataset_id": str(collection.dataset_id)},
+    )
+
+    assert result.status_code == HTTP_STATUS_OK
+    assert result.json()["annotation_label_name"] == "dog"
+    assert result.json()["color"] == "#ff8040"
+    assert result.json()["alpha"] == 0.5
+
+
+def test_read_annotation_labels_with_counts(db_session: Session, test_client: TestClient) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image_id = create_image(session=db_session, collection_id=collection_id).sample_id
+    cat = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    cat.color = "#ff8040"
+    cat.alpha = 0.5
+    db_session.commit()
+    create_annotation_label(session=db_session, root_collection_id=collection_id, label_name="dog")
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image_id,
+        annotation_label_id=cat.annotation_label_id,
+    )
+
+    result = test_client.get(f"/api/collections/{collection_id!s}/annotation_labels_with_counts")
+
+    assert result.status_code == HTTP_STATUS_OK
+    counts = {row["annotation_label_name"]: row["annotation_count"] for row in result.json()}
+    assert counts == {"cat": 1, "dog": 0}
+    colors = {row["annotation_label_name"]: (row["color"], row["alpha"]) for row in result.json()}
+    assert colors == {"cat": ("#ff8040", 0.5), "dog": (None, None)}
+
+
+def test_set_annotation_label_color(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session)
+    label_id = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    ).annotation_label_id
+
+    result = test_client.put(
+        f"/api/annotation_labels/{label_id!s}/color",
+        json={"color": "#ff8040", "alpha": 0.5},
+    )
+
+    assert result.status_code == HTTP_STATUS_OK
+    assert result.json()["color"] == "#ff8040"
+    assert result.json()["alpha"] == 0.5
+    label = test_client.get(f"/api/annotation_labels/{label_id!s}").json()
+    assert label["color"] == "#ff8040"
+    assert label["alpha"] == 0.5
+
+
+def test_set_annotation_label_color__clear(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session)
+    label_id = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    ).annotation_label_id
+    setup_result = test_client.put(
+        f"/api/annotation_labels/{label_id!s}/color",
+        json={"color": "#ff8040", "alpha": 0.5},
+    )
+    assert setup_result.status_code == HTTP_STATUS_OK
+
+    result = test_client.put(
+        f"/api/annotation_labels/{label_id!s}/color",
+        json={"color": None, "alpha": None},
+    )
+
+    assert result.status_code == HTTP_STATUS_OK
+    label = test_client.get(f"/api/annotation_labels/{label_id!s}").json()
+    assert label["color"] is None
+    assert label["alpha"] is None
+
+
+def test_set_annotation_label_color__not_found(test_client: TestClient) -> None:
+    result = test_client.put(
+        f"/api/annotation_labels/{uuid.uuid4()!s}/color",
+        json={"color": "#ff8040", "alpha": 1},
+    )
+
+    assert result.status_code == HTTP_STATUS_NOT_FOUND
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"color": "red", "alpha": 1},
+        {"color": "#ff8040", "alpha": 1.5},
+        {"color": "#ff8040", "alpha": None},
+        {"color": None, "alpha": 0.5},
+        {},
+        {"color": "#ff8040"},
+        {"alpha": 0.5},
+    ],
+)
+def test_set_annotation_label_color__invalid(
+    db_session: Session, test_client: TestClient, body: dict[str, Any]
+) -> None:
+    collection = create_collection(session=db_session)
+    label_id = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    ).annotation_label_id
+
+    result = test_client.put(f"/api/annotation_labels/{label_id!s}/color", json=body)
+
+    assert result.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
 def test_delete_annotation_label(db_session: Session, test_client: TestClient) -> None:
     collection_id = create_collection(session=db_session).collection_id
     label_id = create_annotation_label(
@@ -93,3 +266,120 @@ def test_delete_annotation_label(db_session: Session, test_client: TestClient) -
 
     label_result = test_client.get(f"/api/annotation_labels/{label_id!s}")
     assert label_result.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_delete_annotation_label__deletes_its_annotations(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image_id = create_image(session=db_session, collection_id=collection_id).sample_id
+    cat_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    ).annotation_label_id
+    dog_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="dog"
+    ).annotation_label_id
+    for label_id in (cat_id, cat_id, dog_id):
+        create_annotation(
+            session=db_session,
+            collection_id=collection_id,
+            sample_id=image_id,
+            annotation_label_id=label_id,
+        )
+
+    result = test_client.delete(f"/api/annotation_labels/{cat_id!s}")
+    assert result.status_code == HTTP_STATUS_OK
+
+    remaining_label_ids = db_session.exec(select(AnnotationBaseTable.annotation_label_id)).all()
+    assert remaining_label_ids == [dog_id]
+
+
+def test_delete_annotation_label__deletes_its_class_metrics(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=collection_id
+    )
+    run_id = run.id
+    label_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    ).annotation_label_id
+    evaluation_class_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run_id,
+                annotation_label_id=label_id,
+                metric_name="average_precision",
+                value=0.5,
+            )
+        ],
+    )
+
+    result = test_client.delete(f"/api/annotation_labels/{label_id!s}")
+
+    assert result.status_code == HTTP_STATUS_OK
+    metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session, evaluation_run_id=run_id
+    )
+    assert metrics == []
+
+
+def test_delete_annotation_label__marks_evaluation_runs_stale(
+    db_session: Session, test_client: TestClient
+) -> None:
+    runs = []
+    label_id = None
+    for index in range(2):
+        collection = create_collection(session=db_session, collection_name=f"collection_{index}")
+        image = create_image(session=db_session, collection_id=collection.collection_id)
+        if label_id is None:
+            label_id = create_annotation_label(
+                session=db_session,
+                root_collection_id=collection.collection_id,
+                label_name="cat",
+            ).annotation_label_id
+        annotation_details = [
+            AnnotationDetails(sample_id=image.sample_id, annotation_label_id=label_id)
+        ]
+        gt_annotation = create_annotations(
+            session=db_session,
+            collection_id=collection.collection_id,
+            annotations=annotation_details,
+            collection_name="ground_truth",
+        )[0]
+        pred_annotation = create_annotations(
+            session=db_session,
+            collection_id=collection.collection_id,
+            annotations=annotation_details,
+            collection_name="predictions",
+        )[0]
+        runs.append(
+            evaluation_run_resolver.create(
+                session=db_session,
+                evaluation_run_input=EvaluationRunCreate(
+                    name=f"run_{index}",
+                    gt_annotation_collection_id=gt_annotation.annotation_collection_id,
+                    pred_annotation_collection_id=pred_annotation.annotation_collection_id,
+                    dataset_id=collection.dataset_id,
+                    task_type=EvaluationTaskType.OBJECT_DETECTION,
+                ),
+            )
+        )
+    assert all(run.stale_since is None for run in runs)
+
+    result = test_client.delete(f"/api/annotation_labels/{label_id!s}")
+    assert result.status_code == HTTP_STATUS_OK
+
+    for run in runs:
+        refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+        assert refreshed is not None
+        assert refreshed.stale_since is not None
+    assert db_session.exec(select(AnnotationBaseTable.sample_id)).all() == []
+
+
+def test_delete_annotation_label__not_found(test_client: TestClient) -> None:
+    result = test_client.delete(f"/api/annotation_labels/{uuid.uuid4()!s}")
+
+    assert result.status_code == HTTP_STATUS_NOT_FOUND

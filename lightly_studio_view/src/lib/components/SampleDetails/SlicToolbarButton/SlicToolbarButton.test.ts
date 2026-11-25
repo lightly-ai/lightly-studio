@@ -5,7 +5,7 @@ import SlicToolbarButton from './SlicToolbarButton.svelte';
 it('activates the tool and exposes its selected state', async () => {
     const onclick = vi.fn();
     const view = render(SlicToolbarButton, { onclick });
-    const button = view.getByRole('button', { name: 'AI-Assisted labeling' });
+    const button = view.getByRole('button', { name: 'Superpixel brush' });
     expect(button).toHaveAttribute('aria-pressed', 'false');
     await fireEvent.click(button);
     expect(onclick).toHaveBeenCalledOnce();

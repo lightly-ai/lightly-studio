@@ -1,15 +1,19 @@
 <script lang="ts">
     import { afterNavigate } from '$app/navigation';
     import { page } from '$app/state';
-    import { Card, CardContent, SampleDetailsSidePanel } from '$lib/components';
-    import { ImageAdjustments } from '$lib/components/ImageAdjustments';
+    import {
+        Card,
+        CardContent,
+        SampleDetailsSidePanel,
+        SidePanelToggleButton
+    } from '$lib/components';
+    import BreadcrumbHeaderActions from './BreadcrumbHeaderActions/BreadcrumbHeaderActions.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { useSettings } from '$lib/hooks/useSettings';
-    import { onMount, untrack, type Snippet } from 'svelte';
+    import { untrack, type Snippet } from 'svelte';
 
-    import { get } from 'svelte/store';
+    import { cn } from '$lib/utils/shadcn';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
@@ -28,7 +32,10 @@
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
-    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
+    import { useAnnotationTarget, useDeleteAnnotationWithUndo } from '$lib/hooks';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { isDeleteKey, isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
         sampleId,
@@ -71,14 +78,13 @@
         toggleSampleSelection,
         clearReversibleActions,
         lastAnnotationBrushSize,
-        imageBrightness,
-        imageContrast,
-        toggleSampleAnnotationCropSelection
+        toggleSampleAnnotationCropSelection,
+        isSampleDetailsSidePanelCollapsed,
+        openSampleDetailsSidePanel
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
-    const { settingsStore } = useSettings();
-    const { isEditingMode, lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
+    const { isEditingMode } = useGlobalStorage();
 
     // Annotation details must use the first annotation from sample.annotations.
     // isOnAnnotationDetailsView is re-synced via $effect when the prop changes.
@@ -97,9 +103,19 @@
 
     const { selectAnnotation } = useAnnotationSelection();
 
+    const { user } = useAuth();
+    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
+    const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => collectionId);
+
     let isPanModeEnabled = $state(false);
 
     let annotationsIdsToHide = $state<Set<string>>(new Set());
+    // Always mounted, also without the Annotations panel, so drawing is always guarded.
+    useAnnotationTarget({
+        getCollectionId: () => collectionId,
+        getAnnotations: () => sample?.annotations ?? [],
+        getHiddenIds: () => annotationsIdsToHide
+    });
     let previousAnnotationType: AnnotationType | null | undefined;
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
@@ -107,8 +123,7 @@
         if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
 
         switch (event.key) {
-            // Check for escape key
-            case get(settingsStore).key_go_back:
+            case 'Escape':
                 if ($isEditingMode) {
                     if (
                         annotationLabelContext.annotationType ||
@@ -120,36 +135,69 @@
                     handleEscape();
                 }
                 break;
-            // Add spacebar handling for selection toggle
-            case ' ': // Space key
-                // Prevent default space behavior (like page scrolling)
-                event.preventDefault();
-                event.stopPropagation();
-
-                // Toggle selection based on context
-                if (!$isEditingMode) {
-                    if (isOnAnnotationDetailsView) {
-                        toggleSampleAnnotationCropSelection(
-                            collectionId,
-                            sample.annotations![0].sample_id
-                        );
-                    } else {
-                        toggleSampleSelection(sampleId, collectionId);
-                    }
-                } else {
-                    if (!isPanModeEnabled) {
-                        previousAnnotationType = annotationLabelContext.annotationType;
-                        sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
-                        sampleDetailsToolbarContext.status = 'drag';
-                        annotationLabelContext.annotationType = null;
-                    }
-                    isPanModeEnabled = true;
-                }
+            case ' ':
+                handleSpaceKeyDown(event);
+                break;
+            case 'Delete':
+            case 'Backspace':
+                handleDeleteKeyDown(event);
                 break;
         }
 
         // Always pass to the hide annotations handler
         handleKeyEvent(event);
+    };
+
+    /** Delete or Backspace deletes the selected annotation while editing. */
+    const handleDeleteKeyDown = async (event: KeyboardEvent) => {
+        if (!isDeleteKey(event) || !$isEditingMode || !canEdit) return;
+        if (annotationLabelContext.isOnAnnotationDetailsView) return;
+        if (
+            sampleDetailsToolbarContext.status !== 'cursor' &&
+            sampleDetailsToolbarContext.status !== 'drag'
+        )
+            return;
+        const annotationId = annotationLabelContext.annotationId;
+        const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
+        if (!annotation) return;
+
+        event.preventDefault();
+        const isDeleted = await deleteWithUndo(annotation, refetch);
+        if (isDeleted && annotationLabelContext.annotationId === annotationId) {
+            annotationLabelContext.annotationId = null;
+        }
+    };
+
+    /** Space toggles the selection, or starts pan mode while editing. */
+    const handleSpaceKeyDown = (event: KeyboardEvent) => {
+        // Opted-out buttons, such as the display adjustments trigger, open on Space natively.
+        if (
+            event.target instanceof HTMLElement &&
+            event.target.closest('[data-ignore-space-shortcut]')
+        )
+            return;
+
+        // Space would scroll the page.
+        event.preventDefault();
+        event.stopPropagation();
+
+        if ($isEditingMode) {
+            if (!isPanModeEnabled) {
+                previousAnnotationType = annotationLabelContext.annotationType;
+                sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
+                sampleDetailsToolbarContext.status = 'drag';
+                annotationLabelContext.annotationType = null;
+            }
+            isPanModeEnabled = true;
+            return;
+        }
+
+        if (isOnAnnotationDetailsView) {
+            toggleSampleAnnotationCropSelection(collectionId, sample.annotations![0].sample_id);
+            return;
+        }
+
+        toggleSampleSelection(sampleId, collectionId);
     };
 
     const handleKeyUpEvent = (event: KeyboardEvent) => {
@@ -191,8 +239,7 @@
             return;
         selectAnnotation({
             annotationId,
-            annotations: sample.annotations ?? [],
-            collectionId
+            annotations: sample.annotations ?? []
         });
     };
 
@@ -236,9 +283,11 @@
         }
     });
 
-    onMount(() => {
-        annotationLabelContext.annotationLabel = $lastAnnotationLabel[collectionId];
-        annotationLabelContext.annotationSource = $lastAnnotationSource[collectionId];
+    // Auto-open the side panel when an annotation is created while collapsed.
+    $effect(() => {
+        if (annotationLabelContext.lastCreatedAnnotationId) {
+            openSampleDetailsSidePanel();
+        }
     });
 </script>
 
@@ -248,12 +297,10 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            {#if $isEditingMode}
-                <ImageAdjustments
-                    bind:brightness={$imageBrightness}
-                    bind:contrast={$imageContrast}
-                />
-            {/if}
+            <div class="flex items-center gap-1">
+                <BreadcrumbHeaderActions {collectionId} />
+                <SidePanelToggleButton />
+            </div>
         </div>
         <Separator class="bg-border-hard" />
 
@@ -295,7 +342,12 @@
                     </CardContent>
                 </Card>
             </div>
-            <div class="relative w-[375px]">
+            <div
+                class={cn(
+                    'relative w-[375px]',
+                    $isSampleDetailsSidePanelCollapsed ? 'hidden' : 'flex'
+                )}
+            >
                 {#if sidePanelItem}
                     {@render sidePanelItem()}
                 {:else}

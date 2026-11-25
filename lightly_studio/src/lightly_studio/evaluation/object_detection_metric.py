@@ -206,12 +206,15 @@ def create_and_persist_metrics_per_sample(
         data: Prepared evaluation data (selected samples and per-sample annotations).
         match_sample: Returns the matching result for one sample, given its id.
     """
-    # Match a whole batch before persisting it, because each commit expires the loaded annotations
+    # Match all samples before commits expire the loaded annotations and force reloads.
+    matching_results = {
+        sample_id: match_sample(sample_id) for sample_id in data.selected_sample_ids
+    }
     for sample_id_batch in batching.batched(items=data.selected_sample_ids):
         sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
         annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
         for sample_id in sample_id_batch:
-            matching_result = match_sample(sample_id)
+            matching_result = matching_results[sample_id]
 
             sample_metrics_to_persist.extend(
                 get_sample_metric_records(
@@ -248,8 +251,8 @@ def create_and_persist_object_detection_metrics_per_sample(
 
     def match_sample(sample_id: UUID) -> MatchingResult:
         return match_image(
-            predictions=_to_bounding_boxes(annotations=data.pred_per_sample.get(sample_id, [])),
-            ground_truths=_to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, [])),
+            predictions=to_bounding_boxes(annotations=data.pred_per_sample.get(sample_id, [])),
+            ground_truths=to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, [])),
             iou_threshold=iou_threshold,
             classwise=classwise,
         )
@@ -400,7 +403,7 @@ def _box_iou_matrix(
     )
 
 
-def _to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingBox]:
+def to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingBox]:
     """Convert object-detection annotations into matcher-ready bounding boxes."""
     boxes: list[BoundingBox] = []
     for annotation in annotations:

@@ -28,7 +28,7 @@ export const cocoDataset = {
     cocoExportFilename: 'coco_export.json',
     classificationExportFilename: 'classification_export.csv',
     yoloExportFilename: 'yolo.zip',
-    segmentationMasksExportFilename: 'coco_segmentation_mask_export.json',
+    segmentationMasksExportFilename: 'coco_instance_segmentation_export.json',
     captionExportFilename: 'coco_captions_export.json',
 
     /** Labels actively used in tests with their sample/annotation counts */

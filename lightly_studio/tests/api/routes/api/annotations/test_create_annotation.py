@@ -4,17 +4,21 @@ from uuid import UUID
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_OK
 from lightly_studio.models.annotation.annotation_base import AnnotationType, AnnotationView
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationView
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationView
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.annotation.polygon import PolygonAnnotationView
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationView,
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageTable
+from lightly_studio.resolvers import object_track_resolver
 from lightly_studio.services import annotations_service
 from lightly_studio.services.annotations_service.create_annotation import AnnotationCreateParams
 
@@ -146,6 +150,58 @@ def test_create_annotation_segmentation_mask(
         ),
         tags=[],
     )
+
+
+def test_create_annotation__polygon(
+    collection: CollectionTable,
+    test_client: TestClient,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    route = f"/api/collections/{collection.collection_id!s}/annotations"
+
+    response = test_client.post(
+        route,
+        json={
+            "annotation_label_id": str(annotation_labels[0].annotation_label_id),
+            "annotation_type": "polygon",
+            "parent_sample_id": str(samples[0].sample_id),
+            "polygons": [[[0, 0], [2, 0], [2, 2]]],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = AnnotationView(**response.json())
+    assert result.annotation_type == AnnotationType.POLYGON
+    assert result.polygon_details == PolygonAnnotationView(
+        x=0,
+        y=0,
+        width=2,
+        height=2,
+        polygons=[[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]],
+    )
+
+
+def test_create_annotation__polygon_too_few_vertices(
+    collection: CollectionTable,
+    test_client: TestClient,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    route = f"/api/collections/{collection.collection_id!s}/annotations"
+
+    response = test_client.post(
+        route,
+        json={
+            "annotation_label_id": str(annotation_labels[0].annotation_label_id),
+            "annotation_type": "polygon",
+            "parent_sample_id": str(samples[0].sample_id),
+            "polygons": [[[0, 0], [2, 0]]],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert "at least 3 vertices" in response.json()["error"]
 
 
 def test_create_annotation_classification(
@@ -336,3 +392,46 @@ def test_create_annotation_cuboid_3d(
         ),
         tags=[],
     )
+
+
+def test_create_annotation_cuboid_3d__with_object_track(
+    db_session: Session,
+    collection: CollectionTable,
+    test_client: TestClient,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    (track_id,) = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id!s}/annotations",
+        json={
+            "annotation_label_id": str(annotation_labels[0].annotation_label_id),
+            "annotation_type": AnnotationType.CUBOID_3D,
+            "parent_sample_id": str(samples[0].sample_id),
+            "object_track_id": str(track_id),
+            "cuboid_3d": {
+                "frame_id": "odom",
+                "px": 1.0,
+                "py": 0.0,
+                "pz": 0.5,
+                "qx": 0.0,
+                "qy": 0.0,
+                "qz": 0.0,
+                "qw": 1.0,
+                "sx": 2.0,
+                "sy": 1.0,
+                "sz": 1.5,
+                "interpolated": True,
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = AnnotationView(**response.json())
+    assert result.object_track_id == track_id
+    assert result.cuboid_3d_details is not None
+    assert result.cuboid_3d_details.interpolated is True

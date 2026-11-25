@@ -7,7 +7,6 @@
         DatasetGridHeader,
         Footer,
         LabelsMenu,
-        MetadataFilterChips,
         Onboarding,
         SelectionPill,
         ShowFiltersButton,
@@ -16,15 +15,24 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { Filter, GripVertical, PanelLeftClose } from '@lucide/svelte';
+    import Filter from '@lucide/svelte/icons/filter';
+    import GripVertical from '@lucide/svelte/icons/grip-vertical';
+    import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
     import { onDestroy, onMount } from 'svelte';
     import { afterNavigate } from '$app/navigation';
-    import { toStore } from 'svelte/store';
+    import { get, toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import {
+        setAnnotationClasses,
+        useMcapSequenceAnnotationCounts,
+        useMcapSequenceFilters,
+        useUnannotatedSampleCount,
+        useUnannotatedSamplesFilter
+    } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
@@ -36,7 +44,7 @@
         isFrameDetailsRoute,
         isSampleDetailsRoute,
         isImagesRoute,
-        isPointCloudsRoute,
+        isMcapSequencesRoute,
         isPointCloudLabelingRoute,
         isVideoFramesRoute,
         isVideosRoute,
@@ -45,6 +53,8 @@
         isVideoDetailsRoute
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
+    import type { CategoricalMetadataValue } from '$lib/services/types';
+    import type { MetadataValueCountsFilter } from '$lib/hooks';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -63,11 +73,9 @@
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { CategoryCount } from '$lib/components/BarChart';
     import { selectCategoricalMetadataKeys } from './metadataDistributionSource';
-    import { buildImageFilter } from '$lib/utils/buildImageFilter';
-    import {
-        buildVideoAnnotationCountsFilter,
-        buildVideoFrameAnnotationCountsFilter
-    } from '$lib/utils/buildAnnotationCountsFilters';
+    import { buildImageAnnotationCountsFilter } from './imageAnnotationCountsFilter';
+    import { buildVideoAnnotationCountsFilter } from './videoAnnotationCountsFilter';
+    import { buildVideoFrameAnnotationCountsFilter } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
     import ClearAllFiltersButton from '$lib/components/ClearAllFiltersButton';
@@ -86,6 +94,7 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import { EMPTY_PLOT_SELECTION } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
@@ -159,10 +168,11 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
-    const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
+    const isPointClouds = $derived(isMcapSequencesRoute(page.route.id));
     const isPointCloudLabeling = $derived(isPointCloudLabelingRoute(page.route.id));
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);
+    const supportsQuery = $derived(isImages || isVideos);
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
@@ -304,7 +314,7 @@
         if (lastCollectionId && lastCollectionId !== collectionId) {
             clearSelectedSamples(lastCollectionId);
             clearSelectedSampleAnnotationCrops(lastCollectionId);
-            clearAnnotationPlotSelection(lastCollectionId);
+            clearPlotSelections(lastCollectionId);
         }
 
         gridType = nextGridType;
@@ -339,6 +349,8 @@
         collectionId: collectionId ?? ''
     }));
     const annotationLabelsData = $derived(annotationLabelsQuery?.data);
+    // The route param is the root collection ID; classes point to the dataset table.
+    $effect(() => setAnnotationClasses(collection.dataset_id, annotationLabelsData ?? []));
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
@@ -347,7 +359,10 @@
         annotationFilterRows,
         selectedAnnotationFilterNames,
         toggleAnnotationFilterSelection,
+        setAnnotationFilterSelection,
         setAnnotationCounts,
+        setUnannotatedSampleCount,
+        includeUnannotatedSamples,
         pruneInvalidSelections
     } = useAnnotationsFilter({
         annotationLabels: annotationLabelsStore
@@ -361,36 +376,67 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const { imageFilter: imageFilterFromHook } = useImageFilters();
+    const {
+        imageFilter: imageFilterFromHook,
+        filterParams: imageFilterParams,
+        imageQueryExpression,
+        updateQueryExpr: updateImageQueryExpr,
+        updatePlotSelection: updateImagePlotSelection
+    } = useImageFilters();
 
-    const { videoFilter: videoFilterFromHook } = useVideoFilters();
-    const plotFilterImageSampleIds = $derived(
-        $imageFilterFromHook?.sample_filter?.sample_ids ?? []
-    );
-    const plotFilterVideoSampleIds = $derived(
-        $videoFilterFromHook?.sample_filter?.sample_ids ?? []
-    );
-    // Query, tag and confusion-cell selections live on the shared image filter's
-    // sample_filter. Pull them out so the distribution counts track them too
-    // (previously only sample_ids from this filter were forwarded).
-    const plotFilterTagIds = $derived($imageFilterFromHook?.sample_filter?.tag_ids ?? []);
-    const plotFilterConfusionCell = $derived(
-        $imageFilterFromHook?.sample_filter?.confusion_cell ?? null
-    );
-    const plotFilterQueryExpr = $derived($imageFilterFromHook?.sample_filter?.query_expr ?? null);
+    const {
+        videoFilter: videoFilterFromHook,
+        filterParams: videoFilterParams,
+        videoQueryExpression,
+        updateQueryExpr: updateVideoQueryExpr,
+        updatePlotSelection: updateVideoPlotSelection
+    } = useVideoFilters();
+
+    // The grids keep a plot selection while the filter holds their collection, so a selection
+    // left here would come back without its chip. The filter can already hold the entered
+    // collection, whose selection must stay.
+    function clearPlotSelections(leftCollectionId: string) {
+        clearAnnotationPlotSelection(leftCollectionId);
+        if (get(imageFilterParams).collection_id === leftCollectionId) {
+            updateImagePlotSelection(EMPTY_PLOT_SELECTION);
+        }
+        if (get(videoFilterParams)?.collection_id === leftCollectionId) {
+            updateVideoPlotSelection(EMPTY_PLOT_SELECTION);
+        }
+    }
+
+    const queryExpression = $derived.by(() => {
+        const params = isVideos ? $videoFilterParams : $imageFilterParams;
+        if (params?.collection_id !== collectionId) return null;
+        return isVideos ? $videoQueryExpression : $imageQueryExpression;
+    });
+    const updateQueryExpr = $derived(isVideos ? updateVideoQueryExpr : updateImageQueryExpr);
 
     // Fill the annotation source filter for whatever collection is on screen. Every grid draws
     // its boxes against this one selection, so seeding only from the images-grid menu left the
     // other tabs filtering against another tab's sources.
     useSeedAnnotationSourceFilter(() => collectionId);
 
+    const { scopeToCollection: scopeUnannotatedSamplesFilter } = useUnannotatedSamplesFilter();
+    $effect.pre(() => scopeUnannotatedSamplesFilter(collectionId));
+
     // Selected annotation sources (annotation collections). When a subset is
     // selected the distribution counts only annotations from those sources; the
     // backend restricts the counted annotations by their own collection id.
     const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
         useAnnotationCollectionsFilter();
+    // Only the image and video grids show the "No annotations" row.
+    const showsNoAnnotationsRow = $derived(isImages || isVideos);
+    const annotationFilterWithUnannotated = $derived<AnnotationsFilter | undefined>(
+        showsNoAnnotationsRow && $includeUnannotatedSamples
+            ? {
+                  ...($annotationFilterStore ?? { filter_type: 'annotations' }),
+                  include_unannotated_samples: true
+              }
+            : $annotationFilterStore
+    );
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
-        const base = $annotationFilterStore;
+        const base = annotationFilterWithUnannotated;
         const sourceIds =
             isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
         // An empty list cannot be sent: the backend skips collection_ids when it is falsy, so
@@ -403,20 +449,28 @@
         };
     });
 
-    // Image-count filter shared by the mix and per-type distribution queries so
-    // the distribution plot tracks the active filters (dimensions, labels,
-    // metadata, query, tags, confusion cell and annotation sources).
+    // Image-count filter shared by the mix and per-type distribution queries so the counts
+    // track the active filters: the plot selection (sample ids, embedding region), tags, query,
+    // confusion cell, dimensions, labels, metadata and annotation sources.
     const imageAnnotationCountsFilter = $derived(
-        buildImageFilter({
+        buildImageAnnotationCountsFilter({
+            imageFilter: $imageFilterFromHook,
+            isAnnotations,
             dimensionsValues: $dimensionsValues,
             annotationFilter: annotationFilterForCounts,
-            metadataFilters,
-            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds,
-            tagIds: isAnnotations ? [] : plotFilterTagIds,
-            confusionCell: isAnnotations ? null : plotFilterConfusionCell,
-            queryExpr: isAnnotations ? null : plotFilterQueryExpr
+            metadataFilters
         })
     );
+
+    const categoricalCountsFilter = $derived.by((): MetadataValueCountsFilter | undefined => {
+        if (isImages && $imageFilterFromHook) {
+            return { ...$imageFilterFromHook, filter_type: 'image' };
+        }
+        if (isVideos && $videoFilterFromHook) {
+            return { ...$videoFilterFromHook, filter_type: 'video' };
+        }
+        return undefined;
+    });
 
     // Annotations of video frames are counted against the frame collection, which
     // is the parent of the annotation collection the route points at.
@@ -429,18 +483,53 @@
     const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
         collectionId: datasetId,
         filter: imageAnnotationCountsFilter,
-        enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
+        enabled:
+            !isVideos &&
+            !isVideoFrames &&
+            !isVideoFrameAnnotations &&
+            !isPointClouds &&
+            !$allSourcesHidden
     }));
 
+    const videoAnnotationCountsFilter = $derived(
+        buildVideoAnnotationCountsFilter({
+            videoFilter: $videoFilterFromHook,
+            metadataFilters,
+            annotationFilter: annotationFilterWithUnannotated,
+            videoBoundsValues: $videoBoundsValues
+        })
+    );
     const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
         collectionId,
-        filter: buildVideoAnnotationCountsFilter({
-            metadataFilters,
-            annotationFilter: $annotationFilterStore,
-            videoBoundsValues: $videoBoundsValues,
-            sampleIds: plotFilterVideoSampleIds
-        }),
+        filter: videoAnnotationCountsFilter,
         enabled: isVideos && !$allSourcesHidden
+    }));
+
+    const unannotatedSampleCountQuery = useUnannotatedSampleCount(() => ({
+        ...(isVideos
+            ? { sampleType: 'video' as const, collectionId, filter: videoAnnotationCountsFilter }
+            : {
+                  sampleType: 'image' as const,
+                  collectionId: datasetId,
+                  filter: imageAnnotationCountsFilter
+              }),
+        enabled: showsNoAnnotationsRow && !$allSourcesHidden
+    }));
+    $effect(() =>
+        setUnannotatedSampleCount(
+            showsNoAnnotationsRow ? unannotatedSampleCountQuery.data : undefined
+        )
+    );
+    const { filterParams: mcapSequenceFilterParams, mcapSequenceFilter } = useMcapSequenceFilters();
+    // The grid page sets the filter collection after this layout reads a new route. Until then
+    // the filter still belongs to the previous collection.
+    const isMcapSequenceFilterOfCollection = $derived(
+        $mcapSequenceFilterParams?.collection_id === collectionId
+    );
+    const mcapSequenceAnnotationCountsQuery = useMcapSequenceAnnotationCounts(() => ({
+        collectionId,
+        filter: $mcapSequenceFilter,
+        enabled: isPointClouds && isMcapSequenceFilterOfCollection && !$allSourcesHidden
     }));
 
     const videoFrameCountsCollectionId = $derived(
@@ -460,6 +549,9 @@
         }
         if (isVideos) {
             return videoAnnotationCountsQuery;
+        }
+        if (isPointClouds) {
+            return mcapSequenceAnnotationCountsQuery;
         }
         return imageAnnotationCountsQuery;
     });
@@ -503,7 +595,12 @@
     const hasFilterPanel = $derived(isCollectionGrid || isCaptions);
 
     const panelIsVisible = $derived(
-        isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings, supportsDistribution)
+        isPanelVisible($activePanel, {
+            isImages,
+            hasMediaWithEmbeddings,
+            supportsDistribution,
+            supportsQuery
+        })
     );
 
     // False only once annotation labels have loaded and come back empty — not
@@ -522,10 +619,13 @@
         $activePanel === 'distribution' && supportsDistribution
     );
 
-    // The distribution settings live here, so they stay when the panel closes and opens again.
+    // The distribution settings live here, so they stay when the panel closes and opens again,
+    // and when a sample opens and the grid comes back.
     let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
     let distributionSampleTagIds = $state<string[]>([]);
     let histogramBinCount = $state(20);
+    let distributionSourceId = $state<string | undefined>(undefined);
+    let distributionGroupId = $state<string | undefined>(undefined);
 
     const handleCategoricalValueToggle = (metadataKey: string, value: string | boolean | null) => {
         const selected = $categoricalMetadataValues[metadataKey] ?? [];
@@ -541,6 +641,16 @@
             collection_id: collectionId,
             field_name: metadataKey,
             action: exists ? 'value_disabled' : 'value_enabled'
+        });
+    };
+
+    const setCategoricalValues = (metadataKey: string, values: CategoricalMetadataValue[]) => {
+        updateCategoricalMetadataValues({ ...$categoricalMetadataValues, [metadataKey]: values });
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: metadataKey,
+            action: 'values_set',
+            value_count: values.length
         });
     };
 
@@ -567,11 +677,13 @@
 </script>
 
 <div class="flex-none">
-    <Header
-        {collection}
-        showTour={onboardingEnabled}
-        onShowTour={() => useOnboarding().requestReplay()}
-    />
+    {#if !(isSampleDetails || isAnnotationDetails || isGroupDetails || isFrameDetails)}
+        <Header
+            {collection}
+            showTour={onboardingEnabled}
+            onShowTour={() => useOnboarding().requestReplay()}
+        />
+    {/if}
     <MenuDialogHost {isImages} {isVideos} {isPointClouds} {hasEmbeddings} {collection} />
 </div>
 
@@ -602,48 +714,53 @@
                     aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                        <h2
+                            class="flex items-center justify-between px-4 py-2 text-lg font-semibold"
                         >
-                            <h2
-                                class="flex items-center justify-between py-2 text-lg font-semibold"
-                            >
-                                <span class="flex items-center space-x-2">
-                                    <Filter class="size-5" />
-                                    <span>Filters</span>
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <ClearAllFiltersButton
-                                        collectionId={metadataCollectionId}
-                                        {isCaptions}
-                                        {isImages}
-                                        {isVideos}
-                                        {isVideoFrames}
-                                    />
-                                    <Tooltip content="Hide filters" position="bottom" class="w-max">
-                                        <Button
-                                            variant="ghost"
-                                            icon={PanelLeftClose}
-                                            ariaLabel="Hide filters"
-                                            buttonProps={{
-                                                onclick: toggleFilterPanelCollapsed,
-                                                'aria-expanded': true,
-                                                'data-testid': 'filter-panel-collapse',
-                                                class: 'size-6 p-0'
-                                            }}
-                                        />
-                                    </Tooltip>
-                                </span>
-                            </h2>
-
-                            {#if isImages}
-                                <QueryControl
-                                    onOpen={() => {
-                                        setActivePanel(
-                                            $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
-                                        );
-                                    }}
+                            <span class="flex items-center space-x-2">
+                                <Filter class="size-5" />
+                                <span>Filters</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <ClearAllFiltersButton
+                                    collectionId={metadataCollectionId}
+                                    {isCaptions}
+                                    {isImages}
+                                    {isVideos}
+                                    {isVideoFrames}
                                 />
+                                <Tooltip content="Hide filters" position="bottom" class="w-max">
+                                    <Button
+                                        variant="ghost"
+                                        icon={PanelLeftClose}
+                                        ariaLabel="Hide filters"
+                                        buttonProps={{
+                                            onclick: toggleFilterPanelCollapsed,
+                                            'aria-expanded': true,
+                                            'data-testid': 'filter-panel-collapse',
+                                            class: 'size-6 p-0'
+                                        }}
+                                    />
+                                </Tooltip>
+                            </span>
+                        </h2>
+                        <div
+                            class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 [scrollbar-gutter:stable] dark:[color-scheme:dark]"
+                        >
+                            {#if supportsQuery}
+                                {#key collectionId}
+                                    <QueryControl
+                                        {queryExpression}
+                                        {updateQueryExpr}
+                                        onOpen={() => {
+                                            setActivePanel(
+                                                $activePanel === 'queryEditor'
+                                                    ? 'none'
+                                                    : 'queryEditor'
+                                            );
+                                        }}
+                                    />
+                                {/key}
                             {/if}
 
                             <div>
@@ -667,34 +784,29 @@
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
-                            <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
-                            {#if !isCaptions && !isPointClouds}
+                            <!-- Captions support only the tag filter. -->
+                            {#if !isCaptions}
                                 <LabelsMenu
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>
                                         toggleAnnotationFilterSelection(label, collectionId)}
+                                    onSelectionChange={(labels) =>
+                                        setAnnotationFilterSelection(labels, collectionId)}
                                     showVisibilityToggle={showAnnotationVisibilityToggle}
                                 />
                             {/if}
 
                             {#if isImages || isVideos || isVideoFrames || isCaptions}
                                 {#key collectionId}
-                                    <MetadataFilterChips
-                                        collectionId={metadataCollectionId}
-                                        isImageCollection={isImages || isCaptions}
-                                        categoricalKeys={categoricalMetadataKeys}
-                                    />
                                     <CombinedMetadataDimensionsFilters
                                         collectionId={metadataCollectionId}
                                         showDimensions={!isCaptions}
                                         {isVideos}
                                         {isVideoFrames}
-                                        isImageCollection={isImages || isCaptions}
-                                        categoricalFilter={isCaptions
-                                            ? undefined
-                                            : imageAnnotationCountsFilter}
+                                        {categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
+                                        onCategoricalValuesSet={setCategoricalValues}
                                         onCategoricalValuesClear={clearCategoricalValues}
                                         onFilterChanged={handleCombinedMetadataFilterChanged}
                                     />
@@ -788,9 +900,17 @@
                                         <PlotPanel {collectionId} />
                                     {/key}
                                 {/await}
-                            {:else if $activePanel === 'queryEditor' && isImages}
+                            {:else if $activePanel === 'queryEditor' && supportsQuery}
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
-                                    <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                                    {#key collectionId}
+                                        <QueryEditorPanel
+                                            {collectionId}
+                                            sampleType={isVideos ? 'video' : 'image'}
+                                            {queryExpression}
+                                            {updateQueryExpr}
+                                            onClose={() => setActivePanel('none')}
+                                        />
+                                    {/key}
                                 {/await}
                             {:else if distributionPanelVisible && isVideos}
                                 {#await import('./VideoDistributionPanel/VideoDistributionPanel.svelte') then { default: VideoDistributionPanel }}
@@ -802,6 +922,8 @@
                                             onClassBarClick={handleClassBarClick}
                                             onClose={() => setActivePanel('none')}
                                             bind:histogramBinCount
+                                            bind:selectedSourceId={distributionSourceId}
+                                            bind:selectedGroupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}
@@ -820,6 +942,8 @@
                                             bind:countMode={distributionCountMode}
                                             bind:histogramBinCount
                                             bind:comparisonTagIds={distributionSampleTagIds}
+                                            bind:selectedSourceId={distributionSourceId}
+                                            bind:selectedGroupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}
@@ -839,7 +963,7 @@
                 <div data-testid="side-panel-tabs" class="contents">
                     <SidePanelTabs
                         {collectionId}
-                        {isImages}
+                        {supportsQuery}
                         {hasMediaWithEmbeddings}
                         {supportsEvaluation}
                         {supportsDistribution}

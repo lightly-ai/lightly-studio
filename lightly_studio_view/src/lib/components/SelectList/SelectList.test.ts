@@ -88,6 +88,59 @@ describe('SelectList', () => {
         expect(screen.getByText('nonexistent')).toBeInTheDocument();
     });
 
+    it('hides the create row when allowCreate is false', async () => {
+        const user = userEvent.setup();
+        render(SelectList, { props: { items: [...mockItems], allowCreate: false } });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'zebra');
+
+        expect(screen.queryByText('Create:')).toBeNull();
+    });
+
+    it('does not create an item on Enter when allowCreate is false', async () => {
+        const user = userEvent.setup();
+        const onSelect = vi.fn();
+        const onCreate = vi.fn();
+        const items = [...mockItems];
+        render(SelectList, { props: { items, allowCreate: false, onSelect, onCreate } });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'zebra{Enter}');
+
+        expect(onSelect).not.toHaveBeenCalled();
+        expect(onCreate).not.toHaveBeenCalled();
+        expect(items).toHaveLength(mockItems.length);
+    });
+
+    it('does not confirm a new item on Enter when allowCreate is false', async () => {
+        const user = userEvent.setup();
+        const onSelect = vi.fn();
+        const onKeyboardConfirm = vi.fn();
+        render(SelectList, {
+            props: { items: [...mockItems], allowCreate: false, onSelect, onKeyboardConfirm }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'zebra{Enter}');
+
+        expect(onSelect).not.toHaveBeenCalled();
+        expect(onKeyboardConfirm).not.toHaveBeenCalled();
+    });
+
+    it('selects an existing item typed in another case when allowCreate is false', async () => {
+        const user = userEvent.setup();
+        const onKeyboardConfirm = vi.fn();
+        render(SelectList, {
+            props: { items: [...mockItems], allowCreate: false, onKeyboardConfirm }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'ITEM2{Enter}');
+
+        expect(onKeyboardConfirm).toHaveBeenCalledWith({ value: 'item2', label: 'Item 2' });
+    });
+
     it('renders all items in the list', async () => {
         const user = userEvent.setup();
         render(SelectList, {
@@ -167,6 +220,42 @@ describe('SelectList', () => {
         });
     });
 
+    it('calls onCreate when the user creates an item from the create option', async () => {
+        const user = userEvent.setup();
+        const onCreate = vi.fn();
+        const onSelect = vi.fn();
+        render(SelectList, { props: { items: [...mockItems], onCreate, onSelect } });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'New Item');
+        await user.click(screen.getByText('Create:'));
+
+        const newItem = { value: 'New Item', label: 'New Item' };
+        expect(onCreate).toHaveBeenCalledExactlyOnceWith(newItem);
+        expect(onSelect).toHaveBeenCalledWith(newItem);
+    });
+
+    it.each([
+        ['without', undefined],
+        ['with', vi.fn()]
+    ])(
+        'does not create an item when pressing Enter on whitespace %s onKeyboardConfirm',
+        async (_, onKeyboardConfirm) => {
+            const user = userEvent.setup();
+            const onCreate = vi.fn();
+            const onSelect = vi.fn();
+            render(SelectList, {
+                props: { items: [...mockItems], onCreate, onSelect, onKeyboardConfirm }
+            });
+
+            await user.click(screen.getByTestId('select-list-trigger'));
+            await user.type(screen.getByTestId('select-list-input'), '   {Enter}');
+
+            expect(onCreate).not.toHaveBeenCalled();
+            expect(onSelect).not.toHaveBeenCalled();
+        }
+    );
+
     it('selects existing item when pressing Enter with case-insensitive match', async () => {
         const user = userEvent.setup();
         const onSelect = vi.fn();
@@ -191,6 +280,40 @@ describe('SelectList', () => {
             // Should select the existing "Dog" label, not create "dog"
             expect(onSelect).toHaveBeenCalledWith({ value: 'Dog', label: 'Dog' });
         });
+    });
+
+    it('shows pinnedTop items even when search does not match them', async () => {
+        const user = userEvent.setup();
+        render(SelectList, {
+            props: {
+                items: mockItems,
+                pinnedTop: [{ value: 'pinned-top', label: 'Always On Top' }],
+                allowCreate: false
+            }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'zzz');
+
+        expect(screen.getByRole('option', { name: 'Always On Top' })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'Item 1' })).not.toBeInTheDocument();
+    });
+
+    it('shows pinnedBottom items even when search does not match them', async () => {
+        const user = userEvent.setup();
+        render(SelectList, {
+            props: {
+                items: mockItems,
+                pinnedBottom: [{ value: 'pinned-bottom', label: 'Always At Bottom' }],
+                allowCreate: false
+            }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'zzz');
+
+        expect(screen.getByRole('option', { name: 'Always At Bottom' })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'Item 1' })).not.toBeInTheDocument();
     });
 
     it('selects existing item when pressing Enter with different casing', async () => {

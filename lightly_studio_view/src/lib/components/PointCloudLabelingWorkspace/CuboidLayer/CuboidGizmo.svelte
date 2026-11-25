@@ -2,78 +2,87 @@
     import { useParentObject3D } from '@threlte/core';
     import { TransformControls } from '@threlte/extras';
     import type { TransformControls as ThreeTransformControls } from 'three/examples/jsm/controls/TransformControls.js';
-    import type { Object3D } from 'three';
-    import { captureTransformSnapshot, restoreTransformSnapshot } from './cuboidTransform';
+    import { getCuboidGizmoOptions } from './cuboidTransform';
+    import { useCuboidTransformControls } from './useCuboidTransformControls.svelte';
+    import OrthographicRotationRing from './OrthographicRotationRing/OrthographicRotationRing.svelte';
+    import OrthographicMoveHandle from './OrthographicMoveHandle/OrthographicMoveHandle.svelte';
+    import type { CameraMode, Vector3 } from '../domain';
 
-    interface Props {
-        mode: 'translate' | 'rotate' | 'scale';
+    // The yaw ring is larger than the move arrows, so the two gizmos never overlap.
+    const PERSPECTIVE_GIZMO_SIZES = { translate: 0.75, rotate: 1.2 } as const;
+
+    interface Props extends Omit<Parameters<typeof useCuboidTransformControls>[0], 'getControls'> {
+        mode: 'translate' | 'rotate';
+        cameraMode: CameraMode;
+        size: Vector3;
         enabled?: boolean;
-        /** Called when the user finishes a drag; receives the mutated parent Object3D and a snapshot of its pre-drag transform. */
-        onTransformEnd?: (
-            object: Object3D,
-            snapshot: ReturnType<typeof captureTransformSnapshot>
-        ) => void;
-        /** Called when the user starts interacting with the gizmo (mousedown on a handle). */
-        onInteractionStart?: () => void;
-        onInteractionCancel?: () => void;
+        /** Reports whether the pointer is on an axis of the perspective gizmo. */
+        onAxisHoverChange?: (isHovered: boolean) => void;
     }
 
     let {
         mode,
+        cameraMode,
+        size,
         enabled = true,
         onTransformEnd,
+        onTransformPreview,
         onInteractionStart,
-        onInteractionCancel
+        onInteractionCancel,
+        onAxisHoverChange
     }: Props = $props();
 
     const parentObject3D = useParentObject3D();
     let controlsRef = $state<ThreeTransformControls | undefined>();
+    const options = $derived(getCuboidGizmoOptions(mode, cameraMode));
+
+    useCuboidTransformControls({
+        getControls: () => controlsRef,
+        onTransformEnd: (object, snapshot) => onTransformEnd?.(object, snapshot),
+        onTransformPreview: (object) => onTransformPreview?.(object),
+        onInteractionStart: () => onInteractionStart?.(),
+        onInteractionCancel: () => onInteractionCancel?.()
+    });
 
     $effect(() => {
         const controls = controlsRef;
         if (!controls) return;
-
-        let changed = false;
-        let snapshot: ReturnType<typeof captureTransformSnapshot> | null = null;
-
-        function onMouseDown(): void {
-            changed = false;
-            const obj = parentObject3D.current;
-            snapshot = obj ? captureTransformSnapshot(obj) : null;
-            onInteractionStart?.();
-        }
-
-        function onObjectChange(): void {
-            changed = true;
-        }
-
-        function onMouseUp(): void {
-            const obj = parentObject3D.current;
-            if (changed && obj && snapshot) onTransformEnd?.(obj, snapshot);
-            else onInteractionCancel?.();
-            snapshot = null;
-        }
-
-        controls.addEventListener('mouseDown', onMouseDown);
-        controls.addEventListener('objectChange', onObjectChange);
-        controls.addEventListener('mouseUp', onMouseUp);
+        const onAxisChange = () => onAxisHoverChange?.(controls.axis !== null);
+        controls.addEventListener('axis-changed', onAxisChange);
         return () => {
-            controls.removeEventListener('mouseDown', onMouseDown);
-            controls.removeEventListener('objectChange', onObjectChange);
-            controls.removeEventListener('mouseUp', onMouseUp);
-            const obj = parentObject3D.current;
-            if (snapshot && obj) restoreTransformSnapshot(obj, snapshot);
-            if (snapshot) onInteractionCancel?.();
+            controls.removeEventListener('axis-changed', onAxisChange);
+            onAxisHoverChange?.(false);
         };
     });
 </script>
 
-<TransformControls
-    bind:controls={controlsRef}
-    {enabled}
-    {mode}
-    space="local"
-    size={0.75}
-    autoPauseControls={true}
-    object={parentObject3D.current}
-/>
+{#if cameraMode !== 'perspective'}
+    {#if enabled && mode === 'rotate'}
+        <OrthographicRotationRing
+            {size}
+            {onTransformEnd}
+            {onInteractionStart}
+            {onInteractionCancel}
+        />
+    {:else if enabled}
+        <OrthographicMoveHandle
+            {onTransformEnd}
+            {onTransformPreview}
+            {onInteractionStart}
+            {onInteractionCancel}
+        />
+    {/if}
+{:else}
+    <TransformControls
+        bind:controls={controlsRef}
+        {enabled}
+        {mode}
+        space={options.space}
+        showX={options.showX}
+        showY={options.showY}
+        showZ={options.showZ}
+        size={PERSPECTIVE_GIZMO_SIZES[mode]}
+        autoPauseControls={true}
+        object={parentObject3D.current}
+    />
+{/if}

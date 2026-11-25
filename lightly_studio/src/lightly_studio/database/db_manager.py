@@ -17,6 +17,7 @@ import logging
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any
@@ -104,7 +105,12 @@ class DatabaseEngine:
         # In tests (where single_threaded=True): Disable preparing, cause constant
         # database recreations under a single connection cause prepared statements to
         # become invalid, leading to "cached plan must not change result type" errors.
-        connect_args: dict[str, Any] = {}
+        # Keep files readable by DuckDB 1.x when created or updated with DuckDB 2.x.
+        connect_args: dict[str, Any] = (
+            {"config": {"storage_compatibility_version": "v1.0.0"}}
+            if self._backend == DatabaseBackend.DUCKDB
+            else {}
+        )
         if single_threaded and self._backend == DatabaseBackend.POSTGRESQL:
             connect_args["prepare_threshold"] = None
 
@@ -115,7 +121,11 @@ class DatabaseEngine:
                 connect_args=connect_args,
             )
         else:
-            engine_kwargs: dict[str, Any] = {"pool_size": 10, "max_overflow": 40}
+            engine_kwargs: dict[str, Any] = {
+                "pool_size": 10,
+                "max_overflow": 40,
+                "connect_args": connect_args,
+            }
             if self._backend == DatabaseBackend.POSTGRESQL:
                 # A session can hold one Postgres connection open and idle across a long stretch.
                 # A middlebox (e.g., firewalls, VPNs) can silently drop idle connections,
@@ -224,16 +234,33 @@ class DatabaseEngine:
                 persistent_session.commit()
 
 
+@dataclass
+class _ClientMode:
+    """Holds whether the Python client uses a remote transport. The client then has no database."""
+
+    remote: bool = False
+
+
 # Global database engine instance instantiated lazily.
 _engine: DatabaseEngine | None = None
+_client_mode = _ClientMode()
+
+
+def set_remote_client(remote: bool) -> None:
+    """Block access to the database while the Python client uses a remote transport."""
+    _client_mode.remote = remote
 
 
 def get_engine() -> DatabaseEngine:
     """Get the database engine.
 
     If the engine does not exist yet, it is newly created with the default settings.
+
+    Raises:
+        NotImplementedError: If the Python client uses a remote transport.
     """
     global _engine  # noqa: PLW0603
+    _check_local()
     if _engine is None:
         _engine = DatabaseEngine()
         atexit.register(close)
@@ -268,7 +295,9 @@ def connect(
 
     Raises:
         ValueError: If both db_file and db_url are provided.
+        NotImplementedError: If the Python client uses a remote transport.
     """
+    _check_local()
     if db_file is not None and db_url is not None:
         raise ValueError("Cannot specify both db_file and db_url")
 
@@ -286,12 +315,14 @@ def connect(
 @contextmanager
 def session() -> Generator[Session, None, None]:
     """Create a short-lived database session. The session is autoclosed."""
+    _check_local()
     with get_engine().session() as session:
         yield session
 
 
 def persistent_session() -> Session:
     """Create a persistent session."""
+    _check_local()
     return get_engine().get_persistent_session()
 
 
@@ -309,6 +340,15 @@ def get_backend() -> DatabaseBackend:
     return get_engine().backend
 
 
+def get_session_backend(session: Session) -> DatabaseBackend:
+    """Returns the database backend that `session` is bound to.
+
+    Uses the bind of the session, not the global engine, so it is correct in tests with
+    per-test engines.
+    """
+    return DatabaseBackend(session.get_bind().dialect.name)
+
+
 def require_postgres_backend(session: Session) -> None:
     """Raise unless ``session`` is bound to a PostgreSQL backend.
 
@@ -321,12 +361,11 @@ def require_postgres_backend(session: Session) -> None:
     Raises:
         NotImplementedError: If the session is not bound to PostgreSQL.
     """
-    bind = session.get_bind()
-    dialect_name = bind.dialect.name if bind is not None else None
-    if dialect_name != DatabaseBackend.POSTGRESQL.value:
+    backend = get_session_backend(session=session)
+    if backend != DatabaseBackend.POSTGRESQL:
         raise NotImplementedError(
             "This operation is only supported on the PostgreSQL backend. "
-            f"Current backend: {dialect_name or 'unknown'}."
+            f"Current backend: {backend.value}."
         )
 
 
@@ -437,3 +476,8 @@ def _session_dependency() -> Generator[Session, None, None]:
 
 
 SessionDep = Annotated[Session, Depends(_session_dependency)]
+
+
+def _check_local() -> None:
+    if _client_mode.remote:
+        raise NotImplementedError("This is not supported with a remote connection yet.")

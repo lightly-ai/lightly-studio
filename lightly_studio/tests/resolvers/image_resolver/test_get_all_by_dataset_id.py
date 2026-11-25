@@ -15,11 +15,9 @@ from lightly_studio.core.dataset_query.order_by import (
 )
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.image import ImageTable
-from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
 from lightly_studio.resolvers import (
     image_resolver,
     metadata_resolver,
-    sample_embedding_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
@@ -42,6 +40,7 @@ from tests.helpers_resolvers import (
     create_images,
     create_sample_embedding,
     create_samples_with_embeddings,
+    create_saved_plot,
     create_tag,
 )
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
@@ -1102,7 +1101,6 @@ def _setup_collection_with_2d_coordinates(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
-        # Distinct first dimensions keep the deterministic cache key stable across samples.
         images_and_embeddings=[
             (ImageStub(path=f"sample_{index}.png"), [float(index) + 0.1, 0.2, 0.3])
             for index in range(len(coordinates))
@@ -1113,19 +1111,12 @@ def _setup_collection_with_2d_coordinates(
     }
     # Seed the cached 2D projection so the region resolver reads deterministic coordinates
     # instead of recomputing them.
-    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+    create_saved_plot(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
+        coordinates=coordinates_by_sample,
     )
-    session.add(
-        TwoDimEmbeddingTable(
-            hash=cache_key,
-            x=[coordinates_by_sample[sample_id][0] for sample_id in cached_sample_ids],
-            y=[coordinates_by_sample[sample_id][1] for sample_id in cached_sample_ids],
-        )
-    )
-    session.commit()
     return collection_id, images
 
 
@@ -1203,19 +1194,13 @@ def test_get_all_by_collection_id__embedding_region_combined_with_dimension_filt
         images[1].sample_id: (2.0, 2.0),  # inside region, narrow
         images[2].sample_id: (100.0, 100.0),  # outside region, wide
     }
-    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
+
+    create_saved_plot(
         session=db_session,
         collection_id=collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
+        coordinates=coordinates,
     )
-    db_session.add(
-        TwoDimEmbeddingTable(
-            hash=cache_key,
-            x=[coordinates[sample_id][0] for sample_id in cached_sample_ids],
-            y=[coordinates[sample_id][1] for sample_id in cached_sample_ids],
-        )
-    )
-    db_session.commit()
 
     result = image_resolver.get_all_by_collection_id(
         session=db_session,

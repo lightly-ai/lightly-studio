@@ -130,7 +130,7 @@ export function useSlicInteraction(getProps: () => SampleSlicRectProps) {
         stroke.cancel();
     };
     const renderStrokePreview = (stroke: SuperpixelStrokePreview) => {
-        if (slicResult) preview.renderStroke(stroke.mask);
+        if (slicResult) preview.renderStroke(stroke.mask, sample.width, sample.height);
     };
     const updateHover = (point: { x: number; y: number } | null) => {
         if (point && editor && slicResult) preview.updateHover(point, editor);
@@ -160,7 +160,8 @@ export function useSlicInteraction(getProps: () => SampleSlicRectProps) {
                 await brushApi.finishBrush(
                     mask,
                     selectedAnnotation,
-                    labels.data ?? [],
+                    // Wait for the class list, so an existing class does not count as missing.
+                    labels.data ?? labels.refetch().then((result) => result.data),
                     async (input: AnnotationUpdateInput) => {
                         await annotationApi.updateAnnotation(input);
                     },

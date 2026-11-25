@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Plus } from '@lucide/svelte';
+    import Plus from '@lucide/svelte/icons/plus';
     import { Portal } from 'bits-ui';
     import { Select, SelectMenuItem } from '$lib/components/Select';
     import { STRATEGY_OPTIONS, type StrategyType } from '$lib/hooks/useStrategyBuilder';

@@ -12,6 +12,9 @@ from lightly_studio.assisted_labeling.provider import (
 class StubProvider:
     """Provider that records the prompts and returns fixed predictions or raises an error."""
 
+    vendor = "stub-vendor"
+    model = "stub-model"
+
     def __init__(
         self, predictions: list[Prediction] | None = None, error: Exception | None = None
     ) -> None:

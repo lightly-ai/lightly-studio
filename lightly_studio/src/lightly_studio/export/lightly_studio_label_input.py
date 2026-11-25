@@ -9,7 +9,7 @@ export logic while differing only in how a sample maps to a labelformat `Image`.
 from __future__ import annotations
 
 from argparse import ArgumentParser
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Protocol
 from uuid import UUID
 
@@ -22,6 +22,7 @@ from labelformat.model.instance_segmentation import (
     InstanceSegmentationInput,
     SingleInstanceSegmentation,
 )
+from labelformat.model.multipolygon import MultiPolygon
 from labelformat.model.object_detection import (
     ImageObjectDetection,
     ObjectDetectionInput,
@@ -30,6 +31,7 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 
 from lightly_studio.core.sample import Sample
+from lightly_studio.export import annotation_batches
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.resolvers import annotation_label_resolver
 
@@ -69,14 +71,14 @@ class LightlyStudioInputBase:
         """Initializes the adapter.
 
         Args:
-            session: The SQLModel session to use for database access. Used only in the
-                constructor to fetch the labels for the given dataset.
+            session: The SQLModel session to use for database access.
             dataset_id: The dataset ID for label retrieval.
             samples: Dataset samples.
             annotation_collection_id: If provided, only annotations belonging to this
                 annotation collection are exported. If None, all annotations are exported.
             sample_to_image: Strategy mapping a sample to a labelformat `Image`.
         """
+        self._session = session
         self._samples = list(samples)
         self._annotation_collection_id = annotation_collection_id
         self._sample_to_image = sample_to_image
@@ -104,19 +106,15 @@ class LightlyStudioInputBase:
                 sample=sample, image_id=idx, use_relative_filename=self.USE_RELATIVE_FILENAME
             )
 
-    def _annotations_of_collection_and_type(
-        self, sample: Sample, annotation_type: AnnotationType
-    ) -> Iterable[AnnotationBaseTable]:
-        # TODO(malte, 07/2026): We can optimise in the future to filter annotations in a DB
-        # query instead of loading every annotation per sample and filtering in Python.
-        for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type != annotation_type:
-                continue
-            if (
-                self._annotation_collection_id is None
-                or annotation.annotation_collection_id == self._annotation_collection_id
-            ):
-                yield annotation
+    def _samples_with_annotations(
+        self, annotation_types: Sequence[AnnotationType]
+    ) -> Iterable[tuple[Sample, list[AnnotationBaseTable]]]:
+        return annotation_batches.iter_sample_annotations(
+            session=self._session,
+            samples=self._samples,
+            annotation_types=annotation_types,
+            annotation_collection_id=self._annotation_collection_id,
+        )
 
 
 class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionInput):
@@ -124,15 +122,15 @@ class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionI
 
     def get_labels(self) -> Iterable[ImageObjectDetection]:
         """Returns the labels for export."""
-        for idx, sample in enumerate(self._samples):
+        for idx, (sample, sample_annotations) in enumerate(
+            self._samples_with_annotations(annotation_types=[AnnotationType.OBJECT_DETECTION])
+        ):
             objects = [
                 _annotation_to_single_obj_det(
                     annotation=annotation,
                     label_id_to_category=self._label_id_to_category,
                 )
-                for annotation in self._annotations_of_collection_and_type(
-                    sample=sample, annotation_type=AnnotationType.OBJECT_DETECTION
-                )
+                for annotation in sample_annotations
             ]
             yield ImageObjectDetection(
                 image=self._sample_to_image(
@@ -156,18 +154,23 @@ class LightlyStudioYOLOObjectDetectionInput(LightlyStudioObjectDetectionInput):
 
 
 class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSegmentationInput):
-    """Labelformat adapter for segmentation mask backed by dataset samples and annotations."""
+    """Labelformat adapter for polygons and segmentation masks backed by dataset samples."""
+
+    ANNOTATION_TYPES: tuple[AnnotationType, ...] = (
+        AnnotationType.POLYGON,
+        AnnotationType.SEGMENTATION_MASK,
+    )
 
     def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
         """Returns the labels for export."""
-        for idx, sample in enumerate(self._samples):
+        for idx, (sample, sample_annotations) in enumerate(
+            self._samples_with_annotations(annotation_types=self.ANNOTATION_TYPES)
+        ):
             image = self._sample_to_image(
                 sample=sample, image_id=idx, use_relative_filename=self.USE_RELATIVE_FILENAME
             )
-            objects = []
-            for annotation in self._annotations_of_collection_and_type(
-                sample=sample, annotation_type=AnnotationType.SEGMENTATION_MASK
-            ):
+            objects: list[SingleInstanceSegmentation] = []
+            for annotation in sample_annotations:
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,
                     label_id_to_category=self._label_id_to_category,
@@ -187,8 +190,17 @@ class LightlyStudioPascalVOCInstanceSegmentationInput(LightlyStudioInstanceSegme
 
     # TODO(Leonardo, 03/2026): Ensure Pascal VOC export maps user-defined background to class ID 0
     # and void/ignore to 255 for spec compliance.
+    ANNOTATION_TYPES = (AnnotationType.SEGMENTATION_MASK,)
     CATEGORY_ID_START = 1
     # Pascal VOC derives mask filenames from image names, so an absolute path cannot be used.
+    USE_RELATIVE_FILENAME = True
+
+
+class LightlyStudioYOLOInstanceSegmentationInput(LightlyStudioInstanceSegmentationInput):
+    """Labelformat adapter for YOLO instance segmentation export from polygon annotations."""
+
+    ANNOTATION_TYPES = (AnnotationType.POLYGON,)
+    # YOLO joins the file name with the output directory, so an absolute path cannot be used.
     USE_RELATIVE_FILENAME = True
 
 
@@ -215,14 +227,15 @@ def _build_label_id_to_category(
 def _annotation_to_single_obj_det(
     annotation: AnnotationBaseTable, label_id_to_category: dict[UUID, Category]
 ) -> SingleObjectDetection:
-    assert annotation.object_detection_details is not None
+    if annotation.object_detection_details is None:
+        raise RuntimeError("Expected `annotation.object_detection_details` to be set.")
     box = BoundingBox(
         xmin=annotation.object_detection_details.x,
         ymin=annotation.object_detection_details.y,
         xmax=annotation.object_detection_details.x + annotation.object_detection_details.width,
         ymax=annotation.object_detection_details.y + annotation.object_detection_details.height,
     )
-    category = label_id_to_category[annotation.annotation_label.annotation_label_id]
+    category = label_id_to_category[annotation.annotation_label_id]
     return SingleObjectDetection(
         category=category,
         box=box,
@@ -236,25 +249,44 @@ def _annotation_to_single_inst_seg(
     image_width: int,
     image_height: int,
 ) -> SingleInstanceSegmentation | None:
-    if annotation.segmentation_details is None:
+    segmentation: MultiPolygon | BinaryMaskSegmentation | None
+    if annotation.annotation_type == AnnotationType.POLYGON:
+        segmentation = _polygon_segmentation(annotation=annotation)
+    else:
+        segmentation = _mask_segmentation(
+            annotation=annotation, image_width=image_width, image_height=image_height
+        )
+    if segmentation is None:
         return None
-    if annotation.segmentation_details.segmentation_mask is None:
-        return None
-
-    box = BoundingBox(
-        xmin=annotation.segmentation_details.x,
-        ymin=annotation.segmentation_details.y,
-        xmax=annotation.segmentation_details.x + annotation.segmentation_details.width,
-        ymax=annotation.segmentation_details.y + annotation.segmentation_details.height,
+    return SingleInstanceSegmentation(
+        category=label_id_to_category[annotation.annotation_label_id],
+        segmentation=segmentation,
     )
-    segmentation = BinaryMaskSegmentation.from_rle(
-        rle_row_wise=annotation.segmentation_details.segmentation_mask,
+
+
+def _polygon_segmentation(annotation: AnnotationBaseTable) -> MultiPolygon | None:
+    if annotation.polygon_details is None:
+        return None
+    return MultiPolygon(
+        polygons=[[(x, y) for x, y in polygon] for polygon in annotation.polygon_details.polygons]
+    )
+
+
+def _mask_segmentation(
+    annotation: AnnotationBaseTable, image_width: int, image_height: int
+) -> BinaryMaskSegmentation | None:
+    details = annotation.segmentation_details
+    if details is None or details.segmentation_mask is None:
+        return None
+    box = BoundingBox(
+        xmin=details.x,
+        ymin=details.y,
+        xmax=details.x + details.width,
+        ymax=details.y + details.height,
+    )
+    return BinaryMaskSegmentation.from_rle(
+        rle_row_wise=details.segmentation_mask,
         width=image_width,
         height=image_height,
         bounding_box=box,
-    )
-    category = label_id_to_category[annotation.annotation_label.annotation_label_id]
-    return SingleInstanceSegmentation(
-        category=category,
-        segmentation=segmentation,
     )

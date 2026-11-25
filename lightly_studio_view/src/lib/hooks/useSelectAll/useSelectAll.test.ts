@@ -27,8 +27,8 @@ vi.mock('./fetchSampleIdsForAnnotations', () => ({
     fetchSampleIdsForAnnotations: vi.fn(() => Promise.resolve(fetchState.ids))
 }));
 
-// Filter hooks are mocked with writable stores the tests drive directly; `buildVideoFilter` /
-// `getFrameFilter` are identity so the store value is the filter.
+// Filter hooks are mocked with writable stores the tests drive directly; `getFrameFilter`
+// is identity so the store value is the filter.
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', async () => {
     const { writable } = await import('svelte/store');
     const imageFilter = writable<unknown>(null);
@@ -37,11 +37,8 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', async () => {
 });
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', async () => {
     const { writable } = await import('svelte/store');
-    const filterParams = writable<unknown>(null);
-    return {
-        useVideoFilters: () => ({ filterParams }),
-        buildVideoFilter: (params: unknown) => params
-    };
+    const videoFilter = writable<unknown>(null);
+    return { useVideoFilters: () => ({ videoFilter }) };
 });
 vi.mock('$lib/hooks/useFramesFilter/useFramesFilter', async () => {
     const { writable } = await import('svelte/store');
@@ -60,11 +57,17 @@ vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', async () => {
 import { toast } from 'svelte-sonner';
 import { useSelectAll } from './useSelectAll';
 import { fetchSampleIdsForImages } from './fetchSampleIdsForImages';
+import { fetchSampleIdsForVideos } from './fetchSampleIdsForVideos';
+import { fetchSampleIdsForAnnotations } from './fetchSampleIdsForAnnotations';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+import {
+    clearAnnotationPlotSelection,
+    useAnnotationPlotSelection
+} from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
 
 const collectionId = 'collection-1';
 
@@ -72,7 +75,7 @@ const collectionId = 'collection-1';
 const imageFilterStore = () => useImageFilters().imageFilter as unknown as Writable<unknown>;
 const imageParamsStore = () =>
     useImageFilters().filterParams as unknown as Writable<{ mode: string }>;
-const videoParamsStore = () => useVideoFilters().filterParams as unknown as Writable<unknown>;
+const videoFilterStore = () => useVideoFilters().videoFilter as unknown as Writable<unknown>;
 const frameParamsStore = () => useFramesFilter().filterParams as unknown as Writable<unknown>;
 const annotationFilterStore = () =>
     useSelectedAnnotationsFilter().annotationFilter as unknown as Writable<unknown>;
@@ -81,6 +84,21 @@ describe('useSelectAll', () => {
     let storage: ReturnType<typeof useGlobalStorage>;
     const sampleSnapshot = () => get(storage.getSelectAllSnapshot(collectionId));
     const annotationSnapshot = () => get(storage.getSelectAllAnnotationSnapshot(collectionId));
+
+    it('uses the active video query for selection and the bulk action snapshot', async () => {
+        const filter = {
+            filter_type: 'video',
+            sample_filter: {
+                query_expr: { match_expr: { type: 'and', children: [] } }
+            }
+        };
+        videoFilterStore().set(filter);
+
+        await useSelectAll(collectionId, 'videos').handleSelectAll();
+
+        expect(fetchSampleIdsForVideos).toHaveBeenCalledWith(collectionId, filter);
+        expect(sampleSnapshot()?.filter).toEqual(filter);
+    });
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -93,9 +111,10 @@ describe('useSelectAll', () => {
         fetchState.gate = null;
         imageParamsStore().set({ mode: 'normal' });
         imageFilterStore().set(null);
-        videoParamsStore().set(null);
+        videoFilterStore().set(null);
         frameParamsStore().set(null);
         annotationFilterStore().set(undefined);
+        clearAnnotationPlotSelection(collectionId);
     });
 
     it('records the captured filter and size into the sample store (images)', async () => {
@@ -112,7 +131,7 @@ describe('useSelectAll', () => {
     });
 
     it('normalizes a no-filter select-all to a conditionless typed filter (videos)', async () => {
-        videoParamsStore().set(null); // builder yields null → must normalize, not store null
+        videoFilterStore().set(null); // builder yields null → must normalize, not store null
 
         await useSelectAll(collectionId, 'videos').handleSelectAll();
 
@@ -139,6 +158,25 @@ describe('useSelectAll', () => {
 
         expect(annotationSnapshot()).toEqual({ filter: annotationFilter, size: 3 });
         expect(sampleSnapshot()).toBeNull();
+    });
+
+    it('limits an annotations select-all to the annotations picked in the plot', async () => {
+        annotationFilterStore().set({ filter_type: 'annotations', annotation_label_ids: ['a1'] });
+        useAnnotationPlotSelection().savePlotSelection({
+            embeddingRegion: null,
+            sampleIds: ['s1', 's2']
+        });
+
+        await useSelectAll(collectionId, 'annotations').handleSelectAll();
+
+        const pickedFilter = {
+            filter_type: 'annotations',
+            annotation_label_ids: ['a1'],
+            embedding_region: undefined,
+            sample_ids: ['s1', 's2']
+        };
+        expect(fetchSampleIdsForAnnotations).toHaveBeenCalledWith(collectionId, pickedFilter);
+        expect(annotationSnapshot()?.filter).toEqual(pickedFilter);
     });
 
     it('normalizes an empty annotations select-all to a conditionless typed filter', async () => {

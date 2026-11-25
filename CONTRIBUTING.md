@@ -10,8 +10,8 @@ We welcome contributions of all kinds, including:
 After you have your changes ready, and you create a new pull request, a maintainer will review your PR, may ask for changes, suggest improvements, or approve once ready.
 
 ## Requirements
-- Python **3.9–3.14** (3.9 recommended)
-- Uv version **0.12.6** (pinned exactly, see `required-version` in the root `pyproject.toml`)
+- Python **3.11–3.15** (3.11 recommended)
+- Uv version **0.13.6** (pinned exactly, see `required-version` in the root `pyproject.toml`)
 - Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
 
 ## Development Quickstart
@@ -39,8 +39,7 @@ To run static checks and unit tests, use the following commands:
 # Backend
 cd lightly_studio
 make static-checks
-make test                     # slow, the full tests + frontend rebuild
-uv run pytest -n 8            # full tests
+make test                     # full tests
 uv run pytest tests/file1.py  # only the affected tests
 
 # Frontend
@@ -54,8 +53,8 @@ make static-checks
 make test
 ```
 
-For `lightly_studio` backend, tests need a frontend build. If not built previously,
-run `make build-lightly_studio_view` (or `make test`).
+For `lightly_studio` backend, tests need only a mock frontend build. `make test` creates it. To
+run `uv run pytest` directly in a new clone, run `make mock-webapp-dist` first.
 
 ### The uv Workspace
 

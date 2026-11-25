@@ -1,4 +1,5 @@
 <script lang="ts">
+    // eslint-disable-next-line no-restricted-imports -- Legacy. Convert to $app/state.
     import { page } from '$app/stores';
     import { client } from '$lib/api/lightly_studio_local/client.gen';
     // Imported from the Button module rather than the `$lib/components` barrel:

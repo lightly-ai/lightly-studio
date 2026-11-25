@@ -10,7 +10,7 @@ const rootCollectionRoutes: Partial<
     [SampleType.IMAGE]: routeHelpers.toImages,
     [SampleType.VIDEO]: routeHelpers.toVideos,
     [SampleType.GROUP]: routeHelpers.toGroups,
-    [SampleType.SEQUENCE]: routeHelpers.toPointClouds
+    [SampleType.SEQUENCE]: routeHelpers.toMcapSequences
 };
 
 export const load: PageLoad = async ({ params: { dataset_id } }) => {

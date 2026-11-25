@@ -15,3 +15,19 @@ class QueryExprError(Exception):
 
 class UnknownImageSizeError(Exception):
     """Exception raised when a stored image has no known width or height."""
+
+
+class ExportError(Exception):
+    """An export cannot be written. The message says why and is shown to the user."""
+
+
+class AnnotationSourceInUseError(Exception):
+    """Exception raised when an annotation source cannot change because other rows use it."""
+
+
+class UnauthenticatedError(Exception):
+    """The request has no valid user identity."""
+
+
+class ForbiddenError(Exception):
+    """The user of the request may not do the requested operation."""

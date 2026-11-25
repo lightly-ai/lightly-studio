@@ -1,46 +1,34 @@
 import type { Scope } from './types';
 
-/** Resolve the query scope at `offset` within `text`.
- *
- * The parser here is lightweight: it scans only the prefix up to `offset`,
- * tracks scope-changing function calls and parentheses, ignores parentheses
- * that appear inside string literals or comments, and then resolves top-level video scope
- * by checking for a leading `video:` prefix.
- */
+/** Resolve the query scope at the cursor, including when the expression is incomplete. */
 export function detectScopeAt(text: string, offset: number): Scope {
     const upTo = text
         .slice(0, offset)
-        .replace(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'|#[^\n\r]*/g, (token) =>
+        .replace(/"([^"\\]|\\.)*"?|'([^'\\]|\\.)*'?|#[^\n\r]*/g, (token) =>
             token.startsWith('#') ? '' : '""'
         );
-    type Frame = Scope | 'paren';
-    const stack: Frame[] = [];
-    const re = /\b(object_detection|classification|segmentation_mask)\s*\(|\(|\)/g;
+    const rootScope = /^\s*video:/i.test(upTo) ? 'video' : 'image';
+    const stack: Scope[] = [];
+    const re =
+        /\b(object_detection|classification|segmentation_mask|frame|event|sample_evaluation)\s*\(|\(|\)/g;
     let match: RegExpExecArray | null;
     while ((match = re.exec(upTo))) {
+        const scope = stack.at(-1) ?? rootScope;
         if (
             match[1] === 'object_detection' ||
             match[1] === 'classification' ||
-            match[1] === 'segmentation_mask'
+            match[1] === 'segmentation_mask' ||
+            match[1] === 'sample_evaluation'
         ) {
             stack.push(match[1]);
+        } else if (match[1] === 'frame' || match[1] === 'event') {
+            stack.push(scope === 'video' ? match[1] : scope);
         } else if (match[0] === '(') {
-            stack.push('paren');
+            stack.push(scope);
         } else {
             stack.pop();
         }
     }
 
-    for (let i = stack.length - 1; i >= 0; i--) {
-        const frame = stack[i];
-        if (
-            frame === 'object_detection' ||
-            frame === 'classification' ||
-            frame === 'segmentation_mask'
-        ) {
-            return frame;
-        }
-    }
-    if (/^\s*video:/i.test(upTo)) return 'video';
-    return 'image';
+    return stack.at(-1) ?? rootScope;
 }

@@ -20,9 +20,9 @@
     <div class="grid">
         <Button
             size="xs"
-            aria-label="Finish"
+            aria-label="Done"
             disabled={!context.annotationId || context.isDrawing || isPending}
-            onclick={finish}>Finish</Button
+            onclick={finish}>Done</Button
         >
     </div>
 {/if}

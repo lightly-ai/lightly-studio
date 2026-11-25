@@ -20,9 +20,10 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable, Cuboid3DCreate
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import annotation_resolver, object_track_resolver
 
 
 def update_annotation_object(
@@ -30,6 +31,7 @@ def update_annotation_object(
     annotation: AnnotationBaseTable,
     fields_to_update: dict[str, object] | None,
     cuboid_3d: Cuboid3DCreate | None = None,
+    commit: bool = True,
 ) -> AnnotationBaseTable:
     """Update an annotation's field using delete-and-reinsert.
 
@@ -39,6 +41,7 @@ def update_annotation_object(
         fields_to_update: Dictionary of field names and values to update.
         cuboid_3d: New cuboid geometry to use when reinserting the cuboid row.
             If None, the existing cuboid geometry is preserved.
+        commit: Whether to commit or leave changes in the caller's transaction.
 
     Returns:
         A copy of the annotation with the updated fields.
@@ -48,7 +51,12 @@ def update_annotation_object(
 
     annotation_type = annotation_copy.annotation_type
 
-    seg_details = annotation_copy.segmentation_details
+    # Read only the details of the annotation type, so other types do not run a lazy SELECT.
+    seg_details = (
+        annotation_copy.segmentation_details
+        if annotation_type == AnnotationType.SEGMENTATION_MASK
+        else None
+    )
     segmentation = (
         SegmentationAnnotationTable(
             sample_id=annotation_copy.sample_id,
@@ -58,11 +66,31 @@ def update_annotation_object(
             width=seg_details.width,
             height=seg_details.height,
         )
-        if annotation_type == AnnotationType.SEGMENTATION_MASK and seg_details
+        if seg_details
         else None
     )
 
-    od_details = annotation_copy.object_detection_details
+    polygon_details = (
+        annotation_copy.polygon_details if annotation_type == AnnotationType.POLYGON else None
+    )
+    polygon = (
+        PolygonAnnotationTable(
+            sample_id=annotation_copy.sample_id,
+            polygons=polygon_details.polygons,
+            x=polygon_details.x,
+            y=polygon_details.y,
+            width=polygon_details.width,
+            height=polygon_details.height,
+        )
+        if polygon_details
+        else None
+    )
+
+    od_details = (
+        annotation_copy.object_detection_details
+        if annotation_type == AnnotationType.OBJECT_DETECTION
+        else None
+    )
     object_detection = (
         ObjectDetectionAnnotationTable(
             sample_id=annotation_copy.sample_id,
@@ -71,12 +99,14 @@ def update_annotation_object(
             width=od_details.width,
             height=od_details.height,
         )
-        if annotation_type == AnnotationType.OBJECT_DETECTION and od_details
+        if od_details
         else None
     )
 
-    cuboid_details = annotation_copy.cuboid_3d_details
-    if annotation_type == AnnotationType.CUBOID_3D and cuboid_details:
+    cuboid_details = (
+        annotation_copy.cuboid_3d_details if annotation_type == AnnotationType.CUBOID_3D else None
+    )
+    if cuboid_details:
         source = cuboid_3d if cuboid_3d is not None else cuboid_details
         cuboid = Cuboid3DAnnotationTable(
             sample_id=annotation_copy.sample_id,
@@ -109,6 +139,16 @@ def update_annotation_object(
 
     annotation_resolver.delete_annotation(session, annotation.sample_id, delete_sample=False)
 
+    # The delete above commits internally (DuckDB FK workaround), so the original
+    # annotation is already gone. Verify that the target track still exists before
+    # reinserting — a concurrent deletion would cause an FK violation on commit,
+    # permanently losing the annotation. Fall back to no track assignment.
+    reinsert_track_id = annotation_copy.object_track_id
+    if reinsert_track_id is not None:
+        track = object_track_resolver.get_by_id(session=session, object_track_id=reinsert_track_id)
+        if track is None:
+            reinsert_track_id = None
+
     new_annotation = AnnotationBaseTable(
         sample_id=annotation_copy.sample_id,
         annotation_label_id=annotation_copy.annotation_label_id,
@@ -116,12 +156,15 @@ def update_annotation_object(
         confidence=annotation_copy.confidence,
         created_at=annotation_copy.created_at,
         parent_sample_id=annotation_copy.parent_sample_id,
-        object_track_id=annotation_copy.object_track_id,
+        object_track_id=reinsert_track_id,
     )
     session.add(new_annotation)
 
     if segmentation:
         session.add(segmentation)
+
+    if polygon:
+        session.add(polygon)
 
     if object_detection:
         session.add(object_detection)
@@ -132,7 +175,9 @@ def update_annotation_object(
     if temporal_span:
         session.add(temporal_span)
 
-    session.commit()
-    session.flush()
+    if commit:
+        session.commit()
+    else:
+        session.flush()
 
-    return annotation_copy
+    return new_annotation

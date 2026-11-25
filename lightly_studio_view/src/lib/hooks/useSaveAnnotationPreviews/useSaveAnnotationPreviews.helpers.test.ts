@@ -26,4 +26,19 @@ describe('previewToCreateInput', () => {
             segmentation_mask: preview.segmentation_mask
         });
     });
+
+    it('saves a preview without a mask as a box', () => {
+        expect(
+            previewToCreateInput({
+                preview: { ...preview, segmentation_mask: null },
+                saveAs: 'mask'
+            })
+        ).toEqual({
+            annotation_type: AnnotationType.OBJECT_DETECTION,
+            x: 1,
+            y: 1,
+            width: 2,
+            height: 2
+        });
+    });
 });

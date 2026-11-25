@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import numpy as np
+from numpy.typing import NDArray
 
 from lightly_studio.assisted_labeling.provider import Prediction, ProviderError
 from lightly_studio.core.annotation import annotation_create
@@ -36,6 +37,25 @@ def to_sorted_annotation_previews(
     )
 
 
+def encode_mask(mask: NDArray[np.bool_]) -> tuple[list[int], AnnotationPreviewBox] | None:
+    """Returns the encoding and the box of a full-image mask, or None if the mask is empty.
+
+    Args:
+        mask: Mask of shape (H, W) and dtype `np.bool_`. H is the image height and W is
+            the image width, in pixels.
+
+    Returns:
+        The row-wise run-length encoding of the mask, in the format of the annotation
+        create endpoint, and the bounding box of the mask in pixels.
+    """
+    if not np.any(mask):
+        return None
+    segmentation_mask, (x, y, width, height) = annotation_create.segmentation_mask_and_bounding_box(
+        binary_mask=mask.astype(np.int_)
+    )
+    return segmentation_mask, AnnotationPreviewBox(x=x, y=y, width=width, height=height)
+
+
 def _to_annotation_preview(
     prediction: Prediction, width: int, height: int
 ) -> AnnotationPreview | None:
@@ -45,13 +65,8 @@ def _to_annotation_preview(
         raise ProviderError(
             f"The provider returned a mask of shape {mask.shape}, expected ({height}, {width})."
         )
-    if not np.any(mask):
+    encoded_mask = encode_mask(mask=mask)
+    if encoded_mask is None:
         return None
-    segmentation_mask, (x, y, box_width, box_height) = (
-        annotation_create.segmentation_mask_and_bounding_box(binary_mask=mask.astype(np.int_))
-    )
-    return AnnotationPreview(
-        bbox=AnnotationPreviewBox(x=x, y=y, width=box_width, height=box_height),
-        segmentation_mask=segmentation_mask,
-        score=prediction.score,
-    )
+    segmentation_mask, bbox = encoded_mask
+    return AnnotationPreview(bbox=bbox, segmentation_mask=segmentation_mask, score=prediction.score)

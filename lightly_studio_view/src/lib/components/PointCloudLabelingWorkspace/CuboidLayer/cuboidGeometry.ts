@@ -59,3 +59,35 @@ export function createCuboidWireframeGeometry(size: DomainVector3): LineSegments
     geometry.setPositions(positions);
     return geometry;
 }
+
+/**
+ * Creates the four edges of the cuboid cross-section perpendicular to one local axis.
+ *
+ * @param size - Full local-axis extents in metres.
+ * @param depthAxis - Local axis (0 = x, 1 = y, 2 = z) that points along the view direction.
+ * @returns Disposable Three.js line geometry of a rectangle centred at the origin.
+ */
+export function createCuboidRectangleGeometry(
+    size: DomainVector3,
+    depthAxis: 0 | 1 | 2
+): LineSegmentsGeometry {
+    const [a, b] = ([0, 1, 2] as const).filter((axis) => axis !== depthAxis);
+    const corners = [
+        [-1, -1],
+        [1, -1],
+        [1, 1],
+        [-1, 1]
+    ].map(([u, v]) => {
+        const point = [0, 0, 0];
+        point[a] = (u * size[a]) / 2;
+        point[b] = (v * size[b]) / 2;
+        return point;
+    });
+    const positions = new Float32Array(
+        corners.flatMap((corner, index) => [...corner, ...corners[(index + 1) % 4]])
+    );
+
+    const geometry = new LineSegmentsGeometry();
+    geometry.setPositions(positions);
+    return geometry;
+}

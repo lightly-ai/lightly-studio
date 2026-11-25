@@ -1,8 +1,6 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
-    import { get } from 'svelte/store';
-    import { useSettings } from '$lib/hooks/useSettings';
     import SampleAnnotationRect from '$lib/components/SampleDetails/SampleAnnotationRect/SampleAnnotationRect.svelte';
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
     import NormalizedBoxRect from '$lib/components/SampleDetails/NormalizedBoxRect/NormalizedBoxRect.svelte';
@@ -38,7 +36,6 @@
 
     const drag = useDragBox(() => ({ interactionRect }));
     const save = () => void smartSelect.save();
-    const { settingsStore } = useSettings();
 
     const onPointerUp = (event: PointerEvent & { currentTarget: SVGRectElement }) => {
         const { start, box } = drag.onPointerUp(event);
@@ -57,7 +54,7 @@
         if (event.key === 'Enter' && smartSelect.canSave) {
             event.preventDefault();
             save();
-        } else if (event.key === get(settingsStore).key_go_back) {
+        } else if (event.key === 'Escape') {
             if (smartSelect.points.length === 0 && !smartSelect.preview) return;
             // Clears the prompts first, so the next press closes the tool.
             event.stopPropagation();
