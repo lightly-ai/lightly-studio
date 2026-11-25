@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from random import choice
 from typing import Any
@@ -737,8 +738,8 @@ def _write_segmentation_dataset(
     tmp_path: Path,
     image_size: tuple[int, int],
     label_line: str,
-    label_names: list[str],
-    image_names: list[str] | None = None,
+    label_names: Sequence[str],
+    image_names: Sequence[str] | None = None,
 ) -> Path:
     data_yaml = tmp_path / "data.yaml"
     data_yaml.write_text(yaml.dump({"train": "../train/images", "nc": 1, "names": ["class_0"]}))

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import ssl
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -201,7 +202,7 @@ class TestDataset:
             annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
         )
 
-        assert _polygons_and_mask_counts(dataset) == (
+        assert _polygons_and_mask_counts(dataset=dataset) == (
             [[[(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)], [(6.0, 6.0), (9.0, 6.0), (9.0, 9.0)]]],
             1,
         )
@@ -226,7 +227,7 @@ class TestDataset:
             )
 
         assert record[0].filename == __file__
-        assert len(_polygons_and_mask_counts(dataset)[0]) == 1
+        assert len(_polygons_and_mask_counts(dataset=dataset)[0]) == 1
 
     def test_add_samples_from_coco__both_parameters(
         self,
@@ -834,7 +835,7 @@ class TestDataset:
         assert Path(samples[1].file_path_abs).is_absolute()
 
 
-def _coco_dict_mixed_crowd(polygon_segmentation: list[list[float]]) -> dict[str, Any]:
+def _coco_dict_mixed_crowd(polygon_segmentation: Sequence[Sequence[float]]) -> dict[str, Any]:
     """Return a COCO dict with one polygon annotation and one crowd RLE annotation."""
     return {
         "images": [{"id": 1, "file_name": "image1.jpg", "width": 10, "height": 10}],
