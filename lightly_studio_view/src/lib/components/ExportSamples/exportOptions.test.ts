@@ -31,4 +31,19 @@ describe('export options', () => {
         ]);
         expect(getDefaultExportType('sequence')).toBe('scene_update_mcap');
     });
+
+    it('offers segmentation in COCO and YOLO for images', () => {
+        const options = getExportOptions('image');
+        expect(options).toContainEqual({
+            value: 'segmentation',
+            label: 'Image Segmentation (COCO)'
+        });
+        expect(options).toContainEqual({
+            value: 'instance_segmentation_yolo',
+            label: 'Image Segmentation Polygons (YOLO)'
+        });
+        expect(options.some((option) => option.label.includes('Segmentation Mask (COCO)'))).toBe(
+            false
+        );
+    });
 });

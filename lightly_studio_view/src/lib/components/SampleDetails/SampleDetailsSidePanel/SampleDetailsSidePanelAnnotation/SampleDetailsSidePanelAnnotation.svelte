@@ -23,7 +23,7 @@
     import { TagChips, TagsEditor } from '$lib/components';
 
     const {
-        annotation: annotationProp,
+        annotation,
         isSelected = false,
         onClick,
         onUpdate,
@@ -70,7 +70,9 @@
 
     const getAnnotationDimensions = (annotation: AnnotationView) => {
         const annotationWithDimensions =
-            annotation.object_detection_details || annotation.segmentation_details;
+            annotation.object_detection_details ||
+            annotation.segmentation_details ||
+            annotation.polygon_details;
         if (annotationWithDimensions) {
             const { width, height } = annotationWithDimensions;
             return `${Math.round(width)}x${Math.round(height)}px`;
@@ -91,23 +93,19 @@
     const { multipleSourcesVisible } = useAnnotationCollectionsFilter();
     const showLabelColorLegend = $derived(!(colorBySource ?? $multipleSourcesVisible));
 
-    const annotationId = $derived(annotationProp.sample_id);
+    const annotationId = $derived(annotation.sample_id);
 
-    const {
-        annotation: annotationResp,
-        updateAnnotation,
-        refetch
-    } = useAnnotation(() => ({
+    // The parent passes the full annotation, so only use the hook to save edits.
+    const { updateAnnotation, refetch } = useAnnotation(() => ({
         collectionId,
         annotationId,
-        onUpdate
+        onUpdate,
+        enabled: false
     }));
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         getCollectionId: () => page.params.collection_id!
     });
-
-    const annotation = $derived(annotationResp.data || annotationProp);
 
     const annotationLabelName = $derived(annotation.annotation_label.annotation_label_name);
     const annotationTags = $derived(annotation.tags ?? []);
@@ -229,7 +227,7 @@
                                     content="Unlock annotation. Allows new brush strokes to paint over this mask again."
                                 >
                                     <Lock
-                                        class="size-4 text-muted-foreground"
+                                        class="size-4 text-primary"
                                         onclick={(e) => {
                                             e.stopPropagation();
                                             onToggleLock?.(e);

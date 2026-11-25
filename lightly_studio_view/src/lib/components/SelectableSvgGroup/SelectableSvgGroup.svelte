@@ -25,6 +25,8 @@
     };
 
     function handleKeyDown(event: KeyboardEvent) {
+        // The annotation card handles Enter as relabel before it reaches the focused group.
+        if (event.defaultPrevented) return;
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             handleSelect();

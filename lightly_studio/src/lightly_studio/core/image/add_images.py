@@ -25,22 +25,20 @@ from tqdm import tqdm
 from lightly_studio.core import path_utils
 from lightly_studio.core.file_outcome_report import (
     BROKEN_IMAGE_ERRORS,
-    AlreadyPresentInputFileError,
     FileOutcome,
     FileOutcomeReport,
-    MissingInputFileError,
 )
 from lightly_studio.core.image import add_annotations
-from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import remote_storage
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.image import AddImagesResult, ImageCreate
 from lightly_studio.resolvers import (
     caption_resolver,
     image_resolver,
     sample_resolver,
     tag_resolver,
 )
+from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.type_definitions import PathLike
 from lightly_studio.utils import parallelize
 
@@ -173,8 +171,52 @@ def load_into_dataset_from_paths(
     return created_path_to_id
 
 
+def create_images(
+    session: Session, collection_id: UUID, images: Sequence[ImageCreate]
+) -> AddImagesResult:
+    """Create the images whose files exist and that are not in the collection yet.
+
+    The caller gives the dimensions, so the files are not opened. An image that is in the
+    collection or earlier in `images` is skipped as already present.
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection to create the images in.
+        images: The images to create.
+
+    Returns:
+        The sample ID of each new image by its path, and the outcome of each input image.
+    """
+    seen_or_existing_paths = _get_existing_paths_set(
+        session=session,
+        collection_id=collection_id,
+        file_paths_abs=[image.file_path_abs for image in images],
+    )
+    outcomes: list[FileOutcome] = []
+    batch: list[ImageCreate] = []
+    created_path_to_id: dict[str, UUID] = {}
+    for image in images:
+        outcome = _classify_new_image(path=image.file_path_abs, seen_paths=seen_or_existing_paths)
+        outcomes.append(outcome)
+        if outcome != FileOutcome.ADDED:
+            continue
+        seen_or_existing_paths.add(image.file_path_abs)
+        batch.append(image)
+        if len(batch) >= SAMPLE_BATCH_SIZE:
+            created_path_to_id.update(
+                _create_batch_samples(session=session, collection_id=collection_id, samples=batch)
+            )
+            batch = []
+    if batch:
+        created_path_to_id.update(
+            _create_batch_samples(session=session, collection_id=collection_id, samples=batch)
+        )
+    return AddImagesResult(sample_ids=created_path_to_id, outcomes=outcomes)
+
+
 def load_into_dataset_from_labelformat(  # noqa: PLR0913
     session: Session,
+    ingestion: IngestionTransport,
     root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
     images_path: PathLike,
@@ -185,7 +227,8 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     """Load samples and their annotations from a labelformat input into the dataset.
 
     Args:
-        session: The database session.
+        session: The database session for the annotations.
+        ingestion: The transport that adds the images.
         root_collection_id: The ID of the root collection to load samples into.
         input_labels: The labelformat input containing images and annotations.
         images_path: The path to the directory containing the images.
@@ -212,60 +255,28 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     report = broken_image_collector.report
     input_labels.on_error = broken_image_collector  # type: ignore[union-attr]
 
-    # The set starts with paths already in the database and grows with paths seen in this
-    # call, so both already-present and in-run duplicate paths are skipped before batching.
-    seen_or_existing_paths = _get_existing_paths_set(
-        session=session,
-        collection_id=root_collection_id,
-        file_paths_abs=[
-            posixpath.join(images_root_abs, str(image.filename))
-            for image in input_labels.get_images()
-        ],
-    )
-
-    samples_to_create: list[ImageCreate] = []
-    created_sample_ids: list[UUID] = []
+    # Scan all images, also those after `limit`, so that the report counts every broken image.
+    for _ in input_labels.get_images():
+        pass
 
     # Phase 1: Sample creation
     labels: Iterable[object] = input_labels.get_labels()
     if limit is not None:
         labels = itertools.islice(labels, limit)
+    images: list[ImageCreate] = []
     for image_data in tqdm(labels, desc="Processing images", unit=" images"):
         image: Image = image_data.image  # type: ignore[attr-defined]
-
-        sample = ImageCreate(
-            file_name=str(image.filename),
-            file_path_abs=posixpath.join(images_root_abs, str(image.filename)),
-            width=image.width,
-            height=image.height,
+        images.append(
+            ImageCreate(
+                file_name=str(image.filename),
+                file_path_abs=posixpath.join(images_root_abs, str(image.filename)),
+                width=image.width,
+                height=image.height,
+            )
         )
-
-        with report.track(path=sample.file_path_abs):
-            # Skip paths already in the database or already seen in this call.
-            if sample.file_path_abs in seen_or_existing_paths:
-                raise AlreadyPresentInputFileError()
-
-            # Missing is the only failure classifiable here (see the docstring):
-            # detect it proactively because FileNotFoundError is unreliable across
-            # fsspec backends and is a subclass of OSError.
-            if not _file_exists(sample.file_path_abs):
-                raise MissingInputFileError()
-
-            seen_or_existing_paths.add(sample.file_path_abs)
-            samples_to_create.append(sample)
-
-            if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-                created_path_to_id = _create_batch_samples(
-                    session=session, collection_id=root_collection_id, samples=samples_to_create
-                )
-                created_sample_ids.extend(created_path_to_id.values())
-                samples_to_create.clear()
-
-    if samples_to_create:
-        created_path_to_id = _create_batch_samples(
-            session=session, collection_id=root_collection_id, samples=samples_to_create
-        )
-        created_sample_ids.extend(created_path_to_id.values())
+    result = ingestion.add_images(collection_id=root_collection_id, images=images)
+    _record_outcomes(report=report, images=images, outcomes=result.outcomes)
+    created_sample_ids = list(result.sample_ids.values())
 
     # Phase 2: Annotation creation (only if samples were created)
     if created_sample_ids:
@@ -283,8 +294,9 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     return created_sample_ids
 
 
-def load_into_dataset_from_coco_captions(
+def load_into_dataset_from_coco_captions(  # noqa: PLR0913
     session: Session,
+    ingestion: IngestionTransport,
     root_collection_id: UUID,
     annotations_json: Path,
     images_path: Path,
@@ -293,7 +305,8 @@ def load_into_dataset_from_coco_captions(
     """Load samples and captions from a COCO captions file into the dataset.
 
     Args:
-        session: Database session used for resolver operations.
+        session: Database session for the captions.
+        ingestion: The transport that adds the images.
         root_collection_id: Identifier of the root collection that receives the samples.
         annotations_json: Path to the COCO captions annotations file.
         images_path: Directory containing the referenced images.
@@ -321,80 +334,41 @@ def load_into_dataset_from_coco_captions(
         annotations=coco_payload.get("annotations", [])
     )
 
-    # The set starts with paths already in the database and grows with paths seen in this
-    # call, so both already-present and in-run duplicate paths are skipped before batching.
-    seen_or_existing_paths = _get_existing_paths_set(
-        session=session,
-        collection_id=root_collection_id,
-        file_paths_abs=[
-            str(images_path / str(image_info["file_name"]))
-            for image_info in images
-            if isinstance(image_info["id"], int)
-        ],
-    )
-
-    report = FileOutcomeReport()
-
-    samples_to_create: list[ImageCreate] = []
-    created_sample_ids: list[UUID] = []
+    images_to_add: list[ImageCreate] = []
     path_to_captions: dict[str, list[str]] = {}
-
-    for image_info in tqdm(images, desc="Processing images", unit=" images"):
-        if isinstance(image_info["id"], int):
-            image_id_raw = image_info["id"]
-        else:
+    for image_info in images:
+        image_id = image_info["id"]
+        if not isinstance(image_id, int):
             continue
-        file_name_raw = str(image_info["file_name"])
-
         width = image_info["width"] if isinstance(image_info["width"], int) else 0
         height = image_info["height"] if isinstance(image_info["height"], int) else 0
-        sample = ImageCreate(
-            file_name=file_name_raw,
-            file_path_abs=str(images_path / file_name_raw),
+        image = ImageCreate(
+            file_name=str(image_info["file_name"]),
+            file_path_abs=str(images_path / str(image_info["file_name"])),
             width=width,
             height=height,
         )
+        images_to_add.append(image)
+        # A later duplicate of a path is skipped, so the first one gives the captions.
+        path_to_captions.setdefault(image.file_path_abs, captions_by_image_id.get(image_id, []))
 
-        with report.track(path=sample.file_path_abs):
-            # Skip paths already in the database or already seen in this call.
-            if sample.file_path_abs in seen_or_existing_paths:
-                raise AlreadyPresentInputFileError()
-
-            # Missing is the only failure classifiable here (see the docstring):
-            # detect it proactively because FileNotFoundError is unreliable across
-            # fsspec backends and is a subclass of OSError.
-            if not _file_exists(sample.file_path_abs):
-                raise MissingInputFileError()
-
-            seen_or_existing_paths.add(sample.file_path_abs)
-            samples_to_create.append(sample)
-            path_to_captions[sample.file_path_abs] = captions_by_image_id.get(image_id_raw, [])
-
-            if len(samples_to_create) >= SAMPLE_BATCH_SIZE:
-                created_path_to_id = _create_batch_samples(
-                    session=session, collection_id=root_collection_id, samples=samples_to_create
-                )
-                created_sample_ids.extend(created_path_to_id.values())
-                _process_batch_captions(
-                    session=session,
-                    collection_id=root_collection_id,
-                    created_path_to_id=created_path_to_id,
-                    path_to_captions=path_to_captions,
-                )
-                samples_to_create.clear()
-                path_to_captions.clear()
-
-    if samples_to_create:
-        created_path_to_id = _create_batch_samples(
-            session=session, collection_id=root_collection_id, samples=samples_to_create
-        )
-        created_sample_ids.extend(created_path_to_id.values())
-        _process_batch_captions(
-            session=session,
-            collection_id=root_collection_id,
-            created_path_to_id=created_path_to_id,
-            path_to_captions=path_to_captions,
-        )
+    report = FileOutcomeReport()
+    created_sample_ids: list[UUID] = []
+    # A rerun skips the images that exist, so an interrupted run must not leave many images
+    # without captions. Write the captions of each batch before the next batch.
+    with tqdm(total=len(images_to_add), desc="Processing images", unit=" images") as progress:
+        for batch_start in range(0, len(images_to_add), SAMPLE_BATCH_SIZE):
+            batch = images_to_add[batch_start : batch_start + SAMPLE_BATCH_SIZE]
+            result = ingestion.add_images(collection_id=root_collection_id, images=batch)
+            _record_outcomes(report=report, images=batch, outcomes=result.outcomes)
+            _process_batch_captions(
+                session=session,
+                collection_id=root_collection_id,
+                created_path_to_id=result.sample_ids,
+                path_to_captions=path_to_captions,
+            )
+            created_sample_ids.extend(result.sample_ids.values())
+            progress.update(len(batch))
 
     report.log_summary()
     report.raise_if_all_failed()
@@ -438,12 +412,11 @@ def tag_samples_by_directory(
         session=session,
         sample_ids=sample_ids,
     )
-    newly_created_samples = [ImageSample(inner=image) for image in newly_created_images]
 
     logger.info(f"Adding directory tags to {len(sample_ids)} new samples.")
     tag_name_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
-    for sample in newly_created_samples:
-        sample_path_abs = Path(sample.file_path_abs)
+    for image in newly_created_images:
+        sample_path_abs = Path(image.file_path_abs)
         relative_path = sample_path_abs.relative_to(input_path_abs)
 
         # relative_path.parts holds the directory levels followed by the file name,
@@ -451,7 +424,7 @@ def tag_samples_by_directory(
         num_directory_levels = len(relative_path.parts) - 1
         for tag_name in relative_path.parts[: min(tag_depth, num_directory_levels)]:
             if tag_name:
-                tag_name_to_sample_ids[tag_name].append(sample.sample_id)
+                tag_name_to_sample_ids[tag_name].append(image.sample_id)
 
     for tag_name, s_ids in tag_name_to_sample_ids.items():
         tag = tag_resolver.get_or_create_sample_tag_by_name(
@@ -538,6 +511,23 @@ def _probe_image(
     except BROKEN_IMAGE_ERRORS:
         return path, FileOutcome.BROKEN
     return path, dimensions
+
+
+def _record_outcomes(
+    report: FileOutcomeReport, images: Sequence[ImageCreate], outcomes: Sequence[FileOutcome]
+) -> None:
+    """Record the outcome of each image in the report."""
+    for image, outcome in zip(images, outcomes, strict=True):
+        report.record(path=image.file_path_abs, outcome=outcome)
+
+
+def _classify_new_image(path: str, seen_paths: set[str]) -> FileOutcome:
+    """Return ALREADY_PRESENT, MISSING, or ADDED for an image that has known dimensions."""
+    if path in seen_paths:
+        return FileOutcome.ALREADY_PRESENT
+    if not _file_exists(path):
+        return FileOutcome.MISSING
+    return FileOutcome.ADDED
 
 
 def _file_exists(path: str) -> bool:

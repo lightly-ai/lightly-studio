@@ -1,35 +1,48 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { get, writable } from 'svelte/store';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { writable } from 'svelte/store';
+import '@testing-library/jest-dom';
+import type { ReversibleAction } from '$lib/hooks/useReversibleActions';
 import BreadcrumbHeaderActions from './BreadcrumbHeaderActions.svelte';
 import type { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
 
 const mocks = vi.hoisted(() => ({
-    isEditingMode: undefined as unknown as import('svelte/store').Writable<boolean>,
+    setIsEditingMode: vi.fn(),
+    executeReversibleAction: vi.fn(),
+    openOperatorsDialog: vi.fn(),
+    openSettingsDialog: vi.fn(),
+    trackEvent: vi.fn(),
+    userRole: 'labeler' as string | undefined,
     workflow: undefined as
         | Partial<NonNullable<ReturnType<typeof useWorkflowFileContext>>>
         | undefined
 }));
 
-vi.mock('$lib/hooks', async () => {
-    const { writable } = await import('svelte/store');
-    return {
-        useGlobalStorage: () => ({
-            isEditingMode: mocks.isEditingMode,
-            setIsEditingMode: (value: boolean) => mocks.isEditingMode.set(value),
-            reversibleActions: writable([]),
-            executeReversibleAction: vi.fn()
-        }),
-        useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn() }),
-        useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) }),
-        usePostHog: () => ({ trackEvent: vi.fn() })
-    };
-});
+const isEditingMode = writable(false);
+const reversibleActions = writable<ReversibleAction[]>([]);
+
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => ({
+        isEditingMode,
+        setIsEditingMode: mocks.setIsEditingMode,
+        reversibleActions,
+        executeReversibleAction: mocks.executeReversibleAction
+    })
+}));
+vi.mock('$lib/hooks/useOperatorsDialog/useOperatorsDialog', () => ({
+    useOperatorsDialog: () => ({ openOperatorsDialog: mocks.openOperatorsDialog })
+}));
 vi.mock('$lib/hooks/useSettingsDialog/useSettingsDialog', () => ({
-    useSettingsDialog: () => ({ openSettingsDialog: vi.fn() })
+    useSettingsDialog: () => ({ openSettingsDialog: mocks.openSettingsDialog })
+}));
+vi.mock('$lib/hooks/useSettings', () => ({
+    useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) })
+}));
+vi.mock('$lib/hooks/usePostHog', () => ({
+    usePostHog: () => ({ trackEvent: mocks.trackEvent })
 }));
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
-    default: () => ({ user: { role: 'labeler' } })
+    default: () => ({ user: mocks.userRole ? { role: mocks.userRole } : undefined })
 }));
 vi.mock('$lib/contexts/WorkflowFile.svelte', () => ({
     useWorkflowFileContext: () => mocks.workflow
@@ -37,38 +50,217 @@ vi.mock('$lib/contexts/WorkflowFile.svelte', () => ({
 
 describe('BreadcrumbHeaderActions', () => {
     beforeEach(() => {
-        mocks.isEditingMode = writable(false);
+        vi.clearAllMocks();
+        mocks.userRole = 'labeler';
         mocks.workflow = undefined;
+        isEditingMode.set(false);
+        reversibleActions.set([]);
     });
 
-    it('lets the user start editing outside a batch', async () => {
+    it('turns edit mode on and tracks the event when Edit is clicked', async () => {
         render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
 
         await fireEvent.click(screen.getByTestId('breadcrumb-edit-button'));
 
-        expect(get(mocks.isEditingMode)).toBe(true);
+        expect(mocks.setIsEditingMode).toHaveBeenCalledWith(true);
+        expect(mocks.trackEvent).toHaveBeenCalledWith('edit_mode_started', {
+            collection_id: 'collection-1',
+            triggered_by: 'click'
+        });
+    });
+
+    it('turns edit mode off when Finish Editing is clicked', async () => {
+        isEditingMode.set(true);
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.click(screen.getByTestId('breadcrumb-finish-editing-button'));
+
+        expect(mocks.setIsEditingMode).toHaveBeenCalledWith(false);
+        expect(mocks.trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('runs the latest reversible action when Undo is clicked', async () => {
+        isEditingMode.set(true);
+        reversibleActions.set([
+            {
+                id: 'action-2',
+                description: 'Delete annotation',
+                execute: vi.fn(),
+                timestamp: new Date(),
+                groupId: 'group-1'
+            },
+            {
+                id: 'action-1',
+                description: 'Add annotation',
+                execute: vi.fn(),
+                timestamp: new Date(),
+                groupId: 'group-1'
+            }
+        ]);
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.click(screen.getByTestId('breadcrumb-undo-button'));
+
+        expect(mocks.executeReversibleAction).toHaveBeenCalledWith('action-2');
+        expect(mocks.trackEvent).toHaveBeenCalledWith('edit_undo', {
+            collection_id: 'collection-1',
+            triggered_by: 'click'
+        });
+    });
+
+    it('disables Undo when there is no reversible action', () => {
+        isEditingMode.set(true);
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        expect(screen.getByTestId('breadcrumb-undo-button')).toBeDisabled();
+    });
+
+    it('toggles edit mode when the edit shortcut is pressed', async () => {
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.keyDown(window, { key: 'e' });
+
+        expect(mocks.setIsEditingMode).toHaveBeenCalledWith(true);
+        expect(mocks.trackEvent).toHaveBeenCalledWith('edit_mode_started', {
+            collection_id: 'collection-1',
+            triggered_by: 'keyboard_shortcut'
+        });
+    });
+
+    it('runs undo when Ctrl+Z is pressed', async () => {
+        reversibleActions.set([
+            {
+                id: 'action-1',
+                description: 'Add annotation',
+                execute: vi.fn(),
+                timestamp: new Date(),
+                groupId: 'group-1'
+            }
+        ]);
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+
+        expect(mocks.executeReversibleAction).toHaveBeenCalledWith('action-1');
+    });
+
+    it('runs undo when Cmd+Z is pressed', async () => {
+        reversibleActions.set([
+            {
+                id: 'action-1',
+                description: 'Add annotation',
+                execute: vi.fn(),
+                timestamp: new Date(),
+                groupId: 'group-1'
+            }
+        ]);
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.keyDown(window, { key: 'Z', metaKey: true });
+
+        expect(mocks.executeReversibleAction).toHaveBeenCalledWith('action-1');
+    });
+
+    it('ignores shortcuts typed in an input element', async () => {
+        reversibleActions.set([
+            {
+                id: 'action-1',
+                description: 'Add annotation',
+                execute: vi.fn(),
+                timestamp: new Date(),
+                groupId: 'group-1'
+            }
+        ]);
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+        const input = document.createElement('input');
+        document.body.appendChild(input);
+
+        await fireEvent.keyDown(input, { key: 'e' });
+        await fireEvent.keyDown(input, { key: 'z', ctrlKey: true });
+
+        expect(mocks.setIsEditingMode).not.toHaveBeenCalled();
+        expect(mocks.executeReversibleAction).not.toHaveBeenCalled();
+        input.remove();
+    });
+
+    it('hides Edit and Undo and ignores shortcuts for a user below labeler', async () => {
+        mocks.userRole = 'viewer';
+        reversibleActions.set([
+            {
+                id: 'action-1',
+                description: 'Add annotation',
+                execute: vi.fn(),
+                timestamp: new Date(),
+                groupId: 'group-1'
+            }
+        ]);
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.keyDown(window, { key: 'e' });
+        await fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
+
+        expect(screen.queryByTestId('breadcrumb-edit-button')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('breadcrumb-undo-button')).not.toBeInTheDocument();
+        expect(mocks.setIsEditingMode).not.toHaveBeenCalled();
+        expect(mocks.executeReversibleAction).not.toHaveBeenCalled();
+    });
+
+    it('opens the Plugins dialog when Plugins is clicked', async () => {
+        mocks.userRole = 'admin';
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.click(screen.getByTestId('breadcrumb-plugins-button'));
+
+        expect(mocks.openOperatorsDialog).toHaveBeenCalled();
+    });
+
+    it('opens the Settings dialog when Settings is clicked', async () => {
+        mocks.userRole = 'admin';
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.click(screen.getByTestId('breadcrumb-settings-button'));
+
+        expect(mocks.openSettingsDialog).toHaveBeenCalled();
+    });
+
+    it('hides Plugins and Settings from a labeler', () => {
+        mocks.userRole = 'labeler';
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        expect(screen.getByTestId('breadcrumb-edit-button')).toBeInTheDocument();
+        expect(screen.queryByTestId('breadcrumb-plugins-button')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('breadcrumb-settings-button')).not.toBeInTheDocument();
+    });
+
+    it('shows Plugins and Settings to an editor', () => {
+        mocks.userRole = 'editor';
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+
+        expect(screen.getByTestId('breadcrumb-plugins-button')).toBeInTheDocument();
+        expect(screen.getByTestId('breadcrumb-settings-button')).toBeInTheDocument();
     });
 
     it('disables editing when it is not the user’s turn on a batch file', async () => {
         mocks.workflow = { active: true, canEdit: false, locked: true };
-        mocks.isEditingMode.set(true);
+        isEditingMode.set(true);
 
         render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
 
         const edit = screen.getByTestId('breadcrumb-edit-button');
         expect(edit).toBeDisabled();
         expect(edit).toHaveAccessibleName('Read-only: you can’t edit this file now');
-        expect(get(mocks.isEditingMode)).toBe(false);
+        expect(mocks.setIsEditingMode).toHaveBeenCalledWith(false);
+        mocks.setIsEditingMode.mockClear();
         await fireEvent.keyDown(window, { key: 'e' });
-        expect(get(mocks.isEditingMode)).toBe(false);
+        expect(mocks.setIsEditingMode).not.toHaveBeenCalled();
     });
 
     it('keeps edit mode while the next batch file is still loading', () => {
         mocks.workflow = { active: true, canEdit: false, locked: false };
-        mocks.isEditingMode.set(true);
+        isEditingMode.set(true);
 
         render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
 
-        expect(get(mocks.isEditingMode)).toBe(true);
+        expect(mocks.setIsEditingMode).not.toHaveBeenCalled();
     });
 });

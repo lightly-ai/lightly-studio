@@ -174,6 +174,23 @@ describe('AnnotationCard', () => {
         expect(screen.getByPlaceholderText('Pick a class')).toHaveFocus();
     });
 
+    it('marks Enter as handled and lets the focused element still see it', async () => {
+        const focused = document.createElement('div');
+        let seenAsHandled: boolean | undefined;
+        focused.addEventListener('keydown', (event) => (seenAsHandled = event.defaultPrevented));
+        document.body.append(focused);
+        try {
+            await renderCard();
+
+            await fireEvent.keyDown(focused, { key: 'Enter' });
+
+            expect(await screen.findByPlaceholderText('Pick a class')).toBeInTheDocument();
+            expect(seenAsHandled).toBe(true);
+        } finally {
+            focused.remove();
+        }
+    });
+
     it('keeps the class on a double Enter', async () => {
         await renderCard({}, {
             ...annotation,

@@ -31,19 +31,18 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.dataset import fsspec_lister, remote_storage
+from lightly_studio.dataset import fsspec_lister
 from lightly_studio.embed import embed_samples
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
-    collection_embedding_model_resolver,
     collection_resolver,
     image_resolver,
-    tag_resolver,
 )
 from lightly_studio.services import annotation_source_service
+from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -161,47 +160,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             AllInputFilesFailedError: If every image in the path is missing or broken.
         """
         source = ingest_tracking.get_source(path=path)
-        fsspec_lister.validate_limit(limit)
-        if tag_depth < 0:
-            raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
-        # Collect image file paths.
-        if allowed_extensions:
-            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
-        else:
-            allowed_extensions_set = None
-        # Configure clients before discovery creates and caches a filesystem.
-        remote_storage.configure_connections(paths=[str(path)])
-        image_paths = list(
-            fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set, limit=limit
-            )
+        active_transport.get_transport().ingestion.add_images_from_path(
+            collection_id=self.collection_id,
+            path=str(path),
+            allowed_extensions=None if allowed_extensions is None else list(allowed_extensions),
+            embed=embed,
+            tag_depth=tag_depth,
+            limit=limit,
         )
-
-        logger.info(f"Found {len(image_paths)} images in {path}.")
-
-        # Process images
-        path_to_sample_id = add_images.load_into_dataset_from_paths(
-            session=self.session,
-            root_collection_id=self.collection_id,
-            image_paths=image_paths,
-        )
-        created_sample_ids = list(path_to_sample_id.values())
-
-        if created_sample_ids:
-            add_images.tag_samples_by_directory(
-                session=self.session,
-                collection_id=self.collection_id,
-                input_path=path,
-                sample_ids=created_sample_ids,
-                tag_depth=tag_depth,
-            )
-
-        if embed:
-            _generate_embeddings_image(
-                session=self.session,
-                collection_id=self.collection_id,
-                sample_ids=created_sample_ids,
-            )
         ingest_tracking.track_samples_ingested(
             source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.FOLDER
         )
@@ -405,6 +371,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=input_labels,
             images_path=images_path,
@@ -413,7 +380,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -492,6 +458,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
             created_sample_ids = add_images.load_into_dataset_from_labelformat(
                 session=self.session,
+                ingestion=active_transport.get_transport().ingestion,
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
                 images_path=images_path,
@@ -501,17 +468,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
             # Tag samples with split name
             _postprocess_created_images(
-                session=self.session,
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
                 tag=split,
                 embed=False,
             )
             # Tag samples by their directory levels below the split's images directory.
-            add_images.tag_samples_by_directory(
-                session=self.session,
+            active_transport.get_transport().ingestion.add_directory_tags(
                 collection_id=self.collection_id,
-                input_path=images_path,
+                path=str(images_path),
                 sample_ids=created_sample_ids,
                 tag_depth=tag_depth,
             )
@@ -522,7 +487,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         # Generate embeddings for all samples at once
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=all_created_sample_ids,
             tag=None,
@@ -599,6 +563,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
@@ -607,17 +572,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
         )
         # Tag samples by their directory levels below the images directory.
-        add_images.tag_samples_by_directory(
-            session=self.session,
+        active_transport.get_transport().ingestion.add_directory_tags(
             collection_id=self.collection_id,
-            input_path=images_path,
+            path=str(images_path),
             sample_ids=created_sample_ids,
             tag_depth=tag_depth,
         )
@@ -683,6 +646,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
@@ -692,7 +656,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -742,6 +705,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
@@ -750,7 +714,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -798,6 +761,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_coco_captions(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             annotations_json=annotations_json,
             images_path=images_path,
@@ -805,7 +769,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -837,7 +800,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
 
 def _postprocess_created_images(
-    session: Session,
     collection_id: UUID,
     sample_ids: list[UUID],
     tag: str | None,
@@ -846,30 +808,19 @@ def _postprocess_created_images(
     """Post-process newly created images by generating embeddings and tagging.
 
     Args:
-        session: Database session for resolver operations.
         collection_id: The ID of the collection to associate with the embedding model.
         sample_ids: List of sample IDs to process.
         embed: If True, generate embeddings for the samples.
         tag: Optional tag name to assign to the samples.
     """
+    transport = active_transport.get_transport()
     if tag is not None and sample_ids:
-        db_tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session,
-            collection_id=collection_id,
-            tag_name=tag,
-        )
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=session,
-            tag_id=db_tag.tag_id,
-            sample_ids=sample_ids,
+        transport.tags.add_to_samples(
+            collection_id=collection_id, tag_name=tag, sample_ids=sample_ids
         )
 
     if embed:
-        _generate_embeddings_image(
-            session=session,
-            collection_id=collection_id,
-            sample_ids=sample_ids,
-        )
+        transport.ingestion.embed_images(collection_id=collection_id, sample_ids=sample_ids)
 
 
 def _normalize_input_path(path: PathLike) -> PathLike:
@@ -878,38 +829,6 @@ def _normalize_input_path(path: PathLike) -> PathLike:
     if isinstance(fs, LocalFileSystem):
         return Path(path).absolute()
     return str(path)
-
-
-def _generate_embeddings_image(
-    session: Session,
-    collection_id: UUID,
-    sample_ids: list[UUID],
-) -> None:
-    """Generate and store embeddings for samples.
-
-    Existing samples that have no embedding of the collection's default model are embedded
-    too, so a rerun completes an embedding that failed before.
-
-    Args:
-        session: Database session for resolver operations.
-        collection_id: The ID of the collection to associate with the embedding model.
-        sample_ids: List of sample IDs to generate embeddings for.
-    """
-    default_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
-        session=session, collection_id=collection_id
-    )
-    if default_model_id is not None:
-        unembedded_sample_ids = image_resolver.get_unembedded_sample_ids(
-            session=session, collection_id=collection_id, embedding_model_id=default_model_id
-        )
-        sample_ids = list(dict.fromkeys([*sample_ids, *unembedded_sample_ids]))
-
-    if not sample_ids:
-        return
-
-    embed_samples.embed_image_samples(
-        session=session, collection_id=collection_id, sample_ids=sample_ids
-    )
 
 
 def _generate_embeddings_annotations(

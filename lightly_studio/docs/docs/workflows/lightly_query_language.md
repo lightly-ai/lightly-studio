@@ -68,27 +68,6 @@ fps >= 29.97
 duration_s > 10 AND fps = 30
 ```
 
-## Video frame queries
-
-Use `frame(...)` to return videos with a matching frame. Inside it, combine annotation
-functions with `frame_timestamp_s`, the frame’s presentation timestamp in seconds on the video’s
-timeline. The first frame might have a nonzero timestamp. If the timestamp is unavailable,
-LightlyStudio stores `-1.0`, so `frame_timestamp_s < 5` also matches frames with an unknown time.
-
-```mysql
-# A person appears on a frame with a timestamp from 0 up to (but excluding) 5 seconds
-frame(object_detection(class_name = "person") AND frame_timestamp_s >= 0 AND frame_timestamp_s < 5)
-
-# A person and a car appear on the same frame
-frame(object_detection(class_name = "person") AND object_detection(class_name = "car"))
-
-# Both appear in the video, possibly on different frames
-frame(object_detection(class_name = "person")) AND frame(object_detection(class_name = "car"))
-```
-
-`frame(NOT object_detection(class_name = "car"))` requires at least one frame without a car detection.
-`NOT frame(object_detection(class_name = "car"))` matches videos with no car detections on any frame, including videos with no frames.
-
 ## Metadata filtering
 
 Use `metadata["path"]` to compare sample metadata. Quote the path with double or single quotes.
@@ -149,19 +128,26 @@ NOT "rejected" IN tags
 
 ## Annotation match functions
 
-An annotation is a classification, bounding box, or segmentation mask attached to an image.
-
-The query language supports three annotation functions:
+Use these functions to match classifications, bounding boxes, and segmentation masks:
 
 - `classification(...)`
 - `object_detection(...)`
 - `segmentation_mask(...)`
 
-Each function contains another query inside the parentheses and matches an image when it has at least one annotation of that type that satisfies the nested query.
+Leave the parentheses empty to match any annotation of the named type. For example,
+`object_detection()` finds images with at least one bounding box, and `NOT object_detection()`
+finds images without bounding boxes, including images that have other annotation types.
+Add a condition inside the parentheses to require at least one annotation of that type to satisfy it.
+
+Bounding boxes and segmentation masks belong to images or individual video frames.
+In an image query, use `object_detection(...)` or `segmentation_mask(...)` directly.
+In a video query, wrap either function in `frame(...)` to find videos with a matching frame.
+For example, `frame(segmentation_mask(class_name = "cat"))` finds videos with a cat mask on at least one frame.
 
 ### Classification queries
 
-Use `classification(...)` when you want to match image-level classifications. Example queries:
+Use `classification(...)` to match an image or whole-video classification. For classifications with
+a time span, see [Video event queries](#video-event-queries). Example queries:
 
 ```mysql
 classification(class_name = "cat")
@@ -217,6 +203,47 @@ height > 400 AND object_detection(class_name = "cat")
 width >= 640 AND classification(class_name = "approved")
 "reviewed" IN tags AND segmentation_mask(class_name = "road")
 ```
+
+## Video frame queries
+
+Use `frame(...)` to return videos with a matching frame. Inside it, combine annotation
+functions with `frame_timestamp_s`, the frame’s presentation timestamp in seconds on the video’s
+timeline. The first frame might have a nonzero timestamp. If the timestamp is unavailable,
+LightlyStudio stores `-1.0`, so `frame_timestamp_s < 5` also matches frames with an unknown time.
+
+```mysql
+# A person appears on a frame with a timestamp from 0 up to (but excluding) 5 seconds
+frame(object_detection(class_name = "person") AND frame_timestamp_s >= 0 AND frame_timestamp_s < 5)
+
+# A person and a car appear on the same frame
+frame(object_detection(class_name = "person") AND object_detection(class_name = "car"))
+
+# Both appear in the video, possibly on different frames
+frame(object_detection(class_name = "person")) AND frame(object_detection(class_name = "car"))
+```
+
+`frame(NOT object_detection(class_name = "car"))` requires at least one frame without a car detection.
+`NOT frame(object_detection(class_name = "car"))` matches videos with no car detections on any frame, including videos with no frames.
+
+## Video event queries
+
+Use `event(...)` to return videos with at least one temporal event that satisfies the expression.
+Only classifications attached to a video can have a time span when you create them.
+You can filter by annotation class (`class_name`), annotation source (`source`), `confidence`,
+and event boundaries (`start_time_s` and `end_time_s`, in seconds from the start of the video).
+
+```mysql
+# A run event starts before five seconds
+event(class_name = "run" AND start_time_s < 5)
+
+# A run event and a walk event both occur in the video
+event(class_name = "run") AND event(class_name = "walk")
+```
+
+On the Videos page, `classification(class_name = "run")` matches a whole-video classification.
+To include both whole-video and temporal event annotation, use `classification(class_name = "run")
+OR event(class_name = "run")`.
+
 
 ## Sample evaluation filtering
 

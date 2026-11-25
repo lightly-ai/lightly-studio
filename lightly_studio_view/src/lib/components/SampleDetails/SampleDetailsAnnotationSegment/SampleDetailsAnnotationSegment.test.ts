@@ -23,14 +23,7 @@ const mocks = vi.hoisted(() => ({
     lastAnnotationSource: undefined as unknown as Writable<Record<string, string>>,
     context: undefined as unknown as AnnotationLabelContext,
     addReversibleAction: vi.fn(),
-    deleteAnnotation: vi.fn(),
-    annotationId: null as string | null,
-    isOnAnnotationDetailsView: false,
-    toolbarContext: {
-        status: 'cursor' as string,
-        brush: { mode: 'brush' as string, size: 50 },
-        slic: { level: 'medium' as string, status: 'idle' as string }
-    }
+    deleteAnnotation: vi.fn()
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -42,14 +35,6 @@ vi.mock(
         return { default: module.default };
     }
 );
-
-vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
-    useSampleDetailsToolbarContext: () => ({ context: mocks.toolbarContext })
-}));
-
-vi.mock('svelte-sonner', () => ({
-    toast: { success: vi.fn(), error: vi.fn() }
-}));
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: vi.fn(() => ({ data: mocks.collections }))
@@ -168,9 +153,6 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.enforceColoringByClassStore.set(false);
         mocks.isEditingMode.set(false);
         mocks.userRole = 'labeler';
-        mocks.annotationId = null;
-        mocks.isOnAnnotationDetailsView = false;
-        mocks.toolbarContext.status = 'cursor';
         mocks.lastAnnotationSource.set({});
         useAnnotationSourceGroupState().sourceGroupStates.set({});
     });

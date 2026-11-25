@@ -26,8 +26,9 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
 vi.mock('$lib/hooks/useSettingsDialog/useSettingsDialog', () => ({
     useSettingsDialog: () => ({ openSettingsDialog: vi.fn() })
 }));
+// Plugins and Settings show from the editor role up.
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
-    default: () => ({ user: { role: 'labeler' } })
+    default: () => ({ user: { role: 'editor' } })
 }));
 vi.mock('$lib/contexts/WorkflowFile.svelte', () => ({
     useWorkflowFileContext: () => undefined

@@ -26,11 +26,15 @@
     import AssistedLabelingPopUps from '$lib/components/SampleDetails/AssistedLabelingPopUps/AssistedLabelingPopUps.svelte';
     import AssistedLabelingOverlays from '$lib/components/SampleDetails/AssistedLabelingOverlays/AssistedLabelingOverlays.svelte';
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
-    import { getDrawerLabel, isPanEnabled } from './SampleDetailsImageContainer.helpers';
+    import {
+        getDrawerLabel,
+        isPanEnabled,
+        reuseUnchangedAnnotations
+    } from './SampleDetailsImageContainer.helpers';
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
-    import { DisplayAdjustmentsPopover } from '$lib/components/DisplayAdjustmentsPopover';
     import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
     import { AnnotationCardLayer } from '$lib/components/SampleDetails/AnnotationCard';
+    import { DisplayAdjustmentsPopover } from '$lib/components/DisplayAdjustmentsPopover';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -94,10 +98,15 @@
         sampleId,
         refetch
     }));
+    let previousAnnotations: AnnotationView[] = [];
+    const annotations = $derived.by(() => {
+        previousAnnotations = reuseUnchangedAnnotations(previousAnnotations, sample.annotations);
+        return previousAnnotations;
+    });
     // The local hidden set is the single source of truth for visibility on the
     // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
-        return sample.annotations
+        return annotations
             .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
             .sort((a, b) => {
                 if (a.sample_id === annotationLabelContext.annotationId) return 1;
@@ -322,7 +331,7 @@
                         annotation.sample_id === annotationLabelContext.annotationId}
                 >
                     <SampleDetailsAnnotation
-                        annotationId={annotation.sample_id}
+                        {annotation}
                         {sampleId}
                         {collectionId}
                         {isResizable}

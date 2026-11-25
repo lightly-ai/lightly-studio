@@ -122,7 +122,7 @@
 {:else}
     <button
         type="button"
-        class="mb-2 flex h-8 items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors enabled:hover:bg-primary enabled:hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        class="mb-2 flex h-8 w-full items-center justify-center rounded-sm bg-card px-2 py-0 text-diffuse-foreground transition-colors enabled:hover:bg-primary enabled:hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
         onclick={openCreateCaption}
         disabled={!canStartDraft}
         data-testid="add-caption-button"

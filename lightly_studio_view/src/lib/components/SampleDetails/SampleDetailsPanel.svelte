@@ -7,6 +7,7 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { untrack, type Snippet } from 'svelte';
 
+    import { cn } from '$lib/utils/shadcn';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
@@ -25,12 +26,11 @@
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
-    import { useAnnotationTarget } from '$lib/hooks';
-    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
-    import { useDeleteAnnotationWithUndo } from '$lib/hooks';
+    import { useAnnotationTarget, useDeleteAnnotationWithUndo } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
+    import { isDeleteKey, isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
         sampleId,
@@ -113,28 +113,6 @@
         getHiddenIds: () => annotationsIdsToHide
     });
     let previousAnnotationType: AnnotationType | null | undefined;
-    const handleDeleteKeyDown = async (event: KeyboardEvent) => {
-        if (!$isEditingMode || !canEdit) return;
-        if (annotationLabelContext.isOnAnnotationDetailsView) return;
-        if (!annotationLabelContext.annotationId) return;
-        if (
-            sampleDetailsToolbarContext.status !== 'cursor' &&
-            sampleDetailsToolbarContext.status !== 'drag'
-        )
-            return;
-
-        event.preventDefault();
-
-        const annotationId = annotationLabelContext.annotationId;
-        const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
-        if (!annotation) return;
-
-        const deleted = await deleteWithUndo(annotation, refetch);
-        if (deleted && annotationLabelContext.annotationId === annotationId) {
-            annotationLabelContext.annotationId = null;
-        }
-    };
-
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
         // Typing in a field or in an overlay must not trigger the shortcuts behind it.
@@ -166,10 +144,34 @@
         handleKeyEvent(event);
     };
 
+    /** Delete or Backspace deletes the selected annotation while editing. */
+    const handleDeleteKeyDown = async (event: KeyboardEvent) => {
+        if (!isDeleteKey(event) || !$isEditingMode || !canEdit) return;
+        if (annotationLabelContext.isOnAnnotationDetailsView) return;
+        if (
+            sampleDetailsToolbarContext.status !== 'cursor' &&
+            sampleDetailsToolbarContext.status !== 'drag'
+        )
+            return;
+        const annotationId = annotationLabelContext.annotationId;
+        const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
+        if (!annotation) return;
+
+        event.preventDefault();
+        const isDeleted = await deleteWithUndo(annotation, refetch);
+        if (isDeleted && annotationLabelContext.annotationId === annotationId) {
+            annotationLabelContext.annotationId = null;
+        }
+    };
+
     /** Space toggles the selection, or starts pan mode while editing. */
     const handleSpaceKeyDown = (event: KeyboardEvent) => {
-        // Let the browser handle Space on buttons (e.g. popover triggers) natively.
-        if (event.target instanceof HTMLButtonElement) return;
+        // Opted-out buttons, such as the display adjustments trigger, open on Space natively.
+        if (
+            event.target instanceof HTMLElement &&
+            event.target.closest('[data-ignore-space-shortcut]')
+        )
+            return;
 
         // Space would scroll the page.
         event.preventDefault();
@@ -333,27 +335,30 @@
                     </CardContent>
                 </Card>
             </div>
-            {#if !$isSampleDetailsSidePanelCollapsed}
-                <div class="relative w-[375px]">
-                    {#if sidePanelItem}
-                        {@render sidePanelItem()}
-                    {:else}
-                        <SampleDetailsSidePanel
-                            bind:annotationsIdsToHide
-                            {sample}
-                            onUpdate={refetch}
-                            {collectionId}
-                            {isPanModeEnabled}
-                        >
-                            {#snippet metadataItem()}
-                                {#if metadataValue}
-                                    {@render metadataValue()}
-                                {/if}
-                            {/snippet}
-                        </SampleDetailsSidePanel>
-                    {/if}
-                </div>
-            {/if}
+            <div
+                class={cn(
+                    'relative w-[375px]',
+                    $isSampleDetailsSidePanelCollapsed ? 'hidden' : 'flex'
+                )}
+            >
+                {#if sidePanelItem}
+                    {@render sidePanelItem()}
+                {:else}
+                    <SampleDetailsSidePanel
+                        bind:annotationsIdsToHide
+                        {sample}
+                        onUpdate={refetch}
+                        {collectionId}
+                        {isPanModeEnabled}
+                    >
+                        {#snippet metadataItem()}
+                            {#if metadataValue}
+                                {@render metadataValue()}
+                            {/if}
+                        {/snippet}
+                    </SampleDetailsSidePanel>
+                {/if}
+            </div>
         </div>
     </div>
 {:else}

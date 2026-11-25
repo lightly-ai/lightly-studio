@@ -48,6 +48,9 @@ describe('detectScopeAt', () => {
         { text: 'video: (frame(', scope: 'frame' },
         { text: 'video: frame(NOT (classification(source = "model") OR ', scope: 'frame' },
         { text: 'video: frame(object_detection(', scope: 'object_detection' },
+        { text: 'event(', scope: 'image' },
+        { text: 'video: frame(event(', scope: 'frame' },
+        { text: 'video: (event((start_time_s', scope: 'event' },
         { text: '# note\nvideo: fps', scope: 'video' },
         { text: 'classification(# )\nclass_name', scope: 'classification' },
         { text: 'file_name = "#classification(" AND width', scope: 'image' }

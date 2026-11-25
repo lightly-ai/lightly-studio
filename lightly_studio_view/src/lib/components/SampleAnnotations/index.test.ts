@@ -230,6 +230,40 @@ describe('SampleAnnotations', () => {
         });
     });
 
+    it('draws the box of a polygon annotation', async () => {
+        const sample = {
+            width: 100,
+            height: 80,
+            annotations: [
+                {
+                    sample_id: 'polygon-1',
+                    annotation_collection_id: SAMPLE_SOURCE_ID,
+                    annotation_type: 'polygon',
+                    annotation_label: { annotation_label_name: 'car' },
+                    polygon_details: {
+                        x: 5,
+                        y: 6,
+                        width: 7,
+                        height: 8,
+                        polygons: [
+                            [
+                                [5, 6],
+                                [12, 6],
+                                [12, 14]
+                            ]
+                        ]
+                    }
+                }
+            ]
+        } as ComponentProps<typeof SampleAnnotations>['sample'];
+
+        render(SampleAnnotations, { props: { sample } });
+
+        await waitFor(() => {
+            expect(hasStrokeRectCall(mockContext, 5, 6, 7, 8)).toBe(true);
+        });
+    });
+
     it('draws nothing once the user unchecks every annotation source', async () => {
         vi.useFakeTimers();
         setShowBoundingBoxesForSegmentation(true);

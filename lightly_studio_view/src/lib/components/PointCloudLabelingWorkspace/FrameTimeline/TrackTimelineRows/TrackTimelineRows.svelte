@@ -1,10 +1,16 @@
 <script lang="ts">
-    import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import type {
+        SequenceTrackView,
+        TickTagView,
+        TickView
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import { TagTimelineRows, useVisibleTags } from '../TagTimelineRows';
     import { DeleteTrackDialog } from './DeleteTrackDialog';
     import TrackTimelineRow from './TrackTimelineRow/TrackTimelineRow.svelte';
-    import { TrackRowsResizer, useTrackRowsHeight } from './TrackRowsResizer';
+    import { TrackRowsResizer, useTrackRowsHeight, type TrackRowsHeight } from './TrackRowsResizer';
     import { TrackTimelineToolbar } from './TrackTimelineToolbar';
     import { useVisibleTracks } from './useVisibleTracks.svelte';
+    import { getTrackKey } from './visibleTracks';
 
     interface Props {
         ticks: TickView[];
@@ -29,6 +35,15 @@
         onDeleteTrack?: (track: SequenceTrackView) => Promise<unknown>;
         /** Identifies the sequence, so the chosen tracks are remembered per sequence. */
         sequenceId?: string;
+        showFrameTags?: boolean;
+        /** Set when frame tags can be shown: toggles the frame tag rows. */
+        onShowFrameTagsChange?: (checked: boolean) => void;
+        /** The frame tags of the sequence; the chosen ones show as rows while `showFrameTags` is set. */
+        frameTags?: TickTagView[];
+        /** The height limit of the rows; the timeline scroll area applies it. */
+        rowsHeight?: TrackRowsHeight;
+        /** The height the rows currently have on screen. */
+        getRowsRenderedHeight?: () => number;
     }
 
     let {
@@ -44,16 +59,35 @@
         onExtendStart,
         onExtendEnd,
         onDeleteTrack,
-        sequenceId
+        sequenceId,
+        showFrameTags = false,
+        onShowFrameTagsChange,
+        frameTags = [],
+        rowsHeight = useTrackRowsHeight(),
+        getRowsRenderedHeight
     }: Props = $props();
-    const rowsHeight = useTrackRowsHeight();
-    let listElement = $state<HTMLElement | null>(null);
     const visible = useVisibleTracks({
         getTracks: () => tracks,
         getSelectedAnnotationId: () => selectedAnnotationId,
         getStorageKey: () =>
             sequenceId ? `lightlyStudio_trackTimelineVisibleTracks_${sequenceId}` : undefined
     });
+    const visibleTags = useVisibleTags({
+        getTags: () => frameTags,
+        getStorageKey: () =>
+            sequenceId ? `lightlyStudio_frameTimelineVisibleTags_${sequenceId}` : undefined
+    });
+    const trackItems = $derived(
+        tracks.map((track) => ({
+            value: getTrackKey(track),
+            label: `${track.annotation_label_name} · Track ${track.object_track_number}`
+        }))
+    );
+    const tagItems = $derived(frameTags.map((tag) => ({ value: tag.tag_id, label: tag.name })));
+    const hasRows = $derived(tracks.length > 0 || (showFrameTags && frameTags.length > 0));
+    // A stored choice can hold ids of removed rows; they must not count as selected.
+    const keepListedIds = (ids: string[], items: { value: string }[]) =>
+        ids.filter((id) => items.some((item) => item.value === id));
     let trackToDelete = $state<SequenceTrackView | null>(null);
     let isDeleteDialogOpen = $state(false);
     const requestDelete = (track: SequenceTrackView) => {
@@ -84,30 +118,42 @@
     };
 </script>
 
-{#if tracks.length > 0 || onStartTrack || onAddTrack}
-    {#if tracks.length > 0}
-        <TrackRowsResizer {rowsHeight} getRenderedHeight={() => listElement?.clientHeight ?? 0} />
+{#if hasRows || onStartTrack || onAddTrack || onShowFrameTagsChange}
+    {#if hasRows}
+        <TrackRowsResizer {rowsHeight} getRenderedHeight={getRowsRenderedHeight} />
     {/if}
-    <div class="w-full border-t px-2 py-1" data-testid="object-track-rows">
-        <TrackTimelineToolbar
-            visibility={tracks.length > 0
-                ? {
-                      tracks,
-                      visibleCount: visible.visibleTracks.length,
-                      selectedKeys: visible.selectedKeys,
-                      onChange: visible.setSelection
-                  }
-                : null}
-            {onAddTrack}
-            {isAddingTrack}
-            {onStartTrack}
-        />
-        <div
-            class="scrollbar-thin w-full overflow-y-auto overflow-x-hidden overscroll-contain px-1 [scrollbar-gutter:stable]"
-            style:max-height={`${rowsHeight.height}px`}
-            bind:this={listElement}
-            data-testid="object-track-list"
-        >
+    <div class="w-full border-t px-2 pb-1" data-testid="object-track-rows">
+        <!-- Sticks under the ruler (`h-8`) and the resize handle (`h-2`) when it is shown. -->
+        <div class="sticky z-20 bg-background py-1 {hasRows ? 'top-10' : 'top-8'}">
+            <TrackTimelineToolbar
+                trackVisibility={tracks.length > 0
+                    ? {
+                          items: trackItems,
+                          visibleCount: visible.visibleTracks.length,
+                          selectedIds: keepListedIds(visible.selectedKeys, trackItems),
+                          onChange: visible.setSelection
+                      }
+                    : null}
+                {onAddTrack}
+                {isAddingTrack}
+                {onStartTrack}
+                frameTags={onShowFrameTagsChange
+                    ? { checked: showFrameTags, onCheckedChange: onShowFrameTagsChange }
+                    : undefined}
+                tagVisibility={showFrameTags && frameTags.length > 0
+                    ? {
+                          items: tagItems,
+                          visibleCount: visibleTags.visibleTags.length,
+                          selectedIds: keepListedIds(visibleTags.selectedIds, tagItems),
+                          onChange: visibleTags.setSelection
+                      }
+                    : undefined}
+            />
+        </div>
+        {#if showFrameTags}
+            <TagTimelineRows {ticks} tags={visibleTags.visibleTags} {onSelectTick} />
+        {/if}
+        <div class="w-full px-1" data-testid="object-track-list" data-timeline-body>
             {#each visible.visibleTracks as track (`${track.object_track_id}-${track.annotation_source_id}`)}
                 <TrackTimelineRow
                     {ticks}

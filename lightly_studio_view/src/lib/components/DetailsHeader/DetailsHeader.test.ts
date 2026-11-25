@@ -7,6 +7,7 @@ import { workflowFile } from '$lib/components/Workflow/workflowFile.fixture';
 import type { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
 
 const mocks = vi.hoisted(() => ({
+    role: 'labeler',
     isEditingMode: undefined as unknown as import('svelte/store').Writable<boolean>,
     workflow: undefined as
         | Partial<NonNullable<ReturnType<typeof useWorkflowFileContext>>>
@@ -37,7 +38,7 @@ vi.mock('$lib/hooks/useSettingsDialog/useSettingsDialog', () => ({
     useSettingsDialog: () => ({ openSettingsDialog: vi.fn() })
 }));
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
-    default: () => ({ user: { role: 'labeler' } })
+    default: () => ({ user: { role: mocks.role } })
 }));
 vi.mock('$lib/contexts/WorkflowFile.svelte', () => ({
     useWorkflowFileContext: () => mocks.workflow
@@ -57,9 +58,12 @@ describe('DetailsHeader', () => {
     beforeEach(() => {
         mocks.isEditingMode = writable(false);
         mocks.workflow = undefined;
+        mocks.role = 'labeler';
     });
 
     it('shows the breadcrumb, edit actions and side-panel toggle outside a batch', () => {
+        // Plugins and Settings show from the editor role up.
+        mocks.role = 'editor';
         renderHeader();
 
         expect(screen.getByTestId('test-breadcrumb')).toBeInTheDocument();
@@ -115,6 +119,7 @@ describe('DetailsHeader', () => {
     });
 
     it('shows extra actions between the edit actions and the side-panel toggle', () => {
+        mocks.role = 'editor';
         renderHeader({ extraActions });
 
         const fullscreen = screen.getByRole('button', { name: 'Enter fullscreen' });

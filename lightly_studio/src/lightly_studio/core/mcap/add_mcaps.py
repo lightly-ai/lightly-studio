@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, NamedTuple
+from typing import NamedTuple
 from uuid import UUID
 
 from mcap.exceptions import McapError
@@ -24,8 +24,8 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcomeReport,
     MissingInputFileError,
 )
-from lightly_studio.core.mcap import dataset_schema, matching, reference_frames
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap import dataset_schema, matching, recording_rows, reference_frames
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
 from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
@@ -34,20 +34,27 @@ from lightly_studio.core.mcap.reader import (
     STATIC_TRANSFORM_TOPIC,
     McapFileReader,
 )
-from lightly_studio.core.mcap.recording import Recording
-from lightly_studio.core.mcap.sequence import McapSequenceEntry
 from lightly_studio.core.mcap.type_definitions import (
     CameraIntrinsics,
     FrameLocator,
     StaticTransform,
 )
-from lightly_studio.database import db_manager
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap import McapCreate
-from lightly_studio.resolvers import group_resolver, mcap_resolver, recording_resolver
-
-if TYPE_CHECKING:
-    from lightly_studio.core.mcap.component import McapComponent
-    from lightly_studio.core.mcap.mcap_dataset import McapDataset
+from lightly_studio.models.recording import RecordingFormat
+from lightly_studio.models.sequence import SampleSequenceLinkCreate
+from lightly_studio.resolvers import (
+    collection_resolver,
+    dynamic_transform_resolver,
+    group_resolver,
+    mcap_group_component_definition_resolver,
+    mcap_group_sequence_resolver,
+    mcap_resolver,
+    recording_resolver,
+    sensor_calibration_resolver,
+    sequence_resolver,
+    static_transform_resolver,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +67,8 @@ DEFAULT_MAX_PAIRING_DIFF_NS = 50_000_000
 
 
 def index_recordings(  # noqa: PLR0913
-    dataset: McapDataset,
+    session: Session,
+    collection_id: UUID,
     mcap_paths: Iterable[str],
     sync_component: str,
     components: Sequence[McapComponentSpec],
@@ -75,7 +83,8 @@ def index_recordings(  # noqa: PLR0913
     the reason and the others are still indexed.
 
     Args:
-        dataset: The dataset to index into.
+        session: The database session.
+        collection_id: The ID of the root collection of the dataset.
         mcap_paths: The paths or URIs of the `.mcap` files.
         sync_component: The name of the component whose messages are the ticks.
         components: The specs the recordings are read through. They must be the
@@ -101,17 +110,18 @@ def index_recordings(  # noqa: PLR0913
         AllInputFilesFailedError: If at least one recording was attempted and every
             attempted recording failed.
     """
+    target = _get_target(session=session, collection_id=collection_id)
     dataset_schema.check_components_match(
-        session=dataset.group_dataset.session,
-        group_collection_id=dataset.group_dataset.collection_id,
+        session=session,
+        group_collection_id=target.group_collection_id,
         components=components,
-        dataset_name=dataset.name,
+        dataset_name=target.name,
     )
     report = FileOutcomeReport()
     sequence_sample_ids: list[UUID] = []
     # The set starts with URIs already in the dataset and grows with URIs seen in this
     # call, so both already-present and in-run duplicate paths are skipped.
-    seen_or_existing_uris = _existing_uris(dataset=dataset)
+    seen_or_existing_uris = _existing_uris(session=session, dataset_id=target.dataset_id)
     for mcap_path in mcap_paths:
         with report.track(mcap_path):
             if mcap_path in seen_or_existing_uris:
@@ -120,7 +130,8 @@ def index_recordings(  # noqa: PLR0913
             try:
                 sequence_sample_ids.append(
                     index_recording(
-                        dataset=dataset,
+                        session=session,
+                        collection_id=collection_id,
                         mcap_path=mcap_path,
                         sync_component=sync_component,
                         components=components,
@@ -141,7 +152,8 @@ def index_recordings(  # noqa: PLR0913
 
 
 def index_recording(  # noqa: PLR0913
-    dataset: McapDataset,
+    session: Session,
+    collection_id: UUID,
     mcap_path: str,
     sync_component: str,
     components: Sequence[McapComponentSpec],
@@ -153,7 +165,8 @@ def index_recording(  # noqa: PLR0913
     Sequence timestamps are the capture time of the sync component.
 
     Args:
-        dataset: The dataset to index into.
+        session: The database session.
+        collection_id: The ID of the root collection of the dataset.
         mcap_path: The path or URI of the `.mcap` file.
         sync_component: The name of the component whose messages are the ticks.
         components: The specs the recording is read through. They must be the components
@@ -181,14 +194,17 @@ def index_recording(  # noqa: PLR0913
         FileNotFoundError: If the file does not exist.
     """
     reference_frames.check_reference_frame_ids(frame_ids=reference_frame_ids)
+    target = _get_target(session=session, collection_id=collection_id)
     dataset_schema.check_components_match(
-        session=dataset.group_dataset.session,
-        group_collection_id=dataset.group_dataset.collection_id,
+        session=session,
+        group_collection_id=target.group_collection_id,
         components=components,
-        dataset_name=dataset.name,
+        dataset_name=target.name,
     )
     sync_object = _get_sync_component(components=components, sync_component=sync_component)
-    mcap_components = _mcap_components(dataset=dataset, components=components)
+    component_collection_ids = _component_collection_ids(
+        session=session, group_collection_id=target.group_collection_id
+    )
 
     loaded = _read_recording(
         mcap_path=mcap_path,
@@ -215,33 +231,63 @@ def index_recording(  # noqa: PLR0913
     )
     logger.info("Indexing %d ticks of '%s'.", len(rows), mcap_path)
 
-    recording = dataset.create_recording(uri=mcap_path)
+    recording_id = recording_resolver.create(
+        session=session, dataset_id=target.dataset_id, uri=mcap_path, format_=RecordingFormat.MCAP
+    )
     _add_calibrations(
-        recording=recording,
+        session=session,
+        recording_id=recording_id,
         components=components,
-        mcap_components=mcap_components,
+        component_collection_ids=component_collection_ids,
         loaded=loaded,
     )
-    _add_static_transforms(recording=recording, static_transforms=loaded.static_transforms)
-    _add_dynamic_transforms(recording=recording, dynamic_transforms=loaded.dynamic_transforms)
-    recording.set_reference_frame_ids(frame_ids=frame_ids)
-    _fill_mcap_definitions(components=components, mcap_components=mcap_components, loaded=loaded)
-
-    sequence = dataset.create_sequence(recording_id=recording.recording_id)
-    group_sample_ids = _write_groups(
-        dataset=dataset, components=components, mcap_components=mcap_components, rows=rows
+    _add_static_transforms(
+        session=session, recording_id=recording_id, static_transforms=loaded.static_transforms
     )
-    sequence.add_samples(
-        entries=[
-            McapSequenceEntry(
+    _add_dynamic_transforms(
+        session=session, recording_id=recording_id, dynamic_transforms=loaded.dynamic_transforms
+    )
+    recording_resolver.set_reference_frame_ids(
+        session=session, recording_id=recording_id, frame_ids=frame_ids
+    )
+    _fill_mcap_definitions(
+        session=session,
+        components=components,
+        component_collection_ids=component_collection_ids,
+        loaded=loaded,
+    )
+
+    sequence_sample_id = mcap_group_sequence_resolver.create(
+        session=session, collection_id=collection_id, recording_id=recording_id
+    )
+    group_sample_ids = _write_groups(
+        session=session,
+        group_collection_id=target.group_collection_id,
+        components=components,
+        component_collection_ids=component_collection_ids,
+        rows=rows,
+    )
+    sequence_resolver.add_samples(
+        session=session,
+        sequence_sample_id=sequence_sample_id,
+        links=[
+            SampleSequenceLinkCreate(
                 sample_id=group_sample_id,
                 seq_number=seq_number,
                 timestamp_ns=row[sync_object.name].capture_timestamp_ns,
             )
             for seq_number, (group_sample_id, row) in enumerate(zip(group_sample_ids, rows))
-        ]
+        ],
     )
-    return sequence.sample_id
+    return sequence_sample_id
+
+
+class _Target(NamedTuple):
+    """The dataset that recordings are indexed into."""
+
+    name: str
+    dataset_id: UUID
+    group_collection_id: UUID
 
 
 class _LoadedRecording(NamedTuple):
@@ -442,26 +488,30 @@ def _tick_rows(
 
 
 def _add_calibrations(
-    recording: Recording,
+    session: Session,
+    recording_id: UUID,
     components: Sequence[McapComponentSpec],
-    mcap_components: Mapping[str, McapComponent],
+    component_collection_ids: Mapping[str, UUID],
     loaded: _LoadedRecording,
 ) -> None:
     """Store the intrinsics of the cameras of the recording, if it has any."""
     calibrations = [
-        CreateSensorCalibration.from_camera_intrinsics(
-            collection_id=mcap_components[component.name].collection_id,
-            intrinsics=loaded.intrinsics[component.name],
+        recording_rows.sensor_calibration_create(
+            recording_id=recording_id,
+            calibration=CreateSensorCalibration.from_camera_intrinsics(
+                collection_id=component_collection_ids[component.name],
+                intrinsics=loaded.intrinsics[component.name],
+            ),
         )
         for component in components
         if component.is_camera
     ]
     if calibrations:
-        recording.add_sensor_calibrations(calibrations=calibrations)
+        sensor_calibration_resolver.create_many(session=session, rows=calibrations)
 
 
 def _add_static_transforms(
-    recording: Recording, static_transforms: Sequence[StaticTransform]
+    session: Session, recording_id: UUID, static_transforms: Sequence[StaticTransform]
 ) -> None:
     """Store the static transforms of the recording, if it has any.
 
@@ -470,11 +520,17 @@ def _add_static_transforms(
     """
     edges = _latest_static_transform_per_child(static_transforms)
     if edges:
-        recording.add_static_transforms(transforms=edges)
+        static_transform_resolver.create_many(
+            session=session,
+            rows=[
+                recording_rows.static_transform_create(recording_id=recording_id, transform=edge)
+                for edge in edges
+            ],
+        )
 
 
 def _add_dynamic_transforms(
-    recording: Recording, dynamic_transforms: Sequence[StaticTransform]
+    session: Session, recording_id: UUID, dynamic_transforms: Sequence[StaticTransform]
 ) -> None:
     """Store every dynamic transform of the recording, if it has any.
 
@@ -482,7 +538,13 @@ def _add_dynamic_transforms(
     a timestamp.
     """
     if dynamic_transforms:
-        recording.add_dynamic_transforms(transforms=dynamic_transforms)
+        dynamic_transform_resolver.create_many(
+            session=session,
+            rows=[
+                recording_rows.dynamic_transform_create(recording_id=recording_id, transform=edge)
+                for edge in dynamic_transforms
+            ],
+        )
 
 
 def _dynamic_edges(
@@ -566,8 +628,9 @@ def _named_transforms(
 
 
 def _fill_mcap_definitions(
+    session: Session,
     components: Sequence[McapComponentSpec],
-    mcap_components: Mapping[str, McapComponent],
+    component_collection_ids: Mapping[str, UUID],
     loaded: _LoadedRecording,
 ) -> None:
     """Fill the channel and the frame of every component from the recording.
@@ -578,16 +641,19 @@ def _fill_mcap_definitions(
     """
     for component in components:
         intrinsics = loaded.intrinsics.get(component.name)
-        mcap_components[component.name].update_mcap_definition(
+        mcap_group_component_definition_resolver.update(
+            session=session,
+            collection_id=component_collection_ids[component.name],
             channel_id=loaded.channel_ids[component.name],
             frame_id=intrinsics.frame_id if intrinsics is not None else component.frame_id,
         )
 
 
 def _write_groups(
-    dataset: McapDataset,
+    session: Session,
+    group_collection_id: UUID,
     components: Sequence[McapComponentSpec],
-    mcap_components: Mapping[str, McapComponent],
+    component_collection_ids: Mapping[str, UUID],
     rows: Sequence[Mapping[str, FrameLocator]],
 ) -> list[UUID]:
     """Write the locators present on each tick and the groups that hold them.
@@ -599,19 +665,18 @@ def _write_groups(
     Returns:
         The IDs of the group samples, in the order of `rows`.
     """
-    session = dataset.group_dataset.session
     sample_ids_by_row: list[set[UUID]] = [set() for _ in rows]
     for component in components:
         _add_component_samples(
             session=session,
-            collection_id=mcap_components[component.name].collection_id,
+            collection_id=component_collection_ids[component.name],
             component_name=component.name,
             rows=rows,
             sample_ids_by_row=sample_ids_by_row,
         )
     return group_resolver.create_many(
         session=session,
-        collection_id=dataset.group_dataset.collection_id,
+        collection_id=group_collection_id,
         groups=sample_ids_by_row,
     )
 
@@ -649,19 +714,41 @@ def _mcap_create(locator: FrameLocator) -> McapCreate:
     )
 
 
-def _mcap_components(
-    dataset: McapDataset, components: Sequence[McapComponentSpec]
-) -> dict[str, McapComponent]:
-    """Look up each component once so indexing does not re-query the group schema."""
-    return {
-        component.name: dataset.group_dataset.get_component(name=component.name)
-        for component in components
-    }
+def _get_target(session: Session, collection_id: UUID) -> _Target:
+    """Return the name, the dataset ID and the GROUP child collection of a root collection.
 
-
-def _existing_uris(dataset: McapDataset) -> set[str]:
-    """Return the URIs of recordings already indexed into the dataset."""
-    recordings = recording_resolver.get_all_by_dataset_id(
-        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    Raises:
+        ValueError: If the collection does not exist.
+        RuntimeError: If the collection has no GROUP child collection.
+    """
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError(f"Collection with id {collection_id} not found.")
+    children = collection_resolver.get_all_by_parent(
+        session=session, parent_collection_id=collection_id, name=None
     )
+    for child in children:
+        if child.sample_type == SampleType.GROUP:
+            return _Target(
+                name=collection.name,
+                dataset_id=collection.dataset_id,
+                group_collection_id=child.collection_id,
+            )
+    raise RuntimeError(
+        f"Dataset '{collection.name}' has no group collection. It was not created with "
+        "`McapDataset.create`."
+    )
+
+
+def _component_collection_ids(session: Session, group_collection_id: UUID) -> dict[str, UUID]:
+    """Look up each component once so indexing does not re-query the group schema."""
+    components = collection_resolver.get_group_components(
+        session=session, parent_collection_id=group_collection_id
+    )
+    return {name: collection.collection_id for name, collection in components.items()}
+
+
+def _existing_uris(session: Session, dataset_id: UUID) -> set[str]:
+    """Return the URIs of recordings already indexed into the dataset."""
+    recordings = recording_resolver.get_all_by_dataset_id(session=session, dataset_id=dataset_id)
     return {recording.uri for recording in recordings}

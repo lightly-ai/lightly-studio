@@ -9,6 +9,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
 from PIL import Image
 from pytest_mock import MockerFixture
 
@@ -230,6 +231,17 @@ def test_start_gui__empty_datasets(
 
     with pytest.raises(ValueError, match="No images have been indexed"):
         start_gui(open_browser=False)
+
+
+@pytest.mark.usefixtures("patch_collection")
+def test_serve_app(mocker: MockerFixture) -> None:
+    """Test that serve_app serves the given app and starts without samples."""
+    custom_app = FastAPI()
+    mock_server = mocker.patch.object(start_gui_module, "Server")
+
+    start_gui_module.serve_app(app=custom_app, open_browser=False)
+
+    mock_server.assert_called_once_with(host=None, port=None, app=custom_app)
 
 
 def test_start_gui_background(

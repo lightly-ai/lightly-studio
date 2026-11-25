@@ -8,11 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-
-- Edit, Undo, Plugins and Settings actions are now in the breadcrumb row on sample detail pages.
+- Find images with any bounding box, segmentation mask, or classification in the query editor with `object_detection()`, `segmentation_mask()`, or `classification()`.
+- The GUI shows polygon annotations as boxes. Polygons can't be edited in the GUI yet.
+- Export polygons to YOLO with the new "Image Segmentation Polygons (YOLO)" export.
+- Python SDK: Export polygons to YOLO with `to_yolo_instance_segmentation`.
+- Filter videos by temporal events in the query editor, for example `event(class_name = "run" AND start_time_s < 5)`.
 - Highlight points inside a selected cuboid and dim the surrounding point cloud to make the selection easier to inspect.
-- Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
-- Pressing Delete or Backspace deletes the selected annotation in editing mode.
 - Python SDK: Added Python 3.15 support.
 - Python SDK: `McapDataset.add_labels_from_folder` accepts `overwrite=True` to replace the annotations of recordings that already have annotations.
 - The embedding plot shows the active plot filter and lets you clear it right on the plot.
@@ -32,18 +33,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: MCAP datasets can use cameras that record JPEG or PNG `CompressedImage` messages, not only H.264 or H.265 video. The camera frames show in the viewer and are used for embeddings.
 - Filter images and videos without annotations with the "No annotations" option in the annotation class filter. Combine it with classes to also see the samples of those classes.
 - The frames between the manually placed 3D cuboids of an object track get interpolated cuboids automatically. When you add a cuboid to a track or move one, the frames between it and the manual cuboids before and after it are interpolated again.
+- Show frame tags on the point cloud timeline with the "Show frame tags" checkbox. Each tag gets a row with bars over the frames that have the tag.
 - Filter video collections by categorical metadata.
+- The embedding plot asks before it computes a plot for 250,000 or more samples, and shows a timer while the plot computes.
+- The GUI query filter shows a warning when a query uses a tag that does not exist.
+- Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
+- Pressing Delete or Backspace deletes the selected annotation in editing mode.
+- Edit, Undo, Plugins and Settings actions are now in the breadcrumb row on sample detail pages.
 
 ### Changed
 
+- The "Image Segmentation Mask (COCO)" export is now "Image Segmentation (COCO)" and includes polygons.
+- BREAKING: In the video query editor, `classification(...)` now matches whole-video classifications. Use `event(...)` for temporal events, or combine both with `OR` to include both kinds.
+- BREAKING: Python SDK: On videos, `ClassificationQuery` now matches whole-video classifications. Use `VideoEventQuery` for temporal events, or combine both queries with `OR(...)` to preserve both kinds of matches.
+- BREAKING: Python SDK: `to_annotation_create(...)` of `CreateClassification`, `CreateObjectDetection`, and `CreateSegmentationMask` takes the annotation class ID in place of `session` and `dataset_id`. To add annotations by class name, use `sample.add_annotations(...)`.
 - Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
-- Each metadata field in the filter panel has a checkbox and shows its filter value. Active fields move to the top.
+- Each metadata field in the filter panel has a checkbox. A collapsed field shows a short summary of its filter, for example a range or "2 of 3" values. Active fields move to the top, and the metadata filter chips are removed.
+- The embedding plot keeps showing its points while new ones load after a filter change, with a small spinner instead of the full loading screen. A selection drawn before the new points arrive is ignored.
+- In edit mode, the lock icon of a locked annotation in the sample details shows in the primary color, so locked annotations are easier to see.
 
 ### Deprecated
+
+- Python SDK: `to_coco_segmentation_masks`. Use `to_coco_instance_segmentation` instead.
 
 ### Removed
 
 ### Fixed
+- Images with many annotations open faster when LightlyStudio runs on a remote server.
+
+- Dialogs, menus, and messages now show in the full-screen point cloud workspace, so you can pick a class, delete a track, change view settings, switch edit mode, and undo edits there. The full-screen workspace has the same layout and colors as the app.
+
+- The embedding plot selection is cleared when you switch to another tab, so the grid no longer stays narrowed after the Plot filter chip is gone.
+
+- A hidden "Excluded by filters" class in the embedding plot stays hidden after you draw a selection.
+
+- Hidden classes in the embedding plot legend stay hidden after a filter change, also when the legend order changes.
+
+- The embedding plot keeps its hidden classes, zoom and active tool when you close it or switch tabs.
 
 ### Security
 

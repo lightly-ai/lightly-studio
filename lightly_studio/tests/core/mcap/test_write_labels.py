@@ -7,7 +7,7 @@ from uuid import UUID
 import pytest
 
 from lightly_studio.core.mcap import add_labels, add_mcaps
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
@@ -335,7 +335,8 @@ def _index_recording(tmp_path: Path) -> tuple[McapDataset, McapSequence, list[UU
     mcap_path = helpers.write_mcap(tmp_path / "recording.mcap")
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,

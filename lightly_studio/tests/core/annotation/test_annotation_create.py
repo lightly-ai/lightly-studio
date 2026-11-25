@@ -1,11 +1,14 @@
+import uuid
 from dataclasses import dataclass
 
 import numpy as np
 import pytest
 
 from lightly_studio.core.annotation.annotation_create import (
+    CreatePolygon,
     CreateSegmentationMask,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 
 @dataclass
@@ -121,3 +124,19 @@ def test_create_segmentation_mask_from_rle_mask_square() -> None:
     assert result.width == 2
     assert result.height == 2
     assert result.segmentation_mask == rle_mask
+
+
+def test_create_polygon__to_annotation_create() -> None:
+    annotation_label_id = uuid.uuid4()
+    parent_sample_id = uuid.uuid4()
+    create = CreatePolygon(class_name="cat", polygons=[[(0, 0), (4, 0), (4, 4)]], confidence=0.5)
+
+    result = create.to_annotation_create(
+        annotation_label_id=annotation_label_id, parent_sample_id=parent_sample_id
+    )
+
+    assert result.annotation_label_id == annotation_label_id
+    assert result.annotation_type == AnnotationType.POLYGON
+    assert result.polygons == [[(0, 0), (4, 0), (4, 4)]]
+    assert result.confidence == 0.5
+    assert result.parent_sample_id == parent_sample_id

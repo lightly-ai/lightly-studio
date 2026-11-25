@@ -23,7 +23,8 @@ def _index_two_sequences(tmp_path: Path) -> tuple[McapDataset, McapSequence, Mca
     second_path = tmp_path / "second"
     second_path.mkdir()
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(helpers.write_mcap(second_path / "second.mcap")),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,

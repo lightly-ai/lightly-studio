@@ -6,17 +6,32 @@ import { useQueryHistory } from '$lib/hooks';
 import type { QueryExprTranslationResult } from '$lib/components/QueryEditor/language/query-expr-translation';
 import QueryEditorPanel from './QueryEditorPanel.svelte';
 
-const { updateQueryExpr, invalidateQueries, queryExpr, translateQuery } = await vi.hoisted(
-    async () => {
-        const queryExpr = { match_expr: { type: 'and' as const, children: [] } };
-        return {
-            updateQueryExpr: vi.fn(),
-            invalidateQueries: vi.fn(),
-            queryExpr,
-            translateQuery: vi.fn((): QueryExprTranslationResult => ({ status: 'ok', queryExpr }))
-        };
-    }
-);
+const {
+    updateQueryExpr,
+    invalidateQueries,
+    queryExpr,
+    translateQuery,
+    setTagNames,
+    useTags,
+    isLoading
+} = await vi.hoisted(async () => {
+    const { writable } = await import('svelte/store');
+    const queryExpr = { match_expr: { type: 'and' as const, children: [] } };
+    const isLoading = writable(false);
+    return {
+        updateQueryExpr: vi.fn(),
+        invalidateQueries: vi.fn(),
+        queryExpr,
+        translateQuery: vi.fn((): QueryExprTranslationResult => ({ status: 'ok', queryExpr })),
+        setTagNames: vi.fn(),
+        useTags: vi.fn(() => ({
+            tags: writable([{ name: 'train' }, { name: 'val' }]),
+            isLoading,
+            error: writable(null)
+        })),
+        isLoading
+    };
+});
 
 vi.mock('$lib/components/QueryEditor/useQueryEditor', () => ({
     useQueryEditor: () => ({
@@ -28,8 +43,13 @@ vi.mock('$lib/components/QueryEditor/useQueryEditor', () => ({
             el.append(input);
             return () => input.remove();
         },
-        translateQuery
+        translateQuery,
+        setTagNames
     })
+}));
+vi.mock('$lib/hooks', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks')>()),
+    useTags
 }));
 vi.mock('@tanstack/svelte-query', () => ({
     useQueryClient: () => ({ invalidateQueries })
@@ -47,6 +67,22 @@ const defaultProps = {
 describe('QueryEditorPanel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        isLoading.set(false);
+    });
+
+    it('gives the editor the tag names of the collection', () => {
+        render(QueryEditorPanel, { props: defaultProps });
+
+        expect(useTags).toHaveBeenCalledWith({ collection_id: 'collection-1' });
+        expect(setTagNames).toHaveBeenLastCalledWith(['train', 'val']);
+    });
+
+    it('gives the editor no tag names while the tags load', () => {
+        isLoading.set(true);
+
+        render(QueryEditorPanel, { props: defaultProps });
+
+        expect(setTagNames).toHaveBeenLastCalledWith(undefined);
     });
 
     it.each([
@@ -104,6 +140,9 @@ describe('QueryEditorPanel', () => {
             screen.getByText(
                 'frame(object_detection(class_name = "person") AND frame_timestamp_s < 5)'
             )
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText('event(class_name = "run" AND start_time_s < 5)')
         ).toBeInTheDocument();
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
         expect(updateQueryExpr).toHaveBeenCalledWith({

@@ -1,9 +1,14 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
     import Loader2 from '@lucide/svelte/icons/loader-2';
-    import AnnotationToolPopUp from '$lib/components/SampleDetails/AnnotationToolPopUp/AnnotationToolPopUp.svelte';
+    import { AnnotationClassSelect } from '$lib/components/SampleDetails/AnnotationClassSelect';
+    import {
+        AnnotationToolPopUp,
+        SaveAsToggle,
+        SaveButtons
+    } from '$lib/components/SampleDetails/AnnotationToolPopUp';
 
-    type SaveAs = ComponentProps<typeof AnnotationToolPopUp>['saveAs'];
+    type SaveAs = ComponentProps<typeof SaveAsToggle>['saveAs'];
 
     interface Props {
         collectionId: string;
@@ -34,18 +39,7 @@
     }: Props = $props();
 </script>
 
-<AnnotationToolPopUp
-    title="Smart select"
-    {collectionId}
-    {annotationClass}
-    {onAnnotationClassChange}
-    {saveAs}
-    {onSaveAsChange}
-    {canSave}
-    {isSaving}
-    {onSave}
-    {onClear}
->
+<AnnotationToolPopUp title="Smart select">
     {#if isPending}
         <p class="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 class="size-4 animate-spin" />
@@ -58,4 +52,16 @@
             Click to add, shift-click to remove. Or drag a box.
         </p>
     {/if}
+
+    {#snippet saveControls()}
+        <AnnotationClassSelect
+            {collectionId}
+            value={annotationClass}
+            onChange={onAnnotationClassChange}
+            label="Annotation class"
+            className="h-8"
+        />
+        <SaveAsToggle {saveAs} {onSaveAsChange} />
+        <SaveButtons {canSave} {isSaving} {onSave} {onClear} />
+    {/snippet}
 </AnnotationToolPopUp>

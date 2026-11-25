@@ -18,8 +18,27 @@ const EXCLUDED: string[] = [
     'lightly_studio/src/lightly_studio/vendor/'
 ];
 
+/** Test code does not count against the limit: it is faster to review than source code. */
+const TEST_FILE_PATTERNS: RegExp[] = [
+    /(^|\/)tests\//,
+    /^lightly_studio_view\/e2e\//,
+    /^lightly_studio\/e2e-tests\//,
+    /\.(test|spec)\.[^/]+$/,
+    /(^|\/)test_[^/]*\.py$/,
+    /_test\.py$/,
+    /(^|\/)conftest\.py$/
+];
+
 export function isExcluded(path: string): boolean {
     return EXCLUDED.some((e) => (e.endsWith('/') ? path.startsWith(e) : path === e));
+}
+
+export function isTestFile(path: string): boolean {
+    return TEST_FILE_PATTERNS.some((pattern) => pattern.test(path));
+}
+
+function countsTowardLimit(path: string): boolean {
+    return !isExcluded(path) && !isTestFile(path);
 }
 
 export const diffSizeGuardrail: Guardrail = {
@@ -28,19 +47,19 @@ export const diffSizeGuardrail: Guardrail = {
     async run(ctx: GuardrailContext): Promise<GuardrailOutcome> {
         const files = await ctx.changedFiles();
         const totalAdditions = files
-            .filter((f) => !isExcluded(f.path))
+            .filter((f) => countsTowardLimit(f.path))
             .reduce((sum, f) => sum + f.additions, 0);
 
         if (totalAdditions > MAX_ADDED_LOC) {
             return {
                 status: 'fail',
-                summary: `PR adds ${totalAdditions} line(s), which exceeds the limit of ${MAX_ADDED_LOC}.`
+                summary: `PR adds ${totalAdditions} non-test line(s), which exceeds the limit of ${MAX_ADDED_LOC}.`
             };
         }
 
         return {
             status: 'pass',
-            summary: `PR adds ${totalAdditions} line(s) (limit: ${MAX_ADDED_LOC}).`
+            summary: `PR adds ${totalAdditions} non-test line(s) (limit: ${MAX_ADDED_LOC}).`
         };
     }
 };

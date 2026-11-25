@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from typing import cast
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio import deployment
+from lightly_studio.api.dependencies import identity
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from tests import helpers_resolvers, helpers_workflow
 
@@ -53,20 +54,21 @@ def images(db_session: Session) -> Generator[tuple[str, list[str]], None, None]:
         yield str(collection_id), [str(sample) for sample in samples]
 
 
-def _enterprise_headers(mocker: MockerFixture, role: str) -> dict[str, str]:
-    """Turn on enterprise mode and return the identity headers of ME with this role."""
-    mocker.patch.object(deployment, "is_enterprise", return_value=True)
+def _proxy_headers(test_client: TestClient, role: str) -> dict[str, str]:
+    """Read the identity from proxy headers and return the headers of ME with this role."""
+    app = cast(FastAPI, test_client.app)
+    app.dependency_overrides[identity.get_identity] = identity.get_proxy_identity
     return {"X-User-Email": ME, "X-User-Role": role}
 
 
 def test_images_list__labeler_sees_only_their_files(
-    test_client: TestClient, mocker: MockerFixture, images: tuple[str, list[str]]
+    test_client: TestClient, images: tuple[str, list[str]]
 ) -> None:
     collection_id, samples = images
 
     response = test_client.post(
         f"/api/collections/{collection_id}/images/list",
-        headers=_enterprise_headers(mocker=mocker, role="labeler"),
+        headers=_proxy_headers(test_client=test_client, role="labeler"),
         json={"filters": WORKFLOW_FILTER},
     )
 
@@ -75,13 +77,13 @@ def test_images_list__labeler_sees_only_their_files(
 
 
 def test_images_list__editor_sees_everyone(
-    test_client: TestClient, mocker: MockerFixture, images: tuple[str, list[str]]
+    test_client: TestClient, images: tuple[str, list[str]]
 ) -> None:
     collection_id, samples = images
 
     response = test_client.post(
         f"/api/collections/{collection_id}/images/list",
-        headers=_enterprise_headers(mocker=mocker, role="editor"),
+        headers=_proxy_headers(test_client=test_client, role="editor"),
         json={"filters": WORKFLOW_FILTER},
     )
 
@@ -90,13 +92,13 @@ def test_images_list__editor_sees_everyone(
 
 
 def test_adjacents__labeler_steps_over_other_files(
-    test_client: TestClient, mocker: MockerFixture, images: tuple[str, list[str]]
+    test_client: TestClient, images: tuple[str, list[str]]
 ) -> None:
     collection_id, samples = images
 
     response = test_client.post(
         f"/api/samples/{samples[1]}/adjacents",
-        headers=_enterprise_headers(mocker=mocker, role="labeler"),
+        headers=_proxy_headers(test_client=test_client, role="labeler"),
         json={"sample_type": "image", "collection_id": collection_id, "filters": WORKFLOW_FILTER},
     )
 
@@ -110,7 +112,6 @@ def test_adjacents__labeler_steps_over_other_files(
 @pytest.mark.parametrize("body", [{}, {"filters": {"filter_type": "image"}}])
 def test_images_list__labeler_sees_only_their_files_without_status_filter(
     test_client: TestClient,
-    mocker: MockerFixture,
     images: tuple[str, list[str]],
     body: dict[str, object],
 ) -> None:
@@ -118,7 +119,7 @@ def test_images_list__labeler_sees_only_their_files_without_status_filter(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/images/list",
-        headers=_enterprise_headers(mocker=mocker, role="labeler"),
+        headers=_proxy_headers(test_client=test_client, role="labeler"),
         json=body,
     )
 
@@ -127,13 +128,13 @@ def test_images_list__labeler_sees_only_their_files_without_status_filter(
 
 
 def test_adjacents__labeler_steps_over_other_files_without_filters(
-    test_client: TestClient, mocker: MockerFixture, images: tuple[str, list[str]]
+    test_client: TestClient, images: tuple[str, list[str]]
 ) -> None:
     collection_id, samples = images
 
     response = test_client.post(
         f"/api/samples/{samples[0]}/adjacents",
-        headers=_enterprise_headers(mocker=mocker, role="labeler"),
+        headers=_proxy_headers(test_client=test_client, role="labeler"),
         json={"sample_type": "image", "collection_id": collection_id},
     )
 
@@ -152,7 +153,6 @@ def test_adjacents__labeler_steps_over_other_files_without_filters(
 )
 def test_status_counts__labeler_counts_only_their_files(
     test_client: TestClient,
-    mocker: MockerFixture,
     images: tuple[str, list[str]],
     role: str,
     expected: dict[str, int],
@@ -161,7 +161,7 @@ def test_status_counts__labeler_counts_only_their_files(
 
     response = test_client.get(
         f"/api/collections/{collection_id}/workflow/status-counts",
-        headers=_enterprise_headers(mocker=mocker, role=role),
+        headers=_proxy_headers(test_client=test_client, role=role),
     )
 
     assert response.status_code == HTTP_STATUS_OK, response.text

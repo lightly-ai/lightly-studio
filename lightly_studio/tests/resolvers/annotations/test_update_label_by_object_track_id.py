@@ -209,6 +209,76 @@ def test_update_label_by_object_track_id__preserves_temporal_span(
     assert updated.temporal_span_details.end_time_s == 3.5
 
 
+def test_update_label_by_object_track_id__keeps_polygons(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    root_collection_id = collection.collection_id
+    old_label = create_annotation_label(
+        session=db_session, root_collection_id=root_collection_id, label_name="cat"
+    )
+    new_label = create_annotation_label(
+        session=db_session, root_collection_id=root_collection_id, label_name="dog"
+    )
+    img_1 = create_image(
+        session=db_session, collection_id=root_collection_id, file_path_abs="/tmp/1.png"
+    )
+    img_2 = create_image(
+        session=db_session, collection_id=root_collection_id, file_path_abs="/tmp/2.png"
+    )
+    track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )[0]
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=root_collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=img_1.sample_id,
+                annotation_label_id=old_label.annotation_label_id,
+                annotation_type=AnnotationType.POLYGON,
+                object_track_id=track_id,
+                polygons=[[(1.5, 2.0), (11.0, 2.0), (11.0, 22.25)]],
+            ),
+            AnnotationDetails(
+                sample_id=img_2.sample_id,
+                annotation_label_id=old_label.annotation_label_id,
+                annotation_type=AnnotationType.POLYGON,
+                object_track_id=track_id,
+                polygons=[
+                    [(30.0, 40.0), (50.0, 40.0), (50.0, 60.0)],
+                    [(70.0, 80.0), (90.0, 80.0), (90.0, 100.0)],
+                ],
+            ),
+        ],
+    )
+
+    annotation_resolver.update_label_by_object_track_id(
+        session=db_session,
+        object_track_id=track_id,
+        annotation_label_id=new_label.annotation_label_id,
+    )
+
+    updated = [
+        annotation_resolver.get_by_id(session=db_session, annotation_id=annotation.sample_id)
+        for annotation in annotations
+    ]
+    assert [a.annotation_label_id for a in updated if a is not None] == [
+        new_label.annotation_label_id,
+        new_label.annotation_label_id,
+    ]
+    assert [
+        a.polygon_details.polygons
+        for a in updated
+        if a is not None and a.polygon_details is not None
+    ] == [
+        [[[1.5, 2.0], [11.0, 2.0], [11.0, 22.25]]],
+        [
+            [[30.0, 40.0], [50.0, 40.0], [50.0, 60.0]],
+            [[70.0, 80.0], [90.0, 80.0], [90.0, 100.0]],
+        ],
+    ]
+
+
 def test_update_label_by_object_track_id__skips_annotations_already_on_new_label(
     db_session: Session,
 ) -> None:

@@ -9,7 +9,7 @@
     import { useCustomSourceColors } from '$lib/hooks';
     import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-    import type { Annotation } from '$lib/services/types';
+    import { isPolygonAnnotation, type Annotation } from '$lib/services/types';
     import type { BoundingBox } from '$lib/types';
     import { getColorByLabel, getColorBySource, withAlpha } from '$lib/utils';
     import { getConstrainedCoordinates } from '$lib/utils/getConstrainedCoordinates';
@@ -82,6 +82,8 @@
             : getColorByLabel(label, alpha);
 
     const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
+    // TODO(Michal, 11/2026): Polygons are read-only in the GUI until polygon editing is added.
+    const isPolygon = $derived(isPolygonAnnotation(annotation));
 
     const annotationId = $derived(annotation.sample_id);
 
@@ -176,8 +178,8 @@
     {/if}
 
     {#if showBoundingBox}
-        <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
-        {#if isResizable && constraintBox && !segmentationMask}
+        <!--Disable resizable rectangle for segmentation masks and polygons since we don’t support it yet.-->
+        {#if isResizable && constraintBox && !segmentationMask && !isPolygon}
             <ResizableRectangle
                 bind:bbox={boundingBox}
                 {colorStroke}

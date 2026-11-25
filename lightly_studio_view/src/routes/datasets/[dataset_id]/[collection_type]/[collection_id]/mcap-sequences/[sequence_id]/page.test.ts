@@ -68,6 +68,13 @@ vi.mock(
     })
 );
 
+vi.mock(
+    '$lib/components/PointCloudLabelingWorkspace/FrameTimeline/useSequenceTickTags.svelte',
+    () => ({
+        useSequenceTickTags: () => ({ query: { data: { tags: [] } } })
+    })
+);
+
 vi.mock('$app/state', () => ({
     page: {
         get url() {

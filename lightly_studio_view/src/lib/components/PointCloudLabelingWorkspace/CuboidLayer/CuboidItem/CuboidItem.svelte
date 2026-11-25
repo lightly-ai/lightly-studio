@@ -23,14 +23,15 @@
     const editModes = $derived(
         getCuboidEditModes({
             tool: layer.activeTool,
-            cameraMode: layer.cameraMode,
             isEditingMode: layer.isEditingMode
         })
     );
     const gizmoModes = $derived(
         editModes.filter((mode): mode is 'translate' | 'rotate' => mode !== 'resize')
     );
+    const showsResizeHandles = $derived(isSelected && editModes.includes('resize'));
     let transformStartAnnotation: typeof item.annotation | null = $state(null);
+    const hoveredGizmoAxes = $state({ translate: false, rotate: false });
     type GizmoObject = Parameters<typeof buildCuboidTransformPayload>[1];
 
     function onTransformEnd(obj: GizmoObject) {
@@ -72,6 +73,7 @@
 >
     <CuboidVisual
         {item}
+        headingOrigin={showsResizeHandles ? item.raisedHeadingOrigin : item.headingOrigin}
         baseColor={base}
         edgeColor={highlightCuboidColor(base, isSelected, isHovered)}
         {isHovered}
@@ -94,13 +96,15 @@
                 {onTransformPreview}
                 {onInteractionStart}
                 {onInteractionCancel}
+                onAxisHoverChange={(isHovered) => (hoveredGizmoAxes[mode] = isHovered)}
             />
         {/each}
-        {#if editModes.includes('resize')}
+        {#if showsResizeHandles}
             <CuboidFaceResize
                 annotation={item.annotation}
                 cameraMode={layer.cameraMode}
                 baseColor={base}
+                isGizmoHovered={() => hoveredGizmoAxes.translate || hoveredGizmoAxes.rotate}
                 onResizeStart={() => {
                     layer.hoverTracker.markClicked();
                     layer.transforms.begin(item.annotation);

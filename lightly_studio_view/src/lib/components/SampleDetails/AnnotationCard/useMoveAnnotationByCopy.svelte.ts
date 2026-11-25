@@ -46,7 +46,8 @@ export const useMoveAnnotationByCopy = (getCollectionId: () => string) => {
             annotation_collection_name: sourceName,
             parent_sample_id: annotation.parent_sample_id,
             ...annotation.object_detection_details,
-            ...annotation.segmentation_details
+            ...annotation.segmentation_details,
+            polygons: annotation.polygon_details?.polygons
         };
         isMoving = true;
         try {

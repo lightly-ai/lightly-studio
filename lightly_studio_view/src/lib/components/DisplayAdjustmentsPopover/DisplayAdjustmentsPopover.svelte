@@ -1,12 +1,12 @@
 <script lang="ts">
-    import Sun from '@lucide/svelte/icons/sun';
     import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+    import Sun from '@lucide/svelte/icons/sun';
     import { Button } from '$lib/components/ui/button';
     import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { AdjustmentSlider } from '../ImageAdjustments';
+    import AdjustmentSlider from './AdjustmentSlider/AdjustmentSlider.svelte';
 
     const { imageBrightness, imageContrast, maskOpacity } = useGlobalStorage();
 
@@ -32,6 +32,7 @@
                     class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-muted/80 shadow-md backdrop-blur-sm"
                     aria-label="Display adjustments"
                     data-testid="display-adjustments-trigger"
+                    data-ignore-space-shortcut
                 >
                     <Sun class="size-4 text-muted-foreground" />
                 </button>
@@ -53,21 +54,10 @@
                 <RotateCcw class="size-4" />
             </Button>
         </div>
-        <div class="sliders-column mt-3 flex flex-col gap-3">
+        <div class="mt-3 flex flex-col gap-3">
             <AdjustmentSlider label="Brightness" min={0.2} max={2} bind:value={$imageBrightness} />
             <AdjustmentSlider label="Contrast" min={0.2} max={2} bind:value={$imageContrast} />
             <AdjustmentSlider label="Mask opacity" min={0.1} max={1} bind:value={$maskOpacity} />
         </div>
     </PopoverContent>
 </Popover>
-
-<style>
-    .sliders-column :global(> div) {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .sliders-column :global(> div > div) {
-        width: 100%;
-    }
-</style>

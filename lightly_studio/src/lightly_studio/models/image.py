@@ -10,6 +10,7 @@ from sqlalchemy import Index
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
+from lightly_studio.core.file_outcome_report import FileOutcome
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.collection import SampleType
@@ -36,6 +37,16 @@ class ImageBase(SQLModel):
 
 class ImageCreate(ImageBase):
     """Image class when inserting."""
+
+
+class AddImagesResult(BaseModel):
+    """The result of adding a list of images to a collection."""
+
+    sample_ids: dict[str, UUID]
+    """The sample ID of each new image, by its absolute file path."""
+
+    outcomes: list[FileOutcome]
+    """The outcome of each input image, in the order of the input."""
 
 
 class ImageTable(ImageBase, table=True):

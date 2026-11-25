@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 import tempfile
-from collections.abc import Iterable, Sequence
-from itertools import islice
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Self
 from uuid import UUID
@@ -21,25 +19,27 @@ from lightly_studio.core.mcap import (
     dataset_schema,
     folder_labels,
 )
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.group_dataset import McapGroupDataset
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.database import db_manager
-from lightly_studio.dataset import fsspec_lister, remote_storage
-from lightly_studio.embed import embed_mcap_sequences
+from lightly_studio.dataset import remote_storage
 from lightly_studio.errors import ExportError
 from lightly_studio.export import mcap_scene_update_export
-from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.collection import (
+    CollectionTable,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import (
     collection_resolver,
     mcap_group_sequence_resolver,
     recording_resolver,
 )
+from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
-
-logger = logging.getLogger(__name__)
 
 
 class McapDataset:
@@ -80,7 +80,7 @@ class McapDataset:
     `create_sequence`.
     """
 
-    def __init__(self, collection: CollectionTable) -> None:
+    def __init__(self, collection: CollectionWithoutChildrenView) -> None:
         """Initialize the dataset.
 
         Args:
@@ -124,16 +124,11 @@ class McapDataset:
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        session = db_manager.persistent_session()
-        root_collection, group_collection = dataset_schema.create_collections(
-            session=session, name=name
-        )
+        root_collection, group_collection = dataset_schema.create_collections(name=name)
         dataset_schema.create_components(
-            session=session,
             group_collection_id=group_collection.collection_id,
             components=components,
         )
-        session.refresh(root_collection)
         return cls(collection=root_collection)
 
     @classmethod
@@ -268,37 +263,19 @@ class McapDataset:
             AllInputFilesFailedError: If every recording under the path failed.
         """
         source = ingest_tracking.get_source(path=path)
-        fsspec_lister.validate_limit(limit)
-        # Configure clients before discovery creates and caches a filesystem.
-        remote_storage.configure_connections(paths=[str(path)])
-        discovered_paths = fsspec_lister.iter_files_from_path(
+        active_transport.get_transport().ingestion.add_mcaps_from_path(
+            collection_id=self.collection_id,
             path=str(path),
-            allowed_extensions=add_mcaps.MCAP_EXTENSIONS,
-            limit=None,
-        )
-        mcap_paths = _recording_paths(
-            discovered_paths=discovered_paths,
-            limit=limit,
-        )
-        logger.info("Found %d MCAP recordings to index in %s.", len(mcap_paths), path)
-
-        sequence_sample_ids = add_mcaps.index_recordings(
-            dataset=self,
-            mcap_paths=mcap_paths,
             sync_component=sync_component,
             components=components,
             max_pairing_diff_ns=max_pairing_diff_ns,
+            limit=limit,
             reference_frame_ids=reference_frame_ids,
+            embed=embed,
         )
         ingest_tracking.track_samples_ingested(
             source=source, sample_type=SampleType.MCAP, ingest_format=IngestFormat.MCAP
         )
-        if embed:
-            embed_mcap_sequences.embed_mcap_sequences(
-                session=self._session,
-                collection_id=self.collection_id,
-                sequence_sample_ids=sequence_sample_ids,
-            )
 
     def add_labels_from_folder(
         self,
@@ -474,13 +451,16 @@ class McapDataset:
         )
         return McapSequence(session=self._session, sample_id=sample_id, recording_id=recording_id)
 
-    def _group_collection(self) -> CollectionTable:
+    def _group_collection(self) -> CollectionWithoutChildrenView:
         """Return the GROUP child collection holding the groups of the dataset.
 
         Raises:
             RuntimeError: If the dataset has no GROUP child collection.
         """
-        for child in self._inner.children:
+        children = active_transport.get_transport().collections.get_all_by_parent(
+            parent_collection_id=self.collection_id, name=None
+        )
+        for child in children:
             if child.sample_type == SampleType.GROUP:
                 return child
         raise RuntimeError(
@@ -527,14 +507,6 @@ class McapDataset:
                 "The recordings share no coordinate frame. Pass `target_frame_id` explicitly."
             )
         return frame_ids[0]
-
-
-def _recording_paths(discovered_paths: Iterable[str], limit: int | None) -> list[str]:
-    """Filter annotation MCAPs before lazily applying the recording limit."""
-    recordings = (
-        path for path in discovered_paths if not annotation_mcap.is_annotation_mcap(uri=path)
-    )
-    return list(recordings if limit is None else islice(recordings, limit))
 
 
 def _get_duplicate_names(components: Sequence[McapComponentSpec]) -> list[str]:

@@ -52,6 +52,7 @@ export type QueryExprTranslationResult =
 
 type QueryScope =
     | 'video_frame'
+    | 'event'
     | 'image'
     | 'video'
     | 'object_detection'
@@ -142,12 +143,13 @@ function visit(expr: Expression, table: QueryScope): QueryExpr['match_expr'] {
         if (expr.name === 'frame') {
             return { type: 'video_frame_match_expr', subexpr: visit(expr.args[0], 'video_frame') };
         }
+        if (expr.name === 'event') {
+            return { type: 'video_event_match_expr', subexpr: visit(expr.args[0], 'event') };
+        }
         const subTable = getFunctionScope(expr.name);
         const type = toAnnotationMatchExprType(subTable);
-        return {
-            type,
-            subexpr: visit(expr.args[0], subTable)
-        };
+        const [condition] = expr.args;
+        return condition ? { type, subexpr: visit(condition, subTable) } : { type };
     }
     if (isSampleEvaluationQuery(expr)) {
         return translateSampleEvaluation(expr);
@@ -219,6 +221,7 @@ function visitComparisonExpression(
                     };
                 }
                 break;
+            case 'event':
             case 'classification':
                 return {
                     type: 'string_expr',
@@ -241,9 +244,10 @@ function visitComparisonExpression(
                     };
                 }
                 break;
+            case 'event':
             case 'video_frame':
             case 'video':
-                if (table === 'video_frame' || isVideoOrdinalFloatFieldName(fieldName)) {
+                if (table !== 'video' || isVideoOrdinalFloatFieldName(fieldName)) {
                     if (!Number.isFinite(right.value)) {
                         throw new Error(`${fieldName} requires a finite number`);
                     }

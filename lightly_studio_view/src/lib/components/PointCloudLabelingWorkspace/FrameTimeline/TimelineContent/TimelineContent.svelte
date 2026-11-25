@@ -1,8 +1,13 @@
 <script lang="ts">
-    import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import type {
+        SequenceTrackView,
+        TickTagView,
+        TickView
+    } from '$lib/api/lightly_studio_local/types.gen';
     import TimelineTracks from '../TimelineTracks/TimelineTracks.svelte';
     import TrackTimelineRows from '../TrackTimelineRows/TrackTimelineRows.svelte';
     import { getTimelineViewport } from '../TimelineViewport';
+    import { useTrackRowsHeight } from '../TrackTimelineRows/TrackRowsResizer';
     import { untrack } from 'svelte';
 
     interface Props {
@@ -25,6 +30,9 @@
         ) => void;
         onSeekStart?: () => void;
         onSeekEnd?: () => void;
+        showFrameTags?: boolean;
+        onShowFrameTagsChange?: (checked: boolean) => void;
+        frameTags?: TickTagView[];
     }
 
     let {
@@ -42,10 +50,15 @@
         onDeleteTrack,
         sequenceId,
         onSeekStart,
-        onSeekEnd
+        onSeekEnd,
+        showFrameTags,
+        onShowFrameTagsChange,
+        frameTags
     }: Props = $props();
     const viewport = getTimelineViewport();
+    const rowsHeight = useTrackRowsHeight();
     let container = $state<HTMLElement | null>(null);
+    let content = $state<HTMLElement | null>(null);
     let previewTick = $state<number | null>(null);
     const activeIndex = $derived(
         ticks.findIndex((tick) => tick.seq_number === (previewTick ?? currentTick))
@@ -56,6 +69,25 @@
         if (!element) return;
         element.scrollLeft = viewport.offset * element.scrollWidth;
     });
+
+    // One element scrolls both ways, so the ruler, the toolbar and the row labels can be sticky.
+    // Its height limit is the rows height plus the height of the sticky header above the rows.
+    let headerHeight = $state(0);
+    const measureHeader = () => {
+        const body = content?.querySelector('[data-timeline-body]');
+        if (!content || !body) return;
+        headerHeight = body.getBoundingClientRect().top - content.getBoundingClientRect().top;
+    };
+    $effect(() => {
+        const element = content;
+        if (!element) return;
+        measureHeader();
+        const observer = new ResizeObserver(measureHeader);
+        observer.observe(element);
+        return () => observer.disconnect();
+    });
+    const getRowsRenderedHeight = () =>
+        container ? Math.max(0, container.clientHeight - headerHeight) : 0;
 
     const syncViewportFromScroll = () => {
         if (!container || container.scrollWidth === 0) return;
@@ -91,12 +123,13 @@
 </script>
 
 <div
-    class="scrollbar-thin h-max shrink-0 overflow-x-auto overscroll-x-contain"
+    class="scrollbar-thin shrink-0 overflow-auto overscroll-contain"
+    style:max-height={`${rowsHeight.height + headerHeight}px`}
     bind:this={container}
     onscroll={syncViewportFromScroll}
     data-testid="timeline-scroll-container"
 >
-    <div class="relative" style:width={`${viewport.zoom * 100}%`}>
+    <div class="relative" style:width={`${viewport.zoom * 100}%`} bind:this={content}>
         <TimelineTracks
             {ticks}
             {currentTick}
@@ -120,10 +153,15 @@
             {sequenceId}
             onExtendStart={onSeekStart}
             onExtendEnd={onSeekEnd}
+            {showFrameTags}
+            {onShowFrameTagsChange}
+            {frameTags}
+            {rowsHeight}
+            {getRowsRenderedHeight}
         />
         {#if activeIndex >= 0 && ticks.length > 0}
             <div
-                class="scrollbar-thin pointer-events-none absolute inset-x-2 bottom-1 top-5 z-30 overflow-hidden px-1 [scrollbar-gutter:stable]"
+                class="pointer-events-none absolute inset-x-2 bottom-1 top-3.5 z-30 overflow-hidden px-1"
                 aria-hidden="true"
             >
                 <div class="relative h-full w-full">

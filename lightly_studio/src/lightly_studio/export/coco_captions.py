@@ -61,12 +61,13 @@ def to_coco_captions_dict(
                 "height": image.height,
             }
         )
-        for caption in sample.captions:
+        # The ORM row reads the captions in the session of the export request.
+        for caption in sample.sample_table.captions:
             coco_annotations.append(
                 {
                     "id": annotation_id,
                     "image_id": image_id,
-                    "caption": caption,
+                    "caption": caption.text,
                 }
             )
             annotation_id += 1

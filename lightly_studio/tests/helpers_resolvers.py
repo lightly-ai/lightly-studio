@@ -19,6 +19,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
@@ -48,6 +49,7 @@ from lightly_studio.resolvers import (
     group_resolver,
     image_resolver,
     mcap_resolver,
+    metadata_resolver,
     sample_embedding_resolver,
     tag_resolver,
 )
@@ -175,17 +177,17 @@ def create_image_with_metadata(  # noqa: PLR0913
     height: int = 1080,
 ) -> ImageSample:
     """Create an image sample and set its metadata."""
-    sample = ImageSample(
-        inner=create_image(
-            session=session,
-            collection_id=collection_id,
-            file_path_abs=file_path_abs,
-            width=width,
-            height=height,
-        )
+    image = create_image(
+        session=session,
+        collection_id=collection_id,
+        file_path_abs=file_path_abs,
+        width=width,
+        height=height,
     )
-    sample.metadata.update(metadata)
-    return sample
+    metadata_resolver.bulk_update_metadata(
+        session=session, sample_metadata=[(image.sample_id, metadata)]
+    )
+    return ImageSample(inner=image)
 
 
 def create_mcap(  # noqa: PLR0913
@@ -295,6 +297,7 @@ def create_annotation(  # noqa: PLR0913
     annotation_data: dict[str, Any] | None = None,
     annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
     annotation_collection_name: str | None = None,
+    polygons: Polygons | None = None,
 ) -> AnnotationBaseTable:
     """Helper function to create an annotation."""
     annotation_data_default = {
@@ -315,6 +318,7 @@ def create_annotation(  # noqa: PLR0913
                 parent_sample_id=sample_id,
                 annotation_label_id=annotation_label_id,
                 annotation_type=annotation_type,
+                polygons=polygons,
                 **(annotation_data),
             )
         ],
@@ -340,6 +344,7 @@ class AnnotationDetails:
         width: Width of the annotation.
         height: Height of the annotation.
         segmentation_mask: Segmentation mask for segmentation annotations.
+        polygons: Polygon parts for polygon annotations.
         object_track_id: Optional object track id.
         start_time_s: Optional temporal span start time in seconds.
         end_time_s: Optional temporal span end time in seconds.
@@ -354,6 +359,7 @@ class AnnotationDetails:
     width: int = 20
     height: int = 20
     segmentation_mask: list[int] | None = None
+    polygons: Polygons | None = None
     object_track_id: UUID | None = None
     start_time_s: float | None = None
     end_time_s: float | None = None
@@ -383,6 +389,7 @@ def create_annotations(
             annotation_type=annotation.annotation_type,
             object_track_id=annotation.object_track_id,
             segmentation_mask=annotation.segmentation_mask,
+            polygons=annotation.polygons,
             confidence=annotation.confidence,
             x=annotation.x,
             y=annotation.y,

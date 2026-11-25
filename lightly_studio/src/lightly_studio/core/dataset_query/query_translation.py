@@ -29,6 +29,7 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.core.dataset_query.polygon_query import PolygonField, PolygonQuery
 from lightly_studio.core.dataset_query.segmentation_mask_query import (
     SegmentationMaskField,
     SegmentationMaskQuery,
@@ -57,6 +58,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    PolygonMatchExpr,
     SampleEvaluationMatchExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
@@ -110,6 +112,8 @@ _STRING_FIELDS: dict[tuple[str, str], _EqualityField[str]] = {
     ("object_detection", "source"): ObjectDetectionField.source,
     ("segmentation_mask", "class_name"): SegmentationMaskField.class_name,
     ("segmentation_mask", "source"): SegmentationMaskField.source,
+    ("polygon", "class_name"): PolygonField.class_name,
+    ("polygon", "source"): PolygonField.source,
 }
 
 _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
@@ -125,6 +129,10 @@ _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
     ("segmentation_mask", "y"): SegmentationMaskField.y,
     ("segmentation_mask", "width"): SegmentationMaskField.width,
     ("segmentation_mask", "height"): SegmentationMaskField.height,
+    ("polygon", "x"): PolygonField.x,
+    ("polygon", "y"): PolygonField.y,
+    ("polygon", "width"): PolygonField.width,
+    ("polygon", "height"): PolygonField.height,
 }
 
 _DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
@@ -145,6 +153,7 @@ _ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("event", "confidence"): VideoEventField.confidence,
     ("object_detection", "confidence"): ObjectDetectionField.confidence,
     ("segmentation_mask", "confidence"): SegmentationMaskField.confidence,
+    ("polygon", "confidence"): PolygonField.confidence,
 }
 # We can merge ordinal fields with nullable, as NULL values fail any comparison in SQL, so it just
 # works as expected.
@@ -308,11 +317,13 @@ def _to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 P
     if isinstance(expr, VideoEventMatchExpr):
         return VideoEventQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery(_to_match_expression(expr=expr.subexpr))
+        return ClassificationQuery(*_annotation_criteria(subexpr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery(_to_match_expression(expr=expr.subexpr))
+        return ObjectDetectionQuery(*_annotation_criteria(subexpr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
-        return SegmentationMaskQuery(_to_match_expression(expr=expr.subexpr))
+        return SegmentationMaskQuery(*_annotation_criteria(subexpr=expr.subexpr))
+    if isinstance(expr, PolygonMatchExpr):
+        return PolygonQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(
         expr,
         (
@@ -330,6 +341,12 @@ def _to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 P
     if isinstance(expr, NotExpr):
         return NOT(_to_match_expression(expr=expr.child))
     assert_never(expr)
+
+
+def _annotation_criteria(subexpr: MatchExpr | None) -> tuple[MatchExpression, ...]:
+    if subexpr is None:
+        return ()
+    return (_to_match_expression(expr=subexpr),)
 
 
 def _metadata_to_match_expression(expr: MetadataComparisonExpr) -> MatchExpression:

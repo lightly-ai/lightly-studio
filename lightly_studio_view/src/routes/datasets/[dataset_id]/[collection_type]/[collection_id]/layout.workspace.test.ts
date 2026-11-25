@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
+import { fromStore, writable, type Writable } from 'svelte/store';
 import * as appState from '$app/state';
 import { tick } from 'svelte';
 import '@testing-library/jest-dom';
@@ -15,6 +15,9 @@ import {
     useMetadataDistributionsBySampleTags
 } from '$lib/hooks';
 import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+import { EMPTY_PLOT_SELECTION } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
+import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import type { LayoutLoadResult } from './+layout';
 import LayoutWorkspaceTestWrapper from './LayoutWorkspaceTestWrapper.test.svelte';
@@ -60,7 +63,6 @@ vi.mock('$lib/components', async () => {
         DatasetGridHeader: Stub,
         Footer,
         LabelsMenu: Stub,
-        MetadataFilterChips: Stub,
         Onboarding: Stub,
         SelectionPill: Stub,
         ShowFiltersButton: Stub,
@@ -797,5 +799,90 @@ describe('SidePanelTabs availability', () => {
         await tick();
 
         expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
+    });
+});
+
+describe('leaving a collection', () => {
+    // fromStore makes the mocked page reactive, so a new collection ID reruns the layout effects.
+    function openCollection(collectionId: Writable<string>): void {
+        const shownCollectionId = fromStore(collectionId);
+        vi.spyOn(appState, 'page', 'get').mockReturnValue({
+            route: { id: APP_ROUTES.images },
+            get params() {
+                return { dataset_id: 'test-dataset-id', collection_id: shownCollectionId.current };
+            }
+        } as unknown as typeof appState.page);
+    }
+
+    interface FilteredCollectionIds {
+        image: string;
+        video: string;
+    }
+
+    function mockPlotFilters(filteredCollectionIds: FilteredCollectionIds) {
+        const updateImagePlotSelection = vi.fn();
+        const updateVideoPlotSelection = vi.fn();
+        vi.mocked(useImageFilters).mockReturnValueOnce({
+            ...useImageFilters(),
+            filterParams: writable({ collection_id: filteredCollectionIds.image }),
+            updatePlotSelection: updateImagePlotSelection
+        } as unknown as ReturnType<typeof useImageFilters>);
+        vi.mocked(useVideoFilters).mockReturnValueOnce({
+            ...useVideoFilters(),
+            filterParams: writable({ collection_id: filteredCollectionIds.video }),
+            updatePlotSelection: updateVideoPlotSelection
+        });
+        return { updateImagePlotSelection, updateVideoPlotSelection };
+    }
+
+    it('clears the image and video plot selections of the collection it leaves', async () => {
+        const collectionId = writable('c1');
+        openCollection(collectionId);
+        const { updateImagePlotSelection, updateVideoPlotSelection } = mockPlotFilters({
+            image: 'c1',
+            video: 'c1'
+        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        collectionId.set('c2');
+        await tick();
+
+        expect(updateImagePlotSelection).toHaveBeenCalledWith(EMPTY_PLOT_SELECTION);
+        expect(updateVideoPlotSelection).toHaveBeenCalledWith(EMPTY_PLOT_SELECTION);
+    });
+
+    it('clears only the filter that holds the collection it leaves', async () => {
+        const collectionId = writable('c1');
+        openCollection(collectionId);
+        const { updateImagePlotSelection, updateVideoPlotSelection } = mockPlotFilters({
+            image: 'c1',
+            video: 'v1'
+        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        collectionId.set('c2');
+        await tick();
+
+        expect(updateImagePlotSelection).toHaveBeenCalledWith(EMPTY_PLOT_SELECTION);
+        expect(updateVideoPlotSelection).not.toHaveBeenCalled();
+    });
+
+    it('keeps the plot selections of the collection it enters', async () => {
+        const collectionId = writable('c1');
+        openCollection(collectionId);
+        const { updateImagePlotSelection, updateVideoPlotSelection } = mockPlotFilters({
+            image: 'c2',
+            video: 'c2'
+        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        collectionId.set('c2');
+        await tick();
+
+        expect(updateImagePlotSelection).not.toHaveBeenCalled();
+        expect(updateVideoPlotSelection).not.toHaveBeenCalled();
     });
 });

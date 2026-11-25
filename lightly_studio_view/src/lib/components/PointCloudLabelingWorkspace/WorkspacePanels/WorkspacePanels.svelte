@@ -6,10 +6,17 @@
     import { useWorkspaceControllerContext } from '../pointCloudWorkspaceLayoutContext.svelte';
     import { useSidePanel } from '../useSidePanel/useSidePanel.svelte';
     import { hasMinimumRole, useAuth } from '$lib/hooks';
+    import { useQueryClient } from '@tanstack/svelte-query';
+    import { TICK_TAGS_QUERY_KEY } from '../FrameTimeline/tickTagsQueryKey';
     const controller = useWorkspaceControllerContext();
     const { workspace, editing, data, presentation, targetSource } = controller;
     const sidePanel = useSidePanel(() => editing.selectedCuboidId);
     const { user } = useAuth();
+    const queryClient = useQueryClient();
+    const refetchTickTags = () => {
+        void workspace.tickDetails.refetch();
+        void queryClient.invalidateQueries({ queryKey: TICK_TAGS_QUERY_KEY });
+    };
     // The source for new cuboids is picked in edit mode only, like the other editing controls.
     const canPickSource = $derived(
         hasMinimumRole(user?.role, 'labeler') && presentation.isEditingMode
@@ -24,7 +31,7 @@
         />
     {:else}
         <PaneGroup direction="horizontal" class="min-h-0 flex-1">
-            <Pane defaultSize={78} minSize={50} class="flex min-h-0 flex-col">
+            <Pane defaultSize={72} minSize={50} class="flex min-h-0 flex-col">
                 <PointCloudWorkspaceMainColumn />
             </Pane>
             <PaneResizer
@@ -40,9 +47,9 @@
             </PaneResizer>
             <Pane
                 bind:this={sidePanel.pane}
-                defaultSize={22}
-                minSize={16}
-                maxSize={40}
+                defaultSize={28}
+                minSize={20}
+                maxSize={45}
                 collapsedSize={0}
                 collapsible
                 onCollapse={() => sidePanel.setCollapsed(true)}
@@ -56,8 +63,8 @@
                     sequence={workspace.sequenceSample}
                     onSequenceTagsChange={workspace.refetchSequenceSample}
                     tick={data.tick}
-                    onTagsChange={() => void workspace.tickDetails.refetch()}
-                    onCuboidTagsChange={() => void workspace.tickDetails.refetch()}
+                    onTagsChange={refetchTickTags}
+                    onCuboidTagsChange={refetchTickTags}
                     editable={presentation.isEditingMode}
                     onCuboidTransform={editing.panelCuboidTransform}
                     onLabelChange={editing.handleLabelChange}
