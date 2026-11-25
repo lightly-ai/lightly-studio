@@ -78,6 +78,7 @@ class TestLocalAnnotationTransport:
                 )
             ],
             collection_name="gt",
+            covered_sample_ids=[],
         )
 
         annotations = transport.get_by_sample_ids(sample_ids=[image.sample_id])
