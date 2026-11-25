@@ -1,14 +1,13 @@
 from collections.abc import Iterable
 from uuid import uuid4
 
-import pytest
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
 from labelformat.model.category import Category
 from labelformat.model.multipolygon import MultiPolygon
+from sqlmodel import Session
 
 from lightly_studio.core import labelformat_helpers
-from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from tests import helpers_resolvers
 
@@ -144,11 +143,9 @@ def test_get_object_detection_annotation_create__with_confidence() -> None:
     assert annotation.confidence == 0.95
 
 
-@pytest.mark.usefixtures("patch_collection")
-def test_create_label_map() -> None:
+def test_create_label_map(persistent_session: Session) -> None:
     # Test the creation of new labels and re-use of existing labels
-    session = db_manager.persistent_session()
-    collection_id = helpers_resolvers.create_collection(session=session).collection_id
+    collection_id = helpers_resolvers.create_collection(session=persistent_session).collection_id
 
     class TestLabels1:
         def get_categories(self) -> Iterable[Category]:
