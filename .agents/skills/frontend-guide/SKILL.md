@@ -301,6 +301,8 @@ describe("MyComponent", () => {
 - **No mirror tests** for simple boolean toggles - testing the truthy case is sufficient when a single boolean controls the state.
 - **Combine related assertions** into one test rather than creating separate tests for closely related checks (e.g., placeholder + accessible label).
 - **Test behavior, not implementation** - don't assert on CSS classes, internal structure, or how hooks are called. Assert on user-visible outcomes.
+  Keep the local state updates or data conversions that produce the outcome under test.
+  Assert on the rendered state, returned value, or request payload. Mock external I/O when needed.
 - **Remove duplicate tests** that verify the same behavior with different queries.
 
 ### Running tests
