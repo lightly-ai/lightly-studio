@@ -172,10 +172,23 @@
                     <Tabs.Content value="segmentation" class="pt-0">
                         <AnnotationsTab
                             exportFormat={ExportFormat.SEGMENTATION_MASK_COCO}
-                            description="The segmentation masks will be exported in COCO format."
+                            description="Polygons and segmentation masks will be exported in COCO format."
                             {annotationSources}
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-instance-segmentations"
+                            sampleType="image"
+                            onDownloadClick={() =>
+                                tracking.handleAnnotationDownloadClick(exportType)}
+                        />
+                    </Tabs.Content>
+
+                    <Tabs.Content value="instance_segmentation_yolo" class="pt-0">
+                        <AnnotationsTab
+                            exportFormat={ExportFormat.INSTANCE_SEGMENTATION_YOLO}
+                            description="Polygons will be exported in YOLO format. Segmentation masks are skipped."
+                            {annotationSources}
+                            bind:selectedAnnotationCollectionId
+                            testId="submit-button-instance-segmentations-yolo"
                             sampleType="image"
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
