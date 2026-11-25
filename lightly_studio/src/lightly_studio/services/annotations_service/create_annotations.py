@@ -24,22 +24,35 @@ def create_annotations(
     collection_name: str | None,
     covered_sample_ids: Sequence[UUID],
 ) -> list[UUID]:
-    """Create annotations and mark the evaluation runs of their annotation collection stale.
+    """Create annotations, record covered samples, and mark evaluation runs stale.
 
-    The evaluation runs become stale only if the function creates annotations.
+    The evaluation runs of the annotation collection become stale only if the function
+    creates annotations.
 
     Args:
         session: Database session for executing the operation.
         parent_collection_id: The ID of the collection of the annotated samples.
         annotations: The annotations to create.
         collection_name: The name of the annotation collection. None uses the default.
-        covered_sample_ids: Parent samples that the annotation collection covers, also
-            samples without annotations.
+        covered_sample_ids: Parent samples to mark as covered, including samples without
+            annotations.
 
     Returns:
         The IDs of the new annotations, in the order of `annotations`.
     """
     try:
+        annotation_collection_id = collection_resolver.get_or_create_child_collection(
+            session=session,
+            collection_id=parent_collection_id,
+            sample_type=SampleType.ANNOTATION,
+            name=collection_name,
+        )
+        annotation_collection_coverage_resolver.add_many(
+            session=session,
+            annotation_collection_id=annotation_collection_id,
+            parent_sample_ids=covered_sample_ids,
+        )
+        # create_many commits the coverage rows together with the annotations.
         annotation_ids = annotation_resolver.create_many(
             session=session,
             parent_collection_id=parent_collection_id,
@@ -47,21 +60,9 @@ def create_annotations(
             collection_name=collection_name,
         )
     except Exception:
-        # create_many flushes rows before it validates them.
+        # add_many and create_many flush rows before create_many validates them.
         session.rollback()
         raise
-    annotation_collection_id = collection_resolver.get_or_create_child_collection(
-        session=session,
-        collection_id=parent_collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name=collection_name,
-    )
-    annotation_collection_coverage_resolver.add_many(
-        session=session,
-        annotation_collection_id=annotation_collection_id,
-        parent_sample_ids=covered_sample_ids,
-    )
-    session.commit()
     if annotation_ids:
         evaluation_run_resolver.mark_stale_by_collection_id(
             session=session, collection_id=annotation_collection_id
