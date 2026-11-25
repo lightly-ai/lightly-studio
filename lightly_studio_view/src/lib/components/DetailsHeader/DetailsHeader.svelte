@@ -49,6 +49,7 @@
             <WorkflowFileActions
                 fileState={workflow.file.state}
                 allowedTransitions={workflow.file.allowed_transitions}
+                yourRole={workflow.file.your_role}
                 transitioning={workflow.transitioning}
                 onTransition={workflow.transition}
                 onAdvance={workflow.goToNext}

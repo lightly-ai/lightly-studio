@@ -25,6 +25,7 @@ const renderActions = (overrides: Partial<Props> = {}) => {
     const props: Props = {
         fileState: 'in_progress',
         allowedTransitions: ['in_review'],
+        yourRole: null,
         transitioning: false,
         onTransition: vi.fn().mockResolvedValue(undefined),
         ...overrides
@@ -70,6 +71,66 @@ describe('WorkflowFileActions', () => {
             await fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
 
             await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Cannot move a file'));
+        });
+
+        describe('labeler on a file they have not started', () => {
+            const untouched: Partial<Props> = {
+                fileState: 'not_started',
+                allowedTransitions: ['in_progress', 'in_review'],
+                yourRole: 'labeler'
+            };
+
+            it('offers Submit for review inline and asks before submitting as-is', async () => {
+                const user = userEvent.setup();
+                const { onTransition, onAdvance } = renderActions(untouched);
+
+                await user.click(screen.getByRole('button', { name: 'Submit for review' }));
+
+                const dialog = await screen.findByRole('dialog');
+                expect(dialog).toHaveTextContent('Submit as-is?');
+                expect(dialog).toHaveTextContent('You haven’t made any changes.');
+                expect(onTransition).not.toHaveBeenCalled();
+
+                await user.click(within(dialog).getByRole('button', { name: 'Submit for review' }));
+
+                expect(onTransition).toHaveBeenCalledWith('in_review');
+                await waitFor(() => expect(onAdvance).toHaveBeenCalled());
+                expect(toast.success).toHaveBeenCalledWith('Submitted for review');
+                expect(
+                    screen.queryByRole('button', { name: 'Admin actions' })
+                ).not.toBeInTheDocument();
+            });
+
+            it('does nothing when the labeler cancels', async () => {
+                const user = userEvent.setup();
+                const { onTransition } = renderActions(untouched);
+
+                await user.click(screen.getByRole('button', { name: 'Submit for review' }));
+                await user.click(
+                    within(await screen.findByRole('dialog')).getByRole('button', {
+                        name: 'Cancel'
+                    })
+                );
+
+                await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+                expect(onTransition).not.toHaveBeenCalled();
+            });
+
+            it('keeps Submit inline for an admin who is the labeler, other moves in the menu', async () => {
+                const user = userEvent.setup();
+                renderActions({
+                    ...untouched,
+                    allowedTransitions: ['in_progress', 'in_review', 'accepted']
+                });
+
+                expect(
+                    screen.getByRole('button', { name: 'Submit for review' })
+                ).toBeInTheDocument();
+                await user.click(screen.getByRole('button', { name: 'Admin actions' }));
+                expect(
+                    screen.getAllByRole('menuitem').map((item) => item.textContent?.trim())
+                ).toEqual(['Accept']);
+            });
         });
 
         it('lets the labeler resubmit a file in rework', async () => {

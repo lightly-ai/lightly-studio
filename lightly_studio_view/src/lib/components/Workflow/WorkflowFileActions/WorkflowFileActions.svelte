@@ -3,12 +3,12 @@
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import Ellipsis from '@lucide/svelte/icons/ellipsis';
-    import WorkflowOverrideDialog from './WorkflowOverrideDialog.svelte';
+    import WorkflowConfirmDialog from './WorkflowConfirmDialog.svelte';
     import {
         placeWorkflowActions,
         type WorkflowAction,
         type WorkflowFileState,
-        type WorkflowMenuAction
+        type WorkflowRole
     } from './workflowActions';
     import { useWorkflowMove } from './useWorkflowMove.svelte';
 
@@ -17,6 +17,8 @@
         fileState: WorkflowFileState;
         /** Target states the current user may move the file to right now. */
         allowedTransitions: WorkflowFileState[];
+        /** The current user's role on the file; decides which moves are their natural step. */
+        yourRole: WorkflowRole;
         /** A move is waiting for the workflow service. */
         transitioning: boolean;
         /** Moves the file; resolves once the service confirmed it. */
@@ -25,26 +27,24 @@
         onAdvance?: () => void;
     }
 
-    const { fileState, allowedTransitions, transitioning, onTransition, onAdvance }: Props =
-        $props();
+    const {
+        fileState,
+        allowedTransitions,
+        yourRole,
+        transitioning,
+        onTransition,
+        onAdvance
+    }: Props = $props();
 
-    const actions = $derived(placeWorkflowActions(fileState, allowedTransitions));
+    const actions = $derived(placeWorkflowActions(fileState, allowedTransitions, yourRole));
     const hasActions = $derived(actions.inline.length > 0 || actions.menu.length > 0);
 
     const workflowMove = useWorkflowMove(() => ({ onTransition, onAdvance }));
     const requested = $derived(workflowMove.requested);
-    /** The admin menu action waiting for confirmation, if any. */
-    let confirming = $state<WorkflowMenuAction | null>(null);
-
     /** A move is in flight, started here or reported by the parent. */
     const busy = $derived(transitioning || requested !== null);
     /** A confirmed menu move in flight: shown in place of the ⋯ button. */
     const pendingMenuAction = $derived(actions.menu.find((a) => a.target === requested));
-
-    const confirmOverride = (action: WorkflowMenuAction) => {
-        confirming = null;
-        workflowMove.override(action.target);
-    };
 
     const buttonLabel = (action: WorkflowAction) =>
         requested === action.target ? action.pendingLabel : action.label;
@@ -58,7 +58,7 @@
                 variant={action.variant}
                 class={action.class}
                 disabled={busy}
-                onclick={() => workflowMove.moveAndAdvance(action)}>{buttonLabel(action)}</Button
+                onclick={() => workflowMove.moveInline(action)}>{buttonLabel(action)}</Button
             >
         {/each}
         {#if pendingMenuAction}
@@ -75,7 +75,7 @@
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Content align="end">
                         {#each actions.menu as action (action.target)}
-                            <DropdownMenu.Item onSelect={() => (confirming = action)}
+                            <DropdownMenu.Item onSelect={() => workflowMove.override(action)}
                                 >{action.label}</DropdownMenu.Item
                             >
                         {/each}
@@ -86,8 +86,8 @@
     </div>
 {/if}
 
-<WorkflowOverrideDialog
-    action={confirming}
-    onConfirm={confirmOverride}
-    onCancel={() => (confirming = null)}
+<WorkflowConfirmDialog
+    confirmation={workflowMove.confirmation}
+    onConfirm={workflowMove.confirm}
+    onCancel={workflowMove.cancel}
 />

@@ -28,7 +28,7 @@
                 options: ['in_review', 'accepted', 'rework']
             }
         },
-        args: { transitioning: false }
+        args: { transitioning: false, yourRole: null }
     });
 
     const openAdminMenu = async (canvasElement: HTMLElement) => {
@@ -38,6 +38,16 @@
 </script>
 
 <!-- Assigned people: what they see today. -->
+
+<Story
+    name="Labeler / Not started"
+    args={{
+        fileState: 'not_started',
+        allowedTransitions: ['in_progress', 'in_review'],
+        yourRole: 'labeler',
+        onTransition: slowTransition()
+    }}
+/>
 
 <Story
     name="Labeler / In progress"

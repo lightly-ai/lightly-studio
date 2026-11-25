@@ -16,9 +16,11 @@ export interface WorkflowAction {
     variant: 'default' | 'outline';
     /** Extra button classes, e.g. the red outline of Send back. */
     class?: string;
+    /** Asked before an inline move that might be a slip, e.g. submitting an untouched file. */
+    confirmation?: WorkflowActionConfirmation;
 }
 
-/** What an admin confirms before an override that skips a workflow step. */
+/** What the user confirms before a move that skips a workflow step or might be a slip. */
 export interface WorkflowActionConfirmation {
     title: string;
     description: string;
@@ -38,13 +40,23 @@ export interface WorkflowActionPlacement {
     menu: WorkflowMenuAction[];
 }
 
+/** The caller's role on the file, from the workflow service. */
+export type WorkflowRole = WorkflowFile['your_role'];
+
 /** The natural next step in each state: what an assigned person sees as inline buttons. */
 const INLINE: Record<WorkflowFileState, MoveTarget[]> = {
-    not_started: [],
+    not_started: ['in_review'],
     in_progress: ['in_review'],
     in_review: ['rework', 'accepted'],
     rework: ['in_review'],
     accepted: []
+};
+
+/** What the labeler confirms before submitting a file they never edited. */
+const SUBMIT_UNTOUCHED: WorkflowActionConfirmation = {
+    title: 'Submit as-is?',
+    description: 'You haven’t made any changes.',
+    confirmLabel: 'Submit for review'
 };
 
 /** Order of the moves in the admin menu. */
@@ -128,18 +140,32 @@ const confirmationFor = (
 const isMoveTarget = (state: WorkflowFileState): state is MoveTarget =>
     (MENU_ORDER as WorkflowFileState[]).includes(state);
 
+/**
+ * The caller's natural steps. Submitting an untouched file is the labeler's natural step;
+ * for an admin it is an override, so it stays in the menu.
+ */
+const naturalSteps = (state: WorkflowFileState, role: WorkflowRole): MoveTarget[] =>
+    state === 'not_started' && role !== 'labeler' ? [] : INLINE[state];
+
+/** An inline button; submitting an untouched file asks first, since it might be a slip. */
+const inlineActionFor = (from: WorkflowFileState, target: MoveTarget): WorkflowAction =>
+    from === 'not_started'
+        ? { ...actionFor(from, target), confirmation: SUBMIT_UNTOUCHED }
+        : actionFor(from, target);
+
 /** Splits the moves the user may make into inline buttons and the "Admin actions" menu. */
 export function placeWorkflowActions(
     state: WorkflowFileState,
-    allowed: WorkflowFileState[]
+    allowed: WorkflowFileState[],
+    role: WorkflowRole
 ): WorkflowActionPlacement {
     const targets = allowed.filter(isMoveTarget);
-    const inline = INLINE[state].filter((target) => targets.includes(target));
+    const inline = naturalSteps(state, role).filter((target) => targets.includes(target));
     const menu = MENU_ORDER.filter(
         (target) => targets.includes(target) && !inline.includes(target)
     );
     return {
-        inline: inline.map((target) => actionFor(state, target)),
+        inline: inline.map((target) => inlineActionFor(state, target)),
         menu: menu.map((target) => {
             const action = actionFor(state, target);
             return { ...action, confirmation: confirmationFor(state, action) };
