@@ -92,7 +92,7 @@ class AnnotationFileTask(str, Enum):
 - The query language and the Python query API get polygon `x`, `y`, `width` and `height`, as masks have. The query editor's `polygon(...)` keyword is part of the frontend work.
 - Polygons load everywhere other annotation details load, including video frames and export. They take `object_track_id`, as masks do.
 - A migration adds the table and the enum value.
-- **Evaluation** stays masks-only. Polygon sources get a clear error, for example "Polygon annotations are not yet supported for instance segmentation evaluation.", plus a changelog entry. COCO segmentation sources now fail with this error. Before, they "ran" with box-only masks that were silently skipped.
+- **Evaluation** stays masks-only. It skips polygons and logs a warning with their count, for example "Skipped 12 polygon annotations in instance segmentation evaluation. Polygon evaluation is not supported yet.", plus a changelog entry. COCO segmentation sources still run and score only their RLE masks, as before. The warning replaces the old silent skip of box-only masks.
   - *Alternative considered:* comparing polygons only with polygons. It still needs rasterizing or polygon geometry, and it can't handle the common case of polygon ground truth with mask predictions, or COCO's mixed ground truth.
 
 ## Follow-ups
