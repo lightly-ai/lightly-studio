@@ -123,6 +123,13 @@ class TestEvaluationMetricComparisonExpr:
 
 
 class TestQueryExpr:
+    @pytest.mark.parametrize(
+        "node_type", ["video_event_match_expr", "video_frame_match_expr", "polygon_match_expr"]
+    )
+    def test_model_validate__requires_subexpression(self, node_type: str) -> None:
+        with pytest.raises(ValidationError, match="subexpr"):
+            QueryExpr.model_validate({"match_expr": {"type": node_type}})
+
     def test_model_validate__and_with_image_and_annotation_nodes(self) -> None:
         """Compose an AND of a leaf image filter and a nested annotation match."""
         tree = QueryExpr.model_validate(
