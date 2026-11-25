@@ -1,7 +1,7 @@
 """The actions a user may do.
 
-`get_policy` is a hook. The default allows every action for the local user. A deployment with
-several users overrides it with `app.dependency_overrides`.
+`get_policy` is a replaceable dependency, a field of `api.replaceable.Replaceable`. The default
+allows every action for the local user. A deployment with several users replaces it.
 """
 
 from __future__ import annotations
