@@ -8,10 +8,13 @@ from lightly_studio.database import db_manager
 from lightly_studio.errors import NotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.collection import SampleType
+from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     collection_resolver,
     object_track_resolver,
+    sequence_resolver,
 )
 from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.local.local_annotation_transport import LocalAnnotationTransport
@@ -21,6 +24,7 @@ from tests.helpers_resolvers import (
     create_collection,
     create_image,
 )
+from tests.resolvers.sequence_resolver import helpers as sequence_helpers
 
 
 @pytest.mark.usefixtures("patch_collection")
@@ -90,6 +94,32 @@ class TestLocalAnnotationTransport:
         )
 
         assert [a.sample_id for a in found] == [annotations[0].sample_id]
+
+    def test_get_covered_sequence_ids(self) -> None:
+        session = db_manager.persistent_session()
+        sequence_id, group_ids = sequence_helpers.create_sequence_and_samples(
+            session=session, sample_count=2
+        )
+        sequence_resolver.add_samples(
+            session=session,
+            sequence_sample_id=sequence_id,
+            links=[SampleSequenceLinkCreate(sample_id=group_ids[0], seq_number=0)],
+        )
+        annotation_collection_id = create_collection(
+            session=session, sample_type=SampleType.ANNOTATION
+        ).collection_id
+        annotation_collection_coverage_resolver.add_many(
+            session=session,
+            annotation_collection_id=annotation_collection_id,
+            parent_sample_ids=group_ids,
+        )
+        transport: AnnotationTransport = LocalAnnotationTransport()
+
+        sequence_ids = transport.get_covered_sequence_ids(
+            annotation_collection_id=annotation_collection_id
+        )
+
+        assert sequence_ids == [sequence_id]
 
     def test_create(self) -> None:
         session = db_manager.persistent_session()
