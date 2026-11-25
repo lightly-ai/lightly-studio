@@ -49,13 +49,13 @@ Compare two or more runs side by side to select the best model:
 The comparison page shows:
 
 - **Leaderboard**: one row for each run, ranked by the best metric. Object detection shows mAP, mAP@50, mAP@75, precision, recall, and F1. Instance segmentation shows precision, recall, and F1. Classification shows accuracy. The best value in each column is bold.
-- **Per annotation class**: a table and a bar chart with one value for each annotation class and run. Select AP, precision, recall, or F1.
+- **Per annotation class**: one value for each annotation class and run. Select AP, precision, recall, or F1. The classes with the largest gap between the runs come first. By default, the page shows the top 10 classes. To see more, select **Top 25** or **All classes**. Select **Bar chart** to see grouped bars, or **Heatmap** to see a table with colored cells and the gap of each class.
 
 mAP is available only for object detection runs with **Compute average precision** turned on. This setting is on by default in **New evaluation**. For an older run, turn it on in the run settings and rerun.
 
 #### Compare runs on tags
 
-Select tags under **Scenarios** to compare the runs on subsets of the images, for example "night" or "small objects". The table has one row for the full set and one row for each tag, and one column for each run. The best run of each row is bold. Select the metric above the table. The link of the page keeps the selected tags.
+Select tags under **Tags** to compare the runs on subsets of the images, for example "night" or "small objects". The table has one row for the full set and one row for each tag, and one column for each run. The best run of each row is bold. Select the metric above the table. The link of the page keeps the selected tags.
 
 The values come from the runs that exist. You do not need one run for each tag. LightlyStudio computes the average precision of a tag again each time you open the page, so many tags on a large dataset take longer to load.
 

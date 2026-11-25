@@ -16,6 +16,9 @@ export type LeaderboardMetric =
     | 'f1'
     | 'accuracy';
 export type PerClassMetric = 'average_precision' | 'precision' | 'recall' | 'f1';
+export type PerClassView = 'bar_chart' | 'heatmap';
+/** Number of annotation classes to show, or null for all classes. */
+export type ClassLimit = 10 | 25 | null;
 export type SelectionProblem = 'too_few_runs' | 'mixed_task_types' | 'unsupported_task_type';
 
 export interface ComparedRun {
@@ -31,14 +34,14 @@ export interface ComparabilityReport {
     staleRunIds: string[];
 }
 
-export interface ScenarioRow {
+export interface TagRow {
     /** "full" for the full set, else the tag ID. */
     id: string;
     label: string;
     /** One value for each run, in the order of the runs. */
     values: (number | null)[];
     bestIndices: number[];
-    /** Evaluated images of each run in this scenario. */
+    /** Evaluated images of each run in this tag. */
     sampleCounts: number[];
 }
 
@@ -47,6 +50,8 @@ export interface PerClassRow {
     /** One value for each run, in the order of the runs. */
     values: (number | null)[];
     bestIndices: number[];
+    /** Difference between the highest and the lowest value. */
+    gap: number;
 }
 
 const COMPARABLE_TASK_TYPES: readonly string[] = [
@@ -63,6 +68,10 @@ const PERCENT = 100;
 const MISSING_VALUE = '—';
 const IOU_THRESHOLD_50 = '0.5';
 const IOU_THRESHOLD_75 = '0.75';
+// A cell with value 0 keeps a light color, so that it differs from a missing value.
+const HEATMAP_MIN_ALPHA = 0.08;
+const HEATMAP_ALPHA_RANGE = 0.6;
+const ALPHA_DECIMALS = 2;
 
 export const LEADERBOARD_METRIC_LABELS: Record<LeaderboardMetric, string> = {
     map: 'mAP',
@@ -79,6 +88,15 @@ export const SELECTION_PROBLEM_MESSAGES: Record<SelectionProblem, string> = {
     mixed_task_types: 'Select runs of the same task type.',
     unsupported_task_type: 'Semantic segmentation runs have no metrics to compare.'
 };
+
+export const PER_CLASS_VIEWS: readonly PerClassView[] = ['bar_chart', 'heatmap'];
+export const PER_CLASS_VIEW_LABELS: Record<PerClassView, string> = {
+    bar_chart: 'Bar chart',
+    heatmap: 'Heatmap'
+};
+
+export const CLASS_LIMIT_OPTIONS: readonly ClassLimit[] = [10, 25, null];
+export const DEFAULT_CLASS_LIMIT: ClassLimit = 10;
 
 export const PER_CLASS_METRIC_LABELS: Record<PerClassMetric, string> = {
     average_precision: 'AP',
@@ -190,14 +208,39 @@ export const perClassRows = (runs: ComparedRun[], metric: PerClassMetric): PerCl
     const labels = [...new Set(classesByRun.flatMap((classes) => [...classes.keys()]))].sort();
     return labels.map((label) => {
         const values = classesByRun.map((classes) => classValue(classes.get(label), metric));
-        return { label, values, bestIndices: bestIndices(values) };
+        return { label, values, bestIndices: bestIndices(values), gap: classGap(values) };
     });
 };
 
+/**
+ * Gives the difference between the highest and the lowest value of the runs. A missing value
+ * does not count, because it means that the metric does not apply, not that it is 0.
+ */
+export const classGap = (values: (number | null)[]): number => {
+    const presentValues = values.filter((value): value is number => value !== null);
+    if (presentValues.length < MINIMUM_RUN_COUNT) return 0;
+    return Math.max(...presentValues) - Math.min(...presentValues);
+};
+
+/** Ranks the classes by gap, largest first, then by label. Keeps at most `limit` classes. */
+export const topClassesByGap = (rows: PerClassRow[], limit: number | null): PerClassRow[] => {
+    const ranked = [...rows].sort(
+        (first, second) => second.gap - first.gap || first.label.localeCompare(second.label)
+    );
+    return limit === null ? ranked : ranked.slice(0, limit);
+};
+
+/** Gives the background color of a heatmap cell. A missing value has no color. */
+export const heatmapCellColor = (value: number | null): string | undefined => {
+    if (value === null) return undefined;
+    const alpha = HEATMAP_MIN_ALPHA + HEATMAP_ALPHA_RANGE * clampToUnit(value);
+    return `hsl(var(--primary) / ${alpha.toFixed(ALPHA_DECIMALS)})`;
+};
+
 /** Builds the full set row, then one row for each tag slice of the first run. */
-export const scenarioRows = (runs: ComparedRun[], metric: LeaderboardMetric): ScenarioRow[] => {
+export const tagRows = (runs: ComparedRun[], metric: LeaderboardMetric): TagRow[] => {
     const fullSetValues = runs.map((entry) => metricValue(entry.metrics.metrics, metric));
-    const fullSet: ScenarioRow = {
+    const fullSet: TagRow = {
         id: FULL_SET_ROW_ID,
         label: 'Full set',
         values: fullSetValues,
@@ -205,7 +248,7 @@ export const scenarioRows = (runs: ComparedRun[], metric: LeaderboardMetric): Sc
         sampleCounts: runs.map((entry) => entry.metrics.evaluated_sample_count)
     };
     const slices = runs[0]?.metrics.slices ?? [];
-    const tagRows = slices.map((slice): ScenarioRow => {
+    const tagRows = slices.map((slice): TagRow => {
         const runSlices = runs.map((entry) =>
             entry.metrics.slices?.find((candidate) => candidate.tag_id === slice.tag_id)
         );
@@ -257,6 +300,8 @@ export const matchingSummary = (run: EvaluationRunView): string | null => {
     const classMatching = configValue(run, 'classwise') === false ? 'Any class' : 'Same class only';
     return `IoU ${iouThreshold.toFixed(IOU_DECIMALS)} · ${classMatching}`;
 };
+
+const clampToUnit = (value: number): number => Math.min(Math.max(value, 0), 1);
 
 const toPercentPoints = (value: number): number => Math.round(value * PERCENT * 10) / 10;
 

@@ -12,11 +12,11 @@
 
     interface Props {
         datasetId: string;
-        /** Collection of the page. Its tags are the scenarios to pick from. */
+        /** Collection of the page. The tag picker shows its tags. */
         collectionId: string;
         /** Runs from the page link, in link order. */
         runIds: string[];
-        /** Tags from the page link, compared as scenarios. */
+        /** Tags from the page link to compare the runs on. */
         tagIds: string[];
         onTagIdsChange: (tagIds: string[]) => void;
         /** Link back to the images of the collection. */

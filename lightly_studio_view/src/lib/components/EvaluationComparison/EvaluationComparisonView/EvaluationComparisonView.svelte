@@ -2,7 +2,7 @@
     import ComparabilityWarning from '../ComparabilityWarning/ComparabilityWarning.svelte';
     import EvaluationLeaderboard from '../EvaluationLeaderboard/EvaluationLeaderboard.svelte';
     import PerClassMetricSection from '../PerClassMetricSection/PerClassMetricSection.svelte';
-    import ScenarioSection from '../ScenarioSection/ScenarioSection.svelte';
+    import TagSection from '../TagSection/TagSection.svelte';
     import type { TagView } from '$lib/api/lightly_studio_local';
     import {
         compareRuns,
@@ -37,12 +37,6 @@
             staleRunIds={report.staleRunIds}
         />
     </section>
-    <ScenarioSection
-        {taskType}
-        runs={rankedRuns}
-        {tags}
-        {selectedTagIds}
-        {onSelectedTagIdsChange}
-    />
+    <TagSection {taskType} runs={rankedRuns} {tags} {selectedTagIds} {onSelectedTagIdsChange} />
     <PerClassMetricSection {taskType} runs={rankedRuns} />
 </div>

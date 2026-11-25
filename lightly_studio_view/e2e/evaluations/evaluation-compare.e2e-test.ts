@@ -29,12 +29,12 @@ test('compares two evaluation runs on a leaderboard', async ({ page }) => {
     await expect(page.getByTestId('per-class-metrics')).toBeVisible();
 
     await page
-        .getByTestId('scenario-tag-picker')
+        .getByTestId('tag-picker')
         .getByRole('checkbox', { name: 'distribution_reviewed' })
         .click();
     await expect(page).toHaveURL(/tags=/);
-    const scenarioRow = page
-        .getByTestId('scenario-table')
+    const tagRow = page
+        .getByTestId('tag-metric-table')
         .getByRole('row', { name: /distribution_reviewed/ });
-    await expect(scenarioRow.getByRole('cell').nth(1)).toHaveText(DECIMAL_METRIC);
+    await expect(tagRow.getByRole('cell').nth(1)).toHaveText(DECIMAL_METRIC);
 });

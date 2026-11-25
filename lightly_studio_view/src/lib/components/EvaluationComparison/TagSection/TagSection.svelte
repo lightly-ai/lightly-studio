@@ -5,13 +5,13 @@
         LEADERBOARD_METRIC_LABELS,
         leaderboardColumns,
         primaryMetric,
-        scenarioRows,
+        tagRows,
         type ComparableTaskType,
         type ComparedRun,
         type LeaderboardMetric
     } from '../EvaluationComparison.helpers';
-    import ScenarioTable from './ScenarioTable/ScenarioTable.svelte';
-    import ScenarioTagPicker from './ScenarioTagPicker/ScenarioTagPicker.svelte';
+    import TagMetricTable from './TagMetricTable/TagMetricTable.svelte';
+    import TagPicker from './TagPicker/TagPicker.svelte';
 
     interface Props {
         taskType: ComparableTaskType;
@@ -29,12 +29,12 @@
     const activeMetric: LeaderboardMetric = $derived(
         metrics.find((metric) => metric === selectedMetric) ?? primaryMetric(taskType, runs)
     );
-    const rows = $derived(scenarioRows(runs, activeMetric));
+    const rows = $derived(tagRows(runs, activeMetric));
 </script>
 
-<section class="flex flex-col gap-3" data-testid="scenario-section">
+<section class="flex flex-col gap-3" data-testid="tag-section">
     <div class="flex items-center justify-between">
-        <h2 class="text-base font-semibold">Scenarios</h2>
+        <h2 class="text-base font-semibold">Tags</h2>
         {#if selectedTagIds.length > 0}
             <Tabs.Root value={activeMetric} onValueChange={(value) => (selectedMetric = value)}>
                 <Tabs.List>
@@ -47,12 +47,12 @@
             </Tabs.Root>
         {/if}
     </div>
-    <ScenarioTagPicker {tags} {selectedTagIds} {onSelectedTagIdsChange} />
+    <TagPicker {tags} {selectedTagIds} {onSelectedTagIdsChange} />
     {#if selectedTagIds.length === 0}
         <p class="text-sm text-muted-foreground">
             Select tags to compare the runs on subsets of the images.
         </p>
     {:else}
-        <ScenarioTable runNames={runs.map((entry) => entry.run.name)} {rows} />
+        <TagMetricTable runNames={runs.map((entry) => entry.run.name)} {rows} />
     {/if}
 </section>

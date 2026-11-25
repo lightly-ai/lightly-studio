@@ -1,5 +1,9 @@
 <script lang="ts">
-    import { formatMetricValue, type PerClassRow } from '../../EvaluationComparison.helpers';
+    import {
+        formatMetricValue,
+        heatmapCellColor,
+        type PerClassRow
+    } from '../../EvaluationComparison.helpers';
 
     interface Props {
         runNames: string[];
@@ -23,6 +27,11 @@
                         {runName}
                     </th>
                 {/each}
+                <th
+                    class="sticky top-0 z-10 border-b bg-background px-3 py-2 text-right font-medium"
+                >
+                    Gap
+                </th>
             </tr>
         </thead>
         <tbody>
@@ -34,11 +43,15 @@
                         <td
                             class="px-3 py-2 text-right tabular-nums"
                             class:font-semibold={isBest}
+                            style:background-color={heatmapCellColor(value)}
                             data-best={isBest}
                         >
                             {formatMetricValue(value)}
                         </td>
                     {/each}
+                    <td class="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                        {formatMetricValue(row.gap)}
+                    </td>
                 </tr>
             {/each}
         </tbody>

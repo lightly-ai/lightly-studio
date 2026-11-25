@@ -6,12 +6,12 @@ import EvaluationComparisonView from './EvaluationComparisonView.svelte';
 const tagProps = { tags: [], selectedTagIds: [], onSelectedTagIdsChange: vi.fn() };
 
 describe('EvaluationComparisonView', () => {
-    it('shows the scenarios section', () => {
+    it('shows the tags section', () => {
         render(EvaluationComparisonView, {
             props: { ...tagProps, taskType: 'object_detection', runs: [makeComparedRun('a')] }
         });
 
-        expect(screen.getByTestId('scenario-section')).toBeInTheDocument();
+        expect(screen.getByTestId('tag-section')).toBeInTheDocument();
     });
 
     it('ranks the runs by mAP', () => {

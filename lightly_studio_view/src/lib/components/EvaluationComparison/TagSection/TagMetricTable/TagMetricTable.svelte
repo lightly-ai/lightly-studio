@@ -1,25 +1,25 @@
 <script lang="ts">
-    import { formatMetricValue, type ScenarioRow } from '../../EvaluationComparison.helpers';
+    import { formatMetricValue, type TagRow } from '../../EvaluationComparison.helpers';
 
     interface Props {
         runNames: string[];
-        rows: ScenarioRow[];
+        rows: TagRow[];
     }
 
     const { runNames, rows }: Props = $props();
 
-    const imageCountText = (row: ScenarioRow): string =>
+    const imageCountText = (row: TagRow): string =>
         new Set(row.sampleCounts).size > 1
             ? 'different images'
             : `${row.sampleCounts[0] ?? 0} images`;
 </script>
 
-<div class="max-h-[480px] overflow-y-auto rounded-md border" data-testid="scenario-table">
+<div class="max-h-[480px] overflow-y-auto rounded-md border" data-testid="tag-metric-table">
     <table class="w-full text-sm">
         <thead>
             <tr class="text-left text-muted-foreground">
                 <th class="sticky top-0 z-10 border-b bg-background py-2 pl-3 pr-4 font-medium">
-                    Scenario
+                    Tag
                 </th>
                 {#each runNames as runName, index (index)}
                     <th

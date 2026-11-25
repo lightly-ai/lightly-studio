@@ -33,6 +33,18 @@
         { stale_since: new Date('2026-11-20T00:00:00Z') }
     );
 
+    const MANY_CLASS_COUNT = 40;
+    const manyClassLabels = Array.from(
+        { length: MANY_CLASS_COUNT },
+        (_, index) => `class-${String(index + 1).padStart(2, '0')}`
+    );
+    const manyClassesModel = (id: string, seed: number) =>
+        makeComparedRun(id, {
+            per_class: manyClassLabels.map((label, index) =>
+                makeClassMetrics(label, ((index * seed) % 97) / 100)
+            )
+        });
+
     const { Story } = defineMeta({
         title: 'Evaluation/EvaluationComparisonView',
         component: EvaluationComparisonView
@@ -55,5 +67,13 @@
                 run: { ...withoutAveragePrecision.run, gt_annotation_source: 'ground_truth_v2' }
             }
         ]
+    }}
+/>
+
+<Story
+    name="Many annotation classes"
+    args={{
+        taskType: 'object_detection',
+        runs: [manyClassesModel('yolo26-l', 37), manyClassesModel('yolo26-m', 53)]
     }}
 />

@@ -16,7 +16,7 @@
         );
 </script>
 
-<div class="flex flex-wrap gap-x-4 gap-y-2" data-testid="scenario-tag-picker">
+<div class="flex flex-wrap gap-x-4 gap-y-2" data-testid="tag-picker">
     {#each tags as tag (tag.tag_id)}
         <label class="flex items-center gap-2 text-sm">
             <Checkbox

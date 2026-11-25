@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import type { EvaluationSliceMetricsView } from '$lib/api/lightly_studio_local';
 import { makeComparedRun, makeMetricsView } from '../fixtures';
-import ScenarioSection from './ScenarioSection.svelte';
+import TagSection from './TagSection.svelte';
 
 const tags = [
     { tag_id: 't1', name: 'night' },
@@ -30,9 +30,9 @@ const defaultProps = {
     onSelectedTagIdsChange: vi.fn()
 };
 
-describe('ScenarioSection', () => {
+describe('TagSection', () => {
     it('shows the full set and each selected tag, with the best run in bold', () => {
-        render(ScenarioSection, { props: defaultProps });
+        render(TagSection, { props: defaultProps });
 
         expect(screen.getByRole('tab', { name: 'mAP' })).toHaveAttribute('aria-selected', 'true');
         const table = screen.getByRole('table');
@@ -43,7 +43,7 @@ describe('ScenarioSection', () => {
     });
 
     it('asks for tags when none is selected', () => {
-        render(ScenarioSection, { props: { ...defaultProps, selectedTagIds: [] } });
+        render(TagSection, { props: { ...defaultProps, selectedTagIds: [] } });
 
         expect(
             screen.getByText('Select tags to compare the runs on subsets of the images.')
@@ -53,15 +53,15 @@ describe('ScenarioSection', () => {
 
     it('reports a changed tag selection', async () => {
         const onSelectedTagIdsChange = vi.fn();
-        render(ScenarioSection, { props: { ...defaultProps, onSelectedTagIdsChange } });
+        render(TagSection, { props: { ...defaultProps, onSelectedTagIdsChange } });
 
         await fireEvent.click(screen.getByRole('checkbox', { name: 'rain' }));
 
         expect(onSelectedTagIdsChange).toHaveBeenCalledWith(['t1', 't2']);
     });
 
-    it('marks a scenario where the runs evaluated different images', () => {
-        render(ScenarioSection, {
+    it('marks a tag where the runs evaluated different images', () => {
+        render(TagSection, {
             props: {
                 ...defaultProps,
                 runs: [withSlice('run-a', 0.3, 4), withSlice('run-b', 0.7, 2)]

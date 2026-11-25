@@ -6,8 +6,10 @@ import type {
 } from '$lib/api/lightly_studio_local';
 import {
     bestIndices,
+    classGap,
     compareRuns,
     formatMetricValue,
+    heatmapCellColor,
     matchingSummary,
     perClassChartSeries,
     leaderboardColumns,
@@ -15,10 +17,12 @@ import {
     perClassMetrics,
     perClassRows,
     primaryMetric,
-    scenarioRows,
     sortByPrimaryMetric,
+    tagRows,
+    topClassesByGap,
     validateSelection,
-    type ComparedRun
+    type ComparedRun,
+    type PerClassRow
 } from './EvaluationComparison.helpers';
 
 const makeRun = (overrides: Partial<EvaluationRunView> = {}): EvaluationRunView => ({
@@ -217,8 +221,8 @@ describe('perClassRows', () => {
         const runB = compared('b', {}, makeMetrics({ per_class: [makeClass('cat', 0.7)] }));
 
         expect(perClassRows([runA, runB], 'average_precision')).toEqual([
-            { label: 'cat', values: [0.9, 0.7], bestIndices: [0] },
-            { label: 'dog', values: [0.4, null], bestIndices: [0] }
+            { label: 'cat', values: [0.9, 0.7], bestIndices: [0], gap: expect.closeTo(0.2) },
+            { label: 'dog', values: [0.4, null], bestIndices: [0], gap: 0 }
         ]);
     });
 
@@ -226,7 +230,7 @@ describe('perClassRows', () => {
         const run = compared('a', {}, makeMetrics({ per_class: [makeClass('cat', null)] }));
 
         expect(perClassRows([run], 'average_precision')).toEqual([
-            { label: 'cat', values: [null], bestIndices: [] }
+            { label: 'cat', values: [null], bestIndices: [], gap: 0 }
         ]);
     });
 });
@@ -248,12 +252,61 @@ describe('formatMetricValue', () => {
     });
 });
 
+describe('classGap', () => {
+    it('is the difference between the highest and the lowest value', () => {
+        expect(classGap([0.2, 0.9, 0.5])).toBeCloseTo(0.7);
+    });
+
+    it('ignores missing values', () => {
+        expect(classGap([0.8, null, 0.3])).toBeCloseTo(0.5);
+    });
+
+    it('is 0 with fewer than two values', () => {
+        expect(classGap([0.8, null])).toBe(0);
+        expect(classGap([null, null])).toBe(0);
+    });
+});
+
+describe('topClassesByGap', () => {
+    const row = (label: string, gap: number): PerClassRow => ({
+        label,
+        values: [],
+        bestIndices: [],
+        gap
+    });
+    const rows = [row('cat', 0.1), row('dog', 0.5), row('bird', 0.1), row('fox', 0.3)];
+
+    it('ranks the classes by gap, then by label', () => {
+        expect(topClassesByGap(rows, null).map((entry) => entry.label)).toEqual([
+            'dog',
+            'fox',
+            'bird',
+            'cat'
+        ]);
+    });
+
+    it('keeps at most the limit of classes', () => {
+        expect(topClassesByGap(rows, 2).map((entry) => entry.label)).toEqual(['dog', 'fox']);
+    });
+});
+
+describe('heatmapCellColor', () => {
+    it('makes a higher value more opaque', () => {
+        expect(heatmapCellColor(0)).toBe('hsl(var(--primary) / 0.08)');
+        expect(heatmapCellColor(1)).toBe('hsl(var(--primary) / 0.68)');
+    });
+
+    it('has no color for a missing value', () => {
+        expect(heatmapCellColor(null)).toBeUndefined();
+    });
+});
+
 describe('perClassChartSeries', () => {
     it('gives one series for each run in percentage points without missing classes', () => {
         const runs = [compared('a'), compared('b')];
         const rows = [
-            { label: 'cat', values: [0.9, 0.7], bestIndices: [0] },
-            { label: 'dog', values: [0.4, null], bestIndices: [0] }
+            { label: 'cat', values: [0.9, 0.7], bestIndices: [0], gap: 0.2 },
+            { label: 'dog', values: [0.4, null], bestIndices: [0], gap: 0 }
         ];
 
         expect(perClassChartSeries(runs, rows)).toEqual([
@@ -286,7 +339,7 @@ describe('matchingSummary', () => {
     });
 });
 
-describe('scenarioRows', () => {
+describe('tagRows', () => {
     const slice = (tagId: string, tagName: string, map: number | null, count: number) => ({
         tag_id: tagId,
         tag_name: tagName,
@@ -312,7 +365,7 @@ describe('scenarioRows', () => {
             }
         );
 
-        expect(scenarioRows([runA, runB], 'map')).toEqual([
+        expect(tagRows([runA, runB], 'map')).toEqual([
             {
                 id: 'full',
                 label: 'Full set',
@@ -342,13 +395,13 @@ describe('scenarioRows', () => {
         );
         run.metrics.slices![0].metrics.f1 = 0;
 
-        const [, emptyRow] = scenarioRows([run, run], 'f1');
+        const [, emptyRow] = tagRows([run, run], 'f1');
 
         expect(emptyRow.values).toEqual([null, null]);
         expect(emptyRow.bestIndices).toEqual([]);
     });
 
     it('has only the full set row without slices', () => {
-        expect(scenarioRows([compared('a')], 'f1').map((row) => row.label)).toEqual(['Full set']);
+        expect(tagRows([compared('a')], 'f1').map((row) => row.label)).toEqual(['Full set']);
     });
 });
