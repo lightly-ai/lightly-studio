@@ -30,7 +30,7 @@ and select `Export`. The dialog shows a dropdown with all available formats for 
 For annotation formats (`Image Classifications (CSV)`, `Video Classifications (CSV)`,
 `Image Object Detections (COCO)`,
 `Image Object Detections (YOLO)`,
-`Image Instance Segmentation (COCO)`, `Image Instance Segmentation (YOLO)`,
+`Image Segmentation (COCO)`, `Image Segmentation Polygons (YOLO)`,
 `Image Segmentation Mask (PASCAL VOC)`, `Image Captions`,
 `YouTube-VIS Video Segmentation Masks`),
 select the format and click `Download`. A zip file is created if the export includes multiple files.
