@@ -46,13 +46,13 @@ def test_skip_and_warn_unreadable_image__reraises_other_error() -> None:
 
 
 def test_add_annotations_from_labelformat__resolved_path_and_collection_name(
-    db_session: Session,
+    persistent_session: Session,
 ) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(session=persistent_session)
     images = helpers_resolvers.create_images(
-        db_session,
-        collection.collection_id,
-        [
+        db_session=persistent_session,
+        collection_id=collection.collection_id,
+        images=[
             ImageStub(
                 path=Path("images/image.jpg").absolute().as_posix(),
                 width=100,
@@ -63,7 +63,6 @@ def test_add_annotations_from_labelformat__resolved_path_and_collection_name(
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_root="images",
@@ -71,7 +70,7 @@ def test_add_annotations_from_labelformat__resolved_path_and_collection_name(
     )
 
     annotations = annotation_resolver.get_all_by_collection_name(
-        session=db_session,
+        session=persistent_session,
         collection_name="model_v1",
         parent_collection_id=collection.collection_id,
     ).annotations
@@ -81,19 +80,18 @@ def test_add_annotations_from_labelformat__resolved_path_and_collection_name(
     assert annotations[0].annotation_label.annotation_label_name == "dog"
 
 
-def test_add_annotations_from_labelformat__missing_images(db_session: Session) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
+def test_add_annotations_from_labelformat__missing_images(persistent_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=persistent_session)
     label_input = _get_labelformat_input_obj_det(filename="nonexistent.jpg")
 
     missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_root="/images",
     )
 
     samples = image_resolver.get_all_by_collection_id(
-        session=db_session, collection_id=collection.collection_id
+        session=persistent_session, collection_id=collection.collection_id
     ).samples
     images_root = Path("/images").absolute().as_posix()
     assert missing_paths == [f"{images_root}/nonexistent.jpg"]
@@ -101,13 +99,13 @@ def test_add_annotations_from_labelformat__missing_images(db_session: Session) -
 
 
 def test_add_annotations_from_labelformat__marks_evaluation_run_stale(
-    db_session: Session,
+    persistent_session: Session,
 ) -> None:
-    collection = helpers_resolvers.create_collection(db_session)
+    collection = helpers_resolvers.create_collection(session=persistent_session)
     helpers_resolvers.create_images(
-        db_session,
-        collection.collection_id,
-        [
+        db_session=persistent_session,
+        collection_id=collection.collection_id,
+        images=[
             ImageStub(
                 path=Path("images/image.jpg").absolute().as_posix(),
                 width=100,
@@ -116,7 +114,7 @@ def test_add_annotations_from_labelformat__marks_evaluation_run_stale(
         ],
     )
     gt_collection = collection_resolver.create(
-        session=db_session,
+        session=persistent_session,
         collection=CollectionCreate(
             name="gt",
             sample_type=SampleType.ANNOTATION,
@@ -124,12 +122,12 @@ def test_add_annotations_from_labelformat__marks_evaluation_run_stale(
         ),
     )
     pred_collection = helpers_resolvers.create_collection(
-        db_session,
+        session=persistent_session,
         sample_type=SampleType.ANNOTATION,
         parent_collection_id=collection.collection_id,
     )
     run = evaluation_run_resolver.create(
-        session=db_session,
+        session=persistent_session,
         evaluation_run_input=EvaluationRunCreate(
             name="run",
             gt_annotation_collection_id=gt_collection.collection_id,
@@ -141,14 +139,13 @@ def test_add_annotations_from_labelformat__marks_evaluation_run_stale(
     assert run.stale_since is None
 
     add_annotations.add_annotations_from_labelformat(
-        session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=_get_labelformat_input_obj_det(filename="image.jpg"),
         images_root="images",
         collection_name="gt",
     )
 
-    refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+    refreshed = evaluation_run_resolver.get_by_id(session=persistent_session, evaluation_id=run.id)
     assert refreshed is not None
     assert refreshed.stale_since is not None
 

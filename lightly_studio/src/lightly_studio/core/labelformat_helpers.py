@@ -10,17 +10,12 @@ from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
 from labelformat.model.category import Category
 from labelformat.model.multipolygon import MultiPolygon
-from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.resolvers import (
-    annotation_label_resolver,
-    collection_resolver,
-)
+from lightly_studio.transport import active_transport
 
 
 class _LabelsWithCategories(Protocol):
@@ -106,35 +101,24 @@ def get_object_detection_annotation_create(
 
 # TODO(lukas 04/2026): change `root_collection_id` to `dataset_id`
 def create_label_map(
-    session: Session,
     root_collection_id: UUID,
     input_labels: _LabelsWithCategories,
 ) -> dict[int, UUID]:
     """Create a mapping of category IDs to annotation label IDs.
 
     Args:
-        session: The database session.
         root_collection_id: The ID of the root collection the labels belong to.
         input_labels: The labelformat input containing the categories.
     """
-    collection = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
+    transport = active_transport.get_transport()
+    collection = transport.collections.get_by_id(collection_id=root_collection_id)
     if collection is None:
         raise ValueError(f"Collection {root_collection_id} doesn't exist")
-    dataset_id = collection.dataset_id
 
-    label_map = {}
-    for category in input_labels.get_categories():
-        # Use label if already exists
-        label = annotation_label_resolver.get_by_label_name(
-            session=session, dataset_id=dataset_id, label_name=category.name
-        )
-        if label is None:
-            # Create new label
-            label_create = AnnotationLabelCreate(
-                dataset_id=dataset_id,
-                annotation_label_name=category.name,
-            )
-            label = annotation_label_resolver.create(session=session, label=label_create)
-
-        label_map[category.id] = label.annotation_label_id
-    return label_map
+    categories = list(input_labels.get_categories())
+    labels = transport.annotations.get_or_create_labels(
+        dataset_id=collection.dataset_id,
+        label_names=[category.name for category in categories],
+    )
+    label_ids = {label.annotation_label_name: label.annotation_label_id for label in labels}
+    return {category.id: label_ids[category.name] for category in categories}
