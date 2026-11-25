@@ -203,7 +203,7 @@ def test_add_annotations_from_labelformat__one_warning_for_skipped(
             for name in filenames
         ],
     )
-    label_input = _get_labelformat_input_instance_segmentation(filenames=filenames)
+    label_input = _get_labelformat_input_invalid_polygon(filenames=filenames)
 
     with caplog.at_level(logging.WARNING):
         add_annotations.add_annotations_from_labelformat(
@@ -232,7 +232,7 @@ def _get_labelformat_input_obj_det(filename: str) -> LabelformatObjectDetectionI
     )
 
 
-def _get_labelformat_input_instance_segmentation(
+def _get_labelformat_input_invalid_polygon(
     filenames: list[str],
 ) -> _InstanceSegmentationInput:
     category = Category(id=0, name="dog")
