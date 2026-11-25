@@ -19,12 +19,6 @@ class TestHttpSampleTransport:
         with pytest.raises(NotImplementedError):
             transport.get_by_ids(sample_ids=[])
 
-    def test_get_image_ids_by_paths(self, test_client: TestClient) -> None:
-        transport: SampleTransport = HttpSampleTransport(client=test_client)
-
-        with pytest.raises(NotImplementedError):
-            transport.get_image_ids_by_paths(collection_id=uuid4(), file_paths=["/a.png"])
-
     def test_query(self, test_client: TestClient, db_session: Session) -> None:
         collection_id = create_collection(session=db_session).collection_id
         for path in ["/a.png", "/b.png"]:
@@ -48,3 +42,9 @@ class TestHttpSampleTransport:
 
         with pytest.raises(ValueError, match="not valid"):
             transport.query(collection_id=collection_id, request=SampleQueryRequest(cursor="x"))
+
+    def test_get_image_ids_by_paths(self, test_client: TestClient) -> None:
+        transport: SampleTransport = HttpSampleTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.get_image_ids_by_paths(collection_id=uuid4(), file_paths=["/a.png"])
