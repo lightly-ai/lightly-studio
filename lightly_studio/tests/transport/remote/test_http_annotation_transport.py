@@ -5,6 +5,7 @@ import uuid
 import httpx
 import pytest
 
+from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.remote.http_annotation_transport import HttpAnnotationTransport
 
@@ -45,6 +46,15 @@ class TestHttpAnnotationTransport:
                 annotations=[],
                 collection_name=None,
                 covered_sample_ids=[],
+            )
+
+    def test_update_bounding_box(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.update_bounding_box(
+                annotation_id=uuid.uuid4(),
+                bounding_box=BoundingBoxCoordinates(x=0, y=0, width=1, height=1),
             )
 
     def test_delete(self) -> None:
