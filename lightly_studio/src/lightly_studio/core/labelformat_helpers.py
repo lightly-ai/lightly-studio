@@ -94,20 +94,16 @@ def get_instance_segmentation_annotation_create(
     Returns:
         The AnnotationCreate instance, or None if a `MultiPolygon` has no valid part.
     """
-    if not isinstance(segmentation, MultiPolygon):
-        return get_segmentation_annotation_create(
+    if isinstance(segmentation, MultiPolygon):
+        return _get_polygon_annotation_create(
             parent_sample_id=parent_sample_id,
             annotation_label_id=annotation_label_id,
-            segmentation=segmentation,
+            multipolygon=segmentation,
         )
-    polygons = valid_polygon_parts(multipolygon=segmentation)
-    if not polygons:
-        return None
-    return AnnotationCreate(
+    return get_segmentation_annotation_create(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
-        annotation_type=AnnotationType.POLYGON,
-        polygons=polygons,
+        segmentation=segmentation,
     )
 
 
@@ -198,3 +194,20 @@ def create_label_map(
 
         label_map[category.id] = label.annotation_label_id
     return label_map
+
+
+def _get_polygon_annotation_create(
+    parent_sample_id: UUID,
+    annotation_label_id: UUID,
+    multipolygon: MultiPolygon,
+) -> AnnotationCreate | None:
+    """Get a polygon AnnotationCreate with the valid parts, or None if no part is valid."""
+    polygons = valid_polygon_parts(multipolygon=multipolygon)
+    if not polygons:
+        return None
+    return AnnotationCreate(
+        parent_sample_id=parent_sample_id,
+        annotation_label_id=annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=polygons,
+    )
