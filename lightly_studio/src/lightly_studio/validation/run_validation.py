@@ -50,6 +50,8 @@ def validate_object_detection(
         collection_name=annotation_source,
         task_type=_TASK_TYPE,
     )
+    # TODO(Szabolcs, 11/2026): Process the samples in batches. For a large dataset, the
+    # annotations and the boxes of all samples can use too much memory.
     annotations = annotation_resolver.get_all_by_collection_id_and_parent_sample_ids(
         session=session,
         parent_sample_ids=list(sample_ids),

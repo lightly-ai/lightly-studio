@@ -16,7 +16,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_validate__flags_degenerate_and_out_of_bounds_boxes(
+def test_validate_annotations__flags_degenerate_and_out_of_bounds_boxes(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
     """Flags boxes with a bad size or outside the image, and leaves valid boxes alone."""
@@ -49,7 +49,7 @@ def test_validate__flags_degenerate_and_out_of_bounds_boxes(
     degenerate_id = _annotate({"x": 0, "y": 0, "width": 0, "height": 10})  # zero width
     out_of_bounds_id = _annotate({"x": 95, "y": 0, "width": 10, "height": 10})  # 95 + 10 > 100
 
-    report = dataset.validate(annotation_source="predictions")
+    report = dataset.validate_annotations(annotation_source="predictions")
 
     assert [issue.annotation_id for issue in report.degenerate_boxes] == [degenerate_id]
     assert [issue.annotation_id for issue in report.out_of_bounds_boxes] == [out_of_bounds_id]
@@ -57,7 +57,7 @@ def test_validate__flags_degenerate_and_out_of_bounds_boxes(
     assert all(issue.sample_id == image.sample_id for issue in flagged)
 
 
-def test_validate__clean_dataset_has_no_issues(
+def test_validate_annotations__clean_dataset_has_no_issues(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
     """A dataset with only valid boxes produces an empty report."""
@@ -83,17 +83,28 @@ def test_validate__clean_dataset_has_no_issues(
         annotation_collection_name="predictions",
     )
 
-    report = dataset.validate(annotation_source="predictions")
+    report = dataset.validate_annotations(annotation_source="predictions")
 
     assert report.degenerate_boxes == []
     assert report.out_of_bounds_boxes == []
 
 
-def test_validate__unknown_source_raises(
+def test_validate_annotations__unknown_source_raises(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
     """Raises ValueError when the annotation source does not exist."""
     dataset = ImageDataset.create(name="test_dataset")
 
     with pytest.raises(ValueError, match="not found"):
-        dataset.validate(annotation_source="missing")
+        dataset.validate_annotations(annotation_source="missing")
+
+
+def test_validate_annotations__query_from_other_dataset_raises(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Raises ValueError when the query belongs to another dataset."""
+    dataset = ImageDataset.create(name="test_dataset")
+    other_dataset = ImageDataset.create(name="other_dataset")
+
+    with pytest.raises(ValueError, match="belongs to another dataset"):
+        dataset.validate_annotations(annotation_source="predictions", query=other_dataset.query())

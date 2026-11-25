@@ -793,7 +793,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             sample_ids=(sample.sample_id for sample in query),
         )
 
-    def validate(
+    # TODO(Szabolcs, 11/2026): Add validate_annotations to video frame datasets.
+    def validate_annotations(
         self, annotation_source: str, query: DatasetQuery | None = None
     ) -> ValidationReport:
         """Check the dataset's object-detection annotations for integrity problems.
@@ -805,9 +806,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         Returns:
             A report of the flagged annotations.
+
+        Raises:
+            ValueError: If ``query`` belongs to another dataset.
         """
         if query is None:
             query = self.query()
+        if query.dataset.collection_id != self.collection_id:
+            raise ValueError("The query belongs to another dataset.")
         return run_validation.validate_object_detection(
             session=self.session,
             collection_id=self.collection_id,
