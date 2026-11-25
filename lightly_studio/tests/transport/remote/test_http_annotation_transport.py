@@ -27,7 +27,10 @@ class TestHttpAnnotationTransport:
 
         with pytest.raises(NotImplementedError):
             transport.create(
-                parent_collection_id=uuid.uuid4(), annotations=[], collection_name=None
+                parent_collection_id=uuid.uuid4(),
+                annotations=[],
+                collection_name=None,
+                covered_sample_ids=[],
             )
 
     def test_delete(self) -> None:

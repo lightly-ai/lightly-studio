@@ -284,6 +284,7 @@ class Sample(ABC):
                 for annotation in annotations
             ],
             collection_name=annotation_source,
+            covered_sample_ids=[],
         )
 
     def delete_annotation(self, annotation: Annotation) -> None:
