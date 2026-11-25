@@ -169,7 +169,7 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
             image = self._sample_to_image(
                 sample=sample, image_id=idx, use_relative_filename=self.USE_RELATIVE_FILENAME
             )
-            objects = []
+            objects: list[SingleInstanceSegmentation] = []
             for annotation in sample_annotations:
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,

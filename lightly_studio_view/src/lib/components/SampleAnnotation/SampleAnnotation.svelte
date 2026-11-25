@@ -82,7 +82,7 @@
             : getColorByLabel(label, alpha);
 
     const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
-    // The box of a polygon can't be edited, only its vertices.
+    // TODO(Michal, 11/2026): Polygons are read-only in the GUI until polygon editing is added.
     const isPolygon = $derived(isPolygonAnnotation(annotation));
 
     const annotationId = $derived(annotation.sample_id);
