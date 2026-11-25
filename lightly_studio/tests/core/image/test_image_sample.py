@@ -562,6 +562,25 @@ class TestImageSample:
         assert (annotation.x, annotation.y, annotation.width, annotation.height) == (1, 2, 30, 4)
 
     @pytest.mark.usefixtures("patch_collection")
+    def test_segmentation_mask_annotation__set_segmentation_mask(self) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
+        image = ImageSample(
+            inner=create_image(session=session, collection_id=collection.collection_id)
+        )
+        image.add_annotation(
+            CreateSegmentationMask(
+                class_name="cat", x=1, y=2, width=3, height=4, segmentation_mask=[1, 2]
+            )
+        )
+        (annotation,) = image.annotations
+        assert isinstance(annotation, SegmentationMaskAnnotation)
+
+        annotation.segmentation_mask = [5, 6]
+
+        assert annotation.segmentation_mask == [5, 6]
+
+    @pytest.mark.usefixtures("patch_collection")
     def test_add_annotation_polygon(self) -> None:
         session = db_manager.persistent_session()
         collection = create_collection(session=session)

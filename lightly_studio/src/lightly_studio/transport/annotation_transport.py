@@ -8,6 +8,7 @@ from uuid import UUID
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationView
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.annotation_label import AnnotationLabelView
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 
@@ -58,6 +59,14 @@ class AnnotationTransport(Protocol):
         self, annotation_id: UUID, bounding_box: BoundingBoxCoordinates
     ) -> None:
         """Replace the bounding box of an object detection or segmentation mask annotation."""
+
+    def update_segmentation_mask(
+        self, annotation_id: UUID, segmentation_mask: Sequence[int]
+    ) -> None:
+        """Replace the segmentation mask of a segmentation mask annotation."""
+
+    def update_polygons(self, annotation_id: UUID, polygons: Polygons) -> None:
+        """Replace the polygons of a polygon annotation and recompute its bounding box."""
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
         """Delete annotations by ID."""

@@ -57,6 +57,18 @@ class TestHttpAnnotationTransport:
                 bounding_box=BoundingBoxCoordinates(x=0, y=0, width=1, height=1),
             )
 
+    def test_update_segmentation_mask(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.update_segmentation_mask(annotation_id=uuid.uuid4(), segmentation_mask=[1])
+
+    def test_update_polygons(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.update_polygons(annotation_id=uuid.uuid4(), polygons=[])
+
     def test_delete(self) -> None:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
 
