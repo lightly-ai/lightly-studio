@@ -544,9 +544,16 @@ def _generate_annotations_export(
         )
         return output_path
     if export_format == ExportFormat.SEGMENTATION_MASK_COCO:
-        output_path = temp_dir / "coco_segmentation_mask_export.json"
-        exporter.to_coco_segmentation_masks(
+        output_path = temp_dir / "coco_instance_segmentation_export.json"
+        exporter.to_coco_instance_segmentation(
             output_json=output_path,
+            annotation_collection_id=annotation_collection_id,
+        )
+        return output_path
+    if export_format == ExportFormat.INSTANCE_SEGMENTATION_YOLO:
+        output_path = temp_dir / "yolo_instance_segmentation"
+        exporter.to_yolo_instance_segmentation(
+            output_folder=output_path,
             annotation_collection_id=annotation_collection_id,
         )
         return output_path

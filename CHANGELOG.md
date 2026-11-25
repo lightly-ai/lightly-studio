@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Python SDK: Export polygons to YOLO with `to_yolo_instance_segmentation`.
 - Filter videos by temporal events in the query editor, for example `event(class_name = "run" AND start_time_s < 5)`.
 - Undo cuboid edits in the point cloud workspace with Ctrl/Cmd + Z: delete, move, resize, rotate and class change. An undone delete restores the cuboid in its object track.
 - Use `frame(...)` in the video query editor to match annotations and timestamps on the same frame.
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The COCO segmentation mask export now includes polygons.
 - BREAKING: In the video query editor, `classification(...)` now matches whole-video classifications. Use `event(...)` for temporal events, or combine both with `OR` to include both kinds.
 - BREAKING: Python SDK: On videos, `ClassificationQuery` now matches whole-video classifications. Use `VideoEventQuery` for temporal events, or combine both queries with `OR(...)` to preserve both kinds of matches.
 - BREAKING: Python SDK: `to_annotation_create(...)` of `CreateClassification`, `CreateObjectDetection`, and `CreateSegmentationMask` takes the annotation class ID in place of `session` and `dataset_id`. To add annotations by class name, use `sample.add_annotations(...)`.
@@ -35,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In edit mode, the lock icon of a locked annotation in the sample details shows in the primary color, so locked annotations are easier to see.
 
 ### Deprecated
+
+- Python SDK: `to_coco_segmentation_masks`. Use `to_coco_instance_segmentation` instead.
 
 ### Removed
 
