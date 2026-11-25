@@ -91,6 +91,8 @@
     const MAX_VISIBLE_MARKS = 200;
     /** Upper bound of labels across the visible window. */
     const MAX_VISIBLE_LABELS = 12;
+    const TICK_GRID_GRADIENT =
+        'linear-gradient(to right, transparent calc(100% - 1px), hsl(var(--border)) 0)';
 
     /** Smallest step of the form 1, 2 or 5 times a power of ten that is at least `minimum`. */
     const niceStep = (minimum: number): number => {
@@ -143,7 +145,7 @@
             {#if ticks.length > 0 && ticks.length / viewport.zoom <= 100}
                 <span
                     class="pointer-events-none absolute inset-0"
-                    style:background-image={'linear-gradient(to right, transparent calc(100% - 1px), hsl(var(--border)) 0)'}
+                    style:background-image={TICK_GRID_GRADIENT}
                     style:background-size={`${100 / ticks.length}% 100%`}
                     aria-hidden="true"
                 ></span>
