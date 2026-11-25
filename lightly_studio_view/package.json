@@ -106,7 +106,7 @@
     "svelte-sonner": "^1.0.5",
     "svelte-virtual": "^1.0.0-next.22",
     "three": "^0.185.1",
-    "uuid": "^13.0.0",
+    "uuid": "^14.0.3",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1"
   },
