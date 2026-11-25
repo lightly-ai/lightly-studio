@@ -107,16 +107,6 @@ def get_instance_segmentation_annotation_create(
     )
 
 
-def valid_polygon_parts(multipolygon: MultiPolygon) -> Polygons:
-    """Get the parts of a multipolygon that have enough vertices and only finite coordinates."""
-    return [
-        part
-        for part in multipolygon.polygons
-        if len(part) >= MIN_VERTICES_PER_PART
-        and all(math.isfinite(x) and math.isfinite(y) for x, y in part)
-    ]
-
-
 def warn_skipped_polygons(count: int) -> None:
     """Log one warning for the polygon annotations that were skipped. Do nothing for 0."""
     if count == 0:
@@ -202,7 +192,7 @@ def _get_polygon_annotation_create(
     multipolygon: MultiPolygon,
 ) -> AnnotationCreate | None:
     """Get a polygon AnnotationCreate with the valid parts, or None if no part is valid."""
-    polygons = valid_polygon_parts(multipolygon=multipolygon)
+    polygons = _valid_polygon_parts(multipolygon=multipolygon)
     if not polygons:
         return None
     return AnnotationCreate(
@@ -211,3 +201,13 @@ def _get_polygon_annotation_create(
         annotation_type=AnnotationType.POLYGON,
         polygons=polygons,
     )
+
+
+def _valid_polygon_parts(multipolygon: MultiPolygon) -> Polygons:
+    """Get the parts of a multipolygon that have enough vertices and only finite coordinates."""
+    return [
+        part
+        for part in multipolygon.polygons
+        if len(part) >= MIN_VERTICES_PER_PART
+        and all(math.isfinite(x) and math.isfinite(y) for x, y in part)
+    ]

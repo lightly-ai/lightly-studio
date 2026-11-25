@@ -122,21 +122,6 @@ def test_get_instance_segmentation_annotation_create__binary_mask() -> None:
     assert result.segmentation_mask == binary_mask.get_rle()
 
 
-def test_valid_polygon_parts__drops_short_and_non_finite_parts() -> None:
-    multipolygon = MultiPolygon(
-        polygons=[
-            [(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)],
-            [(0.0, 0.0), (1.0, 1.0)],
-            [(0.0, 0.0), (1.0, float("nan")), (2.0, 2.0)],
-            [(0.0, 0.0), (float("inf"), 1.0), (2.0, 2.0)],
-        ]
-    )
-
-    assert labelformat_helpers.valid_polygon_parts(multipolygon=multipolygon) == [
-        [(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)]
-    ]
-
-
 def test_warn_skipped_polygons__zero_is_silent(caplog: pytest.LogCaptureFixture) -> None:
     labelformat_helpers.warn_skipped_polygons(count=0)
 
@@ -259,3 +244,18 @@ def test_create_label_map(db_session: Session) -> None:
     assert label_map_2[0] == label_map_1[0]  # dog exists already
     assert label_map_2[1] == label_map_1[1]  # cat exists already
     assert label_map_2[2] not in label_map_1.values()  # bird is new
+
+
+def test_valid_polygon_parts__drops_short_and_non_finite_parts() -> None:
+    multipolygon = MultiPolygon(
+        polygons=[
+            [(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)],
+            [(0.0, 0.0), (1.0, 1.0)],
+            [(0.0, 0.0), (1.0, float("nan")), (2.0, 2.0)],
+            [(0.0, 0.0), (float("inf"), 1.0), (2.0, 2.0)],
+        ]
+    )
+
+    assert labelformat_helpers._valid_polygon_parts(multipolygon=multipolygon) == [
+        [(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)]
+    ]
