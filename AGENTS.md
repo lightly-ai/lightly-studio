@@ -23,6 +23,32 @@ When the task matches, also load:
 Claude Code gives you a reminder. A `PreToolUse` hook (`.claude/settings.json` and
 `.claude/hooks/skill-reminder.py`) shows the matching skill when you edit these paths.
 
+## Product Analytics
+
+Each user action that a PR adds or changes fires one PostHog event in the same PR.
+
+- **Actions:** create, edit, delete, relabel, move, or tag data; export or download; import;
+  start a compute or model run; submit a dialog; open a new tool. A new way to do an existing
+  action (a keyboard shortcut, a new SDK input class) also counts: add a property to the
+  existing event, for example `trigger: 'keyboard'`.
+- **No event for:** read-only queries, hover states, visual toggles, layout changes, refactors.
+- **Frontend:** `const { trackEvent } = usePostHog();` from `$lib/hooks`. Fire in the mutation
+  hook after `mutateAsync` resolves, or in the handler after the action succeeds. Ref:
+  `lightly_studio_view/src/lib/hooks/useDeleteAnnotation/useDeleteAnnotation.ts`.
+- **Python SDK and CLI:** `tracking.track(event=..., properties=...)` from
+  `lightly_studio.analytics`, in the public method or CLI command, after it succeeds. Add the
+  event name as a constant in `analytics/tracking.py` and send `"source": "sdk"`. The SDK has
+  no UI, so each public method that changes data needs its own event.
+- Do not fire events in services or resolvers: the GUI and the SDK both call them. Follow the
+  call path first. If a layer already fires an event for the action, do not add another one.
+- **Names:** snake_case, `<object>_<past tense verb>`, such as `annotation_deleted` or
+  `export_triggered`. Reuse an existing name if one fits.
+- **Properties:** IDs, counts, types, enums, booleans. Never emails, names, file paths, class
+  names, tag names, captions, or other text that a user typed.
+- Fire once per action, after success. Not per item, not on error or cancel.
+- Add a test that asserts the event fires: mock `usePostHog` in vitest, or use
+  `mocker.patch.object(tracking, "track")` in pytest (see `lightly_studio/tests/test_cli.py`).
+
 ## Validation
 
 ### Backend
