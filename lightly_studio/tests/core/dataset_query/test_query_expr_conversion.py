@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
 import numpy as np
 import pytest
+from sqlmodel import col, select
 
 from lightly_studio.core.dataset_query import query_expr_conversion, query_translation
 from lightly_studio.core.dataset_query.annotation_evaluation_metric_expression import (
@@ -25,6 +27,8 @@ from lightly_studio.core.dataset_query.object_detection_query import (
     ObjectDetectionQuery,
 )
 from lightly_studio.core.dataset_query.order_by import (
+    OrderByAnnotationEvaluationMetricField,
+    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
@@ -41,7 +45,9 @@ from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
 from lightly_studio.core.dataset_query.video_frame_sample_field import VideoFrameSampleField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationSide
 from lightly_studio.models.query_expr import FieldRef
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_query import SortKey
 from lightly_studio.models.sort_direction import SortDirection
 
@@ -279,25 +285,69 @@ def test_to_query_expr__confusion_criterion_not_supported(criterion: Any) -> Non
 def test_to_sort_keys() -> None:
     order_by = [
         OrderByField(ImageSampleField.width).desc(),
-        OrderByField(ImageSampleField.created_at),
+        OrderByMetadataField(field_name="weather"),
     ]
 
     sort_keys = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=SampleType.IMAGE)
 
     assert sort_keys == [
         SortKey(field=FieldRef(table="image", name="width"), direction=SortDirection.desc),
-        SortKey(field=FieldRef(table="image", name="created_at"), direction=SortDirection.asc),
+        SortKey(field=FieldRef(table="metadata", name="weather"), direction=SortDirection.asc),
     ]
 
 
 @pytest.mark.parametrize(
     "order_by",
-    [OrderByMetadataField(field_name="weather"), OrderByField(VideoSampleField.fps)],
+    [
+        OrderByField(VideoSampleField.fps),
+        OrderByField(ClassificationField.confidence),
+        OrderByEvaluationMetricField(evaluation_run_name="run", metric_name="miou"),
+        OrderByAnnotationEvaluationMetricField(
+            evaluation_run_id=uuid.uuid4(),
+            metric_name="iou",
+            side=EvaluationAnnotationSide.PREDICTION,
+            annotation_id_column=col(SampleTable.sample_id),
+        ),
+    ],
 )
 def test_to_sort_keys__not_supported(order_by: OrderByExpression) -> None:
     with pytest.raises(UnsupportedQueryError):
         query_expr_conversion.to_sort_keys(order_by=[order_by], sample_type=SampleType.IMAGE)
 
 
+@pytest.mark.parametrize(
+    ("sample_type", "order_by"),
+    [
+        (SampleType.IMAGE, OrderByField(ImageSampleField.file_name)),
+        (SampleType.IMAGE, OrderByField(ImageSampleField.file_path_abs).desc()),
+        (SampleType.IMAGE, OrderByField(ImageSampleField.created_at)),
+        (SampleType.IMAGE, OrderByField(ImageSampleField.width).desc()),
+        (SampleType.IMAGE, OrderByField(ImageSampleField.height)),
+        (SampleType.VIDEO, OrderByField(VideoSampleField.created_at).desc()),
+        (SampleType.VIDEO, OrderByField(VideoSampleField.duration_s)),
+        (SampleType.VIDEO, OrderByField(VideoSampleField.fps).desc()),
+        (SampleType.IMAGE, OrderByMetadataField(field_name="weather").desc()),
+        (SampleType.VIDEO, OrderByMetadataField(field_name="odometry.acc[1]")),
+    ],
+)
+def test_to_sort_keys__same_sql(sample_type: SampleType, order_by: OrderByExpression) -> None:
+    (sort_key,) = query_expr_conversion.to_sort_keys(order_by=[order_by], sample_type=sample_type)
+
+    translated = _to_order_by(sort_key=sort_key)
+
+    assert _sort_sql(order_by=translated) == _sort_sql(order_by=order_by)
+
+
 def _sql(match: MatchExpression) -> str:
     return str(match.get().compile(compile_kwargs={"literal_binds": True}))
+
+
+def _to_order_by(sort_key: SortKey) -> OrderByExpression:
+    return query_translation.sort_to_order_by(
+        key=(sort_key.field.table, sort_key.field.name), direction=sort_key.direction
+    )
+
+
+def _sort_sql(order_by: OrderByExpression) -> str:
+    query = order_by.apply(select(SampleTable))
+    return str(query.compile(compile_kwargs={"literal_binds": True}))

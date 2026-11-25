@@ -40,7 +40,11 @@ from lightly_studio.core.dataset_query.foreign_field import (
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.metadata_expression import MetadataComparisonExpression
 from lightly_studio.core.dataset_query.object_detection_query import ObjectDetectionQuery
-from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByExpression,
+    OrderByField,
+    OrderByMetadataField,
+)
 from lightly_studio.core.dataset_query.polygon_query import PolygonQuery
 from lightly_studio.core.dataset_query.query_translation import FieldExpr
 from lightly_studio.core.dataset_query.sample_evaluation_query import SampleEvaluationQuery
@@ -124,6 +128,9 @@ _RELATIONSHIP_TABLES: dict[tuple[str, object], str] = {
 }
 
 
+_METADATA_TABLE = "metadata"
+
+
 class UnsupportedQueryError(NotImplementedError):
     """The transport cannot send this query yet."""
 
@@ -146,16 +153,21 @@ def to_sort_keys(order_by: Sequence[OrderByExpression], sample_type: SampleType)
     """Convert order-by expressions on samples of the sample type to sort keys.
 
     Raises:
-        UnsupportedQueryError: If a sort is not on a sample field.
+        UnsupportedQueryError: If a sort is not on a sample field of the sample type or on
+            metadata.
     """
-    keys = []
-    for expression in order_by:
-        if not isinstance(expression, OrderByField):
-            raise UnsupportedQueryError(f"The sort {type(expression).__name__} is not supported.")
-        direction = SortDirection.asc if expression.ascending else SortDirection.desc
-        field_ref, _ = _lookup_field(field=expression.field, scope=sample_type.value)
-        keys.append(SortKey(field=field_ref, direction=direction))
-    return keys
+    return [_to_sort_key(expression=expression, scope=sample_type.value) for expression in order_by]
+
+
+def _to_sort_key(expression: OrderByExpression, scope: str) -> SortKey:
+    direction = SortDirection.asc if expression.ascending else SortDirection.desc
+    if isinstance(expression, OrderByMetadataField):
+        field_ref = FieldRef(table=_METADATA_TABLE, name=expression.field_name)
+    elif isinstance(expression, OrderByField):
+        field_ref = _lookup_sort_field(field=expression.field, scope=scope)
+    else:
+        raise UnsupportedQueryError(f"The sort {type(expression).__name__} is not supported.")
+    return SortKey(field=field_ref, direction=direction)
 
 
 def _to_match_expr(expression: MatchExpression, scope: str) -> MatchExpr:
@@ -306,6 +318,23 @@ def _lookup_field(field: Field, scope: str) -> tuple[FieldRef, type[FieldExpr]]:
     if key not in fields_by_column:
         raise UnsupportedQueryError(f"The field {type(field).__name__} is not supported.")
     return fields_by_column[key]
+
+
+def _lookup_sort_field(field: Field, scope: str) -> FieldRef:
+    sort_fields_by_column = _sort_fields_by_column()
+    key = (scope, field.get_sqlmodel_field())
+    if key not in sort_fields_by_column:
+        raise UnsupportedQueryError(f"The sort field {type(field).__name__} is not supported.")
+    return sort_fields_by_column[key]
+
+
+@functools.cache
+def _sort_fields_by_column() -> dict[tuple[str, Any], FieldRef]:
+    """Map (table, column) to the field reference of the sort field."""
+    return {
+        (table, field.get_sqlmodel_field()): FieldRef(table=table, name=name)
+        for (table, name), field in query_translation.sort_fields().items()
+    }
 
 
 @functools.cache
