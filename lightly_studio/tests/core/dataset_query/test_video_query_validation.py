@@ -50,6 +50,7 @@ def test_event_scope() -> None:
         field,
         ClassificationMatchExpr(subexpr=event),
         VideoEventMatchExpr(subexpr=event),
+        VideoEventMatchExpr(subexpr=ClassificationMatchExpr()),
     )
     for expr in invalid_expressions:
         with pytest.raises(QueryExprError):
