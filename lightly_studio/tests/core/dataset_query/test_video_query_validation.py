@@ -100,9 +100,10 @@ def test_frame_scope() -> None:
         query_translation.to_match_expression(expr=field, sample_type=SampleType.VIDEO)
 
 
+@pytest.mark.parametrize("table", ["video_frame", "parent_video"])
 @pytest.mark.parametrize("sample_type", [None, SampleType.IMAGE, SampleType.VIDEO])
-def test_frame_fields_outside_frame_scope(sample_type: SampleType | None) -> None:
-    expr = TagsContainsExpr(field=FieldRef(table="video_frame", name="tags"), tag_name="blurry")
+def test_frame_fields_outside_frame_scope(table: str, sample_type: SampleType | None) -> None:
+    expr = TagsContainsExpr(field=FieldRef(table=table, name="tags"), tag_name="blurry")
     with pytest.raises(QueryExprError, match="frame query"):
         query_translation.to_match_expression(expr=expr, sample_type=sample_type)
 

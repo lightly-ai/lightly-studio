@@ -19,7 +19,7 @@ from lightly_studio.models.query_expr import (
     VideoFrameMatchExpr,
 )
 
-_FRAME_TABLES = frozenset({"video_frame"})
+_FRAME_TABLES = frozenset({"video_frame", "parent_video"})
 
 
 def validate(expr: MatchExpr, scope: str | None) -> None:
