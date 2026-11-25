@@ -54,7 +54,8 @@ def _validate_node(expr: MatchExpr, scope: str | None) -> None:
         child_scope = (
             "frame:" + expr.type.removesuffix("_match_expr") if scope == "frame" else "annotation"
         )
-        validate(expr=expr.subexpr, scope=child_scope)
+        if expr.subexpr is not None:
+            validate(expr=expr.subexpr, scope=child_scope)
     elif scope == "frame":
         if not isinstance(expr, OrdinalFloatExpr) or expr.field != FieldRef(
             table="video_frame", name="frame_timestamp_s"

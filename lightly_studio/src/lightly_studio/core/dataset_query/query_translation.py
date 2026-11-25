@@ -317,11 +317,11 @@ def _to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 P
     if isinstance(expr, VideoEventMatchExpr):
         return VideoEventQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery(_to_match_expression(expr=expr.subexpr))
+        return ClassificationQuery(*_annotation_criteria(subexpr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery(_to_match_expression(expr=expr.subexpr))
+        return ObjectDetectionQuery(*_annotation_criteria(subexpr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
-        return SegmentationMaskQuery(_to_match_expression(expr=expr.subexpr))
+        return SegmentationMaskQuery(*_annotation_criteria(subexpr=expr.subexpr))
     if isinstance(expr, PolygonMatchExpr):
         return PolygonQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(
@@ -341,6 +341,12 @@ def _to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 P
     if isinstance(expr, NotExpr):
         return NOT(_to_match_expression(expr=expr.child))
     assert_never(expr)
+
+
+def _annotation_criteria(subexpr: MatchExpr | None) -> tuple[MatchExpression, ...]:
+    if subexpr is None:
+        return ()
+    return (_to_match_expression(expr=subexpr),)
 
 
 def _metadata_to_match_expression(expr: MetadataComparisonExpr) -> MatchExpression:
