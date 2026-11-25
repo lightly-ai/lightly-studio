@@ -21,7 +21,9 @@ def test_create_app__serves_extra_router_before_webapp_catch_all() -> None:
     response = TestClient(app).get("/api/extra/ping")
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {"status": "ok"}
-    assert _route_paths(app).index("/api/extra/ping") < _route_paths(app).index("/{path:path}")
+    assert _route_paths(app=app).index("/api/extra/ping") < _route_paths(app=app).index(
+        "/{path:path}"
+    )
 
 
 def test_create_app__extra_router_keeps_operation_ids() -> None:
@@ -37,9 +39,9 @@ def test_create_app__repeated_calls_do_not_duplicate_routes() -> None:
     second = app_module.create_app(routers=[_extra_router()])
     plain = app_module.create_app()
 
-    assert _route_paths(first) == _route_paths(second)
-    assert _route_paths(first).count("/api/extra/ping") == 1
-    assert _route_paths(plain) == _route_paths(app_module.app)
+    assert _route_paths(app=first) == _route_paths(app=second)
+    assert _route_paths(app=first).count("/api/extra/ping") == 1
+    assert _route_paths(app=plain) == _route_paths(app=app_module.app)
 
 
 def test_create_app__replace() -> None:

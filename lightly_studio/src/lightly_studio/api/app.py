@@ -68,9 +68,6 @@ from lightly_studio.plugins.operator_registry import operator_registry
 
 SessionDep = Annotated[Session, Depends(db_manager.session)]
 
-# Every replaceable dependency keeps its default.
-_NO_REPLACEMENTS = Replaceable()
-
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
@@ -105,17 +102,18 @@ if LIGHTLY_STUDIO_DEBUG:
 
 def create_app(
     routers: Sequence[APIRouter] = (),
-    replace: Replaceable = _NO_REPLACEMENTS,
+    replace: Replaceable | None = None,
 ) -> FastAPI:
     """Create the FastAPI app.
 
     Args:
         routers: Extra routers. They are served under `/api`, before the webapp catch-all.
         replace: The replaceable dependencies. Each field that is not its default replaces
-            the default in every route of this app.
+            the default in every route of this app. `None` keeps all defaults.
     """
     app = FastAPI(lifespan=lifespan)
-    _set_replacements(app=app, replace=replace)
+    if replace is not None:
+        _set_replacements(app=app, replace=replace)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -147,7 +145,7 @@ def create_app(
     # api routes
     app.include_router(_create_api_router())
 
-    # images serving
+    # sample serving
     app.include_router(images.app_router, prefix="/images")
     app.include_router(video_frames_media.frames_router)
     app.include_router(video_media.app_router)
@@ -180,7 +178,7 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
 def _set_replacements(app: FastAPI, replace: Replaceable) -> None:
     """Make FastAPI call each replacement instead of its default."""
     for field in dataclasses.fields(Replaceable):
-        default = getattr(_NO_REPLACEMENTS, field.name)
+        default = getattr(Replaceable, field.name)
         replacement = getattr(replace, field.name)
         if replacement is not default:
             app.dependency_overrides[default] = replacement
