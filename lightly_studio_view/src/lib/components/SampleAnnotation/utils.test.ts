@@ -1,6 +1,8 @@
 import { vi, beforeEach, afterEach } from 'vitest';
+import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     computeBoundingBoxFromMask,
+    getBoundingBox,
     encodeBinaryMaskToRLE,
     decodeRLEToBinaryMask,
     maskToDataUrl,
@@ -9,6 +11,27 @@ import {
 } from '$lib/components/SampleAnnotation/utils';
 
 describe('SampleAnnotationUtils', () => {
+    it('returns the rounded box of a polygon annotation', () => {
+        const annotation = {
+            annotation_type: 'polygon',
+            polygon_details: {
+                x: 1.4,
+                y: 2.6,
+                width: 10.2,
+                height: 20.5,
+                polygons: [
+                    [
+                        [1.4, 2.6],
+                        [11.6, 2.6],
+                        [11.6, 23.1]
+                    ]
+                ]
+            }
+        } as AnnotationView;
+
+        expect(getBoundingBox(annotation)).toEqual({ x: 1, y: 3, width: 10, height: 21 });
+    });
+
     it('returns a 1x1 bounding box for a single active pixel', () => {
         const width = 4;
         const height = 3;
