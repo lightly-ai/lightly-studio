@@ -28,7 +28,8 @@ class SampleTransport(Protocol):
     def get_image_ids_by_paths(
         self, collection_id: UUID, file_paths: Sequence[str]
     ) -> dict[str, UUID]:
-        """Get the sample IDs of the images of a collection by absolute file path.
+        """Get the sample IDs of the images of a collection by file path.
 
-        Paths without an image in the collection are not in the result.
+        Callers pass absolute, normalized paths. The lookup compares them exactly to the
+        stored image paths. Paths without an image in the collection are not in the result.
         """
