@@ -98,12 +98,6 @@ class LocalAnnotationTransport:
             session=session, annotation_ids=annotation_ids
         )
 
-    def delete_existing(self, annotation_ids: Sequence[UUID]) -> int:
-        """Delete annotations by ID. IDs that do not exist are ignored."""
-        return annotation_resolver.delete_annotations_by_ids(
-            session=db_manager.persistent_session(), annotation_ids=annotation_ids
-        )
-
     def delete_empty_object_tracks(self, object_track_ids: Sequence[UUID]) -> int:
         """Delete the object tracks that have no annotations and no child tracks."""
         return object_track_resolver.delete_empty_by_ids(

@@ -145,6 +145,24 @@ class TestLocalAnnotationTransport:
         transport.delete(annotation_ids=[annotation.sample_id])
         assert transport.get_by_sample_ids(sample_ids=[image.sample_id]) == []
 
+    def test_delete_empty_object_tracks(self) -> None:
+        session = db_manager.persistent_session()
+        dataset_id = create_collection(session=session).dataset_id
+        track_ids = object_track_resolver.create_many(
+            session=session,
+            tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=dataset_id)],
+        )
+        transport: AnnotationTransport = LocalAnnotationTransport()
+
+        deleted_count = transport.delete_empty_object_tracks(
+            object_track_ids=[track_ids[0], uuid.uuid4()]
+        )
+
+        assert deleted_count == 1
+        assert (
+            object_track_resolver.get_by_id(session=session, object_track_id=track_ids[0]) is None
+        )
+
     def test_get_free_object_track_numbers(self) -> None:
         session = db_manager.persistent_session()
         dataset_id = create_collection(session=session).dataset_id
@@ -175,41 +193,3 @@ class TestLocalAnnotationTransport:
             for track_id in track_ids
         ]
         assert [track.object_track_number for track in tracks if track is not None] == [7, 3]
-
-    def test_delete_existing(self) -> None:
-        session = db_manager.persistent_session()
-        collection_id = create_collection(session=session).collection_id
-        image = create_image(session=session, collection_id=collection_id)
-        label = create_annotation_label(session=session, root_collection_id=collection_id)
-        annotation = create_annotation(
-            session=session,
-            collection_id=collection_id,
-            sample_id=image.sample_id,
-            annotation_label_id=label.annotation_label_id,
-        )
-        transport: AnnotationTransport = LocalAnnotationTransport()
-
-        deleted_count = transport.delete_existing(
-            annotation_ids=[annotation.sample_id, uuid.uuid4()]
-        )
-
-        assert deleted_count == 1
-        assert transport.get_by_sample_ids(sample_ids=[image.sample_id]) == []
-
-    def test_delete_empty_object_tracks(self) -> None:
-        session = db_manager.persistent_session()
-        dataset_id = create_collection(session=session).dataset_id
-        track_ids = object_track_resolver.create_many(
-            session=session,
-            tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=dataset_id)],
-        )
-        transport: AnnotationTransport = LocalAnnotationTransport()
-
-        deleted_count = transport.delete_empty_object_tracks(
-            object_track_ids=[track_ids[0], uuid.uuid4()]
-        )
-
-        assert deleted_count == 1
-        assert (
-            object_track_resolver.get_by_id(session=session, object_track_id=track_ids[0]) is None
-        )

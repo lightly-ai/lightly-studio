@@ -49,10 +49,6 @@ class HttpAnnotationTransport:
         """Delete annotations by ID. Not supported over HTTP yet."""
         raise NotImplementedError("Deleting annotations over HTTP is not supported yet.")
 
-    def delete_existing(self, annotation_ids: Sequence[UUID]) -> int:
-        """Delete annotations by ID. Not supported over HTTP yet."""
-        raise NotImplementedError("Deleting annotations over HTTP is not supported yet.")
-
     def delete_empty_object_tracks(self, object_track_ids: Sequence[UUID]) -> int:
         """Delete empty object tracks. Not supported over HTTP yet."""
         raise NotImplementedError("Object tracks over HTTP are not supported yet.")

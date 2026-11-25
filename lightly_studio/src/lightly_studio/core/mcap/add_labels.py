@@ -230,7 +230,7 @@ def _delete_sequence_annotations(
         for annotation in annotations
         if annotation.object_track_id is not None
     }
-    deleted_count = transport.annotations.delete_existing(
+    transport.annotations.delete(
         annotation_ids=[annotation.sample_id for annotation in annotations]
     )
     deleted_track_count = transport.annotations.delete_empty_object_tracks(
@@ -238,7 +238,7 @@ def _delete_sequence_annotations(
     )
     logger.info(
         "Deleted %d annotations and %d object tracks of annotation source '%s' to overwrite them.",
-        deleted_count,
+        len(annotations),
         deleted_track_count,
         annotation_source,
     )
