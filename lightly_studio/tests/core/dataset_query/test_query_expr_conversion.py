@@ -53,6 +53,25 @@ from lightly_studio.models.sort_direction import SortDirection
 
 _DATE = datetime(2024, 1, 2, tzinfo=timezone.utc)
 
+# Criteria on video frames, at the top level of frames or in a `VideoFrameQuery` on videos.
+_FRAME_MATCHES = [
+    VideoFrameSampleField.frame_number > 10,
+    VideoFrameSampleField.frame_timestamp_pts <= 1000,
+    VideoFrameSampleField.rotation_deg == 90,
+    VideoFrameSampleField.frame_timestamp_s != 1.5,
+    VideoFrameSampleField.tags.contains("cat"),
+    VideoFrameSampleField.parent_video.file_name == "a.mp4",
+    VideoFrameSampleField.parent_video.file_path_abs != "/a.mp4",
+    VideoFrameSampleField.parent_video.width >= 1920,
+    VideoFrameSampleField.parent_video.height < 1080,
+    VideoFrameSampleField.parent_video.fps > 29.97,
+    VideoFrameSampleField.parent_video.fps == 30,
+    VideoFrameSampleField.parent_video.duration_s == 2.5,
+    VideoFrameSampleField.parent_video.duration_s != 3,
+    VideoFrameSampleField.parent_video.tags.contains("cat"),
+    OR(VideoFrameSampleField.frame_number < 5, VideoFrameSampleField.parent_video.width > 1),
+]
+
 
 def test_to_query_expr() -> None:
     match = AND(
@@ -120,7 +139,6 @@ def test_to_query_expr() -> None:
         (SampleType.VIDEO, VideoSampleField.duration_s != 3),
         (SampleType.VIDEO, VideoSampleField.created_at > _DATE),
         (SampleType.VIDEO, VideoSampleField.tags.contains("cat")),
-        (SampleType.VIDEO_FRAME, VideoFrameSampleField.tags.contains("cat")),
         (SampleType.VIDEO, VideoSampleField.metadata["weather"] == "sunny"),
         (SampleType.VIDEO, OR(AND(VideoSampleField.fps < 10), NOT(VideoSampleField.width > 1))),
         (SampleType.IMAGE, ClassificationQuery()),
@@ -185,6 +203,8 @@ def test_to_query_expr() -> None:
             SampleType.VIDEO,
             NOT(AnnotationMetricQuery.false_negative(run_name="run", ground_truth="cat")),
         ),
+        *[(SampleType.VIDEO_FRAME, match) for match in _FRAME_MATCHES],
+        *[(SampleType.VIDEO, VideoFrameQuery(match)) for match in _FRAME_MATCHES],
     ],
 )
 def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression) -> None:
@@ -260,6 +280,15 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
             VideoEventQuery(AnnotationMetricQuery.false_positive(run_name="run", prediction="dog")),
         ),
         (SampleType.VIDEO, VideoFrameQuery(SampleEvaluationQuery("run"))),
+        (SampleType.IMAGE, VideoFrameSampleField.parent_video.width > 1),
+        (SampleType.IMAGE, VideoFrameSampleField.parent_video.tags.contains("cat")),
+        (SampleType.VIDEO, VideoFrameSampleField.parent_video.file_name == "a.mp4"),
+        (SampleType.VIDEO, VideoFrameSampleField.parent_video.duration_s == 2.5),
+        (SampleType.VIDEO, VideoFrameSampleField.parent_video.tags.contains("cat")),
+        (
+            SampleType.VIDEO_FRAME,
+            ObjectDetectionQuery(VideoFrameSampleField.parent_video.width > 1),
+        ),
     ],
 )
 def test_to_query_expr__not_supported(sample_type: SampleType, match: MatchExpression) -> None:

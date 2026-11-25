@@ -22,7 +22,7 @@ from lightly_studio.models.video import VideoFrameTable, VideoTable
 # TODO(Malte, 07/2026): Generalize into a reusable foreign-tags accessor (mirroring
 # ForeignComparableField / ForeignNumericalField) instead of a video-frame-specific class.
 @dataclass
-class _ParentVideoTagsContainsExpression(MatchExpression):
+class ParentVideoTagsContainsExpression(MatchExpression):
     """Expression checking whether a frame's parent video has a given tag."""
 
     tag_name: str
@@ -38,9 +38,9 @@ class _ParentVideoTagsContainsExpression(MatchExpression):
 class _ParentVideoTagsAccessor:
     """Provides tag membership queries on a frame's parent video."""
 
-    def contains(self, tag_name: str) -> _ParentVideoTagsContainsExpression:
+    def contains(self, tag_name: str) -> ParentVideoTagsContainsExpression:
         """Check whether the parent video has the given tag."""
-        return _ParentVideoTagsContainsExpression(tag_name=tag_name)
+        return ParentVideoTagsContainsExpression(tag_name=tag_name)
 
 
 class _ParentVideoField:
