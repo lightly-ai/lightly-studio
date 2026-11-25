@@ -94,31 +94,17 @@ def get_instance_segmentation_annotation_create(
     Returns:
         The AnnotationCreate instance, or None if a `MultiPolygon` has no valid part.
     """
-    if not isinstance(segmentation, MultiPolygon):
-        return get_segmentation_annotation_create(
+    if isinstance(segmentation, MultiPolygon):
+        return _get_polygon_annotation_create(
             parent_sample_id=parent_sample_id,
             annotation_label_id=annotation_label_id,
-            segmentation=segmentation,
+            multipolygon=segmentation,
         )
-    polygons = valid_polygon_parts(multipolygon=segmentation)
-    if not polygons:
-        return None
-    return AnnotationCreate(
+    return get_segmentation_annotation_create(
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
-        annotation_type=AnnotationType.POLYGON,
-        polygons=polygons,
+        segmentation=segmentation,
     )
-
-
-def valid_polygon_parts(multipolygon: MultiPolygon) -> Polygons:
-    """Get the parts of a multipolygon that have enough vertices and only finite coordinates."""
-    return [
-        part
-        for part in multipolygon.polygons
-        if len(part) >= MIN_VERTICES_PER_PART
-        and all(math.isfinite(x) and math.isfinite(y) for x, y in part)
-    ]
 
 
 def warn_skipped_polygons(count: int) -> None:
@@ -198,3 +184,30 @@ def create_label_map(
 
         label_map[category.id] = label.annotation_label_id
     return label_map
+
+
+def _get_polygon_annotation_create(
+    parent_sample_id: UUID,
+    annotation_label_id: UUID,
+    multipolygon: MultiPolygon,
+) -> AnnotationCreate | None:
+    """Get a polygon AnnotationCreate with the valid parts, or None if no part is valid."""
+    polygons = _valid_polygon_parts(multipolygon=multipolygon)
+    if not polygons:
+        return None
+    return AnnotationCreate(
+        parent_sample_id=parent_sample_id,
+        annotation_label_id=annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=polygons,
+    )
+
+
+def _valid_polygon_parts(multipolygon: MultiPolygon) -> Polygons:
+    """Get the parts of a multipolygon that have enough vertices and only finite coordinates."""
+    return [
+        part
+        for part in multipolygon.polygons
+        if len(part) >= MIN_VERTICES_PER_PART
+        and all(math.isfinite(x) and math.isfinite(y) for x, y in part)
+    ]

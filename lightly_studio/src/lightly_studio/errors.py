@@ -30,4 +30,4 @@ class UnauthenticatedError(Exception):
 
 
 class ForbiddenError(Exception):
-    """The user of the request does not have the required role."""
+    """The user of the request may not do the requested operation."""

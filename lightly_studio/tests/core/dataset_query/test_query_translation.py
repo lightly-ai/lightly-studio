@@ -24,6 +24,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    QueryExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
@@ -218,6 +219,21 @@ def test_to_match_expression__tags_unknown_field() -> None:
     )
     with pytest.raises(QueryExprError, match="Unknown tags field"):
         query_translation.to_match_expression(expr)
+
+
+@pytest.mark.parametrize(
+    "annotation_type", ["classification", "object_detection", "segmentation_mask"]
+)
+@pytest.mark.parametrize("criteria", [{}, {"subexpr": None}], ids=["omitted", "null"])
+def test_to_match_expression__any_annotation_of_type(
+    annotation_type: str, criteria: dict[str, None]
+) -> None:
+    query = QueryExpr.model_validate(
+        {"match_expr": {"type": f"{annotation_type}_match_expr", **criteria}}
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr=query.match_expr))
+    assert "exists" in sql
+    assert f"annotation_type = '{annotation_type}'" in sql
 
 
 def test_to_match_expression__classification_match() -> None:
