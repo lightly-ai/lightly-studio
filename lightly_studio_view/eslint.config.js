@@ -6,13 +6,14 @@ import js from '@eslint/js';
 import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
 import ts from 'typescript-eslint';
+import svelteConfig from './svelte.config.js';
 
 export default ts.config(
     js.configs.recommended,
     ...ts.configs.recommended,
-    ...svelte.configs['flat/recommended'],
+    ...svelte.configs.recommended,
     prettier,
-    ...svelte.configs['flat/prettier'],
+    ...svelte.configs.prettier,
     {
         languageOptions: {
             globals: {
@@ -22,11 +23,12 @@ export default ts.config(
         }
     },
     {
-        files: ['**/*.svelte'],
+        files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
 
         languageOptions: {
             parserOptions: {
-                parser: ts.parser
+                parser: ts.parser,
+                svelteConfig
             }
         }
     },
@@ -68,6 +70,19 @@ export default ts.config(
                 'error',
                 { paths: [{ name: '$app/stores', message: 'Use $app/state.' }] }
             ]
+        }
+    },
+    {
+        // eslint-plugin-svelte 3 enables these rules. Enable them after we fix the findings.
+        rules: {
+            'svelte/no-dom-manipulating': 'off',
+            'svelte/no-navigation-without-resolve': 'off',
+            'svelte/no-unused-svelte-ignore': 'off',
+            'svelte/no-useless-children-snippet': 'off',
+            'svelte/prefer-svelte-reactivity': 'off',
+            'svelte/prefer-writable-derived': 'off',
+            'svelte/require-each-key': 'off',
+            'svelte/valid-prop-names-in-kit-pages': 'off'
         }
     },
     {
