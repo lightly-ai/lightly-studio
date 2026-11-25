@@ -37,7 +37,7 @@ class HttpAnnotationTransport:
 
     def get_covered_sequence_ids(self, annotation_collection_id: UUID) -> list[UUID]:
         """Get the covered sequences. Not supported over HTTP yet."""
-        raise NotImplementedError("Annotation coverage over HTTP is not supported yet.")
+        raise NotImplementedError("Finding labeled sequences over HTTP is not supported yet.")
 
     def create(
         self,

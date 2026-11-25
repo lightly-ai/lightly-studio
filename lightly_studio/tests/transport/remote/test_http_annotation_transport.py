@@ -33,7 +33,7 @@ class TestHttpAnnotationTransport:
     def test_get_covered_sequence_ids(self) -> None:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
 
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(NotImplementedError, match="Finding labeled sequences"):
             transport.get_covered_sequence_ids(annotation_collection_id=uuid.uuid4())
 
     def test_create(self) -> None:

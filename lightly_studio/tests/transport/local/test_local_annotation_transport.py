@@ -100,6 +100,7 @@ class TestLocalAnnotationTransport:
         sequence_id, group_ids = sequence_helpers.create_sequence_and_samples(
             session=session, sample_count=2
         )
+        # Only the first group is in the sequence.
         sequence_resolver.add_samples(
             session=session,
             sequence_sample_id=sequence_id,

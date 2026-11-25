@@ -69,7 +69,10 @@ class LocalAnnotationTransport:
         ]
 
     def get_covered_sequence_ids(self, annotation_collection_id: UUID) -> list[UUID]:
-        """Get the sequences with groups that the annotation collection covers."""
+        """Get the IDs of the sequences that have groups covered by the annotation collection.
+
+        The order is not defined.
+        """
         return list(
             annotation_collection_coverage_resolver.sequence_sample_ids(
                 session=db_manager.persistent_session(),
