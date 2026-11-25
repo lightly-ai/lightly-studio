@@ -45,6 +45,7 @@ class AnnotationTransport(Protocol):
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
         """Delete annotations by ID."""
 
+    # TODO(Iunir, 11/2026): Merge with create_object_tracks. Two clients can get the same numbers.
     def get_free_object_track_numbers(self, dataset_id: UUID, count: int) -> list[int]:
         """Get the `count` lowest positive object track numbers that the dataset does not use."""
 

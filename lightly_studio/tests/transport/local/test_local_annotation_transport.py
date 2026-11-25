@@ -140,9 +140,14 @@ class TestLocalAnnotationTransport:
         transport: AnnotationTransport = LocalAnnotationTransport()
 
         track_ids = transport.create_object_tracks(
-            tracks=[ObjectTrackCreate(object_track_number=7, dataset_id=dataset_id)]
+            tracks=[
+                ObjectTrackCreate(object_track_number=7, dataset_id=dataset_id),
+                ObjectTrackCreate(object_track_number=3, dataset_id=dataset_id),
+            ]
         )
 
-        track = object_track_resolver.get_by_id(session=session, object_track_id=track_ids[0])
-        assert track is not None
-        assert track.object_track_number == 7
+        tracks = [
+            object_track_resolver.get_by_id(session=session, object_track_id=track_id)
+            for track_id in track_ids
+        ]
+        assert [track.object_track_number for track in tracks if track is not None] == [7, 3]
