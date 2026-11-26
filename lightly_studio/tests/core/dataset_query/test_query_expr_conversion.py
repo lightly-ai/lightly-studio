@@ -188,6 +188,7 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
         (SampleType.IMAGE, VideoFrameQuery(VideoFrameSampleField.frame_timestamp_s > 1)),
         (SampleType.VIDEO, VideoEventQuery()),
         (SampleType.VIDEO, VideoFrameSampleField.frame_timestamp_s > 1),
+        (SampleType.VIDEO, VideoFrameSampleField.parent_video.width > 1),
     ],
 )
 def test_to_query_expr__not_supported(sample_type: SampleType, match: MatchExpression) -> None:

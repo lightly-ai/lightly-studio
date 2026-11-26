@@ -40,6 +40,7 @@ from lightly_studio.core.dataset_query.tags_expression import TagsContainsExpres
 from lightly_studio.core.dataset_query.video_event_query import VideoEventQuery
 from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
 from lightly_studio.errors import QueryExprError
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
@@ -91,6 +92,19 @@ _SCOPED_QUERIES: dict[type[_ScopedQuery], tuple[type[_ScopedMatchExpr], str]] = 
     VideoFrameQuery: (VideoFrameMatchExpr, "video_frame"),
 }
 
+# The relationships that each scope allows, with the table of the related fields.
+_RELATIONSHIP_TABLES: dict[tuple[str, object], str] = {
+    ("classification", AnnotationBaseTable.annotation_label): "classification",
+    ("event", AnnotationBaseTable.annotation_label): "event",
+    ("event", AnnotationBaseTable.temporal_span_details): "event",
+    ("object_detection", AnnotationBaseTable.annotation_label): "object_detection",
+    ("object_detection", AnnotationBaseTable.object_detection_details): "object_detection",
+    ("segmentation_mask", AnnotationBaseTable.annotation_label): "segmentation_mask",
+    ("segmentation_mask", AnnotationBaseTable.segmentation_details): "segmentation_mask",
+    ("polygon", AnnotationBaseTable.annotation_label): "polygon",
+    ("polygon", AnnotationBaseTable.polygon_details): "polygon",
+}
+
 
 class UnsupportedQueryError(NotImplementedError):
     """The transport cannot send this query yet."""
@@ -140,8 +154,13 @@ def _to_match_expr(expression: MatchExpression, scope: str) -> MatchExpr:
     if isinstance(expression, _ScopedQuery):
         return _to_scoped_match_expr(query=expression)
     if isinstance(expression, RelationshipMatchExpression):
-        # The scope identifies the related table.
-        return _to_match_expr(expression=expression.criterion, scope=scope)
+        relationship = expression.relationship
+        if (scope, relationship) not in _RELATIONSHIP_TABLES:
+            raise UnsupportedQueryError(
+                f"The relationship {relationship} of {scope} is not supported."
+            )
+        table = _RELATIONSHIP_TABLES[(scope, relationship)]
+        return _to_match_expr(expression=expression.criterion, scope=table)
     return _to_leaf_expr(expression=expression, scope=scope)
 
 
