@@ -178,10 +178,12 @@
     }
     label={openChannel?.group_component_name ?? ''}
     imageUrl={openFrame.fullFrameUrl ?? openFrame.frameUrl}
-    {batch}
-    {annotations}
-    {annotationClasses}
-    projection={canProject ? (openChannelDetails?.projection ?? undefined) : undefined}
+    overlay={{
+        batch,
+        annotations,
+        annotationClasses,
+        projection: canProject ? (openChannelDetails?.projection ?? undefined) : undefined
+    }}
     projectionSettings={$projectionSettings}
     onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
     {onPlaybackToggle}

@@ -7,7 +7,7 @@ const defaultProps = {
     open: true,
     label: 'CAM_FRONT',
     imageUrl: null,
-    annotations: [],
+    overlay: { annotations: [] },
     position: { index: 2, total: 5 },
     previousKey: '[',
     nextKey: ']'
