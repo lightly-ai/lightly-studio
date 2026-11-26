@@ -126,7 +126,7 @@ def _annotations_by_group(
 ) -> defaultdict[UUID, list[AnnotationView]]:
     """Returns the annotations keyed by tick group."""
     rows = annotation_resolver.get_all_by_parent_sample_ids(
-        session=session, parent_sample_ids=group_sample_ids
+        session=session, parent_sample_ids=group_sample_ids, load_view_relationships=True
     )
     parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
         session=session, annotations=rows
