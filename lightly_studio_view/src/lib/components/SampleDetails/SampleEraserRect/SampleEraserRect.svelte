@@ -15,12 +15,7 @@
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import {
-        getBrushAnchor,
-        getBrushOutlinePath,
-        getBrushSpans,
-        useSegmentationMaskPreview
-    } from '$lib/hooks/useSegmentationMaskPreview';
+    import { getBrushOutlinePath, useSegmentationMaskPreview } from '$lib/hooks';
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
@@ -91,11 +86,7 @@
     // The slider sets a radius; the eraser clears a disc of 2 * radius pixels.
     const brushSize = $derived(brushRadius * 2);
     const brushOutlinePath = $derived(
-        mousePosition
-            ? getBrushOutlinePath(
-                  getBrushSpans(getBrushAnchor(mousePosition, brushSize), brushSize)
-              )
-            : ''
+        mousePosition ? getBrushOutlinePath(mousePosition, brushSize) : ''
     );
 
     // Parse the color once and cache it for direct mask rendering.

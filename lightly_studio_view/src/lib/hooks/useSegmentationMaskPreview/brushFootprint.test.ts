@@ -81,18 +81,13 @@ describe('getStrokeAnchors', () => {
 });
 
 describe('getBrushOutlinePath', () => {
-    it('outlines a single pixel', () => {
-        expect(getBrushOutlinePath([{ y: 5, xStart: 3, width: 1 }])).toBe('M3 5H4V6H3V5Z');
+    it('outlines the single pixel of size 1', () => {
+        expect(getBrushOutlinePath({ x: 3.7, y: 5.2 }, 1)).toBe('M3 5H4V6H3V5Z');
     });
 
     it('outlines the staircase of a size 4 disc', () => {
-        expect(
-            getBrushOutlinePath([
-                { y: 18, xStart: 9, width: 2 },
-                { y: 19, xStart: 8, width: 4 },
-                { y: 20, xStart: 8, width: 4 },
-                { y: 21, xStart: 9, width: 2 }
-            ])
-        ).toBe('M9 18H11V19H12V20H12V21H11V22H9V21H8V20H8V19H9V18Z');
+        expect(getBrushOutlinePath({ x: 10.4, y: 19.6 }, 4)).toBe(
+            'M9 18H11V19H12V20H12V21H11V22H9V21H8V20H8V19H9V18Z'
+        );
     });
 });

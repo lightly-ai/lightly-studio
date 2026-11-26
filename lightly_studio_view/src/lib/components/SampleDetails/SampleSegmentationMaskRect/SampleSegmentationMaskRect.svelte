@@ -13,16 +13,12 @@
         useCollectionWithChildren,
         useSegmentationMaskBrush,
         useSegmentationMaskPreview,
+        getBrushOutlinePath,
         useAnnotationLabels,
         useAnnotation,
         useAnnotationLabelContext,
         useDeleteAnnotation
     } from '$lib/hooks';
-    import {
-        getBrushAnchor,
-        getBrushOutlinePath,
-        getBrushSpans
-    } from '$lib/hooks/useSegmentationMaskPreview';
     import { page } from '$app/state';
     import { usePostHog } from '$lib/hooks';
     import type { PendingChange } from '../pendingChange';
@@ -128,11 +124,7 @@
     // The slider sets a radius; the brush paints a disc of 2 * radius pixels.
     const brushSize = $derived(brushRadius * 2);
     const brushOutlinePath = $derived(
-        mousePosition
-            ? getBrushOutlinePath(
-                  getBrushSpans(getBrushAnchor(mousePosition, brushSize), brushSize)
-              )
-            : ''
+        mousePosition ? getBrushOutlinePath(mousePosition, brushSize) : ''
     );
 
     // Parse the color once and cache it for direct mask rendering.

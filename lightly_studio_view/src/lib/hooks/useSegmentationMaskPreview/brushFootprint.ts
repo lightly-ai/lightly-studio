@@ -8,8 +8,8 @@ export interface BrushSpan {
 }
 
 /**
- * Snap the cursor to the pixel grid. An odd size centres on the pixel under the cursor,
- * an even size centres on the nearest pixel corner.
+ * Snap the cursor to the pixel grid. An odd size centers on the pixel under the cursor,
+ * an even size centers on the nearest pixel corner.
  */
 export function getBrushAnchor(point: BrushPoint, size: number): BrushPoint {
     if (isOdd(size)) {
@@ -53,8 +53,13 @@ export function getStrokeAnchors(from: BrushPoint, to: BrushPoint): BrushPoint[]
     }
 }
 
-/** Return an SVG path that outlines the pixels of the spans, ordered top to bottom. */
-export function getBrushOutlinePath(spans: BrushSpan[]): string {
+/** Return an SVG path that outlines the pixels the brush paints at `point`. */
+export function getBrushOutlinePath(point: BrushPoint, size: number): string {
+    return toOutlinePath(getBrushSpans(getBrushAnchor(point, size), size));
+}
+
+// Spans are ordered top to bottom.
+function toOutlinePath(spans: BrushSpan[]): string {
     if (spans.length === 0) return '';
 
     const rightEdge = spans.map((span) => `H${span.xStart + span.width}V${span.y + 1}`).join('');
@@ -76,12 +81,12 @@ function getDiscOffsets(size: number): BrushSpan[] {
     return offsets;
 }
 
-// A pixel is in the disc when its centre lies within size / 2 of the disc centre.
+// A pixel is in the disc when its center lies within size / 2 of the disc center.
 // Distances are doubled so that the check stays in exact integer math.
 function computeDiscOffsets(size: number): BrushSpan[] {
     const firstOffset = -Math.floor(size / 2);
-    const centreShift = isOdd(size) ? 0 : 1;
-    const doubledDistance = (offset: number) => 2 * offset + centreShift;
+    const centerShift = isOdd(size) ? 0 : 1;
+    const doubledDistance = (offset: number) => 2 * offset + centerShift;
     const squaredSize = size * size;
     const offsets: BrushSpan[] = [];
 
