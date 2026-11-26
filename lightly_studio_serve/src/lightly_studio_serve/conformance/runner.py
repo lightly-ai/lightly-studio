@@ -77,6 +77,12 @@ def check_conformance(
 def _describe(client: ProbeClient, timeout: float) -> DescribeResponse:
     """Read ``/v1/describe``, the one endpoint that every server has."""
     response = client.get(path=protocol.DESCRIBE_PATH, timeout=timeout)
+    # A server that serves only a labeling model has no embedder, so it has no describe path.
+    if response.status_code == HTTPStatus.NOT_FOUND:
+        raise _FaultError(
+            f"{protocol.DESCRIBE_PATH} answers {int(HTTPStatus.NOT_FOUND)}, so the server "
+            "serves no embedder. This kit tests the embedding endpoints only."
+        )
     return _parsed(model=DescribeResponse, response=response, path=protocol.DESCRIBE_PATH)
 
 
