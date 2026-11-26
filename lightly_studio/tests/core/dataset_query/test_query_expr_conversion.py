@@ -261,6 +261,21 @@ def test_to_query_expr__not_supported(sample_type: SampleType, match: MatchExpre
         query_expr_conversion.to_query_expr(match_expression=match, sample_type=sample_type)
 
 
+@pytest.mark.parametrize(
+    "criterion",
+    [
+        NOT(AnnotationEvaluationMetricField("iou") > 0.3),
+        AND(AnnotationEvaluationMetricField("iou") > 0.3),
+        EvaluationMetricField("miou") < 0.3,
+    ],
+)
+def test_to_query_expr__confusion_criterion_not_supported(criterion: Any) -> None:
+    match = AnnotationMetricQuery.confusion("run", "cat", "dog", criterion)
+
+    with pytest.raises(UnsupportedQueryError):
+        query_expr_conversion.to_query_expr(match_expression=match, sample_type=SampleType.IMAGE)
+
+
 def test_to_sort_keys() -> None:
     order_by = [
         OrderByField(ImageSampleField.width).desc(),

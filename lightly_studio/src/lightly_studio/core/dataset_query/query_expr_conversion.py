@@ -269,7 +269,7 @@ def _to_annotation_metric_expr(query: AnnotationMetricQuery) -> MatchExpr:
             run_name=query.run_name,
             ground_truth=ground_truth,
             prediction=prediction,
-            criteria=[_to_metric_comparison_expr(metric=criterion) for criterion in query.criteria],
+            criteria=[_to_annotation_metric_criterion(criterion=term) for term in query.criteria],
         )
     if query.criteria:
         raise UnsupportedQueryError("Only confusion queries support metric criteria.")
@@ -280,6 +280,14 @@ def _to_annotation_metric_expr(query: AnnotationMetricQuery) -> MatchExpr:
     raise UnsupportedQueryError(
         f"The {query.match_kind} query with these class names is not supported."
     )
+
+
+def _to_annotation_metric_criterion(criterion: MatchExpression) -> EvaluationMetricComparisonExpr:
+    if not isinstance(criterion, AnnotationEvaluationMetricMatchExpression):
+        raise UnsupportedQueryError(
+            f"The annotation metric criterion {type(criterion).__name__} is not supported."
+        )
+    return _to_metric_comparison_expr(metric=criterion)
 
 
 def _to_metric_comparison_expr(
