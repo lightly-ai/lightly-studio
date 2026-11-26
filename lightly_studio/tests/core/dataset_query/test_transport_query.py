@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 import pytest
 from pytest_mock import MockerFixture
@@ -16,11 +17,17 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByMetadataField,
 )
 from lightly_studio.core.dataset_query.query_expr_conversion import UnsupportedQueryError
+from lightly_studio.core.dataset_query.video_frame_sample_field import VideoFrameSampleField
 from lightly_studio.core.image.record_image_sample import RecordImageSample
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import env
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.query_expr import FieldRef
+from lightly_studio.models.query_expr import (
+    FieldRef,
+    IntegerExpr,
+    OrdinalComparisonOperator,
+    QueryExpr,
+)
 from lightly_studio.models.sample_query import (
     EvaluationMetricSortKey,
     SampleQueryRequest,
@@ -160,6 +167,57 @@ def test_build_sampling_request__ordered_or_sliced(
     assert build() is None
     mocker.patch.object(active_transport, "is_remote", return_value=True)
     with pytest.raises(UnsupportedQueryError, match=r"order or the slice"):
+        build()
+
+
+def test_build_export_request(mocker: MockerFixture) -> None:
+    mocker.patch.object(env, "LIGHTLY_STUDIO_TRANSPORT_QUERIES", False)
+
+    request = transport_query.build_export_request(
+        sample_type=SampleType.IMAGE,
+        match_expression=ImageSampleField.width > 10,
+        filters_sample_ids=False,
+        is_ordered=False,
+        is_sliced=False,
+    )
+
+    assert request == SampleQueryRequest(
+        query_expr=QueryExpr(
+            match_expr=IntegerExpr(
+                field=FieldRef(table="image", name="width"),
+                operator=OrdinalComparisonOperator.GT,
+                value=10,
+            )
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "unsupported",
+    [
+        {"is_ordered": True},
+        {"is_sliced": True},
+        {"filters_sample_ids": True},
+        {"sample_type": SampleType.VIDEO},
+        {"match_expression": VideoFrameSampleField.parent_video.width > 1},
+    ],
+)
+def test_build_export_request__not_supported(
+    mocker: MockerFixture, unsupported: dict[str, Any]
+) -> None:
+    def build() -> object:
+        supported: dict[str, Any] = {
+            "sample_type": SampleType.IMAGE,
+            "match_expression": None,
+            "filters_sample_ids": False,
+            "is_ordered": False,
+            "is_sliced": False,
+        }
+        return transport_query.build_export_request(**{**supported, **unsupported})
+
+    assert build() is None
+    mocker.patch.object(active_transport, "is_remote", return_value=True)
+    with pytest.raises(UnsupportedQueryError):
         build()
 
 

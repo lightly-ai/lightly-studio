@@ -361,6 +361,16 @@ class DatasetQuery(Generic[T]):
             offset=0 if self._slice is None else self._slice.start or 0,
         )
 
+    def _export_request(self) -> SampleQueryRequest | None:
+        """Get the request for the export transport, or None to export with SQL."""
+        return transport_query.build_export_request(
+            sample_type=self.dataset.sample_type,
+            match_expression=self.match_expression,
+            filters_sample_ids=self._sample_ids_subquery is not None,
+            is_ordered=bool(self.order_by_expressions),
+            is_sliced=self._slice is not None,
+        )
+
     def _limit(self) -> int | None:
         """Get the maximum number of samples of the slice, or None without a limit."""
         if self._slice is None or self._slice.stop is None:

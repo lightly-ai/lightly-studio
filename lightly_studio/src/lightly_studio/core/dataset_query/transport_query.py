@@ -11,6 +11,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.dataset_query.query_expr_conversion import UnsupportedQueryError
 from lightly_studio.core.image.record_image_sample import RecordImageSample
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample_query import (
     DEFAULT_PAGE_SIZE,
     EvaluationMetricSortKey,
@@ -36,14 +37,10 @@ def build_request(
     if not active_transport.use_transport_queries():
         return None
     try:
-        if sample_type != SampleType.IMAGE or filters_sample_ids:
-            raise UnsupportedQueryError("Only image queries without sample IDs are supported.")
-        query_expr = (
-            None
-            if match_expression is None
-            else query_expr_conversion.to_query_expr(
-                match_expression=match_expression, sample_type=sample_type
-            )
+        query_expr = _to_image_query_expr(
+            sample_type=sample_type,
+            match_expression=match_expression,
+            filters_sample_ids=filters_sample_ids,
         )
         sort = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=sample_type)
         needs_offset_paging = not all(
@@ -91,6 +88,36 @@ def build_sampling_request(
     )
 
 
+def build_export_request(
+    sample_type: SampleType,
+    match_expression: MatchExpression | None,
+    filters_sample_ids: bool,
+    is_ordered: bool,
+    is_sliced: bool,
+) -> SampleQueryRequest | None:
+    """Build the request of an export. None means the export uses SQL.
+
+    The request has only the filter. The export transport cannot send an order or a slice
+    yet.
+
+    Raises:
+        UnsupportedQueryError: If the transport is remote and cannot send the query.
+    """
+    try:
+        if is_ordered or is_sliced:
+            raise UnsupportedQueryError("The export transport cannot send an order or a slice.")
+        query_expr = _to_image_query_expr(
+            sample_type=sample_type,
+            match_expression=match_expression,
+            filters_sample_ids=filters_sample_ids,
+        )
+    except UnsupportedQueryError:
+        if active_transport.is_remote():
+            raise
+        return None
+    return SampleQueryRequest(query_expr=query_expr)
+
+
 def iter_samples(
     collection_id: UUID, request: SampleQueryRequest, limit: int | None
 ) -> Iterator[RecordImageSample]:
@@ -118,3 +145,15 @@ def iter_samples(
 
 def _is_field_sort(key: SortKey | EvaluationMetricSortKey, table: str) -> bool:
     return isinstance(key, SortKey) and key.field.table == table
+
+
+def _to_image_query_expr(
+    sample_type: SampleType, match_expression: MatchExpression | None, filters_sample_ids: bool
+) -> QueryExpr | None:
+    if sample_type != SampleType.IMAGE or filters_sample_ids:
+        raise UnsupportedQueryError("Only image queries without sample IDs are supported.")
+    if match_expression is None:
+        return None
+    return query_expr_conversion.to_query_expr(
+        match_expression=match_expression, sample_type=sample_type
+    )
