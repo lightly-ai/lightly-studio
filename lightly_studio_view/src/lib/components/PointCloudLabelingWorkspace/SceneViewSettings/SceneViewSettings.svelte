@@ -36,9 +36,10 @@
         {#snippet child({ props })}
             <Button
                 {...props}
-                variant="outline"
+                variant="ghost"
                 size="xs"
-                class="px-3"
+                class="h-7 gap-1 px-2"
+                title="Scene settings"
                 aria-label="Scene settings"
                 aria-expanded={open}
             >

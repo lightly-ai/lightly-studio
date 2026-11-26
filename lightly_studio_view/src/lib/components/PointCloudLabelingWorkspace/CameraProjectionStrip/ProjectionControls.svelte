@@ -42,9 +42,10 @@
         {#snippet child({ props })}
             <Button
                 {...props}
-                variant="outline"
+                variant="ghost"
                 size="xs"
-                class="px-3"
+                class="h-7 gap-1 px-2"
+                title="Projection settings"
                 aria-label="Projection settings"
                 aria-expanded={open}
                 onkeydown={preventSpaceActivation}
