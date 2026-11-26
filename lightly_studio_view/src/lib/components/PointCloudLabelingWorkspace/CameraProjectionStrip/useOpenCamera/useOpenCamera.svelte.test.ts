@@ -106,9 +106,6 @@ describe('useOpenCamera', () => {
             cameras.handleWindowKeydown(next);
             expect(onOpenCameraChange).toHaveBeenLastCalledWith('CAM_A', 'replace');
             expect(next.defaultPrevented).toBe(true);
-
-            cameras.handleWindowKeydown(keyEvent({ key: 'ArrowRight', shiftKey: true }));
-            expect(onOpenCameraChange).toHaveBeenLastCalledWith('CAM_A', 'replace');
         });
 
         it('goes to the previous camera and wraps', () => {

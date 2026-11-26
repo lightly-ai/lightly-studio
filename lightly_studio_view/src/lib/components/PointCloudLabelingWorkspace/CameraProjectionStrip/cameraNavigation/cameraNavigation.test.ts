@@ -26,18 +26,17 @@ describe('getAdjacentCamera', () => {
 });
 
 describe('getCameraKeyAction', () => {
-    it('maps the configured keys and Shift+Arrow keys', () => {
+    it('maps the configured keys', () => {
         expect(getCameraKeyAction(keyEvent('['), KEYS)).toBe('previous');
         expect(getCameraKeyAction(keyEvent(']'), KEYS)).toBe('next');
         expect(getCameraKeyAction(keyEvent('Q'), { previous: 'q', next: 'w' })).toBe('previous');
-        expect(getCameraKeyAction(keyEvent('ArrowRight', { shiftKey: true }), KEYS)).toBe('next');
-        expect(getCameraKeyAction(keyEvent('ArrowLeft', { shiftKey: true }), KEYS)).toBe(
-            'previous'
-        );
     });
 
-    it('ignores plain arrows and modified keys', () => {
+    it('ignores arrows and modified keys', () => {
         expect(getCameraKeyAction(keyEvent('ArrowRight'), KEYS)).toBeUndefined();
+        expect(
+            getCameraKeyAction(keyEvent('ArrowRight', { shiftKey: true }), KEYS)
+        ).toBeUndefined();
         expect(getCameraKeyAction(keyEvent(']', { ctrlKey: true }), KEYS)).toBeUndefined();
         expect(getCameraKeyAction(keyEvent(']', { metaKey: true }), KEYS)).toBeUndefined();
     });

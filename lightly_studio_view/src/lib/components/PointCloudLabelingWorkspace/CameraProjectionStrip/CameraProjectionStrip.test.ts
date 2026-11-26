@@ -395,8 +395,7 @@ describe('CameraProjectionStrip', () => {
             await fireEvent.keyDown(document.body, { key: '[' });
             expect(onOpenCameraChange).toHaveBeenLastCalledWith('CAM_B', 'replace');
 
-            await fireEvent.keyDown(document.body, { key: 'ArrowRight', shiftKey: true });
-            expect(onOpenCameraChange).toHaveBeenCalledTimes(3);
+            expect(onOpenCameraChange).toHaveBeenCalledTimes(2);
         });
 
         it('switches once when the key is pressed inside the dialog', async () => {
