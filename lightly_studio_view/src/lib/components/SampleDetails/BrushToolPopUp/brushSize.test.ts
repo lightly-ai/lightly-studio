@@ -65,12 +65,12 @@ describe('parseBrushSize', () => {
         expect(parseBrushSize(' 12 ')).toBe(12);
         expect(parseBrushSize('0')).toBe(1);
         expect(parseBrushSize('900')).toBe(500);
+        expect(parseBrushSize('-5')).toBe(1);
     });
 
     it('rejects empty and invalid text', () => {
         expect(parseBrushSize('')).toBeUndefined();
         expect(parseBrushSize('abc')).toBeUndefined();
         expect(parseBrushSize('12.5')).toBeUndefined();
-        expect(parseBrushSize('-3')).toBeUndefined();
     });
 });

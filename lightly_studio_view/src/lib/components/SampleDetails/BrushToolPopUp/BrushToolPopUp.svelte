@@ -1,7 +1,7 @@
 <script lang="ts">
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useGlobalStorage } from '$lib/hooks';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils/isInputElement';
     import Brush from '@lucide/svelte/icons/brush';

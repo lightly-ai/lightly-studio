@@ -2,7 +2,7 @@ import { MAX_BRUSH_SIZE, MIN_BRUSH_SIZE } from '$lib/contexts/SampleDetailsToolb
 
 export const SLIDER_STEPS = 1000;
 const WHEEL_STEP_RATIO = 0.1;
-const WHOLE_NUMBER = /^\d+$/;
+const WHOLE_NUMBER = /^-?\d+$/;
 
 export const clampBrushSize = (size: number): number =>
     Math.min(MAX_BRUSH_SIZE, Math.max(MIN_BRUSH_SIZE, Math.round(size)));

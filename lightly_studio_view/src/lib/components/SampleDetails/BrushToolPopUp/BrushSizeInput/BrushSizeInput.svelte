@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { Input } from '$lib/components/ui/input';
     import { MAX_BRUSH_SIZE, MIN_BRUSH_SIZE } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { untrack } from 'svelte';
     import {
@@ -67,7 +68,7 @@
 <div class="flex w-full flex-col gap-2">
     <div class="flex items-center">
         <span class="w-16 text-sm text-muted-foreground"> Size: </span>
-        <input
+        <Input
             type="number"
             min={MIN_BRUSH_SIZE}
             max={MAX_BRUSH_SIZE}
@@ -78,7 +79,8 @@
             oninput={(event) => (draft = event.currentTarget.value)}
             onkeydown={onFieldKeyDown}
             onblur={applyDraft}
-            class="h-8 w-16 rounded-md border border-input bg-background px-1 text-right text-sm text-foreground"
+            class="h-8 w-16 px-1 py-1 text-right"
+            wrapperClass="w-auto"
         />
         <span class="ml-1 text-sm text-muted-foreground">px</span>
     </div>
