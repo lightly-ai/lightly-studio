@@ -27,6 +27,12 @@ class AnnotationTransport(Protocol):
     ) -> list[AnnotationView]:
         """Get the annotations of samples that are in one annotation collection."""
 
+    def get_covered_sequence_ids(self, annotation_collection_id: UUID) -> list[UUID]:
+        """Get the IDs of the sequences that have groups covered by the annotation collection.
+
+        The order is not defined.
+        """
+
     def create(
         self,
         parent_collection_id: UUID,

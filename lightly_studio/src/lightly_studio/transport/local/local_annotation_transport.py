@@ -17,6 +17,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelView,
 )
 from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
     annotation_label_resolver,
     annotation_resolver,
     object_track_resolver,
@@ -66,6 +67,18 @@ class LocalAnnotationTransport:
             AnnotationView.from_annotation_table(annotation=annotation)
             for annotation in annotations
         ]
+
+    def get_covered_sequence_ids(self, annotation_collection_id: UUID) -> list[UUID]:
+        """Get the IDs of the sequences that have groups covered by the annotation collection.
+
+        The order is not defined.
+        """
+        return list(
+            annotation_collection_coverage_resolver.sequence_sample_ids(
+                session=db_manager.persistent_session(),
+                annotation_collection_id=annotation_collection_id,
+            )
+        )
 
     def create(
         self,
