@@ -56,6 +56,8 @@ class ComputeTransport(Protocol):
     def sampling(self, config: SamplingConfig, query_expr: QueryExpr | None) -> None:
         """Sample from the matching samples and tag the result with the tag of `config`.
 
+        Only image collections are supported.
+
         Args:
             config: The sampling config. It also sets the collection.
             query_expr: The samples to sample from. None uses all samples of the collection.
