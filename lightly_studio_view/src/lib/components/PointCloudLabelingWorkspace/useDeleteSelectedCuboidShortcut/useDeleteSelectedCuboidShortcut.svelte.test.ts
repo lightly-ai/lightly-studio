@@ -1,6 +1,9 @@
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { toast } from 'svelte-sonner';
 import { useDeleteSelectedCuboidShortcut } from './useDeleteSelectedCuboidShortcut.svelte';
+
+vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 
 const disposers: (() => void)[] = [];
 afterEach(() => {
@@ -11,9 +14,9 @@ afterEach(() => {
 function setup({
     selectedCuboidId = 'cuboid-1' as string | null,
     isEditingMode = true,
-    isTickStale = false
+    isTickStale = false,
+    deleteCuboid = vi.fn().mockResolvedValue(undefined)
 } = {}) {
-    const deleteCuboid = vi.fn().mockResolvedValue(undefined);
     disposers.push(
         $effect.root(() => {
             useDeleteSelectedCuboidShortcut({
@@ -43,6 +46,13 @@ describe('useDeleteSelectedCuboidShortcut', () => {
 
         expect(deleteCuboid.mock.calls).toEqual([['cuboid-1'], ['cuboid-1']]);
         expect(deleteEvent.defaultPrevented).toBe(true);
+    });
+
+    it('shows an error when the refresh after the delete fails', async () => {
+        setup({ deleteCuboid: vi.fn().mockRejectedValue(new Error('refresh failed')) });
+
+        pressKey('Delete');
+        await vi.waitFor(() => expect(toast.error).toHaveBeenCalled());
     });
 
     it('does nothing outside edit mode', () => {

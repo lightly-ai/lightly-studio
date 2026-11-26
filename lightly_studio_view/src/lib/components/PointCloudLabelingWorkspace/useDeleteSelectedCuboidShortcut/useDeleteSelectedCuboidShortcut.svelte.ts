@@ -1,3 +1,4 @@
+import { toast } from 'svelte-sonner';
 import { isTextInputTarget } from '$lib/utils';
 
 const DELETE_KEYS = new Set(['Delete', 'Backspace']);
@@ -22,7 +23,10 @@ export function useDeleteSelectedCuboidShortcut({
         const selectedCuboidId = getSelectedCuboidId();
         if (!getIsEditingMode() || getIsTickStale() || !selectedCuboidId) return;
         event.preventDefault();
-        void deleteCuboid(selectedCuboidId);
+        // The delete rejects only when the refresh after a successful delete fails.
+        deleteCuboid(selectedCuboidId).catch(() => {
+            toast.error('The cuboid is deleted, but the workspace did not refresh.');
+        });
     }
 
     $effect(() => {

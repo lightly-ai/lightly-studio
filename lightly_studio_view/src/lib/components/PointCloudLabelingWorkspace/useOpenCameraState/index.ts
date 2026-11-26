@@ -1,1 +1,1 @@
-export { useOpenCameraState } from './useOpenCameraState.svelte';
+export { useOpenCameraState } from './useOpenCameraState';
