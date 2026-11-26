@@ -10,8 +10,6 @@
     import WorkspacePanels from './WorkspacePanels/WorkspacePanels.svelte';
     import WorkspaceClassDialog from './WorkspaceClassDialog/WorkspaceClassDialog.svelte';
 
-    // This workspace is not compiled as a custom element; keep its inputs reactive as a group.
-    // svelte-ignore custom_element_props_identifier
     let options: WorkspaceOptions = $props();
     const controller = createWorkspaceController(() => options);
     providePointCloudWorkspaceLayoutContext(controller.getLayout, controller);
