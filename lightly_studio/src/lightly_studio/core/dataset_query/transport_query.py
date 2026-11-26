@@ -44,6 +44,9 @@ def build_request(
             )
         )
         sort = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=sample_type)
+        # TODO(iunir, 11/2026): Remove when the server pages metadata sorts.
+        if any(key.field.table != sample_type.value for key in sort):
+            raise UnsupportedQueryError("The server cannot page this sort yet.")
     except UnsupportedQueryError:
         if active_transport.is_remote():
             raise

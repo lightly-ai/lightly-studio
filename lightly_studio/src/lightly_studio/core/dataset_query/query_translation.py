@@ -246,6 +246,11 @@ def field_tables() -> list[tuple[type[FieldExpr], Mapping[tuple[str, str], objec
     ]
 
 
+def sort_fields() -> Mapping[tuple[str, str], Field]:
+    """Return the sample fields that a sort can use, by (table, name)."""
+    return _SORT_FIELDS
+
+
 def has_tags(table: str) -> bool:
     """Return whether the samples of the table have tags."""
     return (table, "tags") in _TAGS_FIELDS
