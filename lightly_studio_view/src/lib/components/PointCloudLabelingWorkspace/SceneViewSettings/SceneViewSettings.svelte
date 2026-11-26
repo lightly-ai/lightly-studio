@@ -3,7 +3,7 @@
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Button } from '$lib/components/ui/button';
     import * as Popover from '$lib/components/ui/popover';
-    import type { ComponentProps } from 'svelte';
+    import type { ComponentProps, Snippet } from 'svelte';
     import AccumulationSettings from './AccumulationSettings.svelte';
     import PointSizeSettings from './PointSizeSettings.svelte';
 
@@ -14,6 +14,8 @@
         accumulation?: ComponentProps<typeof AccumulationSettings>;
         onPointSizeChange: (pointSize: number) => void;
         onToggleNavigationHelpers: (show: boolean) => void;
+        /** Controls shown above the display settings, such as the frame and color selects. */
+        filters?: Snippet;
     }
 
     let {
@@ -22,7 +24,8 @@
         disabled = false,
         accumulation,
         onPointSizeChange,
-        onToggleNavigationHelpers
+        onToggleNavigationHelpers,
+        filters
     }: Props = $props();
     let open = $state(false);
 </script>
@@ -49,6 +52,9 @@
             <h3 class="text-sm font-medium">Scene settings</h3>
             <p class="text-xs text-muted-foreground">Adjust the scene display.</p>
         </div>
+        {#if filters}
+            <div class="border-b pb-3">{@render filters()}</div>
+        {/if}
         <PointSizeSettings {pointSize} {disabled} {onPointSizeChange} />
         <label class="flex items-center gap-2 border-t pt-3 text-sm">
             <Checkbox

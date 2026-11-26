@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
 import { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.svelte';
@@ -57,6 +57,28 @@ const frontImage = new Blob(['front'], { type: 'image/jpeg' });
 const rearImage = new Blob(['rear'], { type: 'image/jpeg' });
 
 describe('CameraProjectionStrip', () => {
+    it('picks the camera channels in the projection settings', async () => {
+        const onToggleCameraChannel = vi.fn();
+        render(CameraProjectionStrip, {
+            ...defaultProps,
+            selectedChannelIds: [1],
+            onToggleCameraChannel,
+            onSetCameraChannels: vi.fn()
+        });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Projection settings' }));
+
+        expect(screen.getByTestId('workspace-camera-select')).toHaveTextContent('Camera: front');
+    });
+
+    it('shows no camera select without channel callbacks', async () => {
+        render(CameraProjectionStrip, defaultProps);
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Projection settings' }));
+
+        expect(screen.queryByTestId('workspace-camera-select')).toBeNull();
+    });
+
     beforeEach(() => {
         tickDetailsResult.data = undefined;
         cameraFramesResult.data = undefined;

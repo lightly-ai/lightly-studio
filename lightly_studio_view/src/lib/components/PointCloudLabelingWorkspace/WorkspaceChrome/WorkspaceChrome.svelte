@@ -5,20 +5,10 @@
     import PanelRight from '@lucide/svelte/icons/panel-right';
     import Tags from '@lucide/svelte/icons/tags';
     import WorkspaceHeader from '../WorkspaceHeader/WorkspaceHeader.svelte';
-    import WorkspaceFilterBar from '../WorkspaceFilterBar/WorkspaceFilterBar.svelte';
     import { useWorkspaceControllerContext } from '../pointCloudWorkspaceLayoutContext.svelte';
     const controller = useWorkspaceControllerContext();
-    const {
-        workspace,
-        presentation,
-        fullscreen,
-        cameraPane,
-        detailsPane,
-        objectTracksPanel,
-        tagTracksPanel,
-        lidarSelection,
-        cameraSelection
-    } = controller;
+    const { presentation, fullscreen, cameraPane, detailsPane, objectTracksPanel, tagTracksPanel } =
+        controller;
 
     const layoutToggles = $derived([
         {
@@ -69,20 +59,4 @@
     onToggleFullscreen={fullscreen.toggleFullscreen}
     {layoutToggles}
     onToggleLayout={toggleLayout}
-/>
-<WorkspaceFilterBar
-    referenceFrames={workspace.referenceFrames}
-    referenceFrameId={workspace.referenceFrameId}
-    onSelectReferenceFrame={workspace.selectReferenceFrame}
-    isShowingSensorFrames={workspace.isShowingSensorFrames}
-    lidarChannels={workspace.lidarChannels}
-    cameraChannels={workspace.cameraChannels}
-    selectedLidarChannels={lidarSelection.selectedChannelIds}
-    selectedCameraChannels={cameraSelection.selectedChannelIds}
-    colorMode={presentation.colorMode}
-    onColorModeChange={presentation.setColorMode}
-    onToggleLidarChannel={lidarSelection.toggleChannel}
-    onToggleCameraChannel={cameraSelection.toggleChannel}
-    onSetLidarChannels={lidarSelection.setChannels}
-    onSetCameraChannels={cameraSelection.setChannels}
 />

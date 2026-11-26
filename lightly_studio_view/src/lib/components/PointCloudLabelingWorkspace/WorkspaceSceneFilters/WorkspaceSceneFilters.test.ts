@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
-import WorkspaceFilterBar from './WorkspaceFilterBar.svelte';
+import WorkspaceSceneFilters from './WorkspaceSceneFilters.svelte';
 
 const lidarChannels: ChannelSummaryView[] = [
     {
@@ -13,28 +13,19 @@ const lidarChannels: ChannelSummaryView[] = [
     }
 ];
 
-const cameraChannels: ChannelSummaryView[] = [
-    { channel_id: 2, group_component_name: 'front', group_component_index: 0, frame_id: 'front' },
-    { channel_id: 3, group_component_name: 'rear', group_component_index: 1, frame_id: 'rear' }
-];
-
 const defaultProps = {
     referenceFrames: [] as { name: string }[],
     referenceFrameId: '',
     onSelectReferenceFrame: vi.fn(),
     lidarChannels,
-    cameraChannels,
     selectedLidarChannels: [] as number[],
-    selectedCameraChannels: [] as number[],
     colorMode: 'density' as const,
     onColorModeChange: vi.fn(),
     onToggleLidarChannel: vi.fn(),
-    onToggleCameraChannel: vi.fn(),
-    onSetLidarChannels: vi.fn(),
-    onSetCameraChannels: vi.fn()
+    onSetLidarChannels: vi.fn()
 };
 
-describe('WorkspaceFilterBar', () => {
+describe('WorkspaceSceneFilters', () => {
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
         Element.prototype.hasPointerCapture = vi.fn(() => false);
@@ -42,57 +33,18 @@ describe('WorkspaceFilterBar', () => {
         Element.prototype.releasePointerCapture = vi.fn();
     });
 
-    it('opens a lane and lists its channels', async () => {
-        const user = userEvent.setup();
-        render(WorkspaceFilterBar, { props: defaultProps });
-
-        await user.click(screen.getByTestId('workspace-camera-select'));
-
-        expect(screen.getByText('front')).toBeInTheDocument();
-        expect(screen.getByText('rear')).toBeInTheDocument();
-    });
-
-    it('summarizes the selection in the trigger', () => {
-        render(WorkspaceFilterBar, {
-            props: { ...defaultProps, selectedCameraChannels: [2] }
+    it('summarizes the lidar selection in the trigger', () => {
+        render(WorkspaceSceneFilters, {
+            props: { ...defaultProps, selectedLidarChannels: [1] }
         });
 
-        expect(screen.getByTestId('workspace-camera-select')).toHaveTextContent('Camera: front');
-        expect(screen.getByTestId('workspace-lidar-select')).toHaveTextContent('Lidar');
-    });
-
-    it('toggles a channel by its channel_id on click', async () => {
-        const user = userEvent.setup();
-        const onToggleCameraChannel = vi.fn();
-        render(WorkspaceFilterBar, {
-            props: { ...defaultProps, onToggleCameraChannel }
-        });
-
-        await user.click(screen.getByTestId('workspace-camera-select'));
-        await user.click(screen.getByText('rear'));
-
-        expect(onToggleCameraChannel).toHaveBeenCalledExactlyOnceWith(3);
-    });
-
-    it('supports selecting all and clearing camera channels', async () => {
-        const user = userEvent.setup();
-        const onSetCameraChannels = vi.fn();
-        render(WorkspaceFilterBar, {
-            props: { ...defaultProps, onSetCameraChannels }
-        });
-
-        await user.click(screen.getByTestId('workspace-camera-select'));
-        await user.click(screen.getByRole('button', { name: 'Clear' }));
-        expect(onSetCameraChannels).toHaveBeenLastCalledWith([]);
-
-        await user.click(screen.getByRole('button', { name: 'Select all' }));
-        expect(onSetCameraChannels).toHaveBeenLastCalledWith([2, 3]);
+        expect(screen.getByTestId('workspace-lidar-select')).toHaveTextContent('Lidar: lidar_top');
     });
 
     it('selects a reference frame by its id', async () => {
         const user = userEvent.setup();
         const onSelectReferenceFrame = vi.fn();
-        render(WorkspaceFilterBar, {
+        render(WorkspaceSceneFilters, {
             props: {
                 ...defaultProps,
                 referenceFrames: [{ name: 'map' }, { name: 'CABIN' }],
@@ -111,7 +63,7 @@ describe('WorkspaceFilterBar', () => {
     it('selects a point color mode with the shared select control', async () => {
         const user = userEvent.setup();
         const onColorModeChange = vi.fn();
-        render(WorkspaceFilterBar, {
+        render(WorkspaceSceneFilters, {
             props: { ...defaultProps, onColorModeChange }
         });
 
@@ -124,13 +76,13 @@ describe('WorkspaceFilterBar', () => {
     });
 
     it('hides the frame select without reference frames', () => {
-        render(WorkspaceFilterBar, { props: defaultProps });
+        render(WorkspaceSceneFilters, { props: defaultProps });
 
         expect(screen.queryByTestId('workspace-frame-select')).not.toBeInTheDocument();
     });
 
     it('says when the tick is shown in the sensor frames', () => {
-        render(WorkspaceFilterBar, {
+        render(WorkspaceSceneFilters, {
             props: {
                 ...defaultProps,
                 referenceFrames: [{ name: 'map' }],
@@ -144,12 +96,11 @@ describe('WorkspaceFilterBar', () => {
         );
     });
 
-    it('disables a lane that has no channels', () => {
-        render(WorkspaceFilterBar, {
+    it('disables the lidar select without lidar channels', () => {
+        render(WorkspaceSceneFilters, {
             props: { ...defaultProps, lidarChannels: [] }
         });
 
         expect(screen.getByTestId('workspace-lidar-select')).toBeDisabled();
-        expect(screen.getByTestId('workspace-camera-select')).toBeEnabled();
     });
 });

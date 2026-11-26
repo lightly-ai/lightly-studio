@@ -10,6 +10,7 @@
     import ProjectionControls from './ProjectionControls.svelte';
     import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';
     import { WorkspacePanel } from '../WorkspacePanel';
+    import { WorkspaceChannelSelect } from '../WorkspaceChannelSelect';
 
     interface Props {
         datasetId: string;
@@ -25,6 +26,10 @@
         onPlaybackToggle?: () => void;
         /** Hides the strip; the panel shows no close button without it. */
         onHide?: () => void;
+        /** Toggles a camera channel; the settings show no channel select without it. */
+        onToggleCameraChannel?: (channelId: number) => void;
+        /** Replaces the shown camera channels. */
+        onSetCameraChannels?: (channelIds: number[]) => void;
     }
 
     let {
@@ -39,7 +44,9 @@
         annotationClasses = [],
         canProject = true,
         onPlaybackToggle,
-        onHide
+        onHide,
+        onToggleCameraChannel,
+        onSetCameraChannels
     }: Props = $props();
     const projectionSettings = useProjectionSettings();
 
@@ -58,6 +65,19 @@
     }));
 </script>
 
+{#snippet cameraChannelSelect()}
+    {#if onToggleCameraChannel && onSetCameraChannels}
+        <WorkspaceChannelSelect
+            label="Camera"
+            channels={summaryCameraChannels}
+            selectedChannels={selectedChannelIds}
+            onToggleChannel={onToggleCameraChannel}
+            onSetChannels={onSetCameraChannels}
+            testId="workspace-camera-select"
+        />
+    {/if}
+{/snippet}
+
 <WorkspacePanel
     title="Camera projections"
     {onHide}
@@ -69,6 +89,7 @@
             settings={$projectionSettings}
             onChange={(settings) => projectionSettings.set(settings)}
             {onPlaybackToggle}
+            filters={onToggleCameraChannel && onSetCameraChannels ? cameraChannelSelect : undefined}
         />
     {/snippet}
     <!-- Reserve the scrollbar so resizing the tiles cannot toggle overflow in a loop. -->

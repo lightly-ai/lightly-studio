@@ -1,6 +1,7 @@
 <script lang="ts">
     import Settings2 from '@lucide/svelte/icons/settings-2';
     import { Button } from '$lib/components/ui/button';
+    import type { Snippet } from 'svelte';
     import * as Popover from '$lib/components/ui/popover';
     import ProjectionSettingsFields from './ProjectionControls/ProjectionSettingsFields.svelte';
     import type { ProjectionSettings } from './projectionSettings';
@@ -9,9 +10,11 @@
         settings: ProjectionSettings;
         onChange: (settings: ProjectionSettings) => void;
         onPlaybackToggle?: () => void;
+        /** Controls shown above the overlay settings, such as the camera channel select. */
+        filters?: Snippet;
     }
 
-    let { settings, onChange, onPlaybackToggle }: Props = $props();
+    let { settings, onChange, onPlaybackToggle, filters }: Props = $props();
     let open = $state(false);
 
     const preventSpaceActivation = (event: KeyboardEvent) => {
@@ -63,6 +66,9 @@
             <h3 class="text-sm font-medium">Camera projection settings</h3>
             <p class="text-xs text-muted-foreground">Adjust the camera overlay visibility.</p>
         </div>
+        {#if filters}
+            <div class="border-b pb-4">{@render filters()}</div>
+        {/if}
         <ProjectionSettingsFields {settings} {onChange} onKeydown={preventSpaceInPopover} />
     </Popover.Content>
 </Popover.Root>

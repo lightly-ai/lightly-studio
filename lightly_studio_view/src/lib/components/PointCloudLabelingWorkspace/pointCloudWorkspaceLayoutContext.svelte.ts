@@ -62,6 +62,14 @@ export interface PointCloudWorkspaceLayoutState {
     accumulation?: ReturnType<typeof createWorkspaceController>['accumulation'];
     /** Strategy used to color the point cloud. */
     colorMode: Exclude<ColorMode, 'none'>;
+    /** Changes how the points are colored. */
+    onColorModeChange: (colorMode: Exclude<ColorMode, 'none'>) => void;
+    /** Lidar channels currently shown in the scene. */
+    selectedLidarChannelIds: number[];
+    /** Toggles a lidar channel by its `channel_id`. */
+    onToggleLidarChannel: (channelId: number) => void;
+    /** Replaces the shown lidar channels. */
+    onSetLidarChannels: (channelIds: number[]) => void;
     /** Selected cuboid identifier, or null. */
     selectedCuboidId: string | null;
     /** Hovered cuboid identifier, or null. */
@@ -70,6 +78,10 @@ export interface PointCloudWorkspaceLayoutState {
     draftCuboid: CuboidBox | null;
     /** Camera channels currently visible in the strip. */
     selectedCameraChannelIds: number[];
+    /** Toggles a camera channel by its `channel_id`. */
+    onToggleCameraChannel: (channelId: number) => void;
+    /** Replaces the shown camera channels. */
+    onSetCameraChannels: (channelIds: number[]) => void;
     /** Whether the camera strip is reduced to its header. */
     cameraStripCollapsed: boolean;
     /** Whether buffering covers the complete sequence. */

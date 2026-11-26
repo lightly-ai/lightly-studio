@@ -116,6 +116,8 @@
                 canProject={!layout.workspace.isShowingSensorFrames}
                 onPlaybackToggle={layout.onPlayToggle}
                 onHide={cameraPane.toggle}
+                onToggleCameraChannel={layout.onToggleCameraChannel}
+                onSetCameraChannels={layout.onSetCameraChannels}
             />
         {/if}
     </Pane>
