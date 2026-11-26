@@ -2,12 +2,9 @@ import { fromStore } from 'svelte/store';
 import type { PaneAPI } from 'paneforge';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 
-/** Keeps camera pane visibility and its session preference synchronized. */
-export function useCameraPane() {
-    const collapsedStore = useSessionStorage<boolean>(
-        'lightlyStudio_pointCloudCameraStripCollapsed',
-        false
-    );
+/** Keeps a collapsible pane and its session preference synchronized. */
+export function useCollapsiblePane(storageKey: string) {
+    const collapsedStore = useSessionStorage<boolean>(storageKey, false);
     const collapsed = fromStore(collapsedStore);
     let pane = $state<PaneAPI>();
 

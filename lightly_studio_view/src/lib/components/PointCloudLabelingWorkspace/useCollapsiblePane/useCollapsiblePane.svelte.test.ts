@@ -1,9 +1,9 @@
 import { flushSync } from 'svelte';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { PaneAPI } from 'paneforge';
-import { useCameraPane } from './useCameraPane.svelte';
+import { useCollapsiblePane } from './useCollapsiblePane.svelte';
 
-const storageKey = 'lightlyStudio_pointCloudCameraStripCollapsed';
+const storageKey = 'lightlyStudio_pointCloudTestPaneCollapsed';
 let dispose = () => {};
 afterEach(() => {
     dispose();
@@ -12,9 +12,9 @@ afterEach(() => {
 
 it('restores a collapsed preference after the pane binds and persists subsequent toggles', () => {
     sessionStorage.setItem(storageKey, 'true');
-    let hook!: ReturnType<typeof useCameraPane>;
+    let hook!: ReturnType<typeof useCollapsiblePane>;
     dispose = $effect.root(() => {
-        hook = useCameraPane();
+        hook = useCollapsiblePane(storageKey);
     });
     flushSync();
     expect(() => hook.toggle()).not.toThrow();
@@ -46,7 +46,7 @@ it('restores a collapsed preference after the pane binds and persists subsequent
     dispose();
 
     dispose = $effect.root(() => {
-        hook = useCameraPane();
+        hook = useCollapsiblePane(storageKey);
     });
     expect(hook.collapsed).toBe(true);
 });
