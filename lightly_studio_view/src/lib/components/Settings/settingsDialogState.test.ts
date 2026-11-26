@@ -198,6 +198,24 @@ describe('SettingsDialogState', () => {
         expect(state.getSavePayload().key_next_camera).toBe('.');
     });
 
+    it('keeps recording past modifier keys and records the typed character', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyNextCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'AltGraph' }));
+        expect(state.recordingShortcut).toBe('keyNextCamera');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'Shift' }));
+        expect(state.recordingShortcut).toBe('keyNextCamera');
+
+        state.handleKeyDown(
+            new KeyboardEvent('keydown', { key: ']', altKey: true, ctrlKey: true })
+        );
+
+        expect(state.shortcuts.keyNextCamera).toBe(']');
+        expect(state.recordingShortcut).toBeNull();
+    });
+
     it('ignores keydown when not recording', () => {
         const state = new SettingsDialogState();
         state.hydrate(TEST_SETTINGS);

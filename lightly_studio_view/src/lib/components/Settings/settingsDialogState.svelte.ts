@@ -88,6 +88,9 @@ export function createSettingsSavePayload(
     };
 }
 
+// A modifier alone is never a shortcut: AltGr and Shift come before the character they type.
+const MODIFIER_KEYS = new Set(['Alt', 'AltGraph', 'Control', 'Meta', 'Shift']);
+
 export function normalizeShortcutKey(event: ShortcutKeyboardEvent): string {
     if (event.key === ' ') {
         return 'Space';
@@ -167,6 +170,9 @@ export class SettingsDialogState {
 
         event.preventDefault();
         event.stopPropagation();
+
+        // Keep recording until the key that the modifier changes.
+        if (MODIFIER_KEYS.has(event.key)) return;
 
         // Escape cancels recording. Stopping it also keeps the dialog open.
         if (event.key !== 'Escape') {
