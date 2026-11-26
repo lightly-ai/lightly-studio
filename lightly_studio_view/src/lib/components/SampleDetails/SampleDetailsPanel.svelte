@@ -28,6 +28,7 @@
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import {
         createSampleDetailsToolbarContext,
+        DEFAULT_BRUSH_SIZE,
         isAssistedLabelingStatus,
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
@@ -260,10 +261,11 @@
         sampleDetailsToolbarContext.brush.mode === 'eraser' &&
             annotationType === AnnotationType.SEGMENTATION_MASK
     );
-    // Restore the brush size saved for the collection. Later saves must not re-run this.
+    // Restore the brush size saved for the collection, or the default when none is saved.
+    // Later saves must not re-run this.
     $effect(() => {
         const savedBrushSize = untrack(() => $lastAnnotationBrushDiameter)[collectionId];
-        if (savedBrushSize !== undefined) setBrushSize(savedBrushSize);
+        setBrushSize(savedBrushSize ?? DEFAULT_BRUSH_SIZE);
     });
 
     $effect(() => {

@@ -142,8 +142,18 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
         expect(mockToolbarContext.brush.size).toBe(37);
     });
 
-    it('keeps the brush size when nothing is saved for the collection', () => {
+    it('uses the default brush size when nothing is saved for the collection', () => {
+        mockToolbarContext.brush.size = 37;
         render(SampleDetailsPanel, { props: defaultProps });
+        expect(mockToolbarContext.brush.size).toBe(100);
+    });
+
+    it('resets the brush size when switching to a collection with no saved size', async () => {
+        lastAnnotationBrushDiameter.set({ 'collection-1': 37 });
+        const { rerender } = render(SampleDetailsPanel, { props: defaultProps });
+        expect(mockToolbarContext.brush.size).toBe(37);
+
+        await rerender({ ...defaultProps, collectionId: 'collection-2' });
         expect(mockToolbarContext.brush.size).toBe(100);
     });
 
