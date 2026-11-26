@@ -76,6 +76,10 @@ export interface PointCloudWorkspaceLayoutState {
     selectedCameraChannelIds: number[];
     /** Whether the camera strip is reduced to its header. */
     cameraStripCollapsed: boolean;
+    /** Camera shown in the enlarged camera dialog, or undefined when it is closed. */
+    openCamera: string | undefined;
+    /** Opens, switches, or closes the enlarged camera dialog. */
+    onOpenCameraChange: (camera: string | undefined, history: 'push' | 'replace') => void;
     /** Whether buffering covers the complete sequence. */
     bufferEntireSequence: boolean;
     /** Inclusive tick ranges ready for playback. */

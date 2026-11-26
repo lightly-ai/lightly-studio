@@ -28,6 +28,8 @@ const defaultProps: Props = {
     bufferEntireSequence: false,
     bufferedRanges: [],
     onCameraStripCollapsedChange: vi.fn(),
+    openCamera: undefined,
+    onOpenCameraChange: vi.fn(),
     onBufferEntireSequenceChange: vi.fn(),
     onPlayToggle: vi.fn(),
     onPlaybackIntervalChange: vi.fn(),

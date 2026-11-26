@@ -12,6 +12,10 @@ export interface WorkspaceOptions {
     tickNumber?: number;
     /** Reports the active tick as a 1-based number for route synchronization. */
     onTickChange?: (tickNumber: number) => void;
+    /** Camera shown in the enlarged camera dialog, or undefined when it is closed. */
+    openCamera?: string;
+    /** Reports the open camera for route synchronization; `push` adds a history entry. */
+    onOpenCameraChange?: (camera: string | undefined, history: 'push' | 'replace') => void;
     /** Opens the previous sequence; the timeline control is disabled when absent. */
     onPreviousSequence?: () => void;
     /** Opens the next sequence; the timeline control is disabled when absent. */

@@ -1,7 +1,6 @@
 <script lang="ts">
     import Camera from '@lucide/svelte/icons/camera';
     import ProjectionOverlay from '../ProjectionOverlay.svelte';
-    import CameraProjectionDialog from './CameraProjectionDialog.svelte';
     import type {
         AnnotationView,
         CameraProjectionView
@@ -22,9 +21,8 @@
         annotations?: readonly AnnotationView[];
         annotationClasses?: readonly AnnotationClassColor[];
         projection?: CameraProjectionView;
-        onPlaybackToggle?: () => void;
+        onEnlarge?: () => void;
         projectionSettings?: ProjectionSettings;
-        onProjectionSettingsChange?: (settings: ProjectionSettings) => void;
     }
     let {
         datasetId,
@@ -38,12 +36,10 @@
         annotations = [],
         annotationClasses = [],
         projection,
-        onPlaybackToggle,
-        projectionSettings,
-        onProjectionSettingsChange
+        onEnlarge,
+        projectionSettings
     }: Props = $props();
 
-    let isEnlarged = $state(false);
     const frame = useCameraFrame(() => ({
         datasetId,
         recordingId,
@@ -65,7 +61,7 @@
             type="button"
             class="flex min-h-0 flex-1 cursor-zoom-in flex-col"
             aria-label={`Enlarge ${label}`}
-            onclick={() => (isEnlarged = true)}
+            onclick={onEnlarge}
         >
             <div class="relative min-h-0 flex-1">
                 <img
@@ -84,21 +80,6 @@
                 />
             </div>
         </button>
-        <CameraProjectionDialog
-            bind:open={isEnlarged}
-            {label}
-            imageUrl={frame.fullFrameUrl ?? frame.frameUrl}
-            {batch}
-            {annotations}
-            {annotationClasses}
-            {projection}
-            {projectionSettings}
-            {onProjectionSettingsChange}
-            {onPlaybackToggle}
-            position={{ index: 1, total: 1 }}
-            previousKey="["
-            nextKey="]"
-        />
     {:else}
         <div class="flex min-h-0 flex-1 items-center justify-center text-muted-foreground">
             <Camera class="size-5" aria-hidden="true" />

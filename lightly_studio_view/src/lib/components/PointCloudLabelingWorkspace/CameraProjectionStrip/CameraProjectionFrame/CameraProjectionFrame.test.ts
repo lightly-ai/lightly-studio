@@ -3,7 +3,6 @@ import { fireEvent } from '@testing-library/dom';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '$lib/api/lightly_studio_local/client.gen';
 import CameraProjectionFrame from './CameraProjectionFrame.svelte';
-import { DEFAULT_PROJECTION_SETTINGS } from '../projectionSettings';
 
 // Pin the client's base URL so the enlarged frame src is deterministic regardless of the
 // value baked into the generated client at build time (see getCameraFrameUrl.test.ts).
@@ -106,82 +105,13 @@ describe('CameraProjectionFrame', () => {
         unmount();
     });
 
-    it('updates the enlarged frame while the dialog stays open', async () => {
-        const { rerender } = render(CameraProjectionFrame, { props: defaultProps });
+    it('asks to enlarge the frame when the tile is clicked', async () => {
+        const onEnlarge = vi.fn();
+        render(CameraProjectionFrame, { props: { ...defaultProps, onEnlarge } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
 
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-        const enlargedImage = screen.getByRole('img', { name: 'front enlarged' });
-        expect(enlargedImage).toHaveAttribute(
-            'src',
-            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=1500&log_time_ns=2000`
-        );
-
-        await rerender({ ...defaultProps, logTimeNs: '3000' });
-
-        expect(screen.getByRole('img', { name: 'front enlarged' })).toHaveAttribute(
-            'src',
-            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=1500&log_time_ns=3000`
-        );
-        expect(screen.getByRole('img', { name: 'front enlarged' })).toBe(enlargedImage);
-        expect(screen.queryByRole('link')).not.toBeInTheDocument();
-    });
-
-    it('uses Space for playback without closing the dialog', async () => {
-        const onPlaybackToggle = vi.fn();
-        render(CameraProjectionFrame, { props: { ...defaultProps, onPlaybackToggle } });
-
-        await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
-        await fireEvent.keyDown(screen.getByRole('dialog'), { code: 'Space', key: ' ' });
-
-        expect(onPlaybackToggle).toHaveBeenCalledOnce();
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-    });
-
-    it('does not restore focus to the frame trigger when the dialog closes', async () => {
-        render(CameraProjectionFrame, { props: defaultProps });
-
-        const trigger = screen.getByRole('button', { name: 'Enlarge front' });
-        await fireEvent.click(trigger);
-        await fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-
+        expect(onEnlarge).toHaveBeenCalledOnce();
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        expect(document.activeElement).not.toBe(trigger);
-    });
-
-    it('does not trigger playback from a dialog control', async () => {
-        const onPlaybackToggle = vi.fn();
-        render(CameraProjectionFrame, {
-            props: {
-                ...defaultProps,
-                onPlaybackToggle,
-                projectionSettings: DEFAULT_PROJECTION_SETTINGS,
-                onProjectionSettingsChange: vi.fn()
-            }
-        });
-
-        await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
-        const settingsButton = screen.getByRole('button', { name: 'Projection settings' });
-        await fireEvent.keyDown(settingsButton, { code: 'Space', key: ' ' });
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(onPlaybackToggle).toHaveBeenCalledOnce();
-        expect(settingsButton).toHaveAttribute('aria-expanded', 'false');
-        expect(document.activeElement).not.toBe(settingsButton);
-    });
-
-    it('shows projection settings in the expanded dialog', async () => {
-        render(CameraProjectionFrame, {
-            props: {
-                ...defaultProps,
-                projectionSettings: DEFAULT_PROJECTION_SETTINGS,
-                onProjectionSettingsChange: vi.fn()
-            }
-        });
-
-        await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
-
-        expect(screen.getByRole('button', { name: 'Projection settings' })).toBeInTheDocument();
     });
 });

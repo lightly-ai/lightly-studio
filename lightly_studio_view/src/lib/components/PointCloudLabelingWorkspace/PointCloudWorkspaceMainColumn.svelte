@@ -111,6 +111,8 @@
             annotationClasses={layout.annotationClasses}
             canProject={!layout.workspace.isShowingSensorFrames}
             onPlaybackToggle={layout.onPlayToggle}
+            openCamera={layout.openCamera}
+            onOpenCameraChange={layout.onOpenCameraChange}
             collapsed={layout.cameraStripCollapsed}
             onToggleCollapsed={cameraPane.toggle}
         />
