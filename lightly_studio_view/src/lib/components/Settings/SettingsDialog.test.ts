@@ -25,7 +25,9 @@ vi.mock('$lib/hooks/useSettings', () => {
         key_toolbar_segmentation_mask: 'm',
         key_toolbar_slic: 'a',
         key_toolbar_brush: 'r',
-        key_toolbar_eraser: 'x'
+        key_toolbar_eraser: 'x',
+        key_previous_camera: '[',
+        key_next_camera: ']'
     });
     const isLoadedStore = writable(true);
 
@@ -357,6 +359,21 @@ describe('SettingsDialog', () => {
         expect(saveSettings).not.toHaveBeenCalled();
     });
 
+    it('should show the point cloud camera shortcuts', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        expect(screen.getByText('Point cloud')).toBeInTheDocument();
+        expect(screen.getByLabelText('Previous camera')).toHaveTextContent('[');
+        expect(screen.getByLabelText('Next camera')).toHaveTextContent(']');
+        const alt = screen.getByLabelText('Previous / next camera (alt)');
+        expect(alt).toHaveTextContent('Shift + ← / →');
+        expect(alt).toBeDisabled();
+        const open = screen.getByLabelText('Open camera 1–9');
+        expect(open).toHaveTextContent('1–9');
+        expect(open).toBeDisabled();
+    });
+
     it('should have unique IDs for all shortcut controls', async () => {
         render(SettingsDialog);
         await openDialog();
@@ -371,7 +388,11 @@ describe('SettingsDialog', () => {
             'toolbar-segmentation-mask',
             'toolbar-brush-mode',
             'toolbar-eraser-mode',
-            'change-brush-size'
+            'change-brush-size',
+            'previous-camera',
+            'next-camera',
+            'camera-alt',
+            'open-camera-n'
         ];
 
         for (const id of ids) {

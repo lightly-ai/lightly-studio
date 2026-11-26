@@ -18,6 +18,8 @@ interface SettingsDialogShortcutState {
     keyToolbarSlic: string;
     keyToolbarBrush: string;
     keyToolbarEraser: string;
+    keyPreviousCamera: string;
+    keyNextCamera: string;
 }
 
 interface SettingsDialogFormState {
@@ -47,7 +49,9 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
             keyToolbarSegmentationMask: settings.key_toolbar_segmentation_mask,
             keyToolbarSlic: settings.key_toolbar_slic ?? 'a',
             keyToolbarBrush: settings.key_toolbar_brush,
-            keyToolbarEraser: settings.key_toolbar_eraser
+            keyToolbarEraser: settings.key_toolbar_eraser,
+            keyPreviousCamera: settings.key_previous_camera,
+            keyNextCamera: settings.key_next_camera
         },
         gridViewRendering: settings.grid_view_sample_rendering,
         gridViewThumbnailQuality: settings.grid_view_thumbnail_quality,
@@ -78,7 +82,9 @@ export function createSettingsSavePayload(
         key_toolbar_segmentation_mask: formState.shortcutSettings.keyToolbarSegmentationMask,
         key_toolbar_slic: formState.shortcutSettings.keyToolbarSlic,
         key_toolbar_brush: formState.shortcutSettings.keyToolbarBrush,
-        key_toolbar_eraser: formState.shortcutSettings.keyToolbarEraser
+        key_toolbar_eraser: formState.shortcutSettings.keyToolbarEraser,
+        key_previous_camera: formState.shortcutSettings.keyPreviousCamera,
+        key_next_camera: formState.shortcutSettings.keyNextCamera
     };
 }
 
@@ -114,7 +120,9 @@ export class SettingsDialogState {
         keyToolbarSegmentationMask: 'm',
         keyToolbarSlic: 'a',
         keyToolbarBrush: 'r',
-        keyToolbarEraser: 'x'
+        keyToolbarEraser: 'x',
+        keyPreviousCamera: '[',
+        keyNextCamera: ']'
     });
     gridViewRendering: RenderingMode = $state('contain');
     gridViewThumbnailQuality: ThumbnailQualityMode = $state('raw');
