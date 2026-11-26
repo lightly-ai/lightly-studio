@@ -64,18 +64,9 @@
     };
 </script>
 
-<div class="flex w-full items-center gap-2">
-    <input
-        type="range"
-        min="0"
-        max={SLIDER_STEPS}
-        step="1"
-        aria-label="Brush size"
-        value={sliderPosition}
-        oninput={onSliderInput}
-        class="min-w-0 flex-1 accent-primary"
-    />
-    <div class="flex items-center gap-1">
+<div class="flex w-full flex-col gap-2">
+    <div class="flex items-center">
+        <span class="w-16 text-sm text-muted-foreground"> Size: </span>
         <input
             type="number"
             min={MIN_BRUSH_SIZE}
@@ -87,8 +78,18 @@
             oninput={(event) => (draft = event.currentTarget.value)}
             onkeydown={onFieldKeyDown}
             onblur={applyDraft}
-            class="h-8 w-14 rounded-md border border-input bg-background px-1 text-right text-sm text-foreground"
+            class="h-8 w-16 rounded-md border border-input bg-background px-1 text-right text-sm text-foreground"
         />
-        <span class="text-sm text-muted-foreground">px</span>
+        <span class="ml-1 text-sm text-muted-foreground">px</span>
     </div>
+    <input
+        type="range"
+        min="0"
+        max={SLIDER_STEPS}
+        step="1"
+        aria-label="Brush size"
+        value={sliderPosition}
+        oninput={onSliderInput}
+        class="w-full accent-primary"
+    />
 </div>

@@ -147,9 +147,7 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-4 pb-2 pt-2">
-                <span class="w-16 text-sm text-muted-foreground"> Size: </span>
-
+            <div class="pb-2 pt-2">
                 <BrushSizeInput
                     size={sampleDetailsToolbarContext.brush.size}
                     onChange={applyBrushSize}
