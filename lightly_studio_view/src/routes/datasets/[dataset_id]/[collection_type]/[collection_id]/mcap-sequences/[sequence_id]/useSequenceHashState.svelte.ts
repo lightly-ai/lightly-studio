@@ -22,24 +22,22 @@ const getUrlState = (hash: string) => ({
 export function useSequenceHashState({ getSequenceId }: UseSequenceHashStateParams) {
     let currentTick = $state(getTickNumberFromHash(page.url.hash));
     let openCamera = $state(getCameraFromHash(page.url.hash));
-    // True while this page session pushed the history entry of the open camera.
-    let pushedCameraEntry = false;
     // True from the moment this page calls history.back() until the popstate lands.
     let isHistoryBackPending = false;
 
     const syncFromUrl = () => {
         ({ tick: currentTick, camera: openCamera } = getUrlState(page.url.hash));
-        pushedCameraEntry = false;
     };
 
-    const writeHash = (historyMode: HistoryMode) => {
+    // `state` defaults to the state of the current entry, so replace writes keep its marker.
+    const writeHash = (historyMode: HistoryMode, state: App.PageState = page.state) => {
         const url = new URL(page.url);
         url.hash = buildSequenceHash({ tick: currentTick, camera: openCamera });
         void goto(url, {
             replaceState: historyMode === 'replace',
             noScroll: true,
             keepFocus: true,
-            state: page.state
+            state
         });
     };
 
@@ -66,15 +64,16 @@ export function useSequenceHashState({ getSequenceId }: UseSequenceHashStatePara
     });
 
     afterNavigate(({ type, from, to }) => {
-        if (type !== 'popstate') return;
+        // A newer navigation can supersede the popstate of history.back(), so any landed
+        // navigation ends the wait.
         isHistoryBackPending = false;
+        if (type !== 'popstate') return;
         if (from?.url.pathname !== to?.url.pathname) {
             syncFromUrl();
             return;
         }
         // The landed entry holds a stale tick, so keep the live one and stamp it onto the entry.
         openCamera = getCameraFromHash(page.url.hash);
-        pushedCameraEntry = false;
         writeHash('replace');
     });
 
@@ -85,18 +84,20 @@ export function useSequenceHashState({ getSequenceId }: UseSequenceHashStatePara
     };
 
     const setOpenCamera = (camera: string | undefined, historyMode: HistoryMode) => {
-        if (camera === undefined && pushedCameraEntry) {
+        // Only a committed push carries the marker: a tick write that supersedes a pending push
+        // copies the state of the entry before it.
+        if (camera === undefined && page.state.cameraEntry) {
             // Pop the entry that opened the camera, so back and close leave the same page.
             openCamera = undefined;
-            pushedCameraEntry = false;
             isHistoryBackPending = true;
             history.back();
             return;
         }
         openCamera = camera;
-        if (camera === undefined) pushedCameraEntry = false;
-        else pushedCameraEntry ||= historyMode === 'push';
-        writeHash(historyMode);
+        writeHash(
+            historyMode,
+            historyMode === 'push' ? { ...page.state, cameraEntry: true } : page.state
+        );
     };
 
     return {

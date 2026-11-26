@@ -8,6 +8,7 @@ const SEQUENCE_URL = 'http://localhost/datasets/d/mcap/c/mcap-sequences/s';
 // Reactive so that the hook effects see URL changes; the mocks read it lazily.
 const route = $state({
     url: new URL(`${SEQUENCE_URL}#tick=2`),
+    state: {} as App.PageState,
     navigationType: null as string | null
 });
 
@@ -17,7 +18,9 @@ vi.mock('$app/state', () => ({
         get url() {
             return route.url;
         },
-        state: {}
+        get state() {
+            return route.state;
+        }
     },
     navigating: {
         get type() {
@@ -45,22 +48,34 @@ const lastGoto = () => {
     return { hash: (url as URL).hash, options };
 };
 
-// SvelteKit updates `page.url` during the navigation and calls afterNavigate at its end.
-const popstate = (toUrl: string) => {
+// SvelteKit updates `page.url` and `page.state` during the navigation and calls afterNavigate
+// at its end.
+const navigate = (type: 'goto' | 'popstate', toUrl: URL, state: App.PageState) => {
     const fromUrl = route.url;
-    route.navigationType = 'popstate';
-    route.url = new URL(toUrl);
+    route.navigationType = type;
+    route.url = toUrl;
+    route.state = state;
     flushSync();
     const callback = vi.mocked(afterNavigate).mock.lastCall![0] as (nav: unknown) => void;
-    callback({ type: 'popstate', from: { url: fromUrl }, to: { url: route.url } });
+    callback({ type, from: { url: fromUrl }, to: { url: route.url } });
     route.navigationType = null;
     flushSync();
+};
+
+const popstate = (toUrl: string, state: App.PageState = {}) =>
+    navigate('popstate', new URL(toUrl), state);
+
+// Lets the last goto of the hook land.
+const commitLastGoto = () => {
+    const [url, options] = vi.mocked(goto).mock.lastCall!;
+    navigate('goto', new URL(url as URL), options?.state ?? {});
 };
 
 describe('useSequenceHashState', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         route.url = new URL(`${SEQUENCE_URL}#tick=2`);
+        route.state = {};
         route.navigationType = null;
     });
 
@@ -91,7 +106,11 @@ describe('useSequenceHashState', () => {
         hashState.setOpenCamera('CAM_B', 'push');
 
         expect(lastGoto().hash).toBe('#tick=2&camera=CAM_B');
-        expect(lastGoto().options).toMatchObject({ replaceState: false, noScroll: true });
+        expect(lastGoto().options).toMatchObject({
+            replaceState: false,
+            noScroll: true,
+            state: { cameraEntry: true }
+        });
     });
 
     it('replaces the history entry when switching cameras', () => {
@@ -117,8 +136,11 @@ describe('useSequenceHashState', () => {
         const { hashState } = setup();
 
         hashState.setOpenCamera('CAM_A', 'push');
+        commitLastGoto();
         hashState.setOpenCamera('CAM_B', 'replace');
+        commitLastGoto();
         hashState.setOpenCamera('CAM_C', 'replace');
+        commitLastGoto();
         vi.mocked(goto).mockClear();
         hashState.setOpenCamera(undefined, 'replace');
 
@@ -153,7 +175,9 @@ describe('useSequenceHashState', () => {
         vi.spyOn(history, 'back').mockImplementation(() => {});
         const { hashState } = setup();
         hashState.setOpenCamera('CAM_A', 'push');
+        commitLastGoto();
         hashState.setTick(9);
+        commitLastGoto();
         hashState.setOpenCamera(undefined, 'replace');
 
         popstate(`${SEQUENCE_URL}#tick=2`);
@@ -168,6 +192,7 @@ describe('useSequenceHashState', () => {
         vi.spyOn(history, 'back').mockImplementation(() => {});
         const { hashState } = setup();
         hashState.setOpenCamera('CAM_A', 'push');
+        commitLastGoto();
         hashState.setOpenCamera(undefined, 'replace');
         vi.mocked(goto).mockClear();
 
@@ -178,6 +203,46 @@ describe('useSequenceHashState', () => {
 
         expect(goto).toHaveBeenCalledOnce();
         expect(lastGoto().hash).toBe('#tick=10');
+    });
+
+    it('closes by replacing when a tick write superseded the pending push', () => {
+        const back = vi.spyOn(history, 'back').mockImplementation(() => {});
+        const { hashState } = setup();
+        hashState.setOpenCamera('CAM_A', 'push');
+        // The tick write starts before the push lands and supersedes it.
+        hashState.setTick(5);
+        commitLastGoto();
+
+        hashState.setOpenCamera(undefined, 'replace');
+
+        expect(back).not.toHaveBeenCalled();
+        expect(lastGoto().hash).toBe('#tick=5');
+        expect(lastGoto().options).toMatchObject({ replaceState: true });
+    });
+
+    it('pops again after a camera reopens from a forward navigation', () => {
+        const back = vi.spyOn(history, 'back').mockImplementation(() => {});
+        const { hashState } = setup();
+
+        popstate(`${SEQUENCE_URL}#tick=2&camera=CAM_A`, { cameraEntry: true });
+        hashState.setOpenCamera(undefined, 'replace');
+
+        expect(back).toHaveBeenCalledOnce();
+    });
+
+    it('stops waiting for history.back when a newer navigation lands', () => {
+        vi.spyOn(history, 'back').mockImplementation(() => {});
+        const { hashState } = setup();
+        hashState.setOpenCamera('CAM_A', 'push');
+        commitLastGoto();
+        hashState.setOpenCamera(undefined, 'replace');
+
+        // The camera reopens before the popstate of history.back() lands and supersedes it.
+        hashState.setOpenCamera('CAM_B', 'push');
+        commitLastGoto();
+        hashState.setTick(11);
+
+        expect(lastGoto().hash).toBe('#tick=11&camera=CAM_B');
     });
 
     it('applies a hash edited in the address bar', () => {
@@ -206,7 +271,9 @@ describe('useSequenceHashState', () => {
         vi.spyOn(history, 'back').mockImplementation(() => {});
         const { hashState } = setup();
         hashState.setOpenCamera('CAM_A', 'push');
+        commitLastGoto();
         hashState.setTick(9);
+        commitLastGoto();
         hashState.setOpenCamera(undefined, 'replace');
 
         route.url = new URL(`${SEQUENCE_URL}#tick=2`);
