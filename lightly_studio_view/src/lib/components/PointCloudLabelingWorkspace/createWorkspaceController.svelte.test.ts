@@ -47,6 +47,9 @@ vi.mock('./useWorkspacePresentation/useWorkspacePresentation.svelte', () => ({
 vi.mock('./useWorkspaceFullscreen/useWorkspaceFullscreen.svelte', () => ({
     useWorkspaceFullscreen: () => ({})
 }));
+vi.mock('./usePanelVisibility/usePanelVisibility.svelte', () => ({
+    usePanelVisibility: () => ({})
+}));
 vi.mock('./useCollapsiblePane/useCollapsiblePane.svelte', () => ({
     useCollapsiblePane: () => ({})
 }));

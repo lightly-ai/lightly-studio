@@ -9,6 +9,7 @@ import { useWorkspacePlayback } from './useWorkspacePlayback/useWorkspacePlaybac
 import { useWorkspaceSceneData } from './useWorkspaceSceneData/useWorkspaceSceneData.svelte';
 import { useWorkspaceEditing } from './useWorkspaceEditing/useWorkspaceEditing.svelte';
 import { useWorkspaceFullscreen } from './useWorkspaceFullscreen/useWorkspaceFullscreen.svelte';
+import { usePanelVisibility } from './usePanelVisibility/usePanelVisibility.svelte';
 import { useCollapsiblePane } from './useCollapsiblePane/useCollapsiblePane.svelte';
 import { useCuboidTargetSource } from './useCuboidTargetSource';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
@@ -56,6 +57,8 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
     const fullscreen = useWorkspaceFullscreen();
     const cameraPane = useCollapsiblePane('lightlyStudio_pointCloudCameraStripCollapsed');
     const detailsPane = useCollapsiblePane('lightlyStudio_pointCloudDetailsCollapsed');
+    const objectTracksPanel = usePanelVisibility('lightlyStudio_pointCloudObjectTracksShown', true);
+    const tagTracksPanel = usePanelVisibility('lightlyStudio_pointCloudFrameTagTracksShown', false);
     const playback = useWorkspacePlayback(
         () => workspace,
         getOptions,
@@ -167,6 +170,8 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         fullscreen,
         cameraPane,
         detailsPane,
+        objectTracksPanel,
+        tagTracksPanel,
         playback,
         data,
         targetSource,
