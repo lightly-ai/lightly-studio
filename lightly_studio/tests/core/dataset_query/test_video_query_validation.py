@@ -116,8 +116,9 @@ def test_frame_scope__video_tags() -> None:
         )
 
 
-def test_video_frame_scope__event_field() -> None:
-    field = FieldRef(table="event", name="class_name")
-    expr = StringExpr(field=field, operator=EqualityComparisonOperator.EQ, value="run")
-    with pytest.raises(QueryExprError, match="event or frame query"):
+@pytest.mark.parametrize("table", ["event", "image", "video"])
+def test_video_frame_scope__non_frame_field(table: str) -> None:
+    field = FieldRef(table=table, name="file_name")
+    expr = StringExpr(field=field, operator=EqualityComparisonOperator.EQ, value="a")
+    with pytest.raises(QueryExprError, match="video_frame and parent_video fields"):
         query_translation.to_match_expression(expr=expr, sample_type=SampleType.VIDEO_FRAME)

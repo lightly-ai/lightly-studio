@@ -97,6 +97,12 @@ def test_to_match_expression__video_frame_tags() -> None:
             _PARENT_VIDEO.duration_s == 1.0,
         ),
         (
+            OrdinalFloatExpr(
+                field=FieldRef(table="parent_video", name="duration_s"), operator=_GT, value=0.5
+            ),
+            _PARENT_VIDEO.duration_s > 0.5,
+        ),
+        (
             TagsContainsExpr(
                 field=FieldRef(table="parent_video", name="tags"), tag_name="reviewed"
             ),
@@ -132,7 +138,13 @@ def test_sort_to_order_by__video_frame_fields(name: str) -> None:
 
 @pytest.mark.usefixtures("patch_collection")
 def test_to_match_expression__video_frame_tags_in_database() -> None:
-    dataset = _create_two_videos()
+    dataset = VideoDataset.create(name="ds")
+    for path, fps in (("/data/a.mp4", 3.0), ("/data/b.mp4", 2.0)):
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(path=path, duration_s=1.0, fps=fps),
+        )
     for frame in dataset.frames():
         if frame.frame_number == 2:
             frame.add_tag("blurry")
@@ -150,10 +162,15 @@ def test_to_match_expression__video_frame_tags_in_database() -> None:
     assert [video.file_path_abs for video in videos] == ["/data/a.mp4"]
 
 
-def test_to_match_expression__parent_video_tags_in_database(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    dataset = _create_two_videos()
+@pytest.mark.usefixtures("patch_collection")
+def test_to_match_expression__parent_video_tags_in_database() -> None:
+    dataset = VideoDataset.create(name="ds")
+    for path in ("/data/a.mp4", "/data/b.mp4"):
+        create_video_with_frames(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            video=VideoStub(path=path, duration_s=1.0, fps=2.0),
+        )
     for video in dataset.query():
         if video.file_path_abs == "/data/b.mp4":
             video.add_tag("reviewed")
@@ -169,17 +186,6 @@ def test_to_match_expression__parent_video_tags_in_database(
         ("/data/b.mp4", 0),
         ("/data/b.mp4", 1),
     ]
-
-
-def _create_two_videos() -> VideoDataset:
-    dataset = VideoDataset.create(name="ds")
-    for path, fps in (("/data/a.mp4", 3.0), ("/data/b.mp4", 2.0)):
-        create_video_with_frames(
-            session=dataset.session,
-            collection_id=dataset.collection_id,
-            video=VideoStub(path=path, duration_s=1.0, fps=fps),
-        )
-    return dataset
 
 
 def _assert_frame_translation(expr: MatchExpr, expected: MatchExpression) -> None:

@@ -160,6 +160,7 @@ _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
 # Nullable numeric columns support ordinal comparisons in the query language.
 _ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "duration_s"): VideoSampleField.duration_s,
+    ("parent_video", "duration_s"): _PARENT_VIDEO.duration_s,
     ("classification", "confidence"): ClassificationField.confidence,
     ("event", "confidence"): VideoEventField.confidence,
     ("object_detection", "confidence"): ObjectDetectionField.confidence,
