@@ -1,10 +1,34 @@
 <script lang="ts">
+    import Camera from '@lucide/svelte/icons/camera';
+    import Grid2x2 from '@lucide/svelte/icons/grid-2x2';
     import WorkspaceHeader from '../WorkspaceHeader/WorkspaceHeader.svelte';
     import WorkspaceFilterBar from '../WorkspaceFilterBar/WorkspaceFilterBar.svelte';
     import { useWorkspaceControllerContext } from '../pointCloudWorkspaceLayoutContext.svelte';
     const controller = useWorkspaceControllerContext();
     const { workspace, presentation, fullscreen, cameraPane, lidarSelection, cameraSelection } =
         controller;
+
+    const layoutToggles = $derived([
+        {
+            id: 'orthographic',
+            label: 'Orthographic views',
+            icon: Grid2x2,
+            isActive: presentation.showOrthographicViews
+        },
+        {
+            id: 'camera',
+            label: 'Camera projections',
+            icon: Camera,
+            isActive: !cameraPane.collapsed
+        }
+    ]);
+    const toggleLayout = (id: string) => {
+        if (id === 'orthographic') {
+            presentation.toggleOrthographicProjections(!presentation.showOrthographicViews);
+        } else if (id === 'camera') {
+            cameraPane.toggle();
+        }
+    };
 </script>
 
 <WorkspaceHeader
@@ -12,8 +36,8 @@
     sourcePath={controller.options.sourcePath}
     isFullscreen={fullscreen.isFullscreen}
     onToggleFullscreen={fullscreen.toggleFullscreen}
-    cameraStripCollapsed={cameraPane.collapsed}
-    onToggleCameraStrip={cameraPane.toggle}
+    {layoutToggles}
+    onToggleLayout={toggleLayout}
 />
 <WorkspaceFilterBar
     referenceFrames={workspace.referenceFrames}
