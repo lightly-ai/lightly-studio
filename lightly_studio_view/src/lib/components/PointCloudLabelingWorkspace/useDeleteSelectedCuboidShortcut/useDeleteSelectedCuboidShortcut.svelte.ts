@@ -15,9 +15,7 @@ export function useDeleteSelectedCuboidShortcut({
     deleteCuboid
 }: Params): void {
     function onKeyDown(event: KeyboardEvent): void {
-        if (!DELETE_KEYS.has(event.key) || event.repeat) return;
-        if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
-        if (isTextInputTarget(event.target) || isInDialog(event.target)) return;
+        if (!isDeleteShortcut(event)) return;
         const selectedCuboidId = getSelectedCuboidId();
         if (!getIsEditingMode() || !selectedCuboidId) return;
         event.preventDefault();
@@ -28,6 +26,12 @@ export function useDeleteSelectedCuboidShortcut({
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     });
+}
+
+function isDeleteShortcut(event: KeyboardEvent): boolean {
+    if (!DELETE_KEYS.has(event.key) || event.repeat) return false;
+    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return false;
+    return !isTextInputTarget(event.target) && !isInDialog(event.target);
 }
 
 function isInDialog(target: EventTarget | null): boolean {
