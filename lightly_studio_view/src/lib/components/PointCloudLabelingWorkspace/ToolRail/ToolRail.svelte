@@ -2,7 +2,7 @@
     import Box from '@lucide/svelte/icons/box';
     import MousePointer2 from '@lucide/svelte/icons/mouse-pointer-2';
     import { Toolbar, type ToolbarItem } from '$lib/components/ui/toolbar';
-    import { useSettings } from '$lib/hooks/useSettings';
+    import { useSettings } from '$lib/hooks';
     import type { WorkspaceTool } from '../domain';
     import { isSceneNavigationKey } from '../SceneViewport/sceneNavigationInput';
 

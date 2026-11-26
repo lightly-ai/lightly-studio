@@ -1,6 +1,6 @@
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { useSettings } from '$lib/hooks/useSettings';
+import { useSettings } from '$lib/hooks';
 import ToolRail from './ToolRail.svelte';
 
 const { settingsStore } = useSettings();
