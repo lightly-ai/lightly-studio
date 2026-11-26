@@ -34,7 +34,7 @@ describe('createBrushDrawer', () => {
         expect(context.fillStyle).toBe('black');
     });
 
-    it('fills every pixel along a size 1 line', () => {
+    it('fills a size 1 line as one span', () => {
         const context: Mock2dContext = {
             fillRect: vi.fn(),
             globalCompositeOperation: 'source-over',
@@ -54,12 +54,7 @@ describe('createBrushDrawer', () => {
         });
 
         expect(ensureSourceMaskContext).toHaveBeenCalledWith(100, 50);
-        expect(context.fillRect.mock.calls).toEqual([
-            [0, 0, 1, 1],
-            [1, 0, 1, 1],
-            [2, 0, 1, 1],
-            [3, 0, 1, 1]
-        ]);
+        expect(context.fillRect.mock.calls).toEqual([[0, 0, 4, 1]]);
         expect(context.globalCompositeOperation).toBe('destination-out');
         expect(context.fillStyle).toBe('black');
     });

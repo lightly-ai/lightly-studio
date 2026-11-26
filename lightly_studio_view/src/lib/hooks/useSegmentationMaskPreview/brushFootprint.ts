@@ -56,6 +56,24 @@ export function getStrokeAnchors(from: BrushPoint, to: BrushPoint): BrushPoint[]
     }
 }
 
+/** A stroke of a round brush from `from` to `to` on an image of `width` x `height` pixels. */
+export interface BrushStroke {
+    from: BrushPoint;
+    to: BrushPoint;
+    size: number;
+    width: number;
+    height: number;
+}
+
+/**
+ * Return the image pixels that a brush stroke paints, as row spans that do not overlap.
+ * The pixels are the union of the brush disc at each anchor of the stroke. Spans are ordered
+ * top to bottom, then left to right.
+ */
+export function getStrokeSpans(stroke: BrushStroke): BrushSpan[] {
+    return toMergedSpans(collectRowRanges(stroke));
+}
+
 /** Return an SVG path that outlines the pixels the brush paints at `point`. */
 export function getBrushOutlinePath(point: BrushPoint, size: number): string {
     return toOutlinePath(getBrushSpans(getBrushAnchor(point, size), size));
@@ -71,6 +89,83 @@ function toOutlinePath(spans: BrushSpan[]): string {
         .map((span) => `H${span.xStart}V${span.y}`)
         .join('');
     return `M${spans[0].xStart} ${spans[0].y}${rightEdge}${leftEdge}Z`;
+}
+
+/** A range of pixels in one row, from `xStart` up to but not including `xEnd`. */
+interface PixelRange {
+    xStart: number;
+    xEnd: number;
+}
+
+// The disc offsets are computed once for the stroke, and pixels outside the image are dropped.
+// Neighbor anchors usually cover touching ranges, so a range joins the last range of its row
+// when possible. This keeps the number of stored ranges small for long strokes.
+function collectRowRanges({
+    from,
+    to,
+    size,
+    width,
+    height
+}: BrushStroke): Map<number, PixelRange[]> {
+    const discOffsets = getDiscOffsets(toWholePixels(size));
+    const rangesByRow = new Map<number, PixelRange[]>();
+
+    for (const anchor of getStrokeAnchors(from, to)) {
+        for (const offset of discOffsets) {
+            const y = anchor.y + offset.y;
+            const xStart = Math.max(0, anchor.x + offset.xStart);
+            const xEnd = Math.min(width, anchor.x + offset.xStart + offset.width);
+            const isInsideImage = y >= 0 && y < height && xStart < xEnd;
+            if (!isInsideImage) continue;
+
+            addRange(rangesByRow, y, { xStart, xEnd });
+        }
+    }
+    return rangesByRow;
+}
+
+function addRange(rangesByRow: Map<number, PixelRange[]>, y: number, range: PixelRange) {
+    const rowRanges = rangesByRow.get(y);
+    if (!rowRanges) {
+        rangesByRow.set(y, [range]);
+        return;
+    }
+    const lastRange = rowRanges[rowRanges.length - 1];
+    if (rangesTouch(lastRange, range)) {
+        lastRange.xStart = Math.min(lastRange.xStart, range.xStart);
+        lastRange.xEnd = Math.max(lastRange.xEnd, range.xEnd);
+        return;
+    }
+    rowRanges.push(range);
+}
+
+function toMergedSpans(rangesByRow: Map<number, PixelRange[]>): BrushSpan[] {
+    const rows = [...rangesByRow.keys()].sort((a, b) => a - b);
+    return rows.flatMap((y) =>
+        mergeRanges(rangesByRow.get(y) ?? []).map((range) => ({
+            y,
+            xStart: range.xStart,
+            width: range.xEnd - range.xStart
+        }))
+    );
+}
+
+function mergeRanges(ranges: PixelRange[]): PixelRange[] {
+    const sortedRanges = [...ranges].sort((a, b) => a.xStart - b.xStart);
+    const mergedRanges: PixelRange[] = [];
+    for (const range of sortedRanges) {
+        const lastRange = mergedRanges[mergedRanges.length - 1];
+        if (lastRange && rangesTouch(lastRange, range)) {
+            lastRange.xEnd = Math.max(lastRange.xEnd, range.xEnd);
+            continue;
+        }
+        mergedRanges.push({ ...range });
+    }
+    return mergedRanges;
+}
+
+function rangesTouch(first: PixelRange, second: PixelRange): boolean {
+    return first.xStart <= second.xEnd && second.xStart <= first.xEnd;
 }
 
 const discOffsetsBySize = new Map<number, BrushSpan[]>();

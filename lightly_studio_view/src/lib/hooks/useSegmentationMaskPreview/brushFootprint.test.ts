@@ -3,7 +3,8 @@ import {
     getBrushAnchor,
     getBrushOutlinePath,
     getBrushSpans,
-    getStrokeAnchors
+    getStrokeAnchors,
+    getStrokeSpans
 } from './brushFootprint';
 
 describe('getBrushAnchor', () => {
@@ -93,6 +94,99 @@ describe('getStrokeAnchors', () => {
             { x: 1, y: 1 },
             { x: 2, y: 0 }
         ]);
+    });
+});
+
+describe('getStrokeSpans', () => {
+    it('joins the discs of a size 3 line into one span per row', () => {
+        expect(
+            getStrokeSpans({
+                from: { x: 2, y: 2 },
+                to: { x: 6, y: 2 },
+                size: 3,
+                width: 20,
+                height: 20
+            })
+        ).toEqual([
+            { y: 1, xStart: 1, width: 7 },
+            { y: 2, xStart: 1, width: 7 },
+            { y: 3, xStart: 1, width: 7 }
+        ]);
+    });
+
+    it('drops the pixels outside the image', () => {
+        expect(
+            getStrokeSpans({
+                from: { x: 0, y: 0 },
+                to: { x: 0, y: 0 },
+                size: 3,
+                width: 20,
+                height: 20
+            })
+        ).toEqual([
+            { y: 0, xStart: 0, width: 2 },
+            { y: 1, xStart: 0, width: 2 }
+        ]);
+    });
+
+    it('returns no spans for a stroke fully outside the image', () => {
+        expect(
+            getStrokeSpans({
+                from: { x: -50, y: -50 },
+                to: { x: -10, y: 30 },
+                size: 5,
+                width: 20,
+                height: 20
+            })
+        ).toEqual([]);
+    });
+
+    it('keeps two spans in a row when the discs do not meet', () => {
+        expect(
+            getStrokeSpans({
+                from: { x: 2, y: 2 },
+                to: { x: 6, y: 6 },
+                size: 2,
+                width: 20,
+                height: 20
+            })
+        ).toEqual([
+            { y: 1, xStart: 1, width: 2 },
+            { y: 2, xStart: 1, width: 3 },
+            { y: 3, xStart: 2, width: 3 },
+            { y: 4, xStart: 3, width: 3 },
+            { y: 5, xStart: 4, width: 3 },
+            { y: 6, xStart: 5, width: 2 }
+        ]);
+    });
+
+    it.each([
+        { from: { x: 3, y: 4 }, to: { x: 40, y: 17 }, size: 7 },
+        { from: { x: 30, y: 2 }, to: { x: 5, y: 45 }, size: 12 },
+        { from: { x: -8, y: 20 }, to: { x: 55, y: 28 }, size: 25 },
+        { from: { x: 10, y: 10 }, to: { x: 11, y: 38 }, size: 4.6 }
+    ])('paints the same pixels as a disc at each anchor ($size px)', ({ from, to, size }) => {
+        const width = 50;
+        const height = 40;
+        const expectedPixels = new Set<string>();
+        for (const anchor of getStrokeAnchors(from, to)) {
+            for (const span of getBrushSpans(anchor, size)) {
+                for (let x = span.xStart; x < span.xStart + span.width; x++) {
+                    const isInsideImage = x >= 0 && x < width && span.y >= 0 && span.y < height;
+                    if (isInsideImage) expectedPixels.add(`${x},${span.y}`);
+                }
+            }
+        }
+
+        const paintedPixels: string[] = [];
+        for (const span of getStrokeSpans({ from, to, size, width, height })) {
+            for (let x = span.xStart; x < span.xStart + span.width; x++) {
+                paintedPixels.push(`${x},${span.y}`);
+            }
+        }
+
+        expect(paintedPixels).toHaveLength(expectedPixels.size);
+        expect(new Set(paintedPixels)).toEqual(expectedPixels);
     });
 });
 

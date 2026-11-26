@@ -1,10 +1,5 @@
-import { getBrushAnchor, getBrushSpans, getStrokeAnchors } from './brushFootprint';
-import type {
-    BrushPoint,
-    DrawBrushDotParams,
-    DrawBrushLineParams,
-    EnsureSourceMaskContext
-} from './types';
+import { getBrushAnchor, getStrokeSpans, type BrushSpan } from './brushFootprint';
+import type { DrawBrushDotParams, DrawBrushLineParams, EnsureSourceMaskContext } from './types';
 
 interface CreateBrushDrawerParams {
     ensureSourceMaskContext: EnsureSourceMaskContext;
@@ -15,7 +10,7 @@ export interface BrushDrawer {
     drawBrushLine: (params: DrawBrushLineParams) => void;
 }
 
-// Brush strokes are stamped as whole-pixel rects, so the mask gets no antialiased edges.
+// Brush strokes are filled as whole-pixel rects, so the mask gets no antialiased edges.
 export function createBrushDrawer({
     ensureSourceMaskContext
 }: CreateBrushDrawerParams): BrushDrawer {
@@ -30,7 +25,11 @@ export function createBrushDrawer({
         if (!context) return;
 
         prepareContext(context, compositeOperation);
-        stampDisc(context, getBrushAnchor(point, brushSize), brushSize);
+        const anchor = getBrushAnchor(point, brushSize);
+        fillSpans(
+            context,
+            getStrokeSpans({ from: anchor, to: anchor, size: brushSize, width, height })
+        );
     };
 
     const drawBrushLine = ({
@@ -45,13 +44,14 @@ export function createBrushDrawer({
         if (!context) return;
 
         prepareContext(context, compositeOperation);
-        const strokeAnchors = getStrokeAnchors(
-            getBrushAnchor(from, brushSize),
-            getBrushAnchor(to, brushSize)
-        );
-        for (const anchor of strokeAnchors) {
-            stampDisc(context, anchor, brushSize);
-        }
+        const strokeSpans = getStrokeSpans({
+            from: getBrushAnchor(from, brushSize),
+            to: getBrushAnchor(to, brushSize),
+            size: brushSize,
+            width,
+            height
+        });
+        fillSpans(context, strokeSpans);
     };
 
     return {
@@ -68,8 +68,8 @@ function prepareContext(
     context.fillStyle = 'black';
 }
 
-function stampDisc(context: CanvasRenderingContext2D, anchor: BrushPoint, brushSize: number) {
-    for (const span of getBrushSpans(anchor, brushSize)) {
+function fillSpans(context: CanvasRenderingContext2D, spans: BrushSpan[]) {
+    for (const span of spans) {
         context.fillRect(span.xStart, span.y, span.width, 1);
     }
 }
