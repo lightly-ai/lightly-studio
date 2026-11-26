@@ -19,6 +19,7 @@ from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.core.dataset_query import query_translation, sort_translation
+from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.image import ImageTable
@@ -27,6 +28,7 @@ from lightly_studio.models.query_expr import (
     FieldRef,
     ObjectDetectionMatchExpr,
     PolygonMatchExpr,
+    QueryExpr,
     SegmentationMaskMatchExpr,
 )
 from lightly_studio.models.sample import SampleTable
@@ -131,6 +133,16 @@ def _offset_page(
     return page, next_cursor
 
 
+def to_image_match_expression(query_expr: QueryExpr) -> MatchExpression:
+    """Translate a query expression on image samples to a match expression.
+
+    Raises:
+        QueryExprError: If the expression uses a field that is not valid for images.
+    """
+    _check_filter_fields(value=query_expr, table="image")
+    return query_translation.to_match_expression(expr=query_expr.match_expr)
+
+
 def _filtered_query(collection_id: UUID, request: SampleQueryRequest) -> SelectOfScalar[ImageTable]:
     query = (
         select(ImageTable)
@@ -139,8 +151,7 @@ def _filtered_query(collection_id: UUID, request: SampleQueryRequest) -> SelectO
     )
     if request.query_expr is None:
         return query
-    _check_filter_fields(value=request.query_expr, table="image")
-    match = query_translation.to_match_expression(expr=request.query_expr.match_expr)
+    match = to_image_match_expression(query_expr=request.query_expr)
     return query.where(match.get())
 
 
