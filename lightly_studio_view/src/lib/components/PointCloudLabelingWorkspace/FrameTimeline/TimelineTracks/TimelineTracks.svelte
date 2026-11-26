@@ -154,8 +154,9 @@
                 <span
                     class="absolute top-1 -translate-x-1/2 text-[10px] leading-none text-muted-foreground"
                     style:left={`${((mark.index + 0.5) / ticks.length) * 100}%`}
-                    >{mark.index + 1}</span
                 >
+                    {mark.index + 1}
+                </span>
             {/each}
             {#each visibleMarks as mark (mark.tick.seq_number)}
                 <span

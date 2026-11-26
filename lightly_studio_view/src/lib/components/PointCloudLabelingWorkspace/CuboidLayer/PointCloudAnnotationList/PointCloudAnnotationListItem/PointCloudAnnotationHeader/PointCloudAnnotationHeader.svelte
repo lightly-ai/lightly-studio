@@ -66,9 +66,9 @@
                 />
             </div>
             {#if trackNumber != null}
-                <Typography variant="body2" className="shrink-0 text-muted-foreground"
-                    >#{trackNumber}</Typography
-                >
+                <Typography variant="body2" className="shrink-0 text-muted-foreground">
+                    #{trackNumber}
+                </Typography>
             {/if}
         </div>
     {:else}
@@ -83,9 +83,9 @@
             {@render colorSwatch()}
             <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
             {#if trackNumber != null}
-                <Typography variant="body2" className="shrink-0 text-muted-foreground"
-                    >#{trackNumber}</Typography
-                >
+                <Typography variant="body2" className="shrink-0 text-muted-foreground">
+                    #{trackNumber}
+                </Typography>
             {/if}
         </button>
     {/if}

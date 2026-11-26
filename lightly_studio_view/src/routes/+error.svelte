@@ -48,8 +48,9 @@
                     <li>
                         Make sure the Lightly Studio API server is running at <code
                             class="rounded bg-muted px-1 py-0.5 font-mono text-sm text-muted-foreground"
-                            >{$apiUrl}</code
                         >
+                            {$apiUrl}
+                        </code>
                     </li>
                     <li>Check that the API is accessible at the configured URL</li>
                     <li>Refresh this page once the API is running</li>

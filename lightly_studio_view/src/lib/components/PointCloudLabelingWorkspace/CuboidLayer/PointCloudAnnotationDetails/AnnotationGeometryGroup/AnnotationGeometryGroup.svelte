@@ -61,9 +61,10 @@
     {:else}
         <dd class="mt-1 grid grid-cols-3 gap-x-4">
             {#each fields as field, index (field)}
-                <Typography variant="body2"
-                    >{labels[index]} {displayValues[index]}{suffix}</Typography
-                >
+                <Typography variant="body2">
+                    {labels[index]}
+                    {displayValues[index]}{suffix}
+                </Typography>
             {/each}
         </dd>
     {/if}

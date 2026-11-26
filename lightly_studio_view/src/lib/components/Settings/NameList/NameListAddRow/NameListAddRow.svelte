@@ -29,9 +29,9 @@
             <span class="font-medium text-foreground">"{name}"</span>
         </span>
         {#if isEnterTarget}
-            <kbd class="rounded border border-border px-1.5 text-xs text-muted-foreground"
-                >Enter</kbd
-            >
+            <kbd class="rounded border border-border px-1.5 text-xs text-muted-foreground">
+                Enter
+            </kbd>
         {/if}
     </button>
 </li>

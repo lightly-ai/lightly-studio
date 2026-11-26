@@ -15,8 +15,9 @@
 
 <div class="mb-3 min-w-0">
     <div class="flex items-center justify-between">
-        <Typography variant="h5" component="h2" className="text-foreground">Query Filter</Typography
-        >
+        <Typography variant="h5" component="h2" className="text-foreground">
+            Query Filter
+        </Typography>
         <Button
             icon={X}
             variant="ghost"

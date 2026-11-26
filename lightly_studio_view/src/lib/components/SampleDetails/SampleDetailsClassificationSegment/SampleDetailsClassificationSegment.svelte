@@ -300,14 +300,14 @@
                     {/if}
                     {#if annotation.confidence != null}
                         {@const formattedConfidence = formatConfidence(annotation.confidence)}
-                        <span class="text-xs text-muted-foreground"
-                            >Confidence: {formattedConfidence}</span
-                        >
+                        <span class="text-xs text-muted-foreground">
+                            Confidence: {formattedConfidence}
+                        </span>
                     {/if}
                     {#if annotation.object_track_number != null}
-                        <span class="shrink-0 font-mono text-xs opacity-80"
-                            >#{annotation.object_track_number}</span
-                        >
+                        <span class="shrink-0 font-mono text-xs opacity-80">
+                            #{annotation.object_track_number}
+                        </span>
                     {/if}
                 </span>
             </span>
