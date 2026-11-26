@@ -107,20 +107,28 @@
         { id: 'focus', label: 'Focus on 3D scene', icon: Focus, isActive: savedLayout !== null }
     ]);
 
-    /** Resizes the timeline pane to its content: compact without track panels. */
-    const fitTimeline = () => {
+    const hasTracks = () => shown.objectTracks || shown.tagTracks;
+
+    /**
+     * Compacts the timeline pane when the last track panel closes and restores its size when
+     * the first track panel opens.
+     */
+    const fitTimeline = (hadTracks: boolean) => {
         const timeline = panes.timeline;
-        if (!timeline || !workspaceHeight) return;
-        const hasTracks = shown.objectTracks || shown.tagTracks;
-        if (!hasTracks && timeline.getSize() > 0) timelineSizeWithTracks = timeline.getSize();
-        timeline.resize(
-            hasTracks ? timelineSizeWithTracks : (COMPACT_TIMELINE_PX / workspaceHeight) * 100
-        );
+        const hasTracksNow = hasTracks();
+        if (!timeline || !workspaceHeight || hadTracks === hasTracksNow) return;
+        if (hasTracksNow) {
+            timeline.resize(timelineSizeWithTracks);
+            return;
+        }
+        if (timeline.getSize() > 0) timelineSizeWithTracks = timeline.getSize();
+        timeline.resize((COMPACT_TIMELINE_PX / workspaceHeight) * 100);
     };
     const setShown = (id: PanelId, isShown: boolean) => {
+        const hadTracks = hasTracks();
         shown[id] = isShown;
         if (isShown) savedLayout = null;
-        if (isTrackPanel(id)) fitTimeline();
+        if (isTrackPanel(id)) fitTimeline(hadTracks);
     };
     const setPanel = (id: PanelId, isShown: boolean) => {
         if (isTrackPanel(id)) {

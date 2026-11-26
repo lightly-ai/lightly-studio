@@ -45,7 +45,7 @@
             {#if layout.showOrthographicViews}
                 <PaneResizer
                     class={cn(
-                        'group relative flex items-center justify-center bg-card transition-colors hover:bg-card',
+                        'group relative flex items-center justify-center bg-card transition-colors hover:bg-card [&[hidden]]:hidden',
                         orthographicIsRight ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize'
                     )}
                     hidden={scene.expandedProjection !== null}
