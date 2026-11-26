@@ -74,6 +74,8 @@
         getCameraChannels: () => summaryCameraChannels,
         getSelectedChannelIds: () => selectedChannelIds,
         getOpenCamera: () => openCamera,
+        getPreviousKey: () => $settingsStore.key_previous_camera,
+        getNextKey: () => $settingsStore.key_next_camera,
         onOpenCameraChange: (camera, historyMode) => onOpenCameraChange?.(camera, historyMode)
     });
     const openChannel = $derived(cameras.openChannel);

@@ -20,14 +20,13 @@ describe('CameraProjectionDialog', () => {
         expect(screen.getByText('Camera: CAM_FRONT · 2 / 5')).toBeInTheDocument();
     });
 
-    it('calls onNext from the button and the next key', async () => {
+    it('calls onNext from the button', async () => {
         const onNext = vi.fn();
         render(CameraProjectionDialog, { props: { ...defaultProps, onNext } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Next camera' }));
-        await fireEvent.keyDown(screen.getByRole('dialog'), { key: ']' });
 
-        expect(onNext).toHaveBeenCalledTimes(2);
+        expect(onNext).toHaveBeenCalledTimes(1);
     });
 
     it('disables the buttons without callbacks', () => {

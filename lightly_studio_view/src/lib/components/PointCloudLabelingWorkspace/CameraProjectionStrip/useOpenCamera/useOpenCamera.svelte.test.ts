@@ -21,6 +21,8 @@ function setup({ openCamera = undefined as string | undefined, selectedChannelId
                 getCameraChannels: () => input.cameraChannels,
                 getSelectedChannelIds: () => input.selectedChannelIds,
                 getOpenCamera: () => input.openCamera,
+                getPreviousKey: () => '[',
+                getNextKey: () => ']',
                 onOpenCameraChange
             });
         })
@@ -88,5 +90,52 @@ describe('useOpenCamera', () => {
 
         expect(onOpenCameraChange).toHaveBeenCalledWith('CAM_C', 'push');
         expect(event.defaultPrevented).toBe(true);
+    });
+
+    describe('previous and next camera keys', () => {
+        const keyEvent = (init: KeyboardEventInit, target?: HTMLElement) => {
+            const event = new KeyboardEvent('keydown', { ...init, cancelable: true });
+            if (target) Object.defineProperty(event, 'target', { value: target });
+            return event;
+        };
+
+        it('switches with a replace and wraps', () => {
+            const { cameras, onOpenCameraChange } = setup({ openCamera: 'CAM_C' });
+
+            const next = keyEvent({ key: ']' });
+            cameras.handleWindowKeydown(next);
+            expect(onOpenCameraChange).toHaveBeenLastCalledWith('CAM_A', 'replace');
+            expect(next.defaultPrevented).toBe(true);
+
+            cameras.handleWindowKeydown(keyEvent({ key: 'ArrowRight', shiftKey: true }));
+            expect(onOpenCameraChange).toHaveBeenLastCalledWith('CAM_A', 'replace');
+        });
+
+        it('goes to the previous camera and wraps', () => {
+            const { cameras, onOpenCameraChange } = setup({ openCamera: 'CAM_A' });
+
+            cameras.handleWindowKeydown(keyEvent({ key: '[' }));
+
+            expect(onOpenCameraChange).toHaveBeenCalledWith('CAM_C', 'replace');
+        });
+
+        it('does nothing when no camera is open', () => {
+            const { cameras, onOpenCameraChange } = setup({});
+            const event = keyEvent({ key: ']' });
+
+            cameras.handleWindowKeydown(event);
+
+            expect(onOpenCameraChange).not.toHaveBeenCalled();
+            expect(event.defaultPrevented).toBe(false);
+        });
+
+        it('ignores keys typed in a text input', () => {
+            const { cameras, onOpenCameraChange } = setup({ openCamera: 'CAM_A' });
+            const input = document.createElement('input');
+
+            cameras.handleWindowKeydown(keyEvent({ key: ']' }, input));
+
+            expect(onOpenCameraChange).not.toHaveBeenCalled();
+        });
     });
 });

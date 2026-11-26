@@ -3,6 +3,7 @@ import type { HistoryMode } from '../../workspaceOptions';
 import {
     getAdjacentCamera,
     getCameraForDigit,
+    getCameraKeyAction,
     type CameraDirection
 } from '../cameraNavigation/cameraNavigation';
 
@@ -10,6 +11,8 @@ interface UseOpenCameraParams {
     getCameraChannels: () => ChannelSummaryView[];
     getSelectedChannelIds: () => number[];
     getOpenCamera: () => string | undefined;
+    getPreviousKey: () => string;
+    getNextKey: () => string;
     onOpenCameraChange: (camera: string | undefined, historyMode: HistoryMode) => void;
 }
 
@@ -18,6 +21,8 @@ export function useOpenCamera({
     getCameraChannels,
     getSelectedChannelIds,
     getOpenCamera,
+    getPreviousKey,
+    getNextKey,
     onOpenCameraChange
 }: UseOpenCameraParams) {
     const selectedChannels = $derived(
@@ -59,6 +64,15 @@ export function useOpenCamera({
         const isInOtherDialog =
             event.target instanceof Element && event.target.closest('[role="dialog"]') !== null;
         if (getOpenCamera() === undefined && isInOtherDialog) return;
+        const direction = getCameraKeyAction(event, {
+            previous: getPreviousKey(),
+            next: getNextKey()
+        });
+        if (direction !== undefined && getOpenCamera() !== undefined) {
+            event.preventDefault();
+            switchCamera(direction);
+            return;
+        }
         const camera = getCameraForDigit(event, selectedNames);
         if (camera === undefined) return;
         event.preventDefault();

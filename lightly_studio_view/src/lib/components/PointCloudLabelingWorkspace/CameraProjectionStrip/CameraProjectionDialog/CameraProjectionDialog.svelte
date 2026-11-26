@@ -8,7 +8,6 @@
     import ChevronLeft from '@lucide/svelte/icons/chevron-left';
     import ChevronRight from '@lucide/svelte/icons/chevron-right';
     import { Button } from '$lib/components/ui/button';
-    import { getCameraKeyAction } from '../cameraNavigation/cameraNavigation';
     import ProjectionControls from '../ProjectionControls.svelte';
     import ProjectionOverlay from '../ProjectionOverlay.svelte';
     import type { ProjectionSettings } from '../projectionSettings';
@@ -51,13 +50,6 @@
     }: Props = $props();
 
     function handleKeydown(event: KeyboardEvent) {
-        const action = getCameraKeyAction(event, { previous: previousKey, next: nextKey });
-        if (action) {
-            event.preventDefault();
-            event.stopPropagation();
-            (action === 'next' ? onNext : onPrevious)?.();
-            return;
-        }
         if (event.code !== 'Space' || event.repeat) return;
         const target = event.target as HTMLElement;
         if (

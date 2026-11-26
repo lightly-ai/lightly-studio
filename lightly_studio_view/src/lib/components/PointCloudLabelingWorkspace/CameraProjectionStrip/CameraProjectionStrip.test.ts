@@ -320,5 +320,44 @@ describe('CameraProjectionStrip', () => {
 
             expect(onOpenCameraChange).toHaveBeenCalledWith('CAM_C', 'replace');
         });
+
+        it('switches cameras with keys while focus is outside the dialog', async () => {
+            const onOpenCameraChange = vi.fn();
+            render(CameraProjectionStrip, {
+                props: { ...cameraProps, openCamera: 'CAM_C', onOpenCameraChange }
+            });
+            expect(screen.getByRole('dialog')).not.toContainElement(
+                document.activeElement as HTMLElement
+            );
+
+            await fireEvent.keyDown(document.body, { key: ']' });
+            expect(onOpenCameraChange).toHaveBeenLastCalledWith('CAM_A', 'replace');
+
+            await fireEvent.keyDown(document.body, { key: '[' });
+            expect(onOpenCameraChange).toHaveBeenLastCalledWith('CAM_B', 'replace');
+
+            await fireEvent.keyDown(document.body, { key: 'ArrowRight', shiftKey: true });
+            expect(onOpenCameraChange).toHaveBeenCalledTimes(3);
+        });
+
+        it('switches once when the key is pressed inside the dialog', async () => {
+            const onOpenCameraChange = vi.fn();
+            render(CameraProjectionStrip, {
+                props: { ...cameraProps, openCamera: 'CAM_A', onOpenCameraChange }
+            });
+
+            await fireEvent.keyDown(screen.getByRole('dialog'), { key: ']' });
+
+            expect(onOpenCameraChange).toHaveBeenCalledTimes(1);
+        });
+
+        it('ignores camera keys when no camera is open', async () => {
+            const onOpenCameraChange = vi.fn();
+            render(CameraProjectionStrip, { props: { ...cameraProps, onOpenCameraChange } });
+
+            await fireEvent.keyDown(document.body, { key: ']' });
+
+            expect(onOpenCameraChange).not.toHaveBeenCalled();
+        });
     });
 });
