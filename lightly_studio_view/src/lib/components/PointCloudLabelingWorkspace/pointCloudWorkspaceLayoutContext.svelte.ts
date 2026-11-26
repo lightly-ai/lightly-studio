@@ -7,6 +7,7 @@ import type { PointCloudWorkspaceContext } from './provider/types';
 import type { AnnotationClass, AnnotationSource, CuboidAnnotation, WorkspaceTool } from './domain';
 import type { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
 import type { createWorkspaceController } from './createWorkspaceController.svelte';
+import type { PanelDock } from './PanelDockToggle';
 
 /** Inclusive range of timeline ticks already available for playback. */
 interface BufferRange {
@@ -54,6 +55,8 @@ export interface PointCloudWorkspaceLayoutState {
     isEditingMode: boolean;
     /** Whether Top, Side, and Front views are visible. */
     showOrthographicViews: boolean;
+    /** Where the orthographic views sit next to the 3D scene. */
+    orthographicDock: PanelDock;
     /** Screen-space point size in CSS pixels. */
     pointSize: number;
     /** Whether navigation buttons and shortcut hints are shown. */
@@ -94,6 +97,8 @@ export interface PointCloudWorkspaceLayoutState {
     onCameraStripCollapsedChange: (collapsed: boolean) => void;
     /** Updates orthographic projection visibility. */
     onToggleOrthographicProjections: (show: boolean) => void | Promise<void>;
+    /** Moves the orthographic views. */
+    onOrthographicDockChange: (dock: PanelDock) => void;
     /** Updates the preferred point size. */
     onPointSizeChange: (value: number) => void;
     /** Updates navigation helper visibility. */

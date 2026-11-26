@@ -44,6 +44,7 @@ const defaultProps: Props = {
     effectiveTool: 'select',
     isEditingMode: true,
     showOrthographicViews: true,
+    orthographicDock: 'bottom' as const,
     pointSize: 2,
     showNavigationHelpers: true,
     colorMode: 'intensity',
@@ -51,6 +52,7 @@ const defaultProps: Props = {
     hoveredCuboidId: null,
     draftCuboid: null,
     onToggleOrthographicProjections: vi.fn(),
+    onOrthographicDockChange: vi.fn(),
     onColorModeChange: vi.fn(),
     selectedLidarChannelIds: [],
     onToggleLidarChannel: vi.fn(),
@@ -131,6 +133,25 @@ it('isolates camera state between separate workspace providers', async () => {
     expect(within(first.container).getByLabelText('top scale')).toHaveTextContent('0.025');
     expect(within(first.container).getByLabelText('perspective scale')).toHaveTextContent('unset');
     expect(within(second.container).getByLabelText('perspective scale')).toHaveTextContent('unset');
+});
+
+it('moves the orthographic views to the right from their panel header', async () => {
+    const onOrthographicDockChange = vi.fn();
+    const { rerender } = render(WorkspaceSceneProviderHarness, {
+        props: { state: { ...defaultProps, onOrthographicDockChange } }
+    });
+    expect(screen.getByTestId('projection-top').parentElement).toHaveClass('grid-cols-3');
+
+    await fireEvent.click(
+        screen.getByRole('button', { name: 'Show orthographic views on the right' })
+    );
+    expect(onOrthographicDockChange).toHaveBeenCalledWith('right');
+
+    await rerender({ state: { ...defaultProps, orthographicDock: 'right' as const } });
+    expect(screen.getByTestId('projection-top').parentElement).toHaveClass('grid-rows-3');
+    expect(
+        screen.getByRole('button', { name: 'Show orthographic views at the bottom' })
+    ).toBeInTheDocument();
 });
 
 it('hides the orthographic views from their close button', async () => {

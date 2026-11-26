@@ -2,6 +2,7 @@ import { fromStore } from 'svelte/store';
 import type { ColorMode } from '$lib/components/PointCloudViewer';
 import { useGlobalStorage } from '$lib/hooks';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
+import type { PanelDock } from '../PanelDockToggle';
 
 /** Owns scene display preferences and editing availability. */
 export function useWorkspacePresentation() {
@@ -16,7 +17,12 @@ export function useWorkspacePresentation() {
         'lightlyStudio_pointCloudShowNavigationHelpers',
         true
     );
+    const orthographicDockStore = useSessionStorage<PanelDock>(
+        'lightlyStudio_pointCloudOrthographicViewsDock',
+        'bottom'
+    );
     const orthographic = fromStore(showOrthographicViews);
+    const orthographicDock = fromStore(orthographicDockStore);
     const editing = fromStore(isEditingMode);
     const points = fromStore(pointSize);
     const helpers = fromStore(showNavigationHelpers);
@@ -27,6 +33,9 @@ export function useWorkspacePresentation() {
         },
         get showOrthographicViews() {
             return orthographic.current;
+        },
+        get orthographicDock() {
+            return orthographicDock.current;
         },
         get pointSize() {
             return points.current;
@@ -42,6 +51,7 @@ export function useWorkspacePresentation() {
         },
         setPointSize: pointSize.set,
         setShowNavigationHelpers: showNavigationHelpers.set,
-        toggleOrthographicProjections: showOrthographicViews.set
+        toggleOrthographicProjections: showOrthographicViews.set,
+        setOrthographicDock: orthographicDockStore.set
     };
 }

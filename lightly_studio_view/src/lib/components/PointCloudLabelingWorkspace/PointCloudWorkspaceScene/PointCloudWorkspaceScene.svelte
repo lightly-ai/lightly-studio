@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Pane, PaneGroup, PaneResizer } from 'paneforge';
+    import { cn } from '$lib/utils';
     import WorkspaceStatusPanel from '../WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import WorkspaceSceneHeader from '../WorkspaceSceneHeader/WorkspaceSceneHeader.svelte';
     import WorkspaceViewport from '../WorkspaceViewport/WorkspaceViewport.svelte';
@@ -11,6 +12,7 @@
     const layout = $derived(getLayout());
     const scene = provideWorkspaceSceneLayout(getLayout);
     provideActiveViewportContext();
+    const orthographicIsRight = $derived(layout.orthographicDock === 'right');
     const hasError = $derived(
         layout.workspace.tickDetails.isError || layout.workspace.cloudPointFrame.isError
     );
@@ -26,7 +28,10 @@
         <WorkspaceStatusPanel status="empty" />
     {:else if layout.sceneFrame}
         <!-- A hidden pane gives its space to the other one; both stay mounted so cameras keep their pose. -->
-        <PaneGroup direction="vertical" class="min-h-0 flex-1">
+        <PaneGroup
+            direction={orthographicIsRight ? 'horizontal' : 'vertical'}
+            class="min-h-0 flex-1"
+        >
             <Pane
                 order={1}
                 defaultSize={60}
@@ -39,10 +44,18 @@
             </Pane>
             {#if layout.showOrthographicViews}
                 <PaneResizer
-                    class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
+                    class={cn(
+                        'group relative flex items-center justify-center bg-card transition-colors hover:bg-card',
+                        orthographicIsRight ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize'
+                    )}
                     hidden={scene.expandedProjection !== null}
                 >
-                    <div class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100">
+                    <div
+                        class={cn(
+                            'flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100',
+                            orthographicIsRight && 'flex-col'
+                        )}
+                    >
                         <span class="size-1 rounded-full bg-muted-foreground"></span>
                         <span class="size-1 rounded-full bg-muted-foreground"></span>
                         <span class="size-1 rounded-full bg-muted-foreground"></span>
