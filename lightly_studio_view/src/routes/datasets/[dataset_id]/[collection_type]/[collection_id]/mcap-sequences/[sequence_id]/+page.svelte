@@ -93,8 +93,20 @@
         if (previousSequenceId !== undefined && previousSequenceId !== sequenceId) syncFromUrl();
     });
 
-    afterNavigate(({ type }) => {
-        if (type === 'popstate') syncFromUrl();
+    // True from the moment this page calls history.back() until the popstate lands.
+    let isHistoryBackPending = false;
+
+    afterNavigate(({ type, from, to }) => {
+        if (type !== 'popstate') return;
+        isHistoryBackPending = false;
+        if (from?.url.pathname !== to?.url.pathname) {
+            syncFromUrl();
+            return;
+        }
+        // The landed entry holds a stale tick, so keep the live one and stamp it onto the entry.
+        openCamera = getCameraFromHash(page.url.hash);
+        pushedCameraEntry = false;
+        writeHash('replace');
     });
 
     const writeHash = (historyMode: 'push' | 'replace') => {
@@ -110,7 +122,8 @@
 
     const updateTickNumber = (nextTickNumber: number) => {
         currentTick = nextTickNumber;
-        writeHash('replace');
+        // The pending popstate writes the live tick once it lands.
+        if (!isHistoryBackPending) writeHash('replace');
     };
 
     const setOpenCamera = (camera: string | undefined, historyMode: 'push' | 'replace') => {
@@ -118,6 +131,7 @@
             // Pop the entry that opened the camera, so back and close leave the same page.
             openCamera = undefined;
             pushedCameraEntry = false;
+            isHistoryBackPending = true;
             history.back();
             return;
         }

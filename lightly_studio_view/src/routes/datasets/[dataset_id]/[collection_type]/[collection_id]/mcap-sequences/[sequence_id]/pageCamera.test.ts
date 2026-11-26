@@ -51,6 +51,15 @@ const lastGoto = () => {
     return { hash: (url as URL).hash, options };
 };
 
+const popstate = (fromPath: string, toPath: string) => {
+    const callback = vi.mocked(afterNavigate).mock.calls[0][0] as (nav: unknown) => void;
+    callback({
+        type: 'popstate',
+        from: { url: new URL(`http://localhost${fromPath}`) },
+        to: { url: new URL(`http://localhost${toPath}`) }
+    });
+};
+
 describe('point-cloud sequence page camera hash', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -131,14 +140,43 @@ describe('point-cloud sequence page camera hash', () => {
     it('syncs the camera and tick from the URL after a popstate navigation', () => {
         render(Page, { props: { data } });
         props().onOpenCameraChange('CAM_A', 'push');
-        const callback = vi.mocked(afterNavigate).mock.calls[0][0] as (nav: {
-            type: string;
-        }) => void;
-
-        routePage.url = new URL('http://localhost/x#tick=7');
-        callback({ type: 'popstate' });
+        routePage.url = new URL('http://localhost/other#tick=7');
+        popstate('/x', '/other');
 
         expect(props().openCamera).toBeUndefined();
         expect(props().tickNumber).toBe(7);
+    });
+
+    it('keeps the live tick when closing lands on the stale open-time entry', () => {
+        vi.spyOn(history, 'back').mockImplementation(() => {});
+        render(Page, { props: { data } });
+        props().onOpenCameraChange('CAM_A', 'push');
+        props().onTickChange(9);
+        props().onOpenCameraChange(undefined, 'replace');
+
+        routePage.url = new URL('http://localhost/datasets/d/mcap/c/mcap-sequences/s#tick=2');
+        popstate('/same', '/same');
+
+        expect(props().tickNumber).toBe(9);
+        expect(props().openCamera).toBeUndefined();
+        expect(lastGoto().hash).toBe('#tick=9');
+        expect(lastGoto().options).toMatchObject({ replaceState: true });
+    });
+
+    it('defers tick writes while history.back is pending', () => {
+        vi.spyOn(history, 'back').mockImplementation(() => {});
+        render(Page, { props: { data } });
+        props().onOpenCameraChange('CAM_A', 'push');
+        props().onOpenCameraChange(undefined, 'replace');
+        vi.mocked(goto).mockClear();
+
+        props().onTickChange(10);
+        expect(goto).not.toHaveBeenCalled();
+
+        routePage.url = new URL('http://localhost/datasets/d/mcap/c/mcap-sequences/s#tick=2');
+        popstate('/same', '/same');
+
+        expect(goto).toHaveBeenCalledOnce();
+        expect(lastGoto().hash).toBe('#tick=10');
     });
 });
