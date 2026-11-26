@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy.orm import aliased
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationTaskType
-from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import collection_resolver
 
 _POLYGON_UNSUPPORTED_TASK_LABELS: dict[EvaluationTaskType, str] = {
@@ -69,9 +68,12 @@ def resolve_and_validate_collection(
     if resolved_id is None:
         raise ValueError(f"Annotation source {collection_name!r} not found.")
     _validate_annotation_collection(session=session, collection_id=resolved_id)
-    _validate_no_polygons(session=session, collection_id=resolved_id, task_type=task_type)
-    _validate_collection_annotation_type(
-        session=session,
+    annotation_types = collection_resolver.get_annotation_types_by_collection_ids(
+        session=session, collection_ids=[resolved_id]
+    ).get(resolved_id, [])
+    _validate_no_polygons(annotation_types=annotation_types, task_type=task_type)
+    _validate_annotation_types(
+        annotation_types=annotation_types,
         collection_id=resolved_id,
         expected_type=annotation_type,
     )
@@ -79,15 +81,13 @@ def resolve_and_validate_collection(
 
 
 def _validate_no_polygons(
-    session: Session,
-    collection_id: UUID,
+    annotation_types: Sequence[str],
     task_type: EvaluationTaskType,
 ) -> None:
     """Raise ValueError if a segmentation task collection contains polygons.
 
     Args:
-        session: Database session.
-        collection_id: ID of the annotation collection to validate.
+        annotation_types: Distinct annotation type values in the collection.
         task_type: Evaluation task type. Tasks without polygon support are checked.
 
     Raises:
@@ -96,44 +96,26 @@ def _validate_no_polygons(
     task_label = _POLYGON_UNSUPPORTED_TASK_LABELS.get(task_type)
     if task_label is None:
         return
-    # TODO(Michal, 11/2026): Move this query to a resolver.
-    sample_alias = aliased(SampleTable)
-    polygon_count: int = session.exec(
-        select(func.count())
-        .select_from(AnnotationBaseTable)
-        .join(sample_alias, AnnotationBaseTable.sample)
-        .where(col(sample_alias.collection_id) == collection_id)
-        .where(col(AnnotationBaseTable.annotation_type) == AnnotationType.POLYGON)
-    ).one()
-    if polygon_count > 0:
+    if AnnotationType.POLYGON.value in annotation_types:
         raise ValueError(f"Polygon annotations are not yet supported for {task_label} evaluation.")
 
 
-def _validate_collection_annotation_type(
-    session: Session,
+def _validate_annotation_types(
+    annotation_types: Sequence[str],
     collection_id: UUID,
     expected_type: AnnotationType,
 ) -> None:
-    """Raise ValueError if any annotation in the collection differs from expected_type.
+    """Raise ValueError if the collection contains a type other than expected_type.
 
     Args:
-        session: Database session.
-        collection_id: ID of the annotation collection to validate.
+        annotation_types: Distinct annotation type values in the collection.
+        collection_id: ID of the annotation collection, used in the error message.
         expected_type: The annotation type every annotation must have.
 
     Raises:
-        ValueError: If the collection contains annotations of a type other than expected_type.
+        ValueError: If annotation_types contains a type other than expected_type.
     """
-    # TODO(Michal, 11/2026): Move this query to a resolver.
-    sample_alias = aliased(SampleTable)
-    mismatch_count: int = session.exec(
-        select(func.count())
-        .select_from(AnnotationBaseTable)
-        .join(sample_alias, AnnotationBaseTable.sample)
-        .where(col(sample_alias.collection_id) == collection_id)
-        .where(col(AnnotationBaseTable.annotation_type) != expected_type)
-    ).one()
-    if mismatch_count > 0:
+    if any(annotation_type != expected_type.value for annotation_type in annotation_types):
         raise ValueError(
             f"Collection {collection_id} contains annotations of types other than "
             f"{expected_type.value!r}."
