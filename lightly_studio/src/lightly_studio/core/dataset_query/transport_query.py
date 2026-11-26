@@ -13,8 +13,10 @@ from lightly_studio.core.image.record_image_sample import RecordImageSample
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample_query import (
     DEFAULT_PAGE_SIZE,
+    EvaluationMetricSortKey,
     SampleInclude,
     SampleQueryRequest,
+    SortKey,
 )
 from lightly_studio.transport import active_transport
 
@@ -44,6 +46,9 @@ def build_request(
             )
         )
         sort = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=sample_type)
+        # TODO(iunir, 11/2026): Remove when the server pages metadata and metric sorts.
+        if not all(_is_field_sort(key=key, table=sample_type.value) for key in sort):
+            raise UnsupportedQueryError("The server cannot page this sort yet.")
     except UnsupportedQueryError:
         if active_transport.is_remote():
             raise
@@ -76,3 +81,7 @@ def iter_samples(
         if remaining is not None:
             remaining -= len(page.samples)
         request = request.model_copy(update={"cursor": page.next_cursor, "offset": 0})
+
+
+def _is_field_sort(key: SortKey | EvaluationMetricSortKey, table: str) -> bool:
+    return isinstance(key, SortKey) and key.field.table == table

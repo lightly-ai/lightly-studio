@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
 import numpy as np
 import pytest
+from sqlmodel import col
 
 from lightly_studio.core.dataset_query import query_expr_conversion, query_translation
 from lightly_studio.core.dataset_query.annotation_evaluation_metric_expression import (
@@ -17,6 +19,7 @@ from lightly_studio.core.dataset_query.classification_query import (
     ClassificationQuery,
 )
 from lightly_studio.core.dataset_query.evaluation_metric_expression import EvaluationMetricField
+from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.field_expression import OrdinalFieldExpression
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
@@ -25,6 +28,8 @@ from lightly_studio.core.dataset_query.object_detection_query import (
     ObjectDetectionQuery,
 )
 from lightly_studio.core.dataset_query.order_by import (
+    OrderByAnnotationEvaluationMetricField,
+    OrderByEvaluationMetricField,
     OrderByExpression,
     OrderByField,
     OrderByMetadataField,
@@ -41,11 +46,32 @@ from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
 from lightly_studio.core.dataset_query.video_frame_sample_field import VideoFrameSampleField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationSide
 from lightly_studio.models.query_expr import FieldRef
-from lightly_studio.models.sample_query import SortKey
+from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_query import EvaluationMetricSortKey, SortKey
 from lightly_studio.models.sort_direction import SortDirection
 
 _DATE = datetime(2024, 1, 2, tzinfo=timezone.utc)
+
+# Criteria on video frames, at the top level of frames or in a `VideoFrameQuery` on videos.
+_FRAME_MATCHES = [
+    VideoFrameSampleField.frame_number > 10,
+    VideoFrameSampleField.frame_timestamp_pts <= 1000,
+    VideoFrameSampleField.rotation_deg == 90,
+    VideoFrameSampleField.frame_timestamp_s != 1.5,
+    VideoFrameSampleField.tags.contains("cat"),
+    VideoFrameSampleField.parent_video.file_name == "a.mp4",
+    VideoFrameSampleField.parent_video.file_path_abs != "/a.mp4",
+    VideoFrameSampleField.parent_video.width >= 1920,
+    VideoFrameSampleField.parent_video.height < 1080,
+    VideoFrameSampleField.parent_video.fps > 29.97,
+    VideoFrameSampleField.parent_video.fps == 30,
+    VideoFrameSampleField.parent_video.duration_s == 2.5,
+    VideoFrameSampleField.parent_video.duration_s != 3,
+    VideoFrameSampleField.parent_video.tags.contains("cat"),
+    OR(VideoFrameSampleField.frame_number < 5, VideoFrameSampleField.parent_video.width > 1),
+]
 
 
 def test_to_query_expr() -> None:
@@ -93,6 +119,70 @@ def test_to_query_expr() -> None:
 
 
 @pytest.mark.parametrize(
+    ("match", "expr_type", "table", "name"),
+    [
+        (VideoFrameSampleField.frame_number > 10, "integer_expr", "video_frame", "frame_number"),
+        (
+            VideoFrameSampleField.frame_timestamp_pts <= 1000,
+            "integer_expr",
+            "video_frame",
+            "frame_timestamp_pts",
+        ),
+        (VideoFrameSampleField.rotation_deg == 90, "integer_expr", "video_frame", "rotation_deg"),
+        (
+            VideoFrameSampleField.frame_timestamp_s != 1.5,
+            "ordinal_float_expr",
+            "video_frame",
+            "frame_timestamp_s",
+        ),
+        (VideoFrameSampleField.tags.contains("cat"), "tags_contains_expr", "video_frame", "tags"),
+        (
+            VideoFrameSampleField.parent_video.file_name == "a.mp4",
+            "string_expr",
+            "parent_video",
+            "file_name",
+        ),
+        (
+            VideoFrameSampleField.parent_video.file_path_abs != "/a.mp4",
+            "string_expr",
+            "parent_video",
+            "file_path_abs",
+        ),
+        (VideoFrameSampleField.parent_video.width >= 1920, "integer_expr", "parent_video", "width"),
+        (
+            VideoFrameSampleField.parent_video.height < 1080,
+            "integer_expr",
+            "parent_video",
+            "height",
+        ),
+        (VideoFrameSampleField.parent_video.fps == 30, "ordinal_float_expr", "parent_video", "fps"),
+        (
+            VideoFrameSampleField.parent_video.duration_s == 2.5,
+            "ordinal_float_expr",
+            "parent_video",
+            "duration_s",
+        ),
+        (
+            VideoFrameSampleField.parent_video.tags.contains("cat"),
+            "tags_contains_expr",
+            "parent_video",
+            "tags",
+        ),
+    ],
+)
+def test_to_query_expr__video_frame_fields(
+    match: MatchExpression, expr_type: str, table: str, name: str
+) -> None:
+    query_expr = query_expr_conversion.to_query_expr(
+        match_expression=match, sample_type=SampleType.VIDEO_FRAME
+    )
+
+    match_expr = query_expr.model_dump(mode="json")["match_expr"]
+    assert match_expr["type"] == expr_type
+    assert match_expr["field"] == {"table": table, "name": name}
+
+
+@pytest.mark.parametrize(
     ("sample_type", "match"),
     [
         (SampleType.IMAGE, ImageSampleField.file_name == "a.png"),
@@ -114,7 +204,6 @@ def test_to_query_expr() -> None:
         (SampleType.VIDEO, VideoSampleField.duration_s != 3),
         (SampleType.VIDEO, VideoSampleField.created_at > _DATE),
         (SampleType.VIDEO, VideoSampleField.tags.contains("cat")),
-        (SampleType.VIDEO_FRAME, VideoFrameSampleField.tags.contains("cat")),
         (SampleType.VIDEO, VideoSampleField.metadata["weather"] == "sunny"),
         (SampleType.VIDEO, OR(AND(VideoSampleField.fps < 10), NOT(VideoSampleField.width > 1))),
         (SampleType.IMAGE, ClassificationQuery()),
@@ -179,6 +268,8 @@ def test_to_query_expr() -> None:
             SampleType.VIDEO,
             NOT(AnnotationMetricQuery.false_negative(run_name="run", ground_truth="cat")),
         ),
+        *[(SampleType.VIDEO_FRAME, match) for match in _FRAME_MATCHES],
+        *[(SampleType.VIDEO, VideoFrameQuery(match)) for match in _FRAME_MATCHES],
     ],
 )
 def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression) -> None:
@@ -254,6 +345,15 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
             VideoEventQuery(AnnotationMetricQuery.false_positive(run_name="run", prediction="dog")),
         ),
         (SampleType.VIDEO, VideoFrameQuery(SampleEvaluationQuery("run"))),
+        (SampleType.IMAGE, VideoFrameSampleField.parent_video.width > 1),
+        (SampleType.IMAGE, VideoFrameSampleField.parent_video.tags.contains("cat")),
+        (SampleType.VIDEO, VideoFrameSampleField.parent_video.file_name == "a.mp4"),
+        (SampleType.VIDEO, VideoFrameSampleField.parent_video.duration_s == 2.5),
+        (SampleType.VIDEO, VideoFrameSampleField.parent_video.tags.contains("cat")),
+        (
+            SampleType.VIDEO_FRAME,
+            ObjectDetectionQuery(VideoFrameSampleField.parent_video.width > 1),
+        ),
     ],
 )
 def test_to_query_expr__not_supported(sample_type: SampleType, match: MatchExpression) -> None:
@@ -279,24 +379,116 @@ def test_to_query_expr__confusion_criterion_not_supported(criterion: Any) -> Non
 def test_to_sort_keys() -> None:
     order_by = [
         OrderByField(ImageSampleField.width).desc(),
-        OrderByField(ImageSampleField.created_at),
+        OrderByMetadataField(field_name="weather"),
+        OrderByEvaluationMetricField(evaluation_run_name="run", metric_name="miou").desc(),
     ]
 
     sort_keys = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=SampleType.IMAGE)
 
     assert sort_keys == [
         SortKey(field=FieldRef(table="image", name="width"), direction=SortDirection.desc),
-        SortKey(field=FieldRef(table="image", name="created_at"), direction=SortDirection.asc),
+        SortKey(field=FieldRef(table="metadata", name="weather"), direction=SortDirection.asc),
+        EvaluationMetricSortKey(run_name="run", metric_name="miou", direction=SortDirection.desc),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("field", "name"),
+    [
+        (VideoFrameSampleField.frame_number, "frame_number"),
+        (VideoFrameSampleField.frame_timestamp_s, "frame_timestamp_s"),
+        (VideoFrameSampleField.frame_timestamp_pts, "frame_timestamp_pts"),
+        (VideoFrameSampleField.rotation_deg, "rotation_deg"),
+    ],
+)
+def test_to_sort_keys__video_frame_fields(field: Field, name: str) -> None:
+    sort_keys = query_expr_conversion.to_sort_keys(
+        order_by=[OrderByField(field)], sample_type=SampleType.VIDEO_FRAME
+    )
+
+    assert sort_keys == [
+        SortKey(field=FieldRef(table="video_frame", name=name), direction=SortDirection.asc)
     ]
 
 
 @pytest.mark.parametrize(
     "order_by",
-    [OrderByMetadataField(field_name="weather"), OrderByField(VideoSampleField.fps)],
+    [
+        OrderByField(VideoSampleField.fps),
+        OrderByField(ClassificationField.confidence),
+        OrderByAnnotationEvaluationMetricField(
+            evaluation_run_id=uuid.uuid4(),
+            metric_name="iou",
+            side=EvaluationAnnotationSide.PREDICTION,
+            annotation_id_column=col(SampleTable.sample_id),
+        ),
+    ],
 )
 def test_to_sort_keys__not_supported(order_by: OrderByExpression) -> None:
     with pytest.raises(UnsupportedQueryError):
         query_expr_conversion.to_sort_keys(order_by=[order_by], sample_type=SampleType.IMAGE)
+
+
+def test_to_sort_keys__nullable_field() -> None:
+    order_by = OrderByField(VideoSampleField.duration_s)
+    with pytest.raises(UnsupportedQueryError):
+        query_expr_conversion.to_sort_keys(order_by=[order_by], sample_type=SampleType.VIDEO)
+
+
+@pytest.mark.parametrize("sample_type", [SampleType.VIDEO, SampleType.VIDEO_FRAME])
+def test_to_sort_keys__evaluation_metric_of_non_image__raises(sample_type: SampleType) -> None:
+    order_by = OrderByEvaluationMetricField(evaluation_run_name="run", metric_name="miou")
+
+    with pytest.raises(UnsupportedQueryError, match="Evaluation metric sorts"):
+        query_expr_conversion.to_sort_keys(order_by=[order_by], sample_type=sample_type)
+
+
+@pytest.mark.parametrize(
+    ("sample_type", "order_by", "table", "name", "direction"),
+    [
+        (SampleType.IMAGE, OrderByField(ImageSampleField.file_name), "image", "file_name", "asc"),
+        (
+            SampleType.IMAGE,
+            OrderByField(ImageSampleField.file_path_abs).desc(),
+            "image",
+            "file_path_abs",
+            "desc",
+        ),
+        (SampleType.IMAGE, OrderByField(ImageSampleField.created_at), "image", "created_at", "asc"),
+        (SampleType.IMAGE, OrderByField(ImageSampleField.width).desc(), "image", "width", "desc"),
+        (SampleType.IMAGE, OrderByField(ImageSampleField.height), "image", "height", "asc"),
+        (
+            SampleType.VIDEO,
+            OrderByField(VideoSampleField.created_at).desc(),
+            "video",
+            "created_at",
+            "desc",
+        ),
+        (SampleType.VIDEO, OrderByField(VideoSampleField.fps).desc(), "video", "fps", "desc"),
+        (
+            SampleType.IMAGE,
+            OrderByMetadataField(field_name="weather").desc(),
+            "metadata",
+            "weather",
+            "desc",
+        ),
+        (
+            SampleType.VIDEO,
+            OrderByMetadataField(field_name="odometry.acc[1]"),
+            "metadata",
+            "odometry.acc[1]",
+            "asc",
+        ),
+    ],
+)
+def test_to_sort_keys__field(
+    sample_type: SampleType, order_by: OrderByExpression, table: str, name: str, direction: str
+) -> None:
+    sort_keys = query_expr_conversion.to_sort_keys(order_by=[order_by], sample_type=sample_type)
+
+    assert sort_keys == [
+        SortKey(field=FieldRef(table=table, name=name), direction=SortDirection(direction))
+    ]
 
 
 def _sql(match: MatchExpression) -> str:

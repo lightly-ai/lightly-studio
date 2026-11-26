@@ -1,8 +1,8 @@
 """Convert dataset-query expressions to the query format that the transport sends.
 
-Sample fields, tags, metadata, annotation queries, video event and frame queries, and
-evaluation queries are supported. Other expressions raise `UnsupportedQueryError`, and the
-caller uses the SQL path.
+Sample fields, tags, metadata, parent-video fields of video frames, annotation queries, video
+event and frame queries, and evaluation queries are supported. Other expressions raise
+`UnsupportedQueryError`, and the caller uses the SQL path.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import ValidationError
+from sqlalchemy.orm import InstrumentedAttribute
 
 from lightly_studio.core.dataset_query import query_translation, video_query_validation
 from lightly_studio.core.dataset_query.annotation_evaluation_metric_expression import (
@@ -40,7 +41,12 @@ from lightly_studio.core.dataset_query.foreign_field import (
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.metadata_expression import MetadataComparisonExpression
 from lightly_studio.core.dataset_query.object_detection_query import ObjectDetectionQuery
-from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
+    OrderByExpression,
+    OrderByField,
+    OrderByMetadataField,
+)
 from lightly_studio.core.dataset_query.polygon_query import PolygonQuery
 from lightly_studio.core.dataset_query.query_translation import FieldExpr
 from lightly_studio.core.dataset_query.sample_evaluation_query import SampleEvaluationQuery
@@ -48,6 +54,9 @@ from lightly_studio.core.dataset_query.segmentation_mask_query import Segmentati
 from lightly_studio.core.dataset_query.tags_expression import TagsContainsExpression
 from lightly_studio.core.dataset_query.video_event_query import VideoEventQuery
 from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
+from lightly_studio.core.dataset_query.video_frame_sample_field import (
+    ParentVideoTagsContainsExpression,
+)
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import SampleType
@@ -80,8 +89,9 @@ from lightly_studio.models.query_expr import (
     VideoEventMatchExpr,
     VideoFrameMatchExpr,
 )
-from lightly_studio.models.sample_query import SortKey
+from lightly_studio.models.sample_query import EvaluationMetricSortKey, SortKey
 from lightly_studio.models.sort_direction import SortDirection
+from lightly_studio.models.video import VideoFrameTable
 
 _ScopedQuery = (
     ClassificationQuery
@@ -110,6 +120,8 @@ _SCOPED_QUERIES: dict[type[_ScopedQuery], tuple[type[_ScopedMatchExpr], str]] = 
     VideoFrameQuery: (VideoFrameMatchExpr, "video_frame"),
 }
 
+_PARENT_VIDEO_TABLE = "parent_video"
+
 # The relationships that each scope allows, with the table of the related fields.
 _RELATIONSHIP_TABLES: dict[tuple[str, object], str] = {
     ("classification", AnnotationBaseTable.annotation_label): "classification",
@@ -121,7 +133,11 @@ _RELATIONSHIP_TABLES: dict[tuple[str, object], str] = {
     ("segmentation_mask", AnnotationBaseTable.segmentation_details): "segmentation_mask",
     ("polygon", AnnotationBaseTable.annotation_label): "polygon",
     ("polygon", AnnotationBaseTable.polygon_details): "polygon",
+    ("video_frame", VideoFrameTable.video): _PARENT_VIDEO_TABLE,
 }
+
+
+_METADATA_TABLE = "metadata"
 
 
 class UnsupportedQueryError(NotImplementedError):
@@ -142,20 +158,35 @@ def to_query_expr(match_expression: MatchExpression, sample_type: SampleType) ->
         raise UnsupportedQueryError(f"The filter is not supported: {error}") from error
 
 
-def to_sort_keys(order_by: Sequence[OrderByExpression], sample_type: SampleType) -> list[SortKey]:
+def to_sort_keys(
+    order_by: Sequence[OrderByExpression], sample_type: SampleType
+) -> list[SortKey | EvaluationMetricSortKey]:
     """Convert order-by expressions on samples of the sample type to sort keys.
 
     Raises:
-        UnsupportedQueryError: If a sort is not on a sample field.
+        UnsupportedQueryError: If a sort is not on a non-nullable sample field of the sample
+            type, on metadata, or on an evaluation metric of images.
     """
-    keys = []
-    for expression in order_by:
-        if not isinstance(expression, OrderByField):
-            raise UnsupportedQueryError(f"The sort {type(expression).__name__} is not supported.")
-        direction = SortDirection.asc if expression.ascending else SortDirection.desc
-        field_ref, _ = _lookup_field(field=expression.field, scope=sample_type.value)
-        keys.append(SortKey(field=field_ref, direction=direction))
-    return keys
+    return [_to_sort_key(expression=expression, scope=sample_type.value) for expression in order_by]
+
+
+def _to_sort_key(expression: OrderByExpression, scope: str) -> SortKey | EvaluationMetricSortKey:
+    direction = SortDirection.asc if expression.ascending else SortDirection.desc
+    if isinstance(expression, OrderByEvaluationMetricField):
+        if scope != SampleType.IMAGE.value:
+            raise UnsupportedQueryError(f"Evaluation metric sorts of {scope} are not supported.")
+        return EvaluationMetricSortKey(
+            run_name=expression.evaluation_run_name,
+            metric_name=expression.metric_name,
+            direction=direction,
+        )
+    if isinstance(expression, OrderByMetadataField):
+        field_ref = FieldRef(table=_METADATA_TABLE, name=expression.field_name)
+    elif isinstance(expression, OrderByField):
+        field_ref = _lookup_sort_field(field=expression.field, scope=scope)
+    else:
+        raise UnsupportedQueryError(f"The sort {type(expression).__name__} is not supported.")
+    return SortKey(field=field_ref, direction=direction)
 
 
 def _to_match_expr(expression: MatchExpression, scope: str) -> MatchExpr:
@@ -199,11 +230,8 @@ def _to_subexpr(criterion: MatchExpression, scope: str) -> MatchExpr | None:
 
 
 def _to_leaf_expr(expression: MatchExpression, scope: str) -> MatchExpr:
-    if isinstance(expression, TagsContainsExpression):
-        if not query_translation.has_tags(table=scope):
-            raise UnsupportedQueryError(f"Tags of {scope} are not supported.")
-        tags = FieldRef(table=scope, name="tags")
-        return TagsContainsExpr(field=tags, tag_name=expression.tag_name)
+    if isinstance(expression, (TagsContainsExpression, ParentVideoTagsContainsExpression)):
+        return _to_tags_expr(expression=expression, scope=scope)
     if isinstance(expression, MetadataComparisonExpression):
         operator = OrdinalComparisonOperator(expression.comparison)
         return MetadataComparisonExpr(
@@ -232,6 +260,16 @@ def _check_field_value(value: object, expr_type: type[FieldExpr]) -> None:
     # Pydantic coerces other values to a datetime.
     if expr_type is DatetimeExpr and not isinstance(value, datetime):
         raise UnsupportedQueryError(f"The value {value!r} is not a datetime.")
+
+
+def _to_tags_expr(
+    expression: TagsContainsExpression | ParentVideoTagsContainsExpression, scope: str
+) -> TagsContainsExpr:
+    is_parent_video_tags = isinstance(expression, ParentVideoTagsContainsExpression)
+    table = _PARENT_VIDEO_TABLE if is_parent_video_tags else scope
+    if not query_translation.has_tags(table=table):
+        raise UnsupportedQueryError(f"Tags of {table} are not supported.")
+    return TagsContainsExpr(field=FieldRef(table=table, name="tags"), tag_name=expression.tag_name)
 
 
 def _to_evaluation_expr(query: SampleEvaluationQuery | AnnotationMetricQuery) -> MatchExpr:
@@ -306,6 +344,32 @@ def _lookup_field(field: Field, scope: str) -> tuple[FieldRef, type[FieldExpr]]:
     if key not in fields_by_column:
         raise UnsupportedQueryError(f"The field {type(field).__name__} is not supported.")
     return fields_by_column[key]
+
+
+def _lookup_sort_field(field: Field, scope: str) -> FieldRef:
+    sort_fields_by_column = _sort_fields_by_column()
+    key = (scope, field.get_sqlmodel_field())
+    if key not in sort_fields_by_column:
+        raise UnsupportedQueryError(f"The sort field {type(field).__name__} is not supported.")
+    return sort_fields_by_column[key]
+
+
+@functools.cache
+def _sort_fields_by_column() -> dict[tuple[str, Any], FieldRef]:
+    """Map (table, column) to the field reference of the sort field.
+
+    Nullable columns are left out, as the keyset paging of the server skips NULL values.
+    """
+    return {
+        (table, field.get_sqlmodel_field()): FieldRef(table=table, name=name)
+        for (table, name), field in query_translation.sort_fields().items()
+        if not _is_nullable(field=field)
+    }
+
+
+def _is_nullable(field: Field) -> bool:
+    column = field.get_sqlmodel_field()
+    return not isinstance(column, InstrumentedAttribute) or bool(column.expression.nullable)
 
 
 @functools.cache
