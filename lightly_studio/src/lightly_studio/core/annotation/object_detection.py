@@ -1,9 +1,7 @@
 """Interface for object detection annotations."""
 
-from sqlmodel import col
-
 from lightly_studio.core.annotation import Annotation
-from lightly_studio.core.db_field import DBField
+from lightly_studio.core.annotation.bounding_box_field import BoundingBoxField
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 
@@ -19,13 +17,13 @@ class ObjectDetectionAnnotation(Annotation):
     ```
     """
 
-    x = DBField(col(ObjectDetectionAnnotationTable.x))
+    x = BoundingBoxField()
     """X coordinate (px) of the object detection bounding box."""
-    y = DBField(col(ObjectDetectionAnnotationTable.y))
+    y = BoundingBoxField()
     """Y coordinate (px) of the object detection bounding box."""
-    width = DBField(col(ObjectDetectionAnnotationTable.width))
+    width = BoundingBoxField()
     """Width (px) of the object detection bounding box."""
-    height = DBField(col(ObjectDetectionAnnotationTable.height))
+    height = BoundingBoxField()
     """Height (px) of the object detection bounding box."""
 
     def __init__(self, inner: ObjectDetectionAnnotationTable) -> None:
