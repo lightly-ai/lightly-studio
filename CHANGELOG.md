@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The frames between the manually placed 3D cuboids of an object track get interpolated cuboids automatically. When you add a cuboid to a track or move one, the frames between it and the manual cuboids before and after it are interpolated again.
 - Show frame tags on the point cloud timeline with the "Show frame tags" checkbox. Each tag gets a row with bars over the frames that have the tag.
 - Filter video collections by categorical metadata.
-- Hide and dock the 3D workspace panels from header toggles
+- Hide the 3D workspace panels from header toggles
 
 ### Changed
 
