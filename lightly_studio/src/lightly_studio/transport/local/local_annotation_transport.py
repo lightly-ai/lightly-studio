@@ -10,12 +10,18 @@ from sqlmodel import Session
 from lightly_studio.database import db_manager
 from lightly_studio.errors import NotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationView
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
     AnnotationLabelView,
 )
-from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver
+from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
+    annotation_label_resolver,
+    annotation_resolver,
+    object_track_resolver,
+)
 from lightly_studio.services import annotations_service
 
 
@@ -47,11 +53,39 @@ class LocalAnnotationTransport:
             for annotation in annotations
         ]
 
+    def get_by_sample_ids_and_collection(
+        self, sample_ids: Sequence[UUID], annotation_collection_id: UUID
+    ) -> list[AnnotationView]:
+        """Get the annotations of samples that are in one annotation collection."""
+        annotations = annotation_resolver.get_all_by_parent_sample_ids_and_annotation_collection_id(
+            session=db_manager.persistent_session(),
+            parent_sample_ids=sample_ids,
+            annotation_collection_id=annotation_collection_id,
+            load_view_relationships=True,
+        )
+        return [
+            AnnotationView.from_annotation_table(annotation=annotation)
+            for annotation in annotations
+        ]
+
+    def get_covered_sequence_ids(self, annotation_collection_id: UUID) -> list[UUID]:
+        """Get the IDs of the sequences that have groups covered by the annotation collection.
+
+        The order is not defined.
+        """
+        return list(
+            annotation_collection_coverage_resolver.sequence_sample_ids(
+                session=db_manager.persistent_session(),
+                annotation_collection_id=annotation_collection_id,
+            )
+        )
+
     def create(
         self,
         parent_collection_id: UUID,
         annotations: Sequence[AnnotationCreate],
         collection_name: str | None,
+        covered_sample_ids: Sequence[UUID],
     ) -> list[UUID]:
         """Add annotations to samples. Mark the evaluation runs of their source stale."""
         return annotations_service.create_annotations(
@@ -59,6 +93,7 @@ class LocalAnnotationTransport:
             parent_collection_id=parent_collection_id,
             annotations=annotations,
             collection_name=collection_name,
+            covered_sample_ids=covered_sample_ids,
         )
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
@@ -74,6 +109,24 @@ class LocalAnnotationTransport:
             raise NotFoundError(f"Annotations not found: {sorted(str(id_) for id_ in missing_ids)}")
         annotation_resolver.delete_annotations_by_ids(
             session=session, annotation_ids=annotation_ids
+        )
+
+    def delete_empty_object_tracks(self, object_track_ids: Sequence[UUID]) -> int:
+        """Delete the object tracks that have no annotations and no child tracks."""
+        return object_track_resolver.delete_empty_by_ids(
+            session=db_manager.persistent_session(), object_track_ids=object_track_ids
+        )
+
+    def get_free_object_track_numbers(self, dataset_id: UUID, count: int) -> list[int]:
+        """Get the `count` lowest positive object track numbers that the dataset does not use."""
+        return object_track_resolver.get_free_numbers(
+            session=db_manager.persistent_session(), dataset_id=dataset_id, count=count
+        )
+
+    def create_object_tracks(self, tracks: Sequence[ObjectTrackCreate]) -> list[UUID]:
+        """Add object tracks."""
+        return object_track_resolver.create_many(
+            session=db_manager.persistent_session(), tracks=list(tracks)
         )
 
 

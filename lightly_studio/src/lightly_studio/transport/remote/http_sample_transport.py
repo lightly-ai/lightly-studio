@@ -31,3 +31,13 @@ class HttpSampleTransport:
             body=request.model_dump(mode="json"),
         )
         return SamplePage.model_validate(body)
+
+    def get_image_ids_by_paths(
+        self, collection_id: UUID, file_paths: Sequence[str]
+    ) -> dict[str, UUID]:
+        """Get the sample IDs of images by path. Not supported over HTTP yet."""
+        raise NotImplementedError("Getting images by path over HTTP is not supported yet.")
+
+    def get_video_ids_by_stems(self, collection_id: UUID) -> dict[str, UUID]:
+        """Get the sample IDs of videos by stem. Not supported over HTTP yet."""
+        raise NotImplementedError("Getting videos by stem over HTTP is not supported yet.")

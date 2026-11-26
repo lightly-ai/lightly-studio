@@ -7,15 +7,11 @@ from pathlib import Path
 from uuid import UUID
 
 from labelformat.formats import ActivityNetTemporalClassificationInput
-from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import labelformat_helpers
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.resolvers import (
-    annotation_resolver,
-    video_resolver,
-)
+from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -24,7 +20,6 @@ ANNOTATION_BATCH_SIZE = 1024
 
 
 def add_annotations_from_activitynet(
-    session: Session,
     root_collection_id: UUID,
     annotations_json: PathLike,
     collection_name: str | None = None,
@@ -32,7 +27,6 @@ def add_annotations_from_activitynet(
     """Add ActivityNet-style event annotations to videos already in a collection.
 
     Args:
-        session: The database session.
         root_collection_id: The ID of the root video collection.
         annotations_json: Path to an ActivityNet-style JSON file.
         collection_name: Optional name for the annotation source. If ``None``, a default
@@ -48,12 +42,9 @@ def add_annotations_from_activitynet(
         )
 
     input_labels = ActivityNetTemporalClassificationInput(input_file=annotations_json)
-    stem_to_sample_id = video_resolver.get_sample_ids_by_stems(
-        session=session,
-        collection_id=root_collection_id,
-    )
+    transport = active_transport.get_transport()
+    stem_to_sample_id = transport.samples.get_video_ids_by_stems(collection_id=root_collection_id)
     label_map = labelformat_helpers.create_label_map(
-        session=session,
         root_collection_id=root_collection_id,
         input_labels=input_labels,
     )
@@ -82,20 +73,20 @@ def add_annotations_from_activitynet(
             )
 
             if len(annotations_to_create) >= ANNOTATION_BATCH_SIZE:
-                annotation_resolver.create_many(
-                    session=session,
+                transport.annotations.create(
                     parent_collection_id=root_collection_id,
                     annotations=annotations_to_create,
                     collection_name=collection_name,
+                    covered_sample_ids=[],
                 )
                 annotations_to_create.clear()
 
     if annotations_to_create:
-        annotation_resolver.create_many(
-            session=session,
+        transport.annotations.create(
             parent_collection_id=root_collection_id,
             annotations=annotations_to_create,
             collection_name=collection_name,
+            covered_sample_ids=[],
         )
 
     if missing_video_ids:
