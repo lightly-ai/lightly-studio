@@ -19,7 +19,7 @@ from lightly_studio.models.query_expr import (
     VideoFrameMatchExpr,
 )
 
-_FRAME_TABLES = frozenset({"video_frame"})
+_FRAME_TABLES = frozenset({"video_frame", "parent_video"})
 
 
 def validate(expr: MatchExpr, scope: str | None) -> None:
@@ -67,7 +67,9 @@ def _validate_node(expr: MatchExpr, scope: str | None) -> None:
 
 
 def _validate_video_field_scope(field: object, scope: str | None) -> None:
-    if scope == SampleType.VIDEO_FRAME.value and _is_frame_field(field=field):
+    if scope == SampleType.VIDEO_FRAME.value:
+        if isinstance(field, FieldRef) and not _is_frame_field(field=field):
+            raise QueryExprError("Frame filters accept only video_frame and parent_video fields.")
         return
     if isinstance(field, FieldRef) and field.table in {"event", *_FRAME_TABLES}:
         raise QueryExprError("Video fields require their event or frame query.")
