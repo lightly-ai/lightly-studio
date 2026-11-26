@@ -1,12 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent } from '@testing-library/dom';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { client } from '$lib/api/lightly_studio_local/client.gen';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CameraProjectionFrame from './CameraProjectionFrame.svelte';
-
-// Pin the client's base URL so the enlarged frame src is deterministic regardless of the
-// value baked into the generated client at build time (see getCameraFrameUrl.test.ts).
-const TEST_BASE_URL = 'http://api.test';
 
 const defaultProps = {
     datasetId: 'dataset-1',
@@ -19,7 +14,6 @@ const defaultProps = {
 };
 
 describe('CameraProjectionFrame', () => {
-    const originalBaseUrl = client.getConfig().baseUrl;
     const context = {
         beginPath: vi.fn(),
         clearRect: vi.fn(),
@@ -32,18 +26,10 @@ describe('CameraProjectionFrame', () => {
         strokeStyle: ''
     };
 
-    beforeAll(() => {
-        client.setConfig({ baseUrl: TEST_BASE_URL });
-    });
-
     beforeEach(() => {
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
             context as unknown as CanvasRenderingContext2D
         );
-    });
-
-    afterAll(() => {
-        client.setConfig({ baseUrl: originalBaseUrl });
     });
 
     afterEach(() => {

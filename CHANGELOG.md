@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Switch cameras in the enlarged camera view of the point cloud workspace with `[` and `]` (configurable in Settings → Shortcuts) or Shift + ← / →, also during playback. Press 1–9 to open camera N. The open camera is kept in the URL.
+- Switch cameras in the enlarged camera view of the point cloud workspace with `[` / `]` (configurable in Settings → Shortcuts) or Shift + ← / →, also during playback, and press 1–9 to open a camera. The open camera is kept in the URL.
 - Find images with any bounding box, segmentation mask, or classification in the query editor with `object_detection()`, `segmentation_mask()`, or `classification()`.
 - The GUI shows polygon annotations as boxes. Polygons can't be edited in the GUI yet.
 - Export polygons to YOLO with the new "Image Segmentation Polygons (YOLO)" export.
