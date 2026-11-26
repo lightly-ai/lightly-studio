@@ -7,7 +7,6 @@ Only sample fields, tags, and metadata are supported. Other expressions raise
 from __future__ import annotations
 
 import functools
-import math
 from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
@@ -107,11 +106,9 @@ def _to_match_expr(expression: MatchExpression, scope: str) -> MatchExpr:
 
 
 def _check_field_value(value: object, expr_type: type[FieldExpr]) -> None:
-    # Pydantic coerces other values to a datetime, and JSON sends non-finite floats as null.
+    # Pydantic coerces other values to a datetime.
     if expr_type is DatetimeExpr and not isinstance(value, datetime):
         raise UnsupportedQueryError(f"The value {value!r} is not a datetime.")
-    if isinstance(value, float) and not math.isfinite(value):
-        raise UnsupportedQueryError(f"The value {value} is not finite.")
 
 
 def _lookup_field(field: Field, scope: str) -> tuple[FieldRef, type[FieldExpr]]:

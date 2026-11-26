@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+import numpy as np
 import pytest
 
 from lightly_studio.core.dataset_query import query_expr_conversion, query_translation
@@ -118,6 +119,12 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
             OrdinalFieldExpression[Any](field=ImageSampleField.created_at, operator=">", value=0),
         ),
         (SampleType.VIDEO, VideoSampleField.fps > float("inf")),
+        (
+            SampleType.VIDEO,
+            OrdinalFieldExpression[Any](
+                field=VideoSampleField.fps, operator=">", value=np.float32("inf")
+            ),
+        ),
         (SampleType.IMAGE, VideoSampleField.width > 100),
         (SampleType.VIDEO, ImageSampleField.width > 100),
         (SampleType.IMAGE, AND()),
