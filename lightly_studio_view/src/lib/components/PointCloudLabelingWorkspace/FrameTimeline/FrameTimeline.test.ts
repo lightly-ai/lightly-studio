@@ -359,7 +359,7 @@ describe('FrameTimeline', () => {
                 props: {
                     ...longProps,
                     showFrameTags: true,
-                    onShowFrameTagsChange: vi.fn(),
+                    onHideFrameTags: vi.fn(),
                     frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [0] }]
                 }
             });
@@ -367,7 +367,10 @@ describe('FrameTimeline', () => {
             expect(screen.getByTestId('timeline-scroll-container')).toHaveClass('overflow-auto');
             const ruler = screen.getByLabelText('Frame position').closest('.sticky');
             expect(ruler).toHaveClass('top-0');
-            expect(screen.getByText('Show frame tags').closest('.sticky')).toHaveClass('right-2');
+            expect(screen.getByText('Frame tag tracks').closest('header')).toHaveClass(
+                'sticky',
+                'left-0'
+            );
             expect(screen.getByTestId('tag-row-label')).toHaveClass('sticky', 'left-3');
         });
     });
@@ -377,7 +380,7 @@ describe('FrameTimeline', () => {
             props: {
                 ...defaultProps,
                 showFrameTags: true,
-                onShowFrameTagsChange: vi.fn(),
+                onHideFrameTags: vi.fn(),
                 frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [0] }]
             }
         });

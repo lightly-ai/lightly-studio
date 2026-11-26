@@ -288,15 +288,30 @@ describe('TrackTimelineRows', () => {
     });
 
     describe('frame tags', () => {
-        it('shows the frame tags checkbox without tracks', async () => {
-            const onShowFrameTagsChange = vi.fn();
+        it('hides the frame tag tracks panel from its close button', async () => {
+            const onHideFrameTags = vi.fn();
             render(TrackTimelineRows, {
-                props: { ...defaultProps, tracks: [], onShowFrameTagsChange }
+                props: { ...defaultProps, tracks: [], showFrameTags: true, onHideFrameTags }
             });
 
-            await fireEvent.click(screen.getByRole('checkbox', { name: 'Show frame tags' }));
+            await fireEvent.click(screen.getByRole('button', { name: 'Hide frame tag tracks' }));
 
-            expect(onShowFrameTagsChange).toHaveBeenCalledWith(true);
+            expect(onHideFrameTags).toHaveBeenCalledOnce();
+        });
+
+        it('hides the object tracks panel from its close button', async () => {
+            const onHideObjectTracks = vi.fn();
+            render(TrackTimelineRows, { props: { ...defaultProps, onHideObjectTracks } });
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Hide object tracks' }));
+
+            expect(onHideObjectTracks).toHaveBeenCalledOnce();
+        });
+
+        it('draws no object tracks while the panel is hidden', () => {
+            render(TrackTimelineRows, { props: { ...defaultProps, showObjectTracks: false } });
+
+            expect(screen.queryByTestId('object-track-rows')).toBeNull();
         });
 
         it('draws the frame tag rows while frame tags are shown', () => {
@@ -304,7 +319,7 @@ describe('TrackTimelineRows', () => {
                 props: {
                     ...defaultProps,
                     showFrameTags: true,
-                    onShowFrameTagsChange: vi.fn(),
+                    onHideFrameTags: vi.fn(),
                     frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [2] }]
                 }
             });
@@ -331,7 +346,7 @@ describe('TrackTimelineRows', () => {
                 props: {
                     ...defaultProps,
                     showFrameTags: false,
-                    onShowFrameTagsChange: vi.fn(),
+                    onHideFrameTags: vi.fn(),
                     frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [2] }]
                 }
             });
@@ -349,7 +364,7 @@ describe('TrackTimelineRows', () => {
                 ...defaultProps,
                 sequenceId: 'sequence-1',
                 showFrameTags: true,
-                onShowFrameTagsChange: vi.fn(),
+                onHideFrameTags: vi.fn(),
                 frameTags
             };
             const newTag = { tag_id: 'tag-6', name: 'tag 6', seq_numbers: [0] };

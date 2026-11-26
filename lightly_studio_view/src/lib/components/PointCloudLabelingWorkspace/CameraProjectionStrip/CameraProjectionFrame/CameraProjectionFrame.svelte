@@ -25,6 +25,8 @@
         onPlaybackToggle?: () => void;
         projectionSettings?: ProjectionSettings;
         onProjectionSettingsChange?: (settings: ProjectionSettings) => void;
+        /** `row`: the strip's height sizes the tile; `column`: the strip's width does. */
+        layout?: 'row' | 'column';
     }
     let {
         datasetId,
@@ -40,7 +42,8 @@
         projection,
         onPlaybackToggle,
         projectionSettings,
-        onProjectionSettingsChange
+        onProjectionSettingsChange,
+        layout = 'row'
     }: Props = $props();
 
     let isEnlarged = $state(false);
@@ -56,18 +59,22 @@
 </script>
 
 <figure
-    class="flex h-full shrink-0 flex-col overflow-hidden bg-muted/30"
-    style:width={`${frame.tileWidth}px`}
+    class="flex shrink-0 flex-col overflow-hidden bg-muted/30 {layout === 'column'
+        ? 'w-full min-w-0'
+        : 'h-full'}"
+    style:width={layout === 'row' ? `${frame.tileWidth}px` : undefined}
+    style:height={layout === 'column' ? `${frame.tileHeight}px` : undefined}
     bind:clientHeight={frame.figureHeight}
+    bind:clientWidth={frame.figureWidth}
 >
     {#if frame.frameUrl && frame.frameUrl !== frame.failedFrameUrl}
         <button
             type="button"
-            class="flex min-h-0 flex-1 cursor-zoom-in flex-col"
+            class="flex min-h-0 w-full min-w-0 flex-1 cursor-zoom-in flex-col"
             aria-label={`Enlarge ${label}`}
             onclick={() => (isEnlarged = true)}
         >
-            <div class="relative min-h-0 flex-1">
+            <div class="relative min-h-0 w-full flex-1">
                 <img
                     src={frame.frameUrl}
                     alt={label}

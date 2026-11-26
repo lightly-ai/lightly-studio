@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Show or hide the panels of the 3D workspace with toggles in its header. Dock the orthographic views and the camera strip below or to the right of the 3D scene with the dock button in their panel header.
 
 ### Changed
 
