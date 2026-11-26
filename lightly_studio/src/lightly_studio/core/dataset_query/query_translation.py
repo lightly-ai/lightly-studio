@@ -251,6 +251,11 @@ def has_tags(table: str) -> bool:
     return (table, "tags") in _TAGS_FIELDS
 
 
+def has_annotation_source(table: str) -> bool:
+    """Return whether the annotations of the table have a source."""
+    return (table, "source") in _STRING_FIELDS
+
+
 def sort_to_order_by(
     key: tuple[str, str],
     direction: SortDirection,

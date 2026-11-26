@@ -1,7 +1,7 @@
 """Convert dataset-query expressions to the query format that the transport sends.
 
-Only sample fields, tags, and metadata are supported. Other expressions raise
-`UnsupportedQueryError`, and the caller uses the SQL path.
+Sample fields, tags, metadata, annotation queries, and video event and frame queries are
+supported. Other expressions raise `UnsupportedQueryError`, and the caller uses the SQL path.
 """
 
 from __future__ import annotations
@@ -13,33 +13,97 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from lightly_studio.core.dataset_query import query_translation
+from lightly_studio.core.dataset_query import query_translation, video_query_validation
+from lightly_studio.core.dataset_query.annotation_expression import (
+    AnnotationSourceMatchExpression,
+    RelationshipMatchExpression,
+)
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
+from lightly_studio.core.dataset_query.classification_query import ClassificationQuery
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.field_expression import (
     ComparableFieldExpression,
     OrdinalFieldExpression,
 )
+from lightly_studio.core.dataset_query.foreign_field import (
+    ForeignComparableField,
+    ForeignNumericalField,
+)
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.metadata_expression import MetadataComparisonExpression
+from lightly_studio.core.dataset_query.object_detection_query import ObjectDetectionQuery
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
+from lightly_studio.core.dataset_query.polygon_query import PolygonQuery
 from lightly_studio.core.dataset_query.query_translation import FieldExpr
+from lightly_studio.core.dataset_query.segmentation_mask_query import SegmentationMaskQuery
 from lightly_studio.core.dataset_query.tags_expression import TagsContainsExpression
+from lightly_studio.core.dataset_query.video_event_query import VideoEventQuery
+from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
+from lightly_studio.errors import QueryExprError
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
+    ClassificationMatchExpr,
     DatetimeExpr,
+    EqualityComparisonOperator,
     FieldRef,
     MatchExpr,
     MetadataComparisonExpr,
     NotExpr,
+    ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
     OrExpr,
+    PolygonMatchExpr,
     QueryExpr,
+    SegmentationMaskMatchExpr,
+    StringExpr,
     TagsContainsExpr,
+    VideoEventMatchExpr,
+    VideoFrameMatchExpr,
 )
 from lightly_studio.models.sample_query import SortKey
 from lightly_studio.models.sort_direction import SortDirection
+
+_ScopedQuery = (
+    ClassificationQuery
+    | ObjectDetectionQuery
+    | SegmentationMaskQuery
+    | PolygonQuery
+    | VideoEventQuery
+    | VideoFrameQuery
+)
+_ScopedMatchExpr = (
+    ClassificationMatchExpr
+    | ObjectDetectionMatchExpr
+    | SegmentationMaskMatchExpr
+    | PolygonMatchExpr
+    | VideoEventMatchExpr
+    | VideoFrameMatchExpr
+)
+
+# The criteria of these queries refer to the fields of the table.
+_SCOPED_QUERIES: dict[type[_ScopedQuery], tuple[type[_ScopedMatchExpr], str]] = {
+    ClassificationQuery: (ClassificationMatchExpr, "classification"),
+    ObjectDetectionQuery: (ObjectDetectionMatchExpr, "object_detection"),
+    SegmentationMaskQuery: (SegmentationMaskMatchExpr, "segmentation_mask"),
+    PolygonQuery: (PolygonMatchExpr, "polygon"),
+    VideoEventQuery: (VideoEventMatchExpr, "event"),
+    VideoFrameQuery: (VideoFrameMatchExpr, "video_frame"),
+}
+
+# The relationships that each scope allows, with the table of the related fields.
+_RELATIONSHIP_TABLES: dict[tuple[str, object], str] = {
+    ("classification", AnnotationBaseTable.annotation_label): "classification",
+    ("event", AnnotationBaseTable.annotation_label): "event",
+    ("event", AnnotationBaseTable.temporal_span_details): "event",
+    ("object_detection", AnnotationBaseTable.annotation_label): "object_detection",
+    ("object_detection", AnnotationBaseTable.object_detection_details): "object_detection",
+    ("segmentation_mask", AnnotationBaseTable.annotation_label): "segmentation_mask",
+    ("segmentation_mask", AnnotationBaseTable.segmentation_details): "segmentation_mask",
+    ("polygon", AnnotationBaseTable.annotation_label): "polygon",
+    ("polygon", AnnotationBaseTable.polygon_details): "polygon",
+}
 
 
 class UnsupportedQueryError(NotImplementedError):
@@ -54,8 +118,9 @@ def to_query_expr(match_expression: MatchExpression, sample_type: SampleType) ->
     """
     try:
         match_expr = _to_match_expr(expression=match_expression, scope=sample_type.value)
+        video_query_validation.validate(expr=match_expr, scope=sample_type.value)
         return QueryExpr(match_expr=match_expr)
-    except ValidationError as error:
+    except (ValidationError, QueryExprError) as error:
         raise UnsupportedQueryError(f"The filter is not supported: {error}") from error
 
 
@@ -86,6 +151,36 @@ def _to_match_expr(expression: MatchExpression, scope: str) -> MatchExpr:
         )
     if isinstance(expression, NOT):
         return NotExpr(child=_to_match_expr(expression=expression.term, scope=scope))
+    if isinstance(expression, _ScopedQuery):
+        return _to_scoped_match_expr(query=expression)
+    if isinstance(expression, RelationshipMatchExpression):
+        relationship = expression.relationship
+        if (scope, relationship) not in _RELATIONSHIP_TABLES:
+            raise UnsupportedQueryError(
+                f"The relationship {relationship} of {scope} is not supported."
+            )
+        table = _RELATIONSHIP_TABLES[(scope, relationship)]
+        return _to_match_expr(expression=expression.criterion, scope=table)
+    return _to_leaf_expr(expression=expression, scope=scope)
+
+
+def _to_scoped_match_expr(query: _ScopedQuery) -> MatchExpr:
+    expr_type, scope = _SCOPED_QUERIES[type(query)]
+    subexpr = _to_subexpr(criterion=query.criterion, scope=scope)
+    return expr_type.model_validate({"subexpr": subexpr})
+
+
+def _to_subexpr(criterion: MatchExpression, scope: str) -> MatchExpr | None:
+    """Convert the criteria of a scoped query. None means that the query has no criteria."""
+    terms = criterion.terms if isinstance(criterion, AND) else (criterion,)
+    if not terms:
+        return None
+    if len(terms) == 1:
+        return _to_match_expr(expression=terms[0], scope=scope)
+    return AndExpr(children=[_to_match_expr(expression=term, scope=scope) for term in terms])
+
+
+def _to_leaf_expr(expression: MatchExpression, scope: str) -> MatchExpr:
     if isinstance(expression, TagsContainsExpression):
         if not query_translation.has_tags(table=scope):
             raise UnsupportedQueryError(f"Tags of {scope} are not supported.")
@@ -102,6 +197,14 @@ def _to_match_expr(expression: MatchExpression, scope: str) -> MatchExpr:
         return expr_type.model_validate(
             {"field": field_ref, "operator": expression.operator, "value": expression.value}
         )
+    if isinstance(expression, AnnotationSourceMatchExpression):
+        if not query_translation.has_annotation_source(table=scope):
+            raise UnsupportedQueryError(f"Annotation sources of {scope} are not supported.")
+        source = FieldRef(table=scope, name="source")
+        equality = (
+            EqualityComparisonOperator.NEQ if expression.negate else EqualityComparisonOperator.EQ
+        )
+        return StringExpr(field=source, operator=equality, value=expression.source_name)
     raise UnsupportedQueryError(f"The filter {type(expression).__name__} is not supported.")
 
 
@@ -125,8 +228,17 @@ def _fields_by_column() -> dict[tuple[str, Any], tuple[FieldRef, type[FieldExpr]
     fields_by_column: dict[tuple[str, Any], tuple[FieldRef, type[FieldExpr]]] = {}
     for expr_type, fields in query_translation.field_tables():
         for (table, name), field in fields.items():
-            if isinstance(field, Field):
-                key = (table, field.get_sqlmodel_field())
+            column = _column_of(field=field)
+            if column is not None:
+                key = (table, column)
                 # The first table of a column wins.
                 fields_by_column.setdefault(key, (FieldRef(table=table, name=name), expr_type))
     return fields_by_column
+
+
+def _column_of(field: object) -> Any | None:
+    if isinstance(field, (ForeignComparableField, ForeignNumericalField)):
+        return field.field.get_sqlmodel_field()
+    if isinstance(field, Field):
+        return field.get_sqlmodel_field()
+    return None
