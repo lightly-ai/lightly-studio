@@ -12,6 +12,7 @@ import { useWorkspaceFullscreen } from './useWorkspaceFullscreen/useWorkspaceFul
 import { usePanelVisibility } from './usePanelVisibility/usePanelVisibility.svelte';
 import { useCollapsiblePane } from './useCollapsiblePane/useCollapsiblePane.svelte';
 import { useCuboidTargetSource } from './useCuboidTargetSource';
+import { useOpenCameraState } from './useOpenCameraState/useOpenCameraState.svelte';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { isSelectedCuboidHidden, useAnnotationVisibility } from './useAnnotationVisibility';
 
@@ -78,6 +79,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         () => targetSource
     );
     const visibility = useAnnotationVisibility(() => getOptions().sequenceId);
+    const openCameraState = useOpenCameraState(getOptions);
     // A hidden cuboid cannot be seen, so it must not stay selected. This covers every way to
     // select one: the panel, the timeline, and a new cuboid in a hidden source.
     $effect(() => {
@@ -123,6 +125,8 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         onToggleCameraChannel: cameraSelection.toggleChannel,
         onSetCameraChannels: cameraSelection.setChannels,
         cameraStripCollapsed: cameraPane.collapsed,
+        openCamera: openCameraState.openCamera,
+        onOpenCameraChange: openCameraState.setOpenCamera,
         bufferEntireSequence: playback.bufferEntireSequence,
         bufferedRanges: playback.bufferedRanges,
         bufferStatus: playback.bufferStatus,

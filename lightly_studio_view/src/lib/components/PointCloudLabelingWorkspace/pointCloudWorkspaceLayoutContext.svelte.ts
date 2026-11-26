@@ -7,6 +7,7 @@ import type { PointCloudWorkspaceContext } from './provider/types';
 import type { AnnotationClass, AnnotationSource, CuboidAnnotation, WorkspaceTool } from './domain';
 import type { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
 import type { createWorkspaceController } from './createWorkspaceController.svelte';
+import type { HistoryMode } from './workspaceOptions';
 import type { PanelDock } from './PanelDockToggle';
 
 /** Inclusive range of timeline ticks already available for playback. */
@@ -89,6 +90,10 @@ export interface PointCloudWorkspaceLayoutState {
     onSetCameraChannels: (channelIds: number[]) => void;
     /** Whether the camera strip is reduced to its header. */
     cameraStripCollapsed: boolean;
+    /** Camera shown in the enlarged camera dialog, or undefined when it is closed. */
+    openCamera: string | undefined;
+    /** Opens, switches, or closes the enlarged camera dialog. */
+    onOpenCameraChange: (camera: string | undefined, historyMode: HistoryMode) => void;
     /** Whether buffering covers the complete sequence. */
     bufferEntireSequence: boolean;
     /** Inclusive tick ranges ready for playback. */
