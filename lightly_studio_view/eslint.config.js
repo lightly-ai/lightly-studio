@@ -76,13 +76,13 @@ export default ts.config(
         // eslint-plugin-svelte 3 enables these rules. Enable them after we fix the findings.
         rules: {
             'svelte/no-dom-manipulating': 'off',
-            'svelte/no-navigation-without-resolve': 'off',
-            'svelte/no-unused-svelte-ignore': 'off',
             'svelte/no-useless-children-snippet': 'off',
-            'svelte/prefer-svelte-reactivity': 'off',
             'svelte/prefer-writable-derived': 'off',
-            'svelte/require-each-key': 'off',
-            'svelte/valid-prop-names-in-kit-pages': 'off'
+            'svelte/valid-prop-names-in-kit-pages': 'off',
+            // These rules find runtime bugs. Show the findings in new code.
+            'svelte/no-navigation-without-resolve': 'warn',
+            'svelte/prefer-svelte-reactivity': 'warn',
+            'svelte/require-each-key': 'warn'
         }
     },
     {

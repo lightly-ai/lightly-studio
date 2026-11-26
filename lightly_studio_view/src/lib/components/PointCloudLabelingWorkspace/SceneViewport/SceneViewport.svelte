@@ -51,8 +51,6 @@
     import { provideSceneViewportContext } from './sceneViewportContext';
     import SceneViewportCanvas from './SceneViewportCanvas/SceneViewportCanvas.svelte';
     import SceneViewportOverlay from './SceneViewportOverlay/SceneViewportOverlay.svelte';
-    // This wrapper forwards scene inputs and is not exposed as a custom element.
-    // svelte-ignore custom_element_props_identifier
     let { pointSize = $bindable(2), ...inputs }: Props = $props();
     const viewportProps = $derived(resolveSceneViewportProps({ ...inputs, pointSize }));
     const interaction = useSceneViewport(() => viewportProps);
