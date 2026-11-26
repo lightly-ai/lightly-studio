@@ -49,7 +49,9 @@ describe('createSettingsDialogFormState', () => {
                 keyToolbarBrush: 'r',
                 keyToolbarEraser: 'x',
                 keyPreviousCamera: '[',
-                keyNextCamera: ']'
+                keyNextCamera: ']',
+                keyPointCloudSelect: 'q',
+                keyPointCloudCreateCuboid: 'c'
             },
             gridViewRendering: 'contain',
             gridViewThumbnailQuality: 'raw',
@@ -77,7 +79,9 @@ describe('createSettingsSavePayload', () => {
                     keyToolbarBrush: 'p',
                     keyToolbarEraser: 'o',
                     keyPreviousCamera: ',',
-                    keyNextCamera: '.'
+                    keyNextCamera: '.',
+                    keyPointCloudSelect: 'z',
+                    keyPointCloudCreateCuboid: 'n'
                 },
                 gridViewRendering: 'cover',
                 gridViewThumbnailQuality: 'high',
@@ -105,7 +109,9 @@ describe('createSettingsSavePayload', () => {
             key_toolbar_brush: 'p',
             key_toolbar_eraser: 'o',
             key_previous_camera: ',',
-            key_next_camera: '.'
+            key_next_camera: '.',
+            key_point_cloud_select: 'z',
+            key_point_cloud_create_cuboid: 'n'
         });
     });
 });
@@ -227,6 +233,45 @@ describe('SettingsDialogState', () => {
 
         expect(state.shortcuts.keyPreviousCamera).toBe('[');
         expect(state.recordingShortcut).toBe('keyPreviousCamera');
+    });
+
+    it.each(['W', 'd', 'e', '3', 'ArrowLeft', 'Enter', 'Delete'])(
+        'does not record the reserved workspace key %s as a point cloud shortcut',
+        (key) => {
+            const state = new SettingsDialogState();
+            state.hydrate(TEST_SETTINGS);
+            state.startRecording('keyPointCloudSelect');
+
+            state.handleKeyDown(new KeyboardEvent('keydown', { key }));
+
+            expect(state.shortcuts.keyPointCloudSelect).toBe('q');
+            expect(state.recordingShortcut).toBe('keyPointCloudSelect');
+        }
+    );
+
+    it('records the point cloud tool shortcuts and saves them', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+
+        state.startRecording('keyPointCloudSelect');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'z' }));
+        state.startRecording('keyPointCloudCreateCuboid');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'n' }));
+
+        expect(state.getSavePayload()).toMatchObject({
+            key_point_cloud_select: 'z',
+            key_point_cloud_create_cuboid: 'n'
+        });
+    });
+
+    it('still records a workspace key as an image annotation shortcut', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyToolbarSelection');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'w' }));
+
+        expect(state.shortcuts.keyToolbarSelection).toBe('w');
     });
 
     it('ignores keydown when not recording', () => {
