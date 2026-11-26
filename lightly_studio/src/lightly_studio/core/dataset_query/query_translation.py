@@ -133,10 +133,14 @@ _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
     ("polygon", "y"): PolygonField.y,
     ("polygon", "width"): PolygonField.width,
     ("polygon", "height"): PolygonField.height,
+    ("video_frame", "frame_number"): VideoFrameSampleField.frame_number,
+    ("video_frame", "frame_timestamp_pts"): VideoFrameSampleField.frame_timestamp_pts,
+    ("video_frame", "rotation_deg"): VideoFrameSampleField.rotation_deg,
 }
 
 _DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
     ("image", "created_at"): ImageSampleField.created_at,
+    ("video", "created_at"): VideoSampleField.created_at,
 }
 
 _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
@@ -170,6 +174,7 @@ _EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {
 _TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
     ("image", "tags"): ImageSampleField.tags,
     ("video", "tags"): VideoSampleField.tags,
+    ("video_frame", "tags"): VideoFrameSampleField.tags,
 }
 
 _SORT_FIELDS: dict[tuple[str, str], Field] = {
@@ -185,6 +190,10 @@ _SORT_FIELDS: dict[tuple[str, str], Field] = {
     ("video", "height"): VideoSampleField.height,
     ("video", "duration_s"): VideoSampleField.duration_s,
     ("video", "fps"): VideoSampleField.fps,
+    ("video_frame", "frame_number"): VideoFrameSampleField.frame_number,
+    ("video_frame", "frame_timestamp_s"): VideoFrameSampleField.frame_timestamp_s,
+    ("video_frame", "frame_timestamp_pts"): VideoFrameSampleField.frame_timestamp_pts,
+    ("video_frame", "rotation_deg"): VideoFrameSampleField.rotation_deg,
 }
 
 
