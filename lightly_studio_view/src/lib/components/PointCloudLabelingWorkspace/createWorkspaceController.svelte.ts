@@ -115,7 +115,8 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         selectedCameraChannelIds: cameraSelection.selectedChannelIds,
         cameraStripCollapsed: cameraPane.collapsed,
         openCamera: getOptions().openCamera,
-        onOpenCameraChange: (camera, history) => getOptions().onOpenCameraChange?.(camera, history),
+        onOpenCameraChange: (camera, historyMode) =>
+            getOptions().onOpenCameraChange?.(camera, historyMode),
         bufferEntireSequence: playback.bufferEntireSequence,
         bufferedRanges: playback.bufferedRanges,
         bufferStatus: playback.bufferStatus,

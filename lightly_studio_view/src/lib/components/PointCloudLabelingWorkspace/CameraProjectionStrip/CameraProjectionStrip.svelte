@@ -6,9 +6,10 @@
     import type { PointBatch } from '$lib/components/PointCloudViewer';
     import type { AnnotationClassColor } from './projectionOverlay';
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
-    import CameraProjectionDialog from './CameraProjectionFrame/CameraProjectionDialog.svelte';
+    import CameraProjectionDialog from './CameraProjectionDialog/CameraProjectionDialog.svelte';
     import { useCameraFrame } from './CameraProjectionFrame/useCameraFrame/useCameraFrame.svelte';
-    import { getAdjacentCamera, getCameraForDigit } from './cameraNavigation/cameraNavigation';
+    import { useOpenCamera } from './useOpenCamera/useOpenCamera.svelte';
+    import type { HistoryMode } from '../workspaceOptions';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
     import ProjectionControls from './ProjectionControls.svelte';
@@ -33,7 +34,7 @@
         collapsed?: boolean;
         onToggleCollapsed?: () => void;
         openCamera?: string;
-        onOpenCameraChange?: (camera: string | undefined, history: 'push' | 'replace') => void;
+        onOpenCameraChange?: (camera: string | undefined, historyMode: HistoryMode) => void;
     }
 
     let {
@@ -69,13 +70,13 @@
         seqNumber,
         displayFrameId: displayFrameId || undefined
     }));
-    const selectedChannels = $derived(
-        summaryCameraChannels.filter((channel) => selectedChannelIds.includes(channel.channel_id))
-    );
-    const selectedNames = $derived(selectedChannels.map((channel) => channel.group_component_name));
-    const openChannel = $derived(
-        selectedChannels.find((channel) => channel.group_component_name === openCamera)
-    );
+    const cameras = useOpenCamera({
+        getCameraChannels: () => summaryCameraChannels,
+        getSelectedChannelIds: () => selectedChannelIds,
+        getOpenCamera: () => openCamera,
+        onOpenCameraChange: (camera, historyMode) => onOpenCameraChange?.(camera, historyMode)
+    });
+    const openChannel = $derived(cameras.openChannel);
     const openChannelDetails = $derived(
         openChannel
             ? tickDetails.data?.camera_channels[openChannel.group_component_name]
@@ -91,36 +92,9 @@
         blob: openChannel ? cameraFrames.data?.[openChannel.channel_id] : undefined,
         label: openChannel?.group_component_name ?? ''
     }));
-
-    // Channels load after the route, so an empty list is not a verdict on the open camera.
-    $effect(() => {
-        if (
-            summaryCameraChannels.length > 0 &&
-            openCamera !== undefined &&
-            !selectedNames.includes(openCamera)
-        ) {
-            onOpenCameraChange?.(undefined, 'replace');
-        }
-    });
-
-    function switchCamera(direction: 'previous' | 'next') {
-        if (openCamera === undefined) return;
-        const camera = getAdjacentCamera(selectedNames, openCamera, direction);
-        if (camera !== undefined) onOpenCameraChange?.(camera, 'replace');
-    }
-
-    function handleWindowKeydown(event: KeyboardEvent) {
-        const isInOtherDialog =
-            event.target instanceof Element && event.target.closest('[role="dialog"]') !== null;
-        if (openCamera === undefined && isInOtherDialog) return;
-        const camera = getCameraForDigit(event, selectedNames);
-        if (camera === undefined) return;
-        event.preventDefault();
-        onOpenCameraChange?.(camera, openCamera ? 'replace' : 'push');
-    }
 </script>
 
-<svelte:window onkeydown={handleWindowKeydown} />
+<svelte:window onkeydown={cameras.handleWindowKeydown} />
 
 <div
     class="flex h-full min-h-0 flex-col bg-background"
@@ -152,7 +126,7 @@
     {#if !collapsed}
         <!-- Reserve scrollbar height so resizing the tiles cannot toggle overflow in a loop. -->
         <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-scroll px-2 pb-2">
-            {#each selectedChannels as summaryChannel}
+            {#each cameras.selectedChannels as summaryChannel}
                 {@const channel =
                     tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
                 <CameraProjectionFrame
@@ -168,8 +142,7 @@
                     {annotationClasses}
                     projection={canProject ? (channel?.projection ?? undefined) : undefined}
                     projectionSettings={$projectionSettings}
-                    onEnlarge={() =>
-                        onOpenCameraChange?.(summaryChannel.group_component_name, 'push')}
+                    onEnlarge={() => cameras.show(summaryChannel.group_component_name)}
                 />
             {/each}
         </div>
@@ -180,7 +153,7 @@
     bind:open={
         () => openChannel !== undefined,
         (open) => {
-            if (!open) onOpenCameraChange?.(undefined, 'replace');
+            if (!open) cameras.close();
         }
     }
     label={openChannel?.group_component_name ?? ''}
@@ -192,12 +165,9 @@
     projectionSettings={$projectionSettings}
     onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
     {onPlaybackToggle}
-    position={{
-        index: openCamera === undefined ? 0 : selectedNames.indexOf(openCamera) + 1,
-        total: selectedNames.length
-    }}
-    onPrevious={selectedNames.length > 1 ? () => switchCamera('previous') : undefined}
-    onNext={selectedNames.length > 1 ? () => switchCamera('next') : undefined}
+    position={cameras.position}
+    onPrevious={cameras.canSwitch ? () => cameras.switchCamera('previous') : undefined}
+    onNext={cameras.canSwitch ? () => cameras.switchCamera('next') : undefined}
     previousKey={$settingsStore.key_previous_camera}
     nextKey={$settingsStore.key_next_camera}
 />

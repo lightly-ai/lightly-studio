@@ -7,6 +7,7 @@ import type { PointCloudWorkspaceContext } from './provider/types';
 import type { AnnotationClass, AnnotationSource, CuboidAnnotation, WorkspaceTool } from './domain';
 import type { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
 import type { createWorkspaceController } from './createWorkspaceController.svelte';
+import type { HistoryMode } from './workspaceOptions';
 
 /** Inclusive range of timeline ticks already available for playback. */
 interface BufferRange {
@@ -79,7 +80,7 @@ export interface PointCloudWorkspaceLayoutState {
     /** Camera shown in the enlarged camera dialog, or undefined when it is closed. */
     openCamera: string | undefined;
     /** Opens, switches, or closes the enlarged camera dialog. */
-    onOpenCameraChange: (camera: string | undefined, history: 'push' | 'replace') => void;
+    onOpenCameraChange: (camera: string | undefined, historyMode: HistoryMode) => void;
     /** Whether buffering covers the complete sequence. */
     bufferEntireSequence: boolean;
     /** Inclusive tick ranges ready for playback. */
