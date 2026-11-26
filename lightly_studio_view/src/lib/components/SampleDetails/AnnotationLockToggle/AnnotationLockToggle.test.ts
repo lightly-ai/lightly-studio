@@ -11,9 +11,7 @@ describe('AnnotationLockToggle', () => {
         render(AnnotationLockToggle, { props: defaultProps });
 
         await user.hover(screen.getByRole('button', { name: 'Lock all annotations' }));
-        expect(screen.getByRole('tooltip')).toHaveTextContent(
-            "Lock all annotations. Locked masks are protected: new brush strokes won't paint over or modify them."
-        );
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Lock all annotations');
     });
 
     it('offers to unlock all annotations when all are locked', async () => {
@@ -21,9 +19,7 @@ describe('AnnotationLockToggle', () => {
         render(AnnotationLockToggle, { props: { ...defaultProps, locked: true } });
 
         await user.hover(screen.getByRole('button', { name: 'Unlock all annotations' }));
-        expect(screen.getByRole('tooltip')).toHaveTextContent(
-            'Unlock all annotations. Allows new brush strokes to paint over these masks again.'
-        );
+        expect(screen.getByRole('tooltip')).toHaveTextContent('Unlock all annotations');
     });
 
     it('names the source scope in the label and the tooltip', async () => {
@@ -34,7 +30,7 @@ describe('AnnotationLockToggle', () => {
             screen.getByRole('button', { name: 'Lock all annotations in this source' })
         );
         expect(screen.getByRole('tooltip')).toHaveTextContent(
-            "Lock all annotations in this source. Locked masks are protected: new brush strokes won't paint over or modify them."
+            'Lock all annotations in this source'
         );
     });
 

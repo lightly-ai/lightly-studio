@@ -18,14 +18,9 @@
         scope === 'source' ? 'all annotations in this source' : 'all annotations'
     );
     const label = $derived(locked ? `Unlock ${target}` : `Lock ${target}`);
-    const tooltip = $derived(
-        locked
-            ? `${label}. Allows new brush strokes to paint over these masks again.`
-            : `${label}. Locked masks are protected: new brush strokes won't paint over or modify them.`
-    );
 </script>
 
-<Tooltip content={tooltip} noTriggerRole>
+<Tooltip content={label} noTriggerRole>
     <button
         type="button"
         aria-label={label}
