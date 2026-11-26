@@ -1,5 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/svelte';
-import { fireEvent } from '@testing-library/dom';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
@@ -65,6 +64,45 @@ const frontImage = new Blob(['front'], { type: 'image/jpeg' });
 const rearImage = new Blob(['rear'], { type: 'image/jpeg' });
 
 describe('CameraProjectionStrip', () => {
+    it('picks the camera channels in the projection settings', async () => {
+        const onToggleCameraChannel = vi.fn();
+        render(CameraProjectionStrip, {
+            ...defaultProps,
+            selectedChannelIds: [1],
+            onToggleCameraChannel,
+            onSetCameraChannels: vi.fn()
+        });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Projection settings' }));
+
+        expect(screen.getByTestId('workspace-camera-select')).toHaveTextContent('Camera: front');
+    });
+
+    it('shows no camera select without channel callbacks', async () => {
+        render(CameraProjectionStrip, defaultProps);
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Projection settings' }));
+
+        expect(screen.queryByTestId('workspace-camera-select')).toBeNull();
+    });
+
+    it('stacks the tiles in a column on the right and moves back to the bottom', async () => {
+        tickDetailsResult.data = tickDetails;
+        const onDockChange = vi.fn();
+        render(CameraProjectionStrip, { ...defaultProps, dock: 'right', onDockChange });
+
+        const tile = screen.getByText('front').closest('figure');
+        expect(tile?.parentElement).toHaveClass('flex-col', 'overflow-x-hidden');
+        // In a column the strip's width sizes the tile, so it carries no width of its own.
+        expect(tile).toHaveClass('w-full');
+        expect(tile?.style.width).toBe('');
+        await fireEvent.click(
+            screen.getByRole('button', { name: 'Show camera projections at the bottom' })
+        );
+
+        expect(onDockChange).toHaveBeenCalledWith('bottom');
+    });
+
     beforeEach(() => {
         tickDetailsResult.data = undefined;
         cameraFramesResult.data = undefined;

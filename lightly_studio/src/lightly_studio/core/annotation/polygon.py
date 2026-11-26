@@ -5,7 +5,7 @@ from __future__ import annotations
 from lightly_studio.core.annotation import Annotation
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.polygon import PolygonAnnotationTable, Polygons
-from lightly_studio.services import annotations_service
+from lightly_studio.transport import active_transport
 
 
 class PolygonAnnotation(Annotation):
@@ -62,10 +62,6 @@ class PolygonAnnotation(Annotation):
 
     @polygons.setter
     def polygons(self, value: Polygons) -> None:
-        session = self.get_object_session()
-        annotations_service.update_annotation_polygons(
-            session=session,
-            annotation_id=self.annotation_base.sample_id,
-            polygons=value,
+        active_transport.get_transport().annotations.update_polygons(
+            annotation_id=self.annotation_base.sample_id, polygons=value
         )
-        session.refresh(self.inner)

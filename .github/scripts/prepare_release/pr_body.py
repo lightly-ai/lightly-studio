@@ -56,4 +56,5 @@ The workflow already checked that:
 byte-identical,
 - Labelformat is pinned by version, not by git sha.
 
-What is left is editorial, and it is what this review is for."""
+What is left is editorial, and it is what this review is for. To prepare the release notes, \
+ask an agent to use the `prepare-release-changelog` skill on this branch."""

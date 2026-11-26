@@ -33,13 +33,18 @@ export function useCameraFrame(getProps: () => CameraProjectionFrameProps) {
 
     let failedFrameUrl = $state<string | null>(null);
 
-    // Tile width follows the frame's own aspect ratio; square until the image has loaded.
+    // The tile follows the frame's own aspect ratio; square until the image has loaded. In a row
+    // the height is given and the width follows; in a column the width is given.
     let aspectRatio = $state(1);
     let figureHeight = $state(0);
+    let figureWidth = $state(0);
     const CAPTION_HEIGHT_PX = 24;
     const BORDER_PX = 2;
     const tileWidth = $derived(
         Math.max(0, figureHeight - CAPTION_HEIGHT_PX) * aspectRatio + BORDER_PX
+    );
+    const tileHeight = $derived(
+        Math.max(0, figureWidth - BORDER_PX) / aspectRatio + CAPTION_HEIGHT_PX
     );
 
     return {
@@ -54,6 +59,15 @@ export function useCameraFrame(getProps: () => CameraProjectionFrameProps) {
         },
         get tileWidth() {
             return tileWidth;
+        },
+        get tileHeight() {
+            return tileHeight;
+        },
+        get figureWidth() {
+            return figureWidth;
+        },
+        set figureWidth(value) {
+            figureWidth = value;
         },
         get figureHeight() {
             return figureHeight;

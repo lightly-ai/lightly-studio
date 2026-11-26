@@ -2,17 +2,14 @@ import { fromStore } from 'svelte/store';
 import type { ColorMode } from '$lib/components/PointCloudViewer';
 import { useGlobalStorage } from '$lib/hooks';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
+import type { PanelDock } from '../PanelDockToggle';
 
 /** Owns scene display preferences and editing availability. */
 export function useWorkspacePresentation() {
     const { isEditingMode } = useGlobalStorage();
-    const orthographicViewsEnabled = useSessionStorage<boolean>(
+    const showOrthographicViews = useSessionStorage<boolean>(
         'lightlyStudio_pointCloudOrthographicViewsEnabled',
         true
-    );
-    const orthographicViewsCollapsed = useSessionStorage<boolean>(
-        'lightlyStudio_pointCloudOrthographicViewsCollapsed',
-        false
     );
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
     const pointSize = useSessionStorage<number>('lightlyStudio_pointCloudPointSize', 2);
@@ -20,8 +17,17 @@ export function useWorkspacePresentation() {
         'lightlyStudio_pointCloudShowNavigationHelpers',
         true
     );
-    const orthographicEnabled = fromStore(orthographicViewsEnabled);
-    const orthographicCollapsed = fromStore(orthographicViewsCollapsed);
+    const orthographicDockStore = useSessionStorage<PanelDock>(
+        'lightlyStudio_pointCloudOrthographicViewsDock',
+        'bottom'
+    );
+    const cameraStripDockStore = useSessionStorage<PanelDock>(
+        'lightlyStudio_pointCloudCameraStripDock',
+        'bottom'
+    );
+    const orthographic = fromStore(showOrthographicViews);
+    const orthographicDock = fromStore(orthographicDockStore);
+    const cameraStripDock = fromStore(cameraStripDockStore);
     const editing = fromStore(isEditingMode);
     const points = fromStore(pointSize);
     const helpers = fromStore(showNavigationHelpers);
@@ -30,11 +36,14 @@ export function useWorkspacePresentation() {
         get isEditingMode() {
             return editing.current;
         },
-        get orthographicViewsEnabled() {
-            return orthographicEnabled.current;
+        get showOrthographicViews() {
+            return orthographic.current;
         },
-        get orthographicViewsCollapsed() {
-            return orthographicCollapsed.current;
+        get orthographicDock() {
+            return orthographicDock.current;
+        },
+        get cameraStripDock() {
+            return cameraStripDock.current;
         },
         get pointSize() {
             return points.current;
@@ -50,7 +59,8 @@ export function useWorkspacePresentation() {
         },
         setPointSize: pointSize.set,
         setShowNavigationHelpers: showNavigationHelpers.set,
-        setOrthographicViewsEnabled: orthographicViewsEnabled.set,
-        setOrthographicViewsCollapsed: orthographicViewsCollapsed.set
+        toggleOrthographicProjections: showOrthographicViews.set,
+        setOrthographicDock: orthographicDockStore.set,
+        setCameraStripDock: cameraStripDockStore.set
     };
 }

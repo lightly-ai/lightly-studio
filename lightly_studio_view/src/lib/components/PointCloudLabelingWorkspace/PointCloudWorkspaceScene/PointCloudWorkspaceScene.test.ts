@@ -46,16 +46,23 @@ const defaultProps: Props = {
     effectiveTool: 'select',
     isEditingMode: true,
     showOrthographicViews: true,
+    orthographicDock: 'bottom' as const,
+    cameraStripDock: 'bottom' as const,
     pointSize: 2,
     showNavigationHelpers: true,
     colorMode: 'intensity',
     selectedCuboidId: null,
     hoveredCuboidId: null,
     draftCuboid: null,
-    orthographicViewsEnabled: true,
-    orthographicViewsCollapsed: false,
-    onOrthographicViewsEnabledChange: vi.fn(),
-    onOrthographicViewsCollapsedChange: vi.fn(),
+    onToggleOrthographicProjections: vi.fn(),
+    onOrthographicDockChange: vi.fn(),
+    onColorModeChange: vi.fn(),
+    selectedLidarChannelIds: [],
+    onToggleLidarChannel: vi.fn(),
+    onSetLidarChannels: vi.fn(),
+    onToggleCameraChannel: vi.fn(),
+    onSetCameraChannels: vi.fn(),
+    onCameraStripDockChange: vi.fn(),
     onPointSizeChange: vi.fn(),
     onToggleNavigationHelpers: vi.fn(),
     onToolChange: vi.fn(),
@@ -72,6 +79,9 @@ const defaultProps: Props = {
     onNextFrame: vi.fn()
 };
 
+const viewportRegions = () =>
+    screen.getAllByRole('region', { name: /^(perspective|top|side|front)$/ });
+
 it('keeps the toolbar in the main viewport and restores all views without remounting them', async () => {
     render(WorkspaceSceneProviderHarness, { props: { state: defaultProps } });
     const main = screen.getByRole('region', { name: 'perspective' });
@@ -80,10 +90,10 @@ it('keeps the toolbar in the main viewport and restores all views without remoun
 
     for (const label of ['Top', 'Side', 'Front', '3D scene']) {
         await fireEvent.click(screen.getByRole('button', { name: `Expand ${label} view` }));
-        expect(screen.getAllByRole('region')).toHaveLength(1);
+        expect(viewportRegions()).toHaveLength(1);
         expect(screen.getAllByTestId('scene-viewport-instance')).toEqual(viewports);
         await fireEvent.click(screen.getByRole('button', { name: 'Restore views' }));
-        expect(screen.getAllByRole('region')).toHaveLength(4);
+        expect(viewportRegions()).toHaveLength(4);
     }
 });
 
@@ -112,30 +122,12 @@ it('restores the main viewport when projections are disabled while one is expand
     const { rerender } = render(WorkspaceSceneProviderHarness, { props: { state: defaultProps } });
     await fireEvent.click(screen.getByRole('button', { name: 'Expand Top view' }));
     expect(defaultProps.onCuboidDraftChange).not.toHaveBeenCalled();
-    await rerender({
-        state: { ...defaultProps, showOrthographicViews: false, orthographicViewsEnabled: false }
-    });
+    await rerender({ state: { ...defaultProps, showOrthographicViews: false } });
     // A draft drawn in a removed viewport must not keep its highlight.
     expect(defaultProps.onCuboidDraftChange).toHaveBeenCalledExactlyOnceWith(null);
     expect(screen.getByRole('region', { name: 'perspective' })).toBeVisible();
     expect(screen.queryByRole('region', { name: 'top' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Restore views' })).not.toBeInTheDocument();
-});
-
-it('collapses the orthographic views to their header and expands them again', async () => {
-    const state = { ...defaultProps, onOrthographicViewsCollapsedChange: vi.fn() };
-    const { rerender } = render(WorkspaceSceneProviderHarness, { props: { state } });
-    await fireEvent.click(
-        screen.getByRole('button', { name: 'Collapse orthographic projections' })
-    );
-    expect(state.onOrthographicViewsCollapsedChange).toHaveBeenCalledExactlyOnceWith(true);
-
-    await rerender({
-        state: { ...state, showOrthographicViews: false, orthographicViewsCollapsed: true }
-    });
-    expect(screen.queryByRole('region', { name: 'top' })).not.toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('button', { name: 'Expand orthographic projections' }));
-    expect(state.onOrthographicViewsCollapsedChange).toHaveBeenLastCalledWith(false);
 });
 
 it('isolates camera state between separate workspace providers', async () => {
@@ -145,4 +137,34 @@ it('isolates camera state between separate workspace providers', async () => {
     expect(within(first.container).getByLabelText('top scale')).toHaveTextContent('0.025');
     expect(within(first.container).getByLabelText('perspective scale')).toHaveTextContent('unset');
     expect(within(second.container).getByLabelText('perspective scale')).toHaveTextContent('unset');
+});
+
+it('moves the orthographic views to the right from their panel header', async () => {
+    const onOrthographicDockChange = vi.fn();
+    const { rerender } = render(WorkspaceSceneProviderHarness, {
+        props: { state: { ...defaultProps, onOrthographicDockChange } }
+    });
+    expect(screen.getByTestId('projection-top').parentElement).toHaveClass('grid-cols-3');
+
+    await fireEvent.click(
+        screen.getByRole('button', { name: 'Show orthographic views on the right' })
+    );
+    expect(onOrthographicDockChange).toHaveBeenCalledWith('right');
+
+    await rerender({ state: { ...defaultProps, orthographicDock: 'right' as const } });
+    expect(screen.getByTestId('projection-top').parentElement).toHaveClass('grid-rows-3');
+    expect(
+        screen.getByRole('button', { name: 'Show orthographic views at the bottom' })
+    ).toBeInTheDocument();
+});
+
+it('hides the orthographic views from their close button', async () => {
+    const onToggleOrthographicProjections = vi.fn();
+    render(WorkspaceSceneProviderHarness, {
+        props: { state: { ...defaultProps, onToggleOrthographicProjections } }
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Hide orthographic views' }));
+
+    expect(onToggleOrthographicProjections).toHaveBeenCalledWith(false);
 });
