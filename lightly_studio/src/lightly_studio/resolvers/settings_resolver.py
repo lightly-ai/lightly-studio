@@ -58,6 +58,8 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
     current_settings.key_toolbar_slic = settings.key_toolbar_slic
     current_settings.key_toolbar_brush = settings.key_toolbar_brush
     current_settings.key_toolbar_eraser = settings.key_toolbar_eraser
+    current_settings.key_previous_camera = settings.key_previous_camera
+    current_settings.key_next_camera = settings.key_next_camera
 
     # Update show annotation text labels
     current_settings.show_annotation_text_labels = settings.show_annotation_text_labels
