@@ -18,7 +18,7 @@ concurrency:
 
 env:
   NODE_OPTIONS: --max-old-space-size=4096
-  DATASET_PATH: $(pwd)/datasets
+  DATASET_REVISION: 9e6e119bb274ffe6c135009963b15193da4e670e
   E2E_BASE_URL: http://localhost:8001
   # Every run restores the uv cache, only main writes one: per-ref copies are
   # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
@@ -51,6 +51,7 @@ jobs:
         run: |
           hash="${{ hashFiles(
             '.github/workflows/end2end_test.yml',
+            '.github/actions/e2e-*/**',
             'Makefile',
             'lightly_studio/Makefile',
             'lightly_studio/alembic.ini',
@@ -128,17 +129,6 @@ jobs:
               )
             }}
 
-      - name: Cache example dataset
-        id: cache-example-dataset
-        uses: actions/cache@v6
-        with:
-          # No need to download a cached version in cache preparation step
-          lookup-only: true
-          path: &cache-example-dataset-path lightly_studio/datasets
-          # Manually update the cache key to invalidate caches when files relevant to the CI change
-          # in the dataset_examples repo.
-          key: &cache-example-dataset-key example-dataset-2026-03-09
-
       ### Setup steps for the workflow ###
       - name: Set Up Python
         if: steps.cache-build.outputs.cache-hit != 'true'
@@ -176,10 +166,6 @@ jobs:
         if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
         run: ./node_modules/.bin/playwright install chromium
-
-      - name: Download example dataset
-        if: steps.cache-example-dataset.outputs.cache-hit != 'true'
-        run: make download-example-dataset
 
       - name: Export schema and generate version file from backend
         if: steps.cache-build.outputs.cache-hit != 'true'
@@ -297,14 +283,15 @@ jobs:
           path: *cache-playwright-browsers-path
           key: *cache-playwright-browsers-key
 
-      - name: Cache example dataset
-        if: steps.cache-success.outputs.cache-hit != 'true'
-        id: cache-example-dataset
-        uses: actions/cache@v6
+      - name: Restore example media
+        if: steps.cache-success.outputs.cache-hit != 'true' && matrix.playwright_project != 'remote-embedder'
+        uses: ./.github/actions/e2e-media
+
+      - name: Restore embedding checkpoint
+        if: steps.cache-success.outputs.cache-hit != 'true' && matrix.playwright_project != 'remote-embedder' && matrix.playwright_project != 'groups'
+        uses: ./.github/actions/e2e-model
         with:
-          fail-on-cache-miss: true
-          path: *cache-example-dataset-path
-          key: *cache-example-dataset-key
+          checkpoint: ${{ matrix.playwright_project == 'videos' && 'PE-Core-T16-384.pt' || 'mobileclip_s0.pt' }}
 
       ### Setup ###
 
@@ -346,7 +333,6 @@ jobs:
       - name: Index dataset with using lightly_studio pypi package
         if: steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio
-        # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
         run: |
           if [ "${{ matrix.postgres }}" = "true" ]; then
             LIGHTLY_STUDIO_DATABASE_URL=postgresql://lightly:lightly@localhost:5432/lightly_studio \
