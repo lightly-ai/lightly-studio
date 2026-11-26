@@ -228,17 +228,32 @@ describe('CameraProjectionStrip', () => {
             expect(onOpenCameraChange).not.toHaveBeenCalled();
         });
 
-        it('keeps the same dialog mounted while the tick changes', async () => {
+        it('follows the tick in the same dialog and image', async () => {
             const { rerender } = render(CameraProjectionStrip, {
                 props: { ...cameraProps, openCamera: 'CAM_B' }
             });
             const dialog = screen.getByRole('dialog');
             const image = screen.getByRole('img', { name: 'CAM_B enlarged' });
+            expect(image.getAttribute('src')).toContain('log_time_ns=2000');
 
-            await rerender({ ...cameraProps, openCamera: 'CAM_B', seqNumber: 1 });
+            tickDetailsResult.data = {
+                ...tickDetails,
+                camera_channels: {
+                    CAM_A: camera(1, 'CAM_A'),
+                    CAM_B: { ...camera(2, 'CAM_B'), log_time_ns: '3000' },
+                    CAM_C: camera(3, 'CAM_C')
+                }
+            };
+            await rerender({
+                ...cameraProps,
+                cameraChannels: cameraChannels.map((channel) => ({ ...channel })),
+                openCamera: 'CAM_B',
+                seqNumber: 1
+            });
 
             expect(screen.getByRole('dialog')).toBe(dialog);
             expect(screen.getByRole('img', { name: 'CAM_B enlarged' })).toBe(image);
+            expect(image.getAttribute('src')).toContain('log_time_ns=3000');
         });
 
         it('disables switching with a single selected camera', () => {
