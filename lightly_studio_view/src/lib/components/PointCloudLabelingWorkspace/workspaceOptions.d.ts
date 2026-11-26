@@ -17,7 +17,10 @@ export interface WorkspaceOptions {
     onTickChange?: (tickNumber: number) => void;
     /** Camera shown in the enlarged camera dialog, or undefined when it is closed. */
     openCamera?: string;
-    /** Reports the open camera for route synchronization; `push` adds a history entry. */
+    /**
+     * Reports the open camera for route synchronization; `push` adds a history entry. Without it,
+     * the workspace keeps the open camera itself and ignores `openCamera`.
+     */
     onOpenCameraChange?: (camera: string | undefined, historyMode: HistoryMode) => void;
     /** Opens the previous sequence; the timeline control is disabled when absent. */
     onPreviousSequence?: () => void;
