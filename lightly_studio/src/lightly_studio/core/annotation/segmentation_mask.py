@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from sqlmodel import col
+from collections.abc import Sequence
 
 from lightly_studio.core.annotation import Annotation
 from lightly_studio.core.annotation.bounding_box_field import BoundingBoxField
-from lightly_studio.core.db_field import DBField
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
+from lightly_studio.transport import active_transport
 
 
 class SegmentationMaskAnnotation(Annotation):
@@ -34,8 +34,6 @@ class SegmentationMaskAnnotation(Annotation):
     """Width (px) of the segmentation mask bounding box."""
     height = BoundingBoxField()
     """Height (px) of the segmentation mask bounding box."""
-    segmentation_mask = DBField(col(SegmentationAnnotationTable.segmentation_mask))
-    """Segmentation mask given as a run-length encoding."""
 
     def __init__(self, inner: SegmentationAnnotationTable) -> None:
         """Initialize the Annotation.
@@ -48,3 +46,14 @@ class SegmentationMaskAnnotation(Annotation):
 
         super().__init__(inner.annotation_base)
         self.inner = inner
+
+    @property
+    def segmentation_mask(self) -> list[int] | None:
+        """Segmentation mask given as a run-length encoding."""
+        return self.inner.segmentation_mask
+
+    @segmentation_mask.setter
+    def segmentation_mask(self, value: Sequence[int]) -> None:
+        active_transport.get_transport().annotations.update_segmentation_mask(
+            annotation_id=self.annotation_base.sample_id, segmentation_mask=value
+        )

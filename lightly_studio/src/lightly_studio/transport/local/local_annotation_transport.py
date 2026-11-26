@@ -11,6 +11,7 @@ from lightly_studio.database import db_manager
 from lightly_studio.errors import NotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationView
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
@@ -105,6 +106,24 @@ class LocalAnnotationTransport:
             session=db_manager.persistent_session(),
             annotation_id=annotation_id,
             bounding_box=bounding_box,
+        )
+
+    def update_segmentation_mask(
+        self, annotation_id: UUID, segmentation_mask: Sequence[int]
+    ) -> None:
+        """Replace the segmentation mask of an annotation. Mark the evaluation runs stale."""
+        annotations_service.update_segmentation_mask(
+            session=db_manager.persistent_session(),
+            annotation_id=annotation_id,
+            segmentation_mask=list(segmentation_mask),
+        )
+
+    def update_polygons(self, annotation_id: UUID, polygons: Polygons) -> None:
+        """Replace the polygons of an annotation. Mark the evaluation runs stale."""
+        annotations_service.update_annotation_polygons(
+            session=db_manager.persistent_session(),
+            annotation_id=annotation_id,
+            polygons=polygons,
         )
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:

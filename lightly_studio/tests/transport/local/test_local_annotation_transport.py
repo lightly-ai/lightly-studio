@@ -8,6 +8,7 @@ from lightly_studio.database import db_manager
 from lightly_studio.errors import NotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.resolvers import (
@@ -172,6 +173,31 @@ class TestLocalAnnotationTransport:
         assert box is not None
         assert (box.x, box.y, box.width, box.height) == (1, 2, 3, 4)
 
+    def test_update_segmentation_mask(self) -> None:
+        image_id, annotation_id = _create_annotated_image(
+            annotation_type=AnnotationType.SEGMENTATION_MASK
+        )
+        transport: AnnotationTransport = LocalAnnotationTransport()
+
+        transport.update_segmentation_mask(annotation_id=annotation_id, segmentation_mask=[2, 3])
+
+        (annotation,) = transport.get_by_sample_ids(sample_ids=[image_id])
+        assert annotation.segmentation_details is not None
+        assert annotation.segmentation_details.segmentation_mask == [2, 3]
+
+    def test_update_polygons(self) -> None:
+        image_id, annotation_id = _create_annotated_image(
+            annotation_type=AnnotationType.POLYGON, polygons=[[(0, 0), (4, 0), (4, 4)]]
+        )
+        transport: AnnotationTransport = LocalAnnotationTransport()
+
+        transport.update_polygons(annotation_id=annotation_id, polygons=[[(0, 0), (9, 0), (9, 7)]])
+
+        (annotation,) = transport.get_by_sample_ids(sample_ids=[image_id])
+        assert annotation.polygon_details is not None
+        assert annotation.polygon_details.polygons == [[(0, 0), (9, 0), (9, 7)]]
+        assert annotation.polygon_details.width == 9
+
     def test_delete(self) -> None:
         session = db_manager.persistent_session()
         collection_id = create_collection(session=session).collection_id
@@ -243,7 +269,9 @@ class TestLocalAnnotationTransport:
         assert [track.object_track_number for track in tracks if track is not None] == [7, 3]
 
 
-def _create_annotated_image(annotation_type: AnnotationType) -> tuple[uuid.UUID, uuid.UUID]:
+def _create_annotated_image(
+    annotation_type: AnnotationType, polygons: Polygons | None = None
+) -> tuple[uuid.UUID, uuid.UUID]:
     session = db_manager.persistent_session()
     collection_id = create_collection(session=session).collection_id
     image = create_image(session=session, collection_id=collection_id)
@@ -254,5 +282,6 @@ def _create_annotated_image(annotation_type: AnnotationType) -> tuple[uuid.UUID,
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=annotation_type,
+        polygons=polygons,
     )
     return image.sample_id, annotation.sample_id
