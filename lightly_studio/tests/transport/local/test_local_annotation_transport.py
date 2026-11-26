@@ -7,6 +7,7 @@ import pytest
 from lightly_studio.database import db_manager
 from lightly_studio.errors import NotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
+from lightly_studio.resolvers import annotation_collection_coverage_resolver, collection_resolver
 from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.local.local_annotation_transport import LocalAnnotationTransport
 from tests.helpers_resolvers import (
@@ -65,6 +66,7 @@ class TestLocalAnnotationTransport:
         session = db_manager.persistent_session()
         collection_id = create_collection(session=session).collection_id
         image = create_image(session=session, collection_id=collection_id)
+        covered = create_image(session=session, collection_id=collection_id, file_path_abs="/b.png")
         label = create_annotation_label(session=session, root_collection_id=collection_id)
         transport: AnnotationTransport = LocalAnnotationTransport()
 
@@ -78,11 +80,20 @@ class TestLocalAnnotationTransport:
                 )
             ],
             collection_name="gt",
+            covered_sample_ids=[covered.sample_id],
         )
 
         annotations = transport.get_by_sample_ids(sample_ids=[image.sample_id])
         assert [a.sample_id for a in annotations] == annotation_ids
         assert annotations[0].annotation_type == AnnotationType.CLASSIFICATION
+        gt_collection_id = collection_resolver.get_by_name(
+            session=session, name="gt", parent_collection_id=collection_id
+        )
+        assert gt_collection_id is not None
+        covered_sample_ids = annotation_collection_coverage_resolver.list_by_collection_id(
+            session=session, annotation_collection_id=gt_collection_id
+        )
+        assert set(covered_sample_ids) == {image.sample_id, covered.sample_id}
 
     def test_delete(self) -> None:
         session = db_manager.persistent_session()

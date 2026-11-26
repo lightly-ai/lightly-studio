@@ -215,7 +215,6 @@ def create_images(
 
 
 def load_into_dataset_from_labelformat(  # noqa: PLR0913
-    session: Session,
     ingestion: IngestionTransport,
     root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
@@ -227,7 +226,6 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     """Load samples and their annotations from a labelformat input into the dataset.
 
     Args:
-        session: The database session for the annotations.
         ingestion: The transport that adds the images.
         root_collection_id: The ID of the root collection to load samples into.
         input_labels: The labelformat input containing images and annotations.
@@ -281,7 +279,6 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     # Phase 2: Annotation creation (only if samples were created)
     if created_sample_ids:
         add_annotations.add_annotations_from_labelformat(
-            session=session,
             root_collection_id=root_collection_id,
             input_labels=input_labels,
             images_root=images_root_abs,

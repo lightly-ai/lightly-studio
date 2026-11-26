@@ -76,6 +76,7 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
             parent_collection_id=annotation.collection_id,
             annotations=[AnnotationCreate(**annotation_data)],
             collection_name=annotation.annotation_collection_name,
+            covered_sample_ids=[],
         )
     except Exception:
         session.rollback()

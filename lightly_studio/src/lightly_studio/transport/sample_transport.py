@@ -24,3 +24,12 @@ class SampleTransport(Protocol):
             ValueError: If the cursor is not valid or an include value is not supported.
             QueryExprError: If the query uses an unknown field.
         """
+
+    def get_image_ids_by_paths(
+        self, collection_id: UUID, file_paths: Sequence[str]
+    ) -> dict[str, UUID]:
+        """Get the sample IDs of the images of a collection by file path.
+
+        Callers pass absolute, normalized paths. The lookup compares them exactly to the
+        stored image paths. Paths without an image in the collection are not in the result.
+        """

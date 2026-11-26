@@ -46,7 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
-- Fixed DuckDB leak warnings when stopping the GUI with Ctrl+C.
+- LightlyStudio no longer prints DuckDB leak warnings when it exits, for example when you stop the GUI with Ctrl+C.
+
+- In the sample details, the outline of the selected annotation source and of the "Source name" input is no longer cut off at the sides.
 
 - Images with many annotations open faster when LightlyStudio runs on a remote server.
 
