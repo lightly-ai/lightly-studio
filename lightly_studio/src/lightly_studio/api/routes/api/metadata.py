@@ -12,15 +12,14 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.errors import NotFoundError, TagNotFoundError
-from lightly_studio.metadata import compute_similarity, compute_typicality
+from lightly_studio.errors import EmbeddingModelNotFoundError, NotFoundError, TagNotFoundError
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.metadata import (
     HistogramView,
     MetadataInfoView,
     MetadataValueCountsView,
 )
-from lightly_studio.resolvers import collection_embedding_model_resolver, collection_resolver
+from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.grid_filter import CollectionFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import (
@@ -30,6 +29,7 @@ from lightly_studio.resolvers.metadata_resolver.sample import (
     get_metadata_info as metadata_info_resolver,
 )
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+from lightly_studio.services import compute_metadata_service
 
 metadata_router = APIRouter(prefix="/collections/{collection_id}", tags=["metadata"])
 
@@ -188,16 +188,10 @@ def compute_typicality_metadata(
     Returns:
         None (204 No Content on success).
     """
-    embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
+    compute_metadata_service.compute_typicality_metadata(
         session=session,
         collection_id=collection.collection_id,
         embedding_model_name=request.embedding_model_name,
-    )
-
-    compute_typicality.compute_typicality_metadata(
-        session=session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model_id,
         metadata_name=request.metadata_name,
     )
 
@@ -244,29 +238,22 @@ def compute_similarity_metadata(
         HTTPException: 404 if invalid embedding model or query tag is given.
     """
     try:
-        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
+        return compute_metadata_service.compute_similarity_metadata(
             session=session,
             collection_id=collection.collection_id,
-            embedding_model_name=request.embedding_model_name,
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail="Embedding model not found",
-        ) from e
-
-    try:
-        return compute_similarity.compute_similarity_metadata(
-            session=session,
-            key_collection_id=collection.collection_id,
             query_tag_id=query_tag_id,
-            embedding_model_id=embedding_model_id,
+            embedding_model_name=request.embedding_model_name,
             metadata_name=request.metadata_name,
         )
     except TagNotFoundError as e:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=f"Query tag {query_tag_id} not found",
+        ) from e
+    except EmbeddingModelNotFoundError as e:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail="Embedding model not found",
         ) from e
 
 
