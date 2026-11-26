@@ -58,7 +58,9 @@ vi.mock('$lib/hooks/useSettings', async () => {
         key_toolbar_brush: 'r',
         key_toolbar_eraser: 'x',
         key_previous_camera: '[',
-        key_next_camera: ']'
+        key_next_camera: ']',
+        key_point_cloud_select: 'q',
+        key_point_cloud_create_cuboid: 'c'
     });
     const showBoundingBoxesForSegmentationStore =
         writable<ShowBoundingBoxesForSegmentationValue>(true);

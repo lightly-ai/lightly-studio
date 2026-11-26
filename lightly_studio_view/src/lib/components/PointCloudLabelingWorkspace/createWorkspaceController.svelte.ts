@@ -12,6 +12,7 @@ import { useWorkspaceFullscreen } from './useWorkspaceFullscreen/useWorkspaceFul
 import { usePanelVisibility } from './usePanelVisibility/usePanelVisibility.svelte';
 import { useCollapsiblePane } from './useCollapsiblePane/useCollapsiblePane.svelte';
 import { useCuboidTargetSource } from './useCuboidTargetSource';
+import { useDeleteSelectedCuboidShortcut } from './useDeleteSelectedCuboidShortcut';
 import { useOpenCameraState } from './useOpenCameraState/useOpenCameraState.svelte';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { isSelectedCuboidHidden, useAnnotationVisibility } from './useAnnotationVisibility';
@@ -78,6 +79,11 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         () => presentation.isEditingMode,
         () => targetSource
     );
+    useDeleteSelectedCuboidShortcut({
+        getSelectedCuboidId: () => editing.selectedCuboidId,
+        getIsEditingMode: () => presentation.isEditingMode,
+        deleteCuboid: editing.handleDeleteCuboid
+    });
     const visibility = useAnnotationVisibility(() => getOptions().sequenceId);
     const openCameraState = useOpenCameraState(getOptions);
     // A hidden cuboid cannot be seen, so it must not stay selected. This covers every way to
