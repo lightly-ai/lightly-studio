@@ -55,6 +55,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
     const presentation = useWorkspacePresentation();
     const fullscreen = useWorkspaceFullscreen();
     const cameraPane = useCollapsiblePane('lightlyStudio_pointCloudCameraStripCollapsed');
+    const detailsPane = useCollapsiblePane('lightlyStudio_pointCloudDetailsCollapsed');
     const playback = useWorkspacePlayback(
         () => workspace,
         getOptions,
@@ -165,6 +166,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         presentation,
         fullscreen,
         cameraPane,
+        detailsPane,
         playback,
         data,
         targetSource,
