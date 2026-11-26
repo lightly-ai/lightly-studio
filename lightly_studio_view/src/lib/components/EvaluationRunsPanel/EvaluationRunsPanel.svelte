@@ -104,8 +104,10 @@
                     size: 'sm',
                     onclick: () => (dialogOpen = true),
                     'data-testid': 'evaluation-runs-add-button'
-                }}>New evaluation</Button
+                }}
             >
+                New evaluation
+            </Button>
         </div>
     {/if}
     <div class="flex min-h-0 flex-1 flex-col overflow-y-auto dark:[color-scheme:dark]">

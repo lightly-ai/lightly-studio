@@ -32,6 +32,8 @@
         stroke="#16a34a"
         stroke-width="4"
         stroke-linejoin="round"
-        paint-order="stroke">{text}</text
+        paint-order="stroke"
     >
+        {text}
+    </text>
 </g>

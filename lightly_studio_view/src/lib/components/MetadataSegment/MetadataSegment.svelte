@@ -88,8 +88,10 @@
                         <span class="truncate text-sm font-medium" title={label}>{label}</span>
                         <span
                             class="min-w-[8rem] flex-1 break-all text-sm"
-                            data-testid={`sample-metadata-${id}`}>{value}</span
+                            data-testid={`sample-metadata-${id}`}
                         >
+                            {value}
+                        </span>
                     </div>
                 {/if}
             {/each}

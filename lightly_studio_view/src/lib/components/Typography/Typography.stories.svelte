@@ -82,14 +82,15 @@
             <Typography variant="h6">H6 - Smallest Heading</Typography>
             <Typography variant="subtitle1">Subtitle 1 - Important secondary text</Typography>
             <Typography variant="subtitle2">Subtitle 2 - Smaller subtitle</Typography>
-            <Typography variant="body1"
-                >Body 1 - Default body text for paragraphs and content</Typography
-            >
-            <Typography variant="body2">Body 2 - Smaller body text for secondary content</Typography
-            >
-            <Typography variant="caption"
-                >Caption - Small text for footnotes and annotations</Typography
-            >
+            <Typography variant="body1">
+                Body 1 - Default body text for paragraphs and content
+            </Typography>
+            <Typography variant="body2">
+                Body 2 - Smaller body text for secondary content
+            </Typography>
+            <Typography variant="caption">
+                Caption - Small text for footnotes and annotations
+            </Typography>
             <Typography variant="overline">Overline - Category Labels</Typography>
         </div>
     {/snippet}

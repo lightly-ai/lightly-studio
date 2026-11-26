@@ -27,15 +27,16 @@
         <li>Metadata: <code>metadata["quality_score"] &gt;= 0.8</code></li>
         {#if sampleType === 'image'}
             <li>
-                Sample evaluation: <code>sample_evaluation(name = "run-name" AND "tp" &gt;= 1)</code
-                >
+                Sample evaluation: <code>
+                    sample_evaluation(name = "run-name" AND "tp" &gt;= 1)
+                </code>
             </li>
         {/if}
         {#if sampleType === 'video'}
             <li>
-                Match annotations on one frame with <code
-                    >frame(object_detection(class_name = "person") AND frame_timestamp_s &lt; 5)</code
-                >.
+                Match annotations on one frame with <code>
+                    frame(object_detection(class_name = "person") AND frame_timestamp_s &lt; 5)
+                </code>.
             </li>
         {/if}
         <li>Tag membership: <code>"tag_name" IN tags</code></li>
