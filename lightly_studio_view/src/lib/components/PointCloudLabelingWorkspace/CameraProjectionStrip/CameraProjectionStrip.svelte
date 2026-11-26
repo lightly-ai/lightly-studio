@@ -110,6 +110,9 @@
     }
 
     function handleWindowKeydown(event: KeyboardEvent) {
+        const isInOtherDialog =
+            event.target instanceof Element && event.target.closest('[role="dialog"]') !== null;
+        if (openCamera === undefined && isInOtherDialog) return;
         const camera = getCameraForDigit(event, selectedNames);
         if (camera === undefined) return;
         event.preventDefault();

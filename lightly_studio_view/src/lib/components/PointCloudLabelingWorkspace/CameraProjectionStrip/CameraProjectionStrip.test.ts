@@ -296,5 +296,29 @@ describe('CameraProjectionStrip', () => {
             expect(onOpenCameraChange).not.toHaveBeenCalled();
             input.remove();
         });
+
+        it('ignores digit keys from another dialog', async () => {
+            const onOpenCameraChange = vi.fn();
+            render(CameraProjectionStrip, { props: { ...cameraProps, onOpenCameraChange } });
+            const otherDialog = document.createElement('div');
+            otherDialog.setAttribute('role', 'dialog');
+            document.body.appendChild(otherDialog);
+
+            await fireEvent.keyDown(otherDialog, { key: '2' });
+
+            expect(onOpenCameraChange).not.toHaveBeenCalled();
+            otherDialog.remove();
+        });
+
+        it('switches cameras with digit keys inside the camera dialog', async () => {
+            const onOpenCameraChange = vi.fn();
+            render(CameraProjectionStrip, {
+                props: { ...cameraProps, openCamera: 'CAM_A', onOpenCameraChange }
+            });
+
+            await fireEvent.keyDown(screen.getByRole('dialog'), { key: '3' });
+
+            expect(onOpenCameraChange).toHaveBeenCalledWith('CAM_C', 'replace');
+        });
     });
 });
