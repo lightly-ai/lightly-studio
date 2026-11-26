@@ -22,8 +22,8 @@ section as a whole.
 
 ## Steps
 
-1. **Read the style reference.** Read the last three releases in `CHANGELOG.md`. Match
-   their grouping, group names, and wording.
+1. **Read the style reference.** Read the last three releases in the changelog of the
+   package (see Scope). Match their grouping, group names, and wording.
 
 2. **Ask which features are not released.** Some features are merged but hidden, or are
    for one customer only. Earlier examples: MCAP and point cloud features in 1.3.0. Ask
@@ -37,12 +37,16 @@ section as a whole.
 4. **Find missing entries.** List the commits since the previous release:
 
    ```
-   git log v<previous>..HEAD --no-merges --format='%h %s'
+   git log <previous tag>..HEAD --no-merges --format='%h %s'
    ```
 
+   The previous tag is `vX.Y.Z` for `lightly-studio` and `lightly-studio-serve/vX.Y.Z` for
+   `lightly-studio-serve`.
+
    Read every commit, not only `feat:` and `fix:` ones: many user-facing commits have no
-   prefix, for example "Delete annotation sources in Settings". Skip `refactor:`, `test:`,
-   `ci:`, `chore:`, and `build:` commits.
+   prefix, for example "Delete annotation sources in Settings". `refactor:`, `test:`,
+   `ci:`, `chore:`, and `build:` commits are usually internal, but check them too. For
+   example, `build: drop Python 3.10 support` needs an entry.
 
    For each user-facing commit, check that an entry covers it. When the title is not
    clear, read the pull request description with `gh pr view <number>`. Add an entry for
