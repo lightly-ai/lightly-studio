@@ -9,18 +9,21 @@ export interface BrushSpan {
 
 /**
  * Snap the cursor to the pixel grid. An odd size centers on the pixel under the cursor,
- * an even size centers on the nearest pixel corner.
+ * an even size centers on the nearest pixel corner. The size rounds to whole pixels.
  */
 export function getBrushAnchor(point: BrushPoint, size: number): BrushPoint {
-    if (isOdd(size)) {
+    if (isOdd(toWholePixels(size))) {
         return { x: Math.floor(point.x), y: Math.floor(point.y) };
     }
     return { x: Math.round(point.x), y: Math.round(point.y) };
 }
 
-/** Return the pixels of a round, hard-edged disc of `size` pixels as row spans. */
+/**
+ * Return the pixels of a round, hard-edged disc of `size` pixels as row spans.
+ * The size rounds to whole pixels.
+ */
 export function getBrushSpans(anchor: BrushPoint, size: number): BrushSpan[] {
-    return getDiscOffsets(size).map((offset) => ({
+    return getDiscOffsets(toWholePixels(size)).map((offset) => ({
         y: anchor.y + offset.y,
         xStart: anchor.x + offset.xStart,
         width: offset.width
@@ -100,6 +103,11 @@ function computeDiscOffsets(size: number): BrushSpan[] {
         offsets.push({ y, xStart, width });
     }
     return offsets;
+}
+
+// The disc math needs a whole number. A fractional size makes a row that never fits.
+function toWholePixels(size: number): number {
+    return Math.max(1, Math.round(size));
 }
 
 function isOdd(size: number): boolean {

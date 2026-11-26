@@ -14,6 +14,10 @@ describe('getBrushAnchor', () => {
     it('uses the nearest pixel corner for an even size', () => {
         expect(getBrushAnchor({ x: 3.7, y: 5.2 }, 2)).toEqual({ x: 4, y: 5 });
     });
+
+    it('rounds a fractional size before it picks the center', () => {
+        expect(getBrushAnchor({ x: 3.7, y: 5.2 }, 2.6)).toEqual({ x: 3, y: 5 });
+    });
 });
 
 describe('getBrushSpans', () => {
@@ -43,6 +47,18 @@ describe('getBrushSpans', () => {
             { y: 20, xStart: 8, width: 4 },
             { y: 21, xStart: 9, width: 2 }
         ]);
+    });
+
+    it('rounds a fractional size to whole pixels', () => {
+        expect(getBrushSpans({ x: 3, y: 5 }, 2.5)).toEqual([
+            { y: 4, xStart: 2, width: 3 },
+            { y: 5, xStart: 2, width: 3 },
+            { y: 6, xStart: 2, width: 3 }
+        ]);
+    });
+
+    it('paints one pixel for a size below 1', () => {
+        expect(getBrushSpans({ x: 3, y: 5 }, 0.4)).toEqual([{ y: 5, xStart: 3, width: 1 }]);
     });
 });
 
