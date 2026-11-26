@@ -67,7 +67,7 @@ describe('BrushSizeInput', () => {
         expect(onChange).toHaveBeenLastCalledWith(101);
 
         await fireEvent.keyDown(field, { key: 'ArrowDown', shiftKey: true });
-        expect(onChange).toHaveBeenLastCalledWith(90);
+        expect(onChange).toHaveBeenLastCalledWith(91);
     });
 
     it('keeps arrow steps within 1 to 500 px', async () => {
@@ -77,7 +77,8 @@ describe('BrushSizeInput', () => {
 
         await fireEvent.keyDown(field, { key: 'ArrowDown', shiftKey: true });
 
-        expect(onChange).toHaveBeenLastCalledWith(1);
+        expect(onChange).not.toHaveBeenCalled();
+        expect(field).toHaveValue(1);
     });
 
     it('applies the slider position on the log scale', async () => {
@@ -91,11 +92,37 @@ describe('BrushSizeInput', () => {
         expect(onChange).toHaveBeenCalledWith(500);
     });
 
+    it('applies a typed size once on Enter followed by blur', async () => {
+        const onChange = vi.fn();
+        const { rerender } = render(BrushSizeInput, { props: { size: 100, onChange } });
+        const field = screen.getByLabelText('Brush size in pixels');
+
+        await fireEvent.input(field, { target: { value: '37' } });
+        await fireEvent.keyDown(field, { key: 'Enter' });
+        await rerender({ size: 37, onChange });
+        await fireEvent.blur(field);
+
+        expect(onChange).toHaveBeenCalledOnce();
+    });
+
+    it('keeps the slider where it was dragged', async () => {
+        const onChange = vi.fn();
+        const { rerender } = render(BrushSizeInput, { props: { size: 1, onChange } });
+        const slider = screen.getByRole('slider', { name: 'Brush size' });
+
+        await fireEvent.input(slider, { target: { value: '66' } });
+        await rerender({ size: 2, onChange });
+
+        expect(onChange).toHaveBeenCalledWith(2);
+        expect(slider).toHaveValue('66');
+    });
+
     it('shows a new size from outside', async () => {
         const { rerender } = render(BrushSizeInput, { props: { size: 100, onChange: vi.fn() } });
 
         await rerender({ size: 110, onChange: vi.fn() });
 
         expect(screen.getByLabelText('Brush size in pixels')).toHaveValue(110);
+        expect(screen.getByRole('slider', { name: 'Brush size' })).toHaveValue('756');
     });
 });

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { MAX_BRUSH_SIZE, MIN_BRUSH_SIZE } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { untrack } from 'svelte';
     import {
         SLIDER_STEPS,
         brushSizeToSliderPosition,
@@ -23,21 +24,32 @@
         draft = String(size);
     });
 
+    // Moved only when the size changes from outside, so the thumb does not jump while dragging.
+    let sliderPosition = $state(0);
+    $effect(() => {
+        const positionSize = sliderPositionToBrushSize(untrack(() => sliderPosition));
+        if (positionSize !== size) sliderPosition = brushSizeToSliderPosition(size);
+    });
+
+    const applySize = (nextSize: number) => {
+        draft = String(nextSize);
+        if (nextSize !== size) onChange(nextSize);
+    };
+
     const applyDraft = () => {
         const parsedSize = parseBrushSize(draft);
         if (parsedSize === undefined) {
             draft = String(size);
             return;
         }
-        draft = String(parsedSize);
-        onChange(parsedSize);
+        applySize(parsedSize);
     };
 
     const stepSize = (event: KeyboardEvent, direction: number) => {
         event.preventDefault();
         const step = event.shiftKey ? SHIFT_ARROW_STEP : ARROW_STEP;
         const baseSize = parseBrushSize(draft) ?? size;
-        onChange(clampBrushSize(baseSize + direction * step));
+        applySize(clampBrushSize(baseSize + direction * step));
     };
 
     const onFieldKeyDown = (event: KeyboardEvent) => {
@@ -47,7 +59,8 @@
     };
 
     const onSliderInput = (event: Event & { currentTarget: HTMLInputElement }) => {
-        onChange(sliderPositionToBrushSize(Number(event.currentTarget.value)));
+        sliderPosition = Number(event.currentTarget.value);
+        applySize(sliderPositionToBrushSize(sliderPosition));
     };
 </script>
 
@@ -58,7 +71,7 @@
         max={SLIDER_STEPS}
         step="1"
         aria-label="Brush size"
-        value={brushSizeToSliderPosition(size)}
+        value={sliderPosition}
         oninput={onSliderInput}
         class="min-w-0 flex-1 accent-primary"
     />

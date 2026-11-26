@@ -265,7 +265,6 @@
         const savedBrushSize = untrack(() => $lastAnnotationBrushDiameter)[collectionId];
         if (savedBrushSize !== undefined) setBrushSize(savedBrushSize);
     });
-    let brushSize = $derived(sampleDetailsToolbarContext.brush.size);
 
     $effect(() => {
         if (!isEditingMode) {
@@ -339,7 +338,7 @@
                                     {isEraser}
                                     selectedAnnotationId={annotationLabelContext?.annotationId}
                                     annotationLabel={annotationLabelContext.annotationLabel}
-                                    {brushSize}
+                                    brushSize={sampleDetailsToolbarContext.brush.size}
                                     {refetch}
                                     {annotationType}
                                     {toggleAnnotationSelection}
