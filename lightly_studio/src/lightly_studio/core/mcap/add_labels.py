@@ -25,14 +25,12 @@ from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, Sc
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate, ObjectTrackTable
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import (
-    annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
     object_track_resolver,
-    tag_resolver,
 )
+from lightly_studio.transport import active_transport
 
 if TYPE_CHECKING:
     from lightly_studio.core.mcap.mcap_dataset import McapDataset
@@ -204,18 +202,17 @@ def write_sequence_labels(  # noqa: PLR0913
         untracked_ids=untracked_ids,
     )
     annotations = _annotation_creates(
-        session=session, dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
+        dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
     )
     if annotations:
-        annotation_resolver.create_many(
-            session=session,
+        active_transport.get_transport().annotations.create(
             parent_collection_id=dataset.group_dataset.collection_id,
             annotations=annotations,
             collection_name=annotation_source,
+            covered_sample_ids=[],
         )
     session.commit()
     _add_frame_tags(
-        session=session,
         collection_id=dataset.group_dataset.collection_id,
         tags_by_group=matched.tags_by_group,
     )
@@ -468,14 +465,13 @@ def _free_track_numbers(session: Session, dataset_id: UUID, count: int) -> list[
 
 
 def _annotation_creates(
-    session: Session,
     dataset_id: UUID,
     matched: MatchResult,
     track_ids: dict[int, UUID],
 ) -> list[AnnotationCreate]:
     """Build AnnotationCreate rows for matched cuboids."""
     label_ids = _label_ids_for_cuboids(
-        session=session, dataset_id=dataset_id, cuboids_by_group=matched.cuboids_by_group
+        dataset_id=dataset_id, cuboids_by_group=matched.cuboids_by_group
     )
     return [
         AnnotationCreate(
@@ -490,21 +486,15 @@ def _annotation_creates(
     ]
 
 
-def _add_frame_tags(
-    session: Session, collection_id: UUID, tags_by_group: Mapping[UUID, FrameTags]
-) -> None:
+def _add_frame_tags(collection_id: UUID, tags_by_group: Mapping[UUID, FrameTags]) -> None:
     """Get or create a sample tag for each frame tag name and add its groups to it."""
     group_ids_by_tag_name: dict[str, list[UUID]] = defaultdict(list)
     for group_id, frame_tags in tags_by_group.items():
         for tag_name in frame_tags.tags:
             group_ids_by_tag_name[tag_name].append(group_id)
+    tags = active_transport.get_transport().tags
     for tag_name, group_ids in group_ids_by_tag_name.items():
-        tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session, collection_id=collection_id, tag_name=tag_name
-        )
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=session, tag_id=tag.tag_id, sample_ids=group_ids
-        )
+        tags.add_to_samples(collection_id=collection_id, tag_name=tag_name, sample_ids=group_ids)
 
 
 def _cuboid_create(cuboid: CuboidLabel) -> Cuboid3DCreate:
@@ -526,27 +516,13 @@ def _cuboid_create(cuboid: CuboidLabel) -> Cuboid3DCreate:
 
 
 def _label_ids_for_cuboids(
-    session: Session, dataset_id: UUID, cuboids_by_group: dict[UUID, list[CuboidLabel]]
+    dataset_id: UUID, cuboids_by_group: dict[UUID, list[CuboidLabel]]
 ) -> dict[str, UUID]:
     """Get or create annotation classes for the cuboid class names."""
     class_names = {cuboid.class_name for cuboids in cuboids_by_group.values() for cuboid in cuboids}
-    return {
-        class_name: _get_or_create_label_id(
-            session=session, dataset_id=dataset_id, class_name=class_name
-        )
-        for class_name in class_names
-    }
-
-
-def _get_or_create_label_id(session: Session, dataset_id: UUID, class_name: str) -> UUID:
-    """Return the annotation label ID for a class, creating it if needed."""
-    label = annotation_label_resolver.get_by_label_name(
-        session=session, dataset_id=dataset_id, label_name=class_name
+    if not class_names:
+        return {}
+    labels = active_transport.get_transport().annotations.get_or_create_labels(
+        dataset_id=dataset_id, label_names=list(class_names)
     )
-    if label is not None:
-        return label.annotation_label_id
-    created = annotation_label_resolver.create(
-        session=session,
-        label=AnnotationLabelCreate(dataset_id=dataset_id, annotation_label_name=class_name),
-    )
-    return created.annotation_label_id
+    return {label.annotation_label_name: label.annotation_label_id for label in labels}
