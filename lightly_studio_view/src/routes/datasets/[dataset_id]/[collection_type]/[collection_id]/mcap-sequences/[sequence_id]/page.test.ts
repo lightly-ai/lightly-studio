@@ -53,7 +53,8 @@ vi.mock('$app/state', () => ({
         ),
         params: { dataset_id: 'dataset-1' },
         state: {}
-    }
+    },
+    navigating: { type: null }
 }));
 
 vi.mock('$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences', () => ({
