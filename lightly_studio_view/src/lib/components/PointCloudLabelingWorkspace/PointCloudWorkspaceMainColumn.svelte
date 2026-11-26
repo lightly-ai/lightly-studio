@@ -127,6 +127,8 @@
                 onDockChange={layout.onCameraStripDockChange}
                 onToggleCameraChannel={layout.onToggleCameraChannel}
                 onSetCameraChannels={layout.onSetCameraChannels}
+                openCamera={layout.openCamera}
+                onOpenCameraChange={layout.onOpenCameraChange}
             />
         {/if}
     </Pane>

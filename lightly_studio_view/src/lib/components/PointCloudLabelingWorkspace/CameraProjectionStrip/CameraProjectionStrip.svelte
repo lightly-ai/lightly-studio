@@ -6,6 +6,11 @@
     import type { PointBatch } from '$lib/components/PointCloudViewer';
     import type { AnnotationClassColor } from './projectionOverlay';
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
+    import CameraProjectionDialog from './CameraProjectionDialog/CameraProjectionDialog.svelte';
+    import { useCameraFrame } from './CameraProjectionFrame/useCameraFrame/useCameraFrame.svelte';
+    import { useOpenCamera } from './useOpenCamera/useOpenCamera.svelte';
+    import type { HistoryMode } from '../workspaceOptions';
+    import { useSettings } from '$lib/hooks/useSettings';
     import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
     import ProjectionControls from './ProjectionControls.svelte';
     import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';
@@ -36,6 +41,8 @@
         onToggleCameraChannel?: (channelId: number) => void;
         /** Replaces the shown camera channels. */
         onSetCameraChannels?: (channelIds: number[]) => void;
+        openCamera?: string;
+        onOpenCameraChange?: (camera: string | undefined, historyMode: HistoryMode) => void;
     }
 
     let {
@@ -54,9 +61,12 @@
         dock = 'bottom',
         onDockChange,
         onToggleCameraChannel,
-        onSetCameraChannels
+        onSetCameraChannels,
+        openCamera,
+        onOpenCameraChange
     }: Props = $props();
     const projectionSettings = useProjectionSettings();
+    const { settingsStore } = useSettings();
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => datasetId,
@@ -71,7 +81,33 @@
         seqNumber,
         displayFrameId: displayFrameId || undefined
     }));
+    const cameras = useOpenCamera({
+        getCameraChannels: () => summaryCameraChannels,
+        getSelectedChannelIds: () => selectedChannelIds,
+        getOpenCamera: () => openCamera,
+        getPreviousKey: () => $settingsStore.key_previous_camera,
+        getNextKey: () => $settingsStore.key_next_camera,
+        onOpenCameraChange: (camera, historyMode) => onOpenCameraChange?.(camera, historyMode)
+    });
+    const openChannel = $derived(cameras.openChannel);
+    const openChannelDetails = $derived(
+        openChannel
+            ? tickDetails.data?.camera_channels[openChannel.group_component_name]
+            : undefined
+    );
+    // The same inputs as the open camera's tile, so the dialog follows the current tick.
+    const openFrame = useCameraFrame(() => ({
+        datasetId,
+        recordingId,
+        channelId: openChannel?.channel_id ?? 0,
+        keyframeTimestampNs: openChannelDetails?.keyframe_log_time_ns ?? undefined,
+        logTimeNs: openChannelDetails?.log_time_ns,
+        blob: openChannel ? cameraFrames.data?.[openChannel.channel_id] : undefined,
+        label: openChannel?.group_component_name ?? ''
+    }));
 </script>
+
+<svelte:window onkeydown={cameras.handleWindowKeydown} />
 
 {#snippet cameraChannelSelect()}
     {#if onToggleCameraChannel && onSetCameraChannels}
@@ -110,7 +146,7 @@
             dock === 'right' ? 'flex-col overflow-x-hidden overflow-y-scroll' : 'overflow-x-scroll'
         )}
     >
-        {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel (summaryChannel.channel_id)}
+        {#each cameras.selectedChannels as summaryChannel (summaryChannel.channel_id)}
             {@const channel =
                 tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
             <CameraProjectionFrame
@@ -125,11 +161,35 @@
                 {annotations}
                 {annotationClasses}
                 projection={canProject ? (channel?.projection ?? undefined) : undefined}
-                {onPlaybackToggle}
                 projectionSettings={$projectionSettings}
-                onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
+                onEnlarge={() => cameras.show(summaryChannel.group_component_name)}
                 layout={dock === 'right' ? 'column' : 'row'}
             />
         {/each}
     </div>
 </WorkspacePanel>
+<!-- One dialog for every camera, so switching cameras and ticks never remounts it. -->
+<CameraProjectionDialog
+    bind:open={
+        () => openChannel !== undefined,
+        (open) => {
+            if (!open) cameras.close();
+        }
+    }
+    label={openChannel?.group_component_name ?? ''}
+    imageUrl={openFrame.fullFrameUrl ?? openFrame.frameUrl}
+    overlay={{
+        batch,
+        annotations,
+        annotationClasses,
+        projection: canProject ? (openChannelDetails?.projection ?? undefined) : undefined
+    }}
+    projectionSettings={$projectionSettings}
+    onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
+    {onPlaybackToggle}
+    position={cameras.position}
+    onPrevious={cameras.canSwitch ? () => cameras.switchCamera('previous') : undefined}
+    onNext={cameras.canSwitch ? () => cameras.switchCamera('next') : undefined}
+    previousKey={$settingsStore.key_previous_camera}
+    nextKey={$settingsStore.key_next_camera}
+/>

@@ -1,7 +1,6 @@
 <script lang="ts">
     import Camera from '@lucide/svelte/icons/camera';
     import ProjectionOverlay from '../ProjectionOverlay.svelte';
-    import CameraProjectionDialog from './CameraProjectionDialog.svelte';
     import type {
         AnnotationView,
         CameraProjectionView
@@ -22,9 +21,8 @@
         annotations?: readonly AnnotationView[];
         annotationClasses?: readonly AnnotationClassColor[];
         projection?: CameraProjectionView;
-        onPlaybackToggle?: () => void;
+        onEnlarge?: () => void;
         projectionSettings?: ProjectionSettings;
-        onProjectionSettingsChange?: (settings: ProjectionSettings) => void;
         /** `row`: the strip's height sizes the tile; `column`: the strip's width does. */
         layout?: 'row' | 'column';
     }
@@ -40,13 +38,11 @@
         annotations = [],
         annotationClasses = [],
         projection,
-        onPlaybackToggle,
+        onEnlarge,
         projectionSettings,
-        onProjectionSettingsChange,
         layout = 'row'
     }: Props = $props();
 
-    let isEnlarged = $state(false);
     const frame = useCameraFrame(() => ({
         datasetId,
         recordingId,
@@ -72,7 +68,7 @@
             type="button"
             class="flex min-h-0 w-full min-w-0 flex-1 cursor-zoom-in flex-col"
             aria-label={`Enlarge ${label}`}
-            onclick={() => (isEnlarged = true)}
+            onclick={onEnlarge}
         >
             <div class="relative min-h-0 w-full flex-1">
                 <img
@@ -91,18 +87,6 @@
                 />
             </div>
         </button>
-        <CameraProjectionDialog
-            bind:open={isEnlarged}
-            {label}
-            imageUrl={frame.fullFrameUrl ?? frame.frameUrl}
-            {batch}
-            {annotations}
-            {annotationClasses}
-            {projection}
-            {projectionSettings}
-            {onProjectionSettingsChange}
-            {onPlaybackToggle}
-        />
     {:else}
         <div class="flex min-h-0 flex-1 items-center justify-center text-muted-foreground">
             <Camera class="size-5" aria-hidden="true" />

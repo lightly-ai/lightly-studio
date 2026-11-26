@@ -15,7 +15,9 @@ export type ShortcutSettingKey =
     | 'keyToolbarSegmentationMask'
     | 'keyToolbarSlic'
     | 'keyToolbarBrush'
-    | 'keyToolbarEraser';
+    | 'keyToolbarEraser'
+    | 'keyPreviousCamera'
+    | 'keyNextCamera';
 
 export interface ShortcutSettingConfig {
     /** Unique HTML id for the control (used by label `for`). */
@@ -54,6 +56,12 @@ export const toolShortcuts: readonly ShortcutSettingConfig[] = [
     { id: 'toolbar-eraser-mode', label: 'Eraser', key: 'keyToolbarEraser' }
 ] as const;
 
+/** Recordable shortcuts that switch cameras in the point cloud workspace. */
+export const pointCloudShortcuts: readonly ShortcutSettingConfig[] = [
+    { id: 'previous-camera', label: 'Previous camera', key: 'keyPreviousCamera' },
+    { id: 'next-camera', label: 'Next camera', key: 'keyNextCamera' }
+] as const;
+
 /** Non-recordable general shortcut rows (static display only). */
 export const staticGeneralShortcuts: readonly StaticShortcutConfig[] = [
     { id: 'go-back', label: 'Go back', displayValue: 'Escape' }
@@ -62,4 +70,10 @@ export const staticGeneralShortcuts: readonly StaticShortcutConfig[] = [
 /** Non-recordable tool shortcut rows (static display only). */
 export const staticToolShortcuts: readonly StaticShortcutConfig[] = [
     { id: 'change-brush-size', label: 'Brush size', displayValue: 'Alt + scroll' }
+] as const;
+
+/** Non-recordable point cloud shortcut rows (static display only). */
+export const staticPointCloudShortcuts: readonly StaticShortcutConfig[] = [
+    { id: 'camera-alt', label: 'Previous / next camera (alt)', displayValue: 'Shift + ← / →' },
+    { id: 'open-camera-n', label: 'Open camera 1–9', displayValue: '1–9' }
 ] as const;

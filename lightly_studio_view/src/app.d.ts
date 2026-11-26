@@ -5,7 +5,10 @@ declare global {
         // interface Error {}
         // interface Locals {}
         // interface PageData {}
-        // interface PageState {}
+        interface PageState {
+            /** Set on the history entry that the point cloud page pushed to open a camera. */
+            cameraEntry?: boolean;
+        }
         // interface Platform {}
     }
 }
