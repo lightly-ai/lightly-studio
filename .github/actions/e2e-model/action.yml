@@ -1,0 +1,22 @@
+name: Restore E2E embedding checkpoint
+description: Share the checkpoint downloaded by the embedder. Only main writes large caches.
+inputs:
+  checkpoint:
+    description: Model checkpoint filename
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: checkpoint
+      shell: bash
+      run: echo "key=e2e-model-${{ inputs.checkpoint }}-${{ hashFiles('lightly_studio/src/lightly_studio/embed/mobileclip_embedder.py', 'lightly_studio/src/lightly_studio/vendor/perception_encoder/vision_encoder/config.py') }}" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v6
+      if: github.ref == 'refs/heads/main'
+      with:
+        path: ~/.cache/lightly-studio/${{ inputs.checkpoint }}
+        key: ${{ steps.checkpoint.outputs.key }}
+    - uses: actions/cache/restore@v6
+      if: github.ref != 'refs/heads/main'
+      with:
+        path: ~/.cache/lightly-studio/${{ inputs.checkpoint }}
+        key: ${{ steps.checkpoint.outputs.key }}
