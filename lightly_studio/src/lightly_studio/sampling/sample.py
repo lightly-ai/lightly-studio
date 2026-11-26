@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Final, Literal
 from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.resolvers import collection_resolver
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
@@ -22,6 +24,15 @@ from lightly_studio.sampling.sampling_config import (
     SubpartDiversityStrategy,
 )
 from lightly_studio.sampling.sampling_via_db import sampling_via_database
+from lightly_studio.transport import active_transport
+
+
+@dataclass(frozen=True)
+class SampleIdSnapshot:
+    """The sample IDs of a query result. A sampling from a snapshot uses SQL."""
+
+    session: Session
+    sample_ids: list[UUID]
 
 
 class Sampling:
@@ -52,8 +63,9 @@ class Sampling:
     sampling_among_narrow_images = query_narrow_images.sampling()
     ```
     See the `DatasetQuery.match()` documentation for more information on filtering.
-    By creating the `Sampling` instance, the query is executed. Further changes to the
-    query do not affect the sampling instance.
+    Further changes to the query do not affect the sampling instance. With the SQL path,
+    creating the `Sampling` instance runs the query. With the transport, each sampling
+    strategy finds the matching samples when it runs.
 
     # Performing single-strategy samplings.
 
@@ -125,23 +137,16 @@ class Sampling:
     ```
     """
 
-    def __init__(
-        self,
-        dataset_id: UUID,
-        session: Session,
-        input_sample_ids: Iterable[UUID],
-    ) -> None:
+    def __init__(self, dataset_id: UUID, samples: SampleIdSnapshot | QueryExpr | None) -> None:
         """Create the sampling interface.
 
         Args:
             dataset_id: Dataset in which the sampling is performed.
-            session: Database session to resolve sampling dependencies.
-            input_sample_ids: Candidate sample ids considered for sampling.
-                The iterable is consumed immediately to capture a stable snapshot.
+            samples: The candidate samples. A query expression or None sends the sampling
+                through the transport. None uses all samples of the dataset.
         """
         self._dataset_id: Final[UUID] = dataset_id
-        self._session: Final[Session] = session
-        self._input_sample_ids: list[UUID] = list(input_sample_ids)
+        self._samples: Final[SampleIdSnapshot | QueryExpr | None] = samples
 
     def metadata_weighting(
         self,
@@ -336,11 +341,7 @@ class Sampling:
         """
         annotation_source_id = None
         if annotation_source is not None:
-            annotation_source_id = collection_resolver.get_by_name(
-                session=self._session,
-                name=annotation_source,
-                parent_collection_id=self._dataset_id,
-            )
+            annotation_source_id = self._get_annotation_source_id(name=annotation_source)
             if annotation_source_id is None:
                 raise ValueError(f"Annotation source {annotation_source!r} not found.")
         strategy = SubpartDiversityStrategy(
@@ -386,8 +387,21 @@ class Sampling:
             strategies=sampling_strategies,
             selected_sequence_length=selected_sequence_length,
         )
-        sampling_via_database(
-            session=self._session,
-            config=config,
-            input_sample_ids=self._input_sample_ids,
+        if isinstance(self._samples, SampleIdSnapshot):
+            sampling_via_database(
+                session=self._samples.session,
+                config=config,
+                input_sample_ids=self._samples.sample_ids,
+            )
+            return
+        active_transport.get_transport().compute.sampling(config=config, query_expr=self._samples)
+
+    def _get_annotation_source_id(self, name: str) -> UUID | None:
+        if isinstance(self._samples, SampleIdSnapshot):
+            return collection_resolver.get_by_name(
+                session=self._samples.session, name=name, parent_collection_id=self._dataset_id
+            )
+        collection = active_transport.get_transport().collections.get_by_name(
+            name=name, parent_collection_id=self._dataset_id
         )
+        return None if collection is None else collection.collection_id
