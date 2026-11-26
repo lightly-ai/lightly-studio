@@ -39,6 +39,17 @@ describe('getCameraKeyAction', () => {
     it('ignores plain arrows and modified keys', () => {
         expect(getCameraKeyAction(keyEvent('ArrowRight'), KEYS)).toBeUndefined();
         expect(getCameraKeyAction(keyEvent(']', { ctrlKey: true }), KEYS)).toBeUndefined();
+        expect(getCameraKeyAction(keyEvent(']', { metaKey: true }), KEYS)).toBeUndefined();
+    });
+
+    it('maps keys typed with AltGr or Option', () => {
+        const altGraphEvent = keyEvent(']', { ctrlKey: true, altKey: true });
+        Object.defineProperty(altGraphEvent, 'getModifierState', {
+            value: (modifier: string) => modifier === 'AltGraph'
+        });
+
+        expect(getCameraKeyAction(altGraphEvent, KEYS)).toBe('next');
+        expect(getCameraKeyAction(keyEvent('[', { altKey: true }), KEYS)).toBe('previous');
     });
 
     it('ignores keys from text inputs', () => {
@@ -56,6 +67,7 @@ describe('getCameraForDigit', () => {
         expect(getCameraForDigit(keyEvent('3'), ['A', 'B'])).toBeUndefined();
         expect(getCameraForDigit(keyEvent('0'), ['A', 'B'])).toBeUndefined();
         expect(getCameraForDigit(keyEvent('1', { shiftKey: true }), ['A'])).toBeUndefined();
+        expect(getCameraForDigit(keyEvent('1', { altKey: true }), ['A'])).toBeUndefined();
     });
 
     it('ignores keys from text inputs', () => {

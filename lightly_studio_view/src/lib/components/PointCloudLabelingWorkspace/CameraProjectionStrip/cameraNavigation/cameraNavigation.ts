@@ -10,8 +10,14 @@ interface CameraKeys {
 const MIN_CAMERAS_TO_SWITCH = 2;
 const DIGIT_KEY_PATTERN = /^[1-9]$/;
 
+function hasAnyModifier(event: KeyboardEvent): boolean {
+    return event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
+}
+
+// Many layouts type `[` and `]` with AltGr, which Windows reports as Ctrl + Alt.
 function hasCommandModifier(event: KeyboardEvent): boolean {
-    return event.altKey || event.ctrlKey || event.metaKey;
+    const isCtrlOrMeta = event.ctrlKey || event.metaKey;
+    return isCtrlOrMeta && !event.getModifierState('AltGraph');
 }
 
 export function getAdjacentCamera(
@@ -44,9 +50,7 @@ export function getCameraForDigit(
     event: KeyboardEvent,
     names: readonly string[]
 ): string | undefined {
-    if (isTextInputTarget(event.target) || hasCommandModifier(event) || event.shiftKey) {
-        return undefined;
-    }
+    if (isTextInputTarget(event.target) || hasAnyModifier(event)) return undefined;
     if (!DIGIT_KEY_PATTERN.test(event.key)) return undefined;
     return names[Number(event.key) - 1];
 }
