@@ -221,9 +221,9 @@
                             <CheckIcon
                                 class={cn(selectedValue !== item.value && 'text-transparent')}
                             />
-                            <span class="min-w-0 flex-1 truncate" title={item.label}
-                                >{item.label}</span
-                            >
+                            <span class="min-w-0 flex-1 truncate" title={item.label}>
+                                {item.label}
+                            </span>
                         </Command.Item>
                     {/each}
                 </Command.Group>

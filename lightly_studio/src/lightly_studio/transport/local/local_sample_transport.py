@@ -8,7 +8,7 @@ from uuid import UUID
 from lightly_studio.database import db_manager
 from lightly_studio.models.sample import SampleView
 from lightly_studio.models.sample_query import SamplePage, SampleQueryRequest
-from lightly_studio.resolvers import image_resolver, sample_resolver
+from lightly_studio.resolvers import image_resolver, sample_resolver, video_resolver
 from lightly_studio.services.sample_services import sample_query_service
 
 
@@ -36,4 +36,10 @@ class LocalSampleTransport:
             session=db_manager.persistent_session(),
             collection_id=collection_id,
             file_paths_abs=file_paths,
+        )
+
+    def get_video_ids_by_stems(self, collection_id: UUID) -> dict[str, UUID]:
+        """Get the sample IDs of all videos of a collection by file name stem."""
+        return video_resolver.get_sample_ids_by_stems(
+            session=db_manager.persistent_session(), collection_id=collection_id
         )

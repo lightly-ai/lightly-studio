@@ -379,14 +379,15 @@ class DatasetQuery(Generic[T]):
             query = query.where(col(SampleTable.sample_id).in_(self._sample_ids_subquery))
 
         # Apply ordering
-        if self.order_by_expressions:
-            for order_by in self.order_by_expressions:
-                query = order_by.apply(query)
-        elif self.dataset.sample_type == SampleType.IMAGE:
+        order_by_expressions = self.order_by_expressions
+        if not order_by_expressions and self.dataset.sample_type == SampleType.IMAGE:
             # TODO(lukas 1/2026): provide default order for other sample types
-            # Order by ImageSampleField.created_at by default.
-            default_order_by = OrderByField(ImageSampleField.created_at)
-            query = default_order_by.apply(query)
+            order_by_expressions = [OrderByField(ImageSampleField.created_at)]
+        if order_by_expressions:
+            for order_by in order_by_expressions:
+                query = order_by.apply(query)
+            # The sample ID breaks ties, as in the transport.
+            query = query.order_by(col(SampleTable.sample_id))
         elif self.dataset.sample_type == SampleType.VIDEO_FRAME:
             query = query.join(VideoFrameTable.video).order_by(
                 col(VideoTable.file_path_abs),

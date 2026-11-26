@@ -34,7 +34,9 @@
             dominant-baseline="central"
             fill="white"
             font-size={9 / scale}
-            font-weight="700">{point.positive ? '+' : '-'}</text
+            font-weight="700"
         >
+            {point.positive ? '+' : '-'}
+        </text>
     </g>
 {/each}

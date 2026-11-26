@@ -1,0 +1,66 @@
+<script lang="ts">
+    import { MultiSelectPopover } from '$lib/components/MultiSelectPopover';
+    import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
+
+    interface Props {
+        /** Lane label shown in the trigger, e.g. "Lidar". */
+        label: string;
+        /** Channels offered in this lane. */
+        channels: ChannelSummaryView[];
+        /** `channel_id`s currently shown. */
+        selectedChannels: number[];
+        /** Toggles a channel on or off by its `channel_id`. */
+        onToggleChannel: (channelId: number) => void;
+        /** Replaces the selection, used by the select-all and clear actions. */
+        onSetChannels: (channelIds: number[]) => void;
+        /** `data-testid` for the trigger; list items derive from it. */
+        testId: string;
+    }
+
+    let { label, channels, selectedChannels, onToggleChannel, onSetChannels, testId }: Props =
+        $props();
+
+    const items = $derived(
+        channels.map((channel) => ({
+            value: String(channel.channel_id),
+            label: channel.group_component_name,
+            testId: `${testId}-${channel.channel_id}`
+        }))
+    );
+    const selectedIds = $derived(selectedChannels.map(String));
+
+    const triggerLabel = $derived.by(() => {
+        if (selectedChannels.length === 0) return label;
+        if (selectedChannels.length === 1) {
+            const only = channels.find((channel) => channel.channel_id === selectedChannels[0]);
+            return only ? `${label}: ${only.group_component_name}` : label;
+        }
+        return `${label}: ${selectedChannels.length} selected`;
+    });
+
+    // MultiSelectPopover reports the full new selection; a single click only ever flips one id, so
+    // relay it back through the toggle contract.
+    const handleChange = (ids: string[]) => {
+        const before = new Set(selectedIds);
+        const changed = [
+            ...ids.filter((id) => !before.has(id)),
+            ...selectedIds.filter((id) => !ids.includes(id))
+        ];
+        if (changed.length === 1) onToggleChannel(Number(changed[0]));
+        else onSetChannels(ids.map(Number));
+    };
+</script>
+
+<MultiSelectPopover
+    {items}
+    {selectedIds}
+    onChange={handleChange}
+    label={triggerLabel}
+    itemNoun="channel"
+    itemNounPlural="channels"
+    showSelectAll
+    disabled={channels.length === 0}
+    triggerClass="m-0 w-full rounded-md"
+    align="start"
+    {testId}
+/>

@@ -263,7 +263,7 @@
         isErasing: annotationLabelContext.isErasing,
         blocksPan: assistedLabeling.blocksPan
     })}
-    cursor={'grab'}
+    cursor="grab"
     boundingBox={annotationDetailsBoundingBox}
     autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
     autoFocusKey={annotationDetailsFocusKey}

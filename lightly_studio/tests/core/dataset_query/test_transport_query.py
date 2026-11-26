@@ -7,7 +7,12 @@ from lightly_studio.core.dataset_query import transport_query
 from lightly_studio.core.dataset_query.boolean_expression import AND
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
-from lightly_studio.core.dataset_query.order_by import OrderByField, OrderByMetadataField
+from lightly_studio.core.dataset_query.order_by import (
+    OrderByEvaluationMetricField,
+    OrderByExpression,
+    OrderByField,
+    OrderByMetadataField,
+)
 from lightly_studio.core.dataset_query.query_expr_conversion import UnsupportedQueryError
 from lightly_studio.core.image.record_image_sample import RecordImageSample
 from lightly_studio.database import db_manager
@@ -36,13 +41,20 @@ def test_build_request__flag_off(mocker: MockerFixture) -> None:
     assert request is None
 
 
+@pytest.mark.parametrize(
+    "order_by",
+    [
+        OrderByMetadataField(field_name="weather"),
+        OrderByEvaluationMetricField(evaluation_run_name="run", metric_name="miou"),
+    ],
+)
 @pytest.mark.usefixtures("_transport_queries")
-def test_build_request__not_supported(mocker: MockerFixture) -> None:
+def test_build_request__not_supported(mocker: MockerFixture, order_by: OrderByExpression) -> None:
     def build() -> object:
         return transport_query.build_request(
             sample_type=SampleType.IMAGE,
             match_expression=None,
-            order_by=[OrderByMetadataField(field_name="weather")],
+            order_by=[order_by],
             filters_sample_ids=False,
             offset=0,
         )

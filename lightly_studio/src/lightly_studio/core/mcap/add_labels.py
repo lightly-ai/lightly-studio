@@ -14,8 +14,6 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlmodel import Session, col, select
-
 from lightly_studio.core.mcap import scene_update
 from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.reader import McapFileReader
@@ -24,15 +22,8 @@ from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
-from lightly_studio.models.annotation.object_track import ObjectTrackCreate, ObjectTrackTable
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.resolvers import (
-    annotation_label_resolver,
-    annotation_resolver,
-    collection_resolver,
-    object_track_resolver,
-    tag_resolver,
-)
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.transport import active_transport
 
 if TYPE_CHECKING:
     from lightly_studio.core.mcap.mcap_dataset import McapDataset
@@ -175,7 +166,6 @@ def write_sequence_labels(  # noqa: PLR0913
         ValueError: If `overwrite` is set and no label matches a tick of the sequence.
             The existing annotations are kept.
     """
-    session = dataset.group_dataset.session
     entries = sequence.get_samples()
     ticks = ticks_by_timestamp(entries=entries)
     matched = match_labels(messages=messages, ticks=ticks)
@@ -192,37 +182,32 @@ def write_sequence_labels(  # noqa: PLR0913
     if overwrite:
         # The delete comes before the track allocation, so new tracks reuse freed numbers.
         _delete_sequence_annotations(
-            session=session,
             group_collection_id=dataset.group_dataset.collection_id,
             annotation_source=annotation_source,
             group_ids=[entry.sample_id for entry in entries],
         )
     track_ids = _allocate_tracks(
-        session=session,
         dataset_id=dataset.dataset_id,
         parent_by_source=parent_by_source,
         untracked_ids=untracked_ids,
     )
     annotations = _annotation_creates(
-        session=session, dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
+        dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
     )
     if annotations:
-        annotation_resolver.create_many(
-            session=session,
+        active_transport.get_transport().annotations.create(
             parent_collection_id=dataset.group_dataset.collection_id,
             annotations=annotations,
             collection_name=annotation_source,
+            covered_sample_ids=[],
         )
-    session.commit()
     _add_frame_tags(
-        session=session,
         collection_id=dataset.group_dataset.collection_id,
         tags_by_group=matched.tags_by_group,
     )
 
 
 def _delete_sequence_annotations(
-    session: Session,
     group_collection_id: UUID,
     annotation_source: str,
     group_ids: Sequence[UUID],
@@ -231,30 +216,29 @@ def _delete_sequence_annotations(
 
     Also deletes the object tracks of the deleted annotations that have no annotations left.
     """
-    annotation_collection_id = collection_resolver.get_by_name(
-        session=session, name=annotation_source, parent_collection_id=group_collection_id
+    transport = active_transport.get_transport()
+    annotation_collection = transport.collections.get_by_name(
+        name=annotation_source, parent_collection_id=group_collection_id
     )
-    if annotation_collection_id is None:
+    if annotation_collection is None:
         return
-    annotations = annotation_resolver.get_all_by_parent_sample_ids_and_annotation_collection_id(
-        session=session,
-        parent_sample_ids=group_ids,
-        annotation_collection_id=annotation_collection_id,
+    annotations = transport.annotations.get_by_sample_ids_and_collection(
+        sample_ids=group_ids, annotation_collection_id=annotation_collection.collection_id
     )
     object_track_ids = {
         annotation.object_track_id
         for annotation in annotations
         if annotation.object_track_id is not None
     }
-    deleted_count = annotation_resolver.delete_annotations_by_ids(
-        session=session, annotation_ids=[annotation.sample_id for annotation in annotations]
+    transport.annotations.delete(
+        annotation_ids=[annotation.sample_id for annotation in annotations]
     )
-    deleted_track_count = object_track_resolver.delete_empty_by_ids(
-        session=session, object_track_ids=list(object_track_ids)
+    deleted_track_count = transport.annotations.delete_empty_object_tracks(
+        object_track_ids=list(object_track_ids)
     )
     logger.info(
         "Deleted %d annotations and %d object tracks of annotation source '%s' to overwrite them.",
-        deleted_count,
+        len(annotations),
         deleted_track_count,
         annotation_source,
     )
@@ -350,7 +334,6 @@ def _assign_untracked_track_ids(matched: MatchResult) -> set[int]:
 
 
 def _allocate_tracks(
-    session: Session,
     dataset_id: UUID,
     parent_by_source: Mapping[int, int | None],
     untracked_ids: set[int],
@@ -369,11 +352,10 @@ def _allocate_tracks(
         for source_id, parent_id in parent_by_source.items()
         if parent_id is not None
     ]
-    numbers = _free_track_numbers(
-        session=session, dataset_id=dataset_id, count=len(parent_by_source)
+    numbers = active_transport.get_transport().annotations.get_free_object_track_numbers(
+        dataset_id=dataset_id, count=len(parent_by_source)
     )
     track_ids = _create_source_tracks(
-        session=session,
         dataset_id=dataset_id,
         numbers=numbers[: len(roots)],
         links=[(source_id, None) for source_id in roots],
@@ -382,7 +364,6 @@ def _allocate_tracks(
     if children:
         track_ids.update(
             _create_source_tracks(
-                session=session,
                 dataset_id=dataset_id,
                 numbers=numbers[len(roots) :],
                 links=[(source_id, track_ids[parent_id]) for source_id, parent_id in children],
@@ -423,7 +404,6 @@ def _require_track_id(cuboid: CuboidLabel) -> int:
 
 
 def _create_source_tracks(
-    session: Session,
     dataset_id: UUID,
     numbers: Sequence[int],
     links: Sequence[tuple[int, UUID | None]],
@@ -434,8 +414,7 @@ def _create_source_tracks(
     The tracks get the object_track_numbers in `numbers`, in the order of `links`. The
     tracks of `untracked_ids` are stored without a source_track_id.
     """
-    created_ids = object_track_resolver.create_many(
-        session=session,
+    created_ids = active_transport.get_transport().annotations.create_object_tracks(
         tracks=[
             ObjectTrackCreate(
                 object_track_number=number,
@@ -451,31 +430,14 @@ def _create_source_tracks(
     }
 
 
-def _free_track_numbers(session: Session, dataset_id: UUID, count: int) -> list[int]:
-    """Return the `count` lowest positive object_track_numbers that the dataset does not use.
-
-    Numbers of deleted tracks are used again, so the numbers have no gaps.
-    """
-    used_numbers = set(
-        session.exec(
-            select(ObjectTrackTable.object_track_number).where(
-                col(ObjectTrackTable.dataset_id) == dataset_id
-            )
-        ).all()
-    )
-    free_numbers = (number for number in itertools.count(start=1) if number not in used_numbers)
-    return list(itertools.islice(free_numbers, count))
-
-
 def _annotation_creates(
-    session: Session,
     dataset_id: UUID,
     matched: MatchResult,
     track_ids: dict[int, UUID],
 ) -> list[AnnotationCreate]:
     """Build AnnotationCreate rows for matched cuboids."""
     label_ids = _label_ids_for_cuboids(
-        session=session, dataset_id=dataset_id, cuboids_by_group=matched.cuboids_by_group
+        dataset_id=dataset_id, cuboids_by_group=matched.cuboids_by_group
     )
     return [
         AnnotationCreate(
@@ -490,21 +452,15 @@ def _annotation_creates(
     ]
 
 
-def _add_frame_tags(
-    session: Session, collection_id: UUID, tags_by_group: Mapping[UUID, FrameTags]
-) -> None:
+def _add_frame_tags(collection_id: UUID, tags_by_group: Mapping[UUID, FrameTags]) -> None:
     """Get or create a sample tag for each frame tag name and add its groups to it."""
     group_ids_by_tag_name: dict[str, list[UUID]] = defaultdict(list)
     for group_id, frame_tags in tags_by_group.items():
         for tag_name in frame_tags.tags:
             group_ids_by_tag_name[tag_name].append(group_id)
+    tags = active_transport.get_transport().tags
     for tag_name, group_ids in group_ids_by_tag_name.items():
-        tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session, collection_id=collection_id, tag_name=tag_name
-        )
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=session, tag_id=tag.tag_id, sample_ids=group_ids
-        )
+        tags.add_to_samples(collection_id=collection_id, tag_name=tag_name, sample_ids=group_ids)
 
 
 def _cuboid_create(cuboid: CuboidLabel) -> Cuboid3DCreate:
@@ -526,27 +482,13 @@ def _cuboid_create(cuboid: CuboidLabel) -> Cuboid3DCreate:
 
 
 def _label_ids_for_cuboids(
-    session: Session, dataset_id: UUID, cuboids_by_group: dict[UUID, list[CuboidLabel]]
+    dataset_id: UUID, cuboids_by_group: dict[UUID, list[CuboidLabel]]
 ) -> dict[str, UUID]:
     """Get or create annotation classes for the cuboid class names."""
     class_names = {cuboid.class_name for cuboids in cuboids_by_group.values() for cuboid in cuboids}
-    return {
-        class_name: _get_or_create_label_id(
-            session=session, dataset_id=dataset_id, class_name=class_name
-        )
-        for class_name in class_names
-    }
-
-
-def _get_or_create_label_id(session: Session, dataset_id: UUID, class_name: str) -> UUID:
-    """Return the annotation label ID for a class, creating it if needed."""
-    label = annotation_label_resolver.get_by_label_name(
-        session=session, dataset_id=dataset_id, label_name=class_name
+    if not class_names:
+        return {}
+    labels = active_transport.get_transport().annotations.get_or_create_labels(
+        dataset_id=dataset_id, label_names=list(class_names)
     )
-    if label is not None:
-        return label.annotation_label_id
-    created = annotation_label_resolver.create(
-        session=session,
-        label=AnnotationLabelCreate(dataset_id=dataset_id, annotation_label_name=class_name),
-    )
-    return created.annotation_label_id
+    return {label.annotation_label_name: label.annotation_label_id for label in labels}

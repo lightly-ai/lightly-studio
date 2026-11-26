@@ -34,9 +34,9 @@
         {/if}
     </div>
     {#if entries.length === 0}
-        <Typography variant="body2" className="text-muted-foreground"
-            >No configuration recorded.</Typography
-        >
+        <Typography variant="body2" className="text-muted-foreground">
+            No configuration recorded.
+        </Typography>
     {:else}
         <dl
             class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2"

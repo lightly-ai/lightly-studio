@@ -90,7 +90,7 @@
         </SelectList>
     </div>
 {:else}
-    <span class="break-all text-sm" data-testid={`annotation-metadata-label`}>
+    <span class="break-all text-sm" data-testid="annotation-metadata-label">
         {currentValue}
         {#if trackId != null}
             <span class="font-mono text-xs opacity-80">#{trackId}</span>
