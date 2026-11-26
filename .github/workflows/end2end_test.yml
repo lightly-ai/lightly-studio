@@ -215,27 +215,31 @@ jobs:
       artifact: ${{ steps.upload.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/cache/restore@v6
+      - name: Check General DuckDB snapshot cache
+        uses: actions/cache/restore@v6
         id: general
         with:
           lookup-only: true
           path: lightly_studio/e2e-seed.db
           key: ${{ needs.check-success.outputs.general }}
-      - uses: actions/cache/restore@v6
+      - name: Check General shard 1 success cache
+        uses: actions/cache/restore@v6
         id: shard-1
         if: steps.general.outputs.cache-hit != 'true'
         with:
           lookup-only: true
           path: .e2e-success-general-1
           key: e2e-success-general-1-${{ needs.check-success.outputs.file-hash }}
-      - uses: actions/cache/restore@v6
+      - name: Check General shard 2 success cache
+        uses: actions/cache/restore@v6
         id: shard-2
         if: steps.general.outputs.cache-hit != 'true'
         with:
           lookup-only: true
           path: .e2e-success-general-2
           key: e2e-success-general-2-${{ needs.check-success.outputs.file-hash }}
-      - uses: actions/cache/restore@v6
+      - name: Check General shard 3 success cache
+        uses: actions/cache/restore@v6
         id: shard-3
         if: steps.general.outputs.cache-hit != 'true'
         with:
@@ -576,10 +580,14 @@ jobs:
         with:
           mode: end
 
+  # The merge queue skips this job: the ruleset requires `End2End Success Check` on the pull request
+  # before it can enter the queue, so these tests already passed. The queue still tests the merged
+  # code with the Postgres jobs below.
   end-to-end-general:
     name: End2End Test (${{ matrix.name }})
     if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
+    # Recent runs: 5.7min median, 9.2min worst.
     timeout-minutes: 20
     needs:
       - check-success
