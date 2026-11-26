@@ -8,23 +8,19 @@
     import PointSizeSettings from './PointSizeSettings.svelte';
 
     interface Props {
-        showOrthographicViews: boolean;
         pointSize: number;
         showNavigationHelpers: boolean;
         disabled?: boolean;
         accumulation?: ComponentProps<typeof AccumulationSettings>;
-        onToggle: (showOrthographicViews: boolean) => void;
         onPointSizeChange: (pointSize: number) => void;
         onToggleNavigationHelpers: (show: boolean) => void;
     }
 
     let {
-        showOrthographicViews,
         pointSize,
         showNavigationHelpers,
         disabled = false,
         accumulation,
-        onToggle,
         onPointSizeChange,
         onToggleNavigationHelpers
     }: Props = $props();
@@ -53,15 +49,6 @@
             <h3 class="text-sm font-medium">Scene settings</h3>
             <p class="text-xs text-muted-foreground">Adjust the scene display.</p>
         </div>
-        <label class="flex items-center gap-2 text-sm">
-            <Checkbox
-                checked={showOrthographicViews}
-                {disabled}
-                aria-label="Show orthographic projections"
-                onCheckedChange={(checked) => onToggle(checked === true)}
-            />
-            <span>Show orthographic projections</span>
-        </label>
         <PointSizeSettings {pointSize} {disabled} {onPointSizeChange} />
         <label class="flex items-center gap-2 border-t pt-3 text-sm">
             <Checkbox

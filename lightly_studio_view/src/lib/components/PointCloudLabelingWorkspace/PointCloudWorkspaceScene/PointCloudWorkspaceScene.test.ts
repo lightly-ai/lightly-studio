@@ -67,6 +67,9 @@ const defaultProps: Props = {
     onNextFrame: vi.fn()
 };
 
+const viewportRegions = () =>
+    screen.getAllByRole('region', { name: /^(perspective|top|side|front)$/ });
+
 it('keeps the toolbar in the main viewport and restores all views without remounting them', async () => {
     render(WorkspaceSceneProviderHarness, { props: { state: defaultProps } });
     const main = screen.getByRole('region', { name: 'perspective' });
@@ -75,10 +78,10 @@ it('keeps the toolbar in the main viewport and restores all views without remoun
 
     for (const label of ['Top', 'Side', 'Front', '3D scene']) {
         await fireEvent.click(screen.getByRole('button', { name: `Expand ${label} view` }));
-        expect(screen.getAllByRole('region')).toHaveLength(1);
+        expect(viewportRegions()).toHaveLength(1);
         expect(screen.getAllByTestId('scene-viewport-instance')).toEqual(viewports);
         await fireEvent.click(screen.getByRole('button', { name: 'Restore views' }));
-        expect(screen.getAllByRole('region')).toHaveLength(4);
+        expect(viewportRegions()).toHaveLength(4);
     }
 });
 
@@ -122,4 +125,15 @@ it('isolates camera state between separate workspace providers', async () => {
     expect(within(first.container).getByLabelText('top scale')).toHaveTextContent('0.025');
     expect(within(first.container).getByLabelText('perspective scale')).toHaveTextContent('unset');
     expect(within(second.container).getByLabelText('perspective scale')).toHaveTextContent('unset');
+});
+
+it('hides the orthographic views from their close button', async () => {
+    const onToggleOrthographicProjections = vi.fn();
+    render(WorkspaceSceneProviderHarness, {
+        props: { state: { ...defaultProps, onToggleOrthographicProjections } }
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Hide orthographic views' }));
+
+    expect(onToggleOrthographicProjections).toHaveBeenCalledWith(false);
 });
