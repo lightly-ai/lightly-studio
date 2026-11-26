@@ -1,0 +1,22 @@
+name: Restore E2E example media
+description: Fetch the exact media revision referenced by indexed E2E databases.
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache/restore@v6
+      id: media
+      with:
+        path: lightly_studio/datasets
+        key: example-dataset-${{ env.DATASET_REVISION }}
+    - if: steps.media.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p lightly_studio/datasets
+        curl --fail --location --silent --show-error --retry 3 \
+          "https://codeload.github.com/lightly-ai/dataset_examples_studio/tar.gz/$DATASET_REVISION" |
+          tar -xz --strip-components=1 -C lightly_studio/datasets
+    - if: steps.media.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: lightly_studio/datasets
+        key: ${{ steps.media.outputs.cache-primary-key }}
