@@ -17,7 +17,7 @@ def seed() -> None:
     dataset.add_samples_from_coco(
         annotations_json="datasets/coco_subset_128_images/instances_train2017.json",
         images_path="datasets/coco_subset_128_images/images",
-        annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
+        annotation_task=ls.AnnotationFileTask.INSTANCE_SEGMENTATION,
     )
 
 
