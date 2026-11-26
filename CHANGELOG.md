@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.5.0\] - 2026-11-26
+
+### Added
+
 - Find images with any bounding box, segmentation mask, or classification in the query editor with `object_detection()`, `segmentation_mask()`, or `classification()`.
 - The GUI shows polygon annotations as boxes. Polygons can't be edited in the GUI yet.
 - Export polygons to YOLO with the new "Image Segmentation Polygons (YOLO)" export.
@@ -43,9 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Python SDK: `to_coco_segmentation_masks`. Use `to_coco_instance_segmentation` instead.
 
-### Removed
-
 ### Fixed
+
 - LightlyStudio no longer prints DuckDB leak warnings when it exits, for example when you stop the GUI with Ctrl+C.
 
 - In the sample details, the outline of the selected annotation source and of the "Source name" input is no longer cut off at the sides.
@@ -61,8 +75,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hidden classes in the embedding plot legend stay hidden after a filter change, also when the legend order changes.
 
 - The embedding plot keeps its hidden classes, zoom and active tool when you close it or switch tabs.
-
-### Security
 
 ## \[1.4.0\] - 2026-11-18
 
