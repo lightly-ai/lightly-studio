@@ -2222,7 +2222,7 @@ wheels = [
 
 [[package]]
 name = "labelformat"
-version = "0.1.17"
+version = "0.1.18"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fsspec" },
@@ -2234,9 +2234,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/83/b7174afba0011e4191bebc98b20de0fea436ae2562af26b8ac2a58cbd105/labelformat-0.1.17.tar.gz", hash = "sha256:1b9014bbbb8afa075e65e732a4884f8df535418d7b12e4cf0c769475107c9697", size = 41772, upload-time = "2026-07-27T08:30:01.24Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/97/bd3b1c404095f4dd62a5a6f7785c2f4f9610e0908b28d8a8598c0d743cd5/labelformat-0.1.18.tar.gz", hash = "sha256:732c27648971aa4214bf2b9adf77b62c2ec31b5c48f0e95d9bccf4c60bcdbb40", size = 42814, upload-time = "2026-11-26T09:16:00.665Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/bb/4b6e2eb736ce74f66a1ee16253badaba12cc334d74bd7adb707a4a4db7d2/labelformat-0.1.17-py3-none-any.whl", hash = "sha256:10247f932cb541157aaf2e40d58a374092365adcdb871283a3badbeb48abf715", size = 61388, upload-time = "2026-07-27T08:29:59.889Z" },
+    { url = "https://files.pythonhosted.org/packages/34/d0/96c371aad8d3387ac69c3df7e667b25d2e7f2de3e8c253080765d378e51d/labelformat-0.1.18-py3-none-any.whl", hash = "sha256:aa560180540e01c702819218a863406a13d0f7e5a668f9abde3a8dcb49683ebf", size = 61956, upload-time = "2026-11-26T09:15:59.608Z" },
 ]
 
 [[package]]
@@ -2488,7 +2488,7 @@ requires-dist = [
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "jinja2", specifier = ">=3.1.0" },
-    { name = "labelformat", specifier = ">=0.1.17" },
+    { name = "labelformat", specifier = ">=0.1.18" },
     { name = "lightly-mundig", specifier = "==0.1.17" },
     { name = "lightly-studio-serve", editable = "lightly_studio_serve" },
     { name = "mcap", specifier = ">=1.6.0,<2.0" },
