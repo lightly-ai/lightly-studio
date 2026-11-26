@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Object3D, OrthographicCamera } from 'three';
 import { render } from '@testing-library/svelte';
+import { get } from 'svelte/store';
 import { FACE_DEFINITIONS } from '../cuboidFaceResize';
 import { useCuboidFaceResize } from './useCuboidFaceResize.svelte';
 import CuboidFaceResizeHarness from './CuboidFaceResizeHarness.svelte';
@@ -66,12 +67,13 @@ function pointer(type: string, clientX: number, clientY: number) {
     return event as PointerEvent;
 }
 
-function startDrag(downEvent = pointer('pointerdown', 250, 100)) {
+function startDrag(downEvent = pointer('pointerdown', 250, 100), isGizmoHovered = () => false) {
     const ref: { current?: ReturnType<typeof useCuboidFaceResize> } = {};
     const instance = render(CuboidFaceResizeHarness, {
         props: {
             ...callbacks,
             getAnnotation: () => annotation,
+            isGizmoHovered,
             onReady: (resize) => {
                 ref.current = resize;
             }
@@ -97,6 +99,18 @@ function startDrag(downEvent = pointer('pointerdown', 250, 100)) {
 }
 
 describe('cuboid face resize interaction', () => {
+    it('leaves the pointer to a hovered move or rotate gizmo', () => {
+        const downEvent = pointer('pointerdown', 250, 100);
+        const stopImmediatePropagation = vi.spyOn(downEvent, 'stopImmediatePropagation');
+        const resize = startDrag(downEvent, () => true);
+        resize.onFaceHoverEnter(PLUS_X_FACE);
+
+        expect(callbacks.onResizeStart).not.toHaveBeenCalled();
+        expect(callbacks.onResizePreview).not.toHaveBeenCalled();
+        expect(stopImmediatePropagation).not.toHaveBeenCalled();
+        expect(get(resize.hoveredFace)).toBeNull();
+    });
+
     it('keeps other canvas pointer handlers from starting a second drag', () => {
         const downEvent = pointer('pointerdown', 250, 100);
         const stopImmediatePropagation = vi.spyOn(downEvent, 'stopImmediatePropagation');

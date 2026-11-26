@@ -8,17 +8,17 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionWithoutChildrenView,
     SampleType,
 )
-from lightly_studio.models.mcap_group_component_definition import McapDataType
-from lightly_studio.resolvers import (
-    collection_resolver,
-    mcap_group_component_definition_resolver,
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionCreate,
 )
+from lightly_studio.resolvers import mcap_group_component_definition_resolver
 from lightly_studio.transport import active_transport
 
 NamedDataType: TypeAlias = tuple[str, McapDataType]
@@ -29,7 +29,6 @@ GROUP_COLLECTION_SUFFIX = "_groups"
 
 
 def create_components(
-    session: Session,
     group_collection_id: UUID,
     components: Sequence[McapComponentSpec],
 ) -> None:
@@ -39,7 +38,6 @@ def create_components(
     first recording that is indexed, with `McapComponent.update_mcap_definition`.
 
     Args:
-        session: The database session.
         group_collection_id: The ID of the GROUP collection holding the components.
         components: The components of the dataset, in the order they are shown in.
 
@@ -47,17 +45,20 @@ def create_components(
         ValueError: If the GROUP collection already has components, or if two
             components have the same name.
     """
-    component_collections = collection_resolver.create_group_components(
-        session=session,
+    transport = active_transport.get_transport()
+    component_collections = transport.collections.create_group_components(
         parent_collection_id=group_collection_id,
         components=[(component.name, SampleType.MCAP) for component in components],
     )
-    for component in components:
-        mcap_group_component_definition_resolver.create(
-            session=session,
-            collection_id=component_collections[component.name].collection_id,
-            mcap_data_type=component.mcap_data_type,
-        )
+    transport.ingestion.add_mcap_component_definitions(
+        rows=[
+            McapGroupComponentDefinitionCreate(
+                collection_id=component_collections[component.name].collection_id,
+                mcap_data_type=component.mcap_data_type,
+            )
+            for component in components
+        ]
+    )
 
 
 def check_components_match(

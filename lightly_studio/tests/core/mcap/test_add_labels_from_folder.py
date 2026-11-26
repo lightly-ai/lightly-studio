@@ -234,7 +234,8 @@ def _index(tmp_path: Path) -> tuple[McapDataset, list[UUID]]:
     path = helpers.write_mcap(tmp_path / "recording.mcap")
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,

@@ -1,4 +1,4 @@
-import { beforeAll, describe, it, expect, vi, afterEach } from 'vitest';
+import { beforeAll, beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
@@ -239,7 +239,12 @@ const defaultProps = {
 };
 
 describe('PointCloudLabelingWorkspace', () => {
+    beforeEach(() => {
+        // The tests query one viewport stub; the orthographic projections add three more.
+        sessionStorage.setItem('lightlyStudio_pointCloudOrthographicViewsEnabled', 'false');
+    });
     afterEach(() => {
+        sessionStorage.removeItem('lightlyStudio_pointCloudOrthographicViewsEnabled');
         vi.clearAllMocks();
         vi.useRealTimers();
         cloudQuery.data = undefined;

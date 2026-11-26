@@ -53,7 +53,7 @@ export interface PointCloudWorkspaceLayoutState {
     effectiveTool: WorkspaceTool;
     /** Whether annotation edits are permitted. */
     isEditingMode: boolean;
-    /** Whether Top, Side, and Front views are visible. */
+    /** Whether the Top, Side, and Front views are on screen: turned on and not collapsed. */
     showOrthographicViews: boolean;
     /** Where the orthographic views sit next to the 3D scene. */
     orthographicDock: PanelDock;

@@ -7,9 +7,14 @@ from typing import Protocol
 from uuid import UUID
 
 from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionCreate,
+)
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
+from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.models.static_transform import StaticTransformCreate
 
 
@@ -18,8 +23,6 @@ class IngestionTransport(Protocol):
 
     A path is a local path or a cloud URI. A remote transport reads it on the server.
     """
-
-    # TODO(Iunir, 11/2026): Add MCAP ingestion when `McapComponentSpec` has no DB imports.
 
     def add_images_from_path(  # noqa: PLR0913
         self,
@@ -195,4 +198,61 @@ class IngestionTransport(Protocol):
 
         Raises:
             ValueError: If `rows` is empty, or if a frame ID is empty.
+        """
+
+    def add_mcap_component_definitions(
+        self, rows: Sequence[McapGroupComponentDefinitionCreate]
+    ) -> None:
+        """Add the MCAP definitions of the component collections of an MCAP dataset.
+
+        Raises:
+            ValueError: If a collection is not a group component, or if its sample type is
+                not MCAP.
+        """
+
+    def add_mcaps_from_path(  # noqa: PLR0913
+        self,
+        collection_id: UUID,
+        path: str,
+        sync_component: str,
+        components: Sequence[McapComponentSpec],
+        max_pairing_diff_ns: int,
+        limit: int | None,
+        reference_frame_ids: Sequence[str] | None,
+        embed: bool,
+    ) -> None:
+        """Index every `.mcap` recording under a path into an MCAP dataset.
+
+        Files named `*_labeled.mcap` are annotation MCAPs and are not indexed.
+
+        Args:
+            collection_id: The ID of the root collection of the MCAP dataset.
+            path: A folder of `.mcap` files, a single file, or a glob.
+            sync_component: The name of the component whose messages are the ticks.
+            components: The specs the recordings are read through.
+            max_pairing_diff_ns: The largest time difference that still pairs a
+                component with a tick.
+            limit: The maximum number of recordings to index. None indexes all.
+            reference_frame_ids: The coordinate frames shown in the viewer, in menu order.
+                None stores no frames.
+            embed: If True, compute embeddings for the new sequences.
+
+        Raises:
+            ValueError: If `components` names other components than the dataset has, if
+                `sync_component` is not one of them, if `limit` is not greater than 0,
+                or if a reference frame id is empty or repeated.
+            AllInputFilesFailedError: If all recordings failed.
+        """
+
+    def add_sequence_samples(
+        self, sequence_sample_id: UUID, links: Sequence[SampleSequenceLinkCreate]
+    ) -> None:
+        """Put groups in the slots of an MCAP sequence, in a single commit.
+
+        Args:
+            sequence_sample_id: The sample ID of the sequence.
+            links: The groups to add and the slot of each.
+
+        Raises:
+            ValueError: If a group does not exist, or if a `seq_number` is negative.
         """

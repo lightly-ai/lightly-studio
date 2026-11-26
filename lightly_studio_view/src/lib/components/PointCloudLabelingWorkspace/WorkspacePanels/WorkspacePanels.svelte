@@ -30,7 +30,7 @@
         />
     {:else}
         <PaneGroup direction="horizontal" class="min-h-0 flex-1">
-            <Pane defaultSize={78} minSize={50} class="flex min-h-0 flex-col">
+            <Pane defaultSize={72} minSize={50} class="flex min-h-0 flex-col">
                 <PointCloudWorkspaceMainColumn />
             </Pane>
             <PaneResizer
@@ -48,9 +48,9 @@
             </PaneResizer>
             <Pane
                 bind:this={detailsPane.pane}
-                defaultSize={22}
-                minSize={16}
-                maxSize={40}
+                defaultSize={28}
+                minSize={20}
+                maxSize={45}
                 collapsedSize={0}
                 collapsible
                 onCollapse={() => detailsPane.setCollapsed(true)}

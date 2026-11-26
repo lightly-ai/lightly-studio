@@ -9,7 +9,13 @@ from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
     BoundingBoxCoordinates,
 )
 from tests.conftest import AnnotationsTestData
-from tests.helpers_resolvers import get_annotation_by_type
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+    get_annotation_by_type,
+)
 
 
 def test_update_bounding_box__object_detection(
@@ -122,3 +128,29 @@ def test_update_bounding_box__invalid_annotation_id(
 
     with pytest.raises(ValueError, match=f"Annotation with ID {invalid_annotation_id} not found."):
         annotation_resolver.update_bounding_box(db_session, invalid_annotation_id, new_coordinates)
+
+
+def test_update_bounding_box__polygon_rejected(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    label = create_annotation_label(session=db_session, root_collection_id=collection_id)
+    image = create_image(session=db_session, collection_id=collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(0, 0), (2, 0), (2, 2)]],
+    )
+
+    with pytest.raises(ValueError, match=r"Edit its vertices instead."):
+        annotation_resolver.update_bounding_box(
+            session=db_session,
+            annotation_id=annotation.sample_id,
+            coordinates=BoundingBoxCoordinates(x=10, y=20, width=100, height=200),
+        )
+
+    stored = annotation_resolver.get_by_id(session=db_session, annotation_id=annotation.sample_id)
+    assert stored is not None
+    assert stored.polygon_details is not None
+    assert stored.polygon_details.width == 2

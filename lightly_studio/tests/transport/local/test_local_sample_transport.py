@@ -3,10 +3,12 @@ from __future__ import annotations
 import pytest
 
 from lightly_studio.database import db_manager
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.transport.local.local_sample_transport import LocalSampleTransport
 from lightly_studio.transport.sample_transport import SampleTransport
 from tests.helpers_resolvers import create_collection, create_image
+from tests.resolvers.video.helpers import VideoStub, create_video
 
 
 @pytest.mark.usefixtures("patch_collection")
@@ -37,3 +39,31 @@ class TestLocalSampleTransport:
         assert [sample.file_name for sample in page.samples] == ["a.png"]
         assert [sample.file_name for sample in next_page.samples] == ["b.png"]
         assert next_page.next_cursor is None
+
+    def test_get_image_ids_by_paths(self) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+        other_collection_id = create_collection(session=session).collection_id
+        image = create_image(session=session, collection_id=collection_id, file_path_abs="/a.png")
+        create_image(session=session, collection_id=other_collection_id, file_path_abs="/b.png")
+        transport: SampleTransport = LocalSampleTransport()
+
+        ids_by_path = transport.get_image_ids_by_paths(
+            collection_id=collection_id, file_paths=["/a.png", "/b.png", "/c.png"]
+        )
+
+        assert ids_by_path == {"/a.png": image.sample_id}
+
+    def test_get_video_ids_by_stems(self) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(
+            session=session, sample_type=SampleType.VIDEO
+        ).collection_id
+        video = create_video(
+            session=session, collection_id=collection_id, video=VideoStub(path="/v/clip.mp4")
+        )
+        transport: SampleTransport = LocalSampleTransport()
+
+        ids_by_stem = transport.get_video_ids_by_stems(collection_id=collection_id)
+
+        assert ids_by_stem == {"clip": video.sample_id}

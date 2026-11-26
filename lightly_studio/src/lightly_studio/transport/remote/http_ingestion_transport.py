@@ -8,9 +8,14 @@ from uuid import UUID
 import httpx
 
 from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionCreate,
+)
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
+from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.models.static_transform import StaticTransformCreate
 
 
@@ -92,3 +97,29 @@ class HttpIngestionTransport:
     def add_dynamic_transforms(self, rows: Sequence[DynamicTransformCreate]) -> list[UUID]:
         """Add dynamic transforms. Not supported over HTTP yet."""
         raise NotImplementedError("Adding transforms over HTTP is not supported yet.")
+
+    def add_mcap_component_definitions(
+        self, rows: Sequence[McapGroupComponentDefinitionCreate]
+    ) -> None:
+        """Add MCAP component definitions. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding MCAP components over HTTP is not supported yet.")
+
+    def add_mcaps_from_path(  # noqa: PLR0913
+        self,
+        collection_id: UUID,
+        path: str,
+        sync_component: str,
+        components: Sequence[McapComponentSpec],
+        max_pairing_diff_ns: int,
+        limit: int | None,
+        reference_frame_ids: Sequence[str] | None,
+        embed: bool,
+    ) -> None:
+        """Index every `.mcap` recording under a path. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding MCAP recordings over HTTP is not supported yet.")
+
+    def add_sequence_samples(
+        self, sequence_sample_id: UUID, links: Sequence[SampleSequenceLinkCreate]
+    ) -> None:
+        """Put groups in the slots of an MCAP sequence. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding sequence samples over HTTP is not supported yet.")

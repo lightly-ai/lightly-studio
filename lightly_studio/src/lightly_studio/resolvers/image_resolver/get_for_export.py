@@ -58,6 +58,7 @@ def get_for_export(
                 joinedload(AnnotationBaseTable.annotation_label),
                 joinedload(AnnotationBaseTable.object_detection_details),
                 joinedload(AnnotationBaseTable.segmentation_details),
+                joinedload(AnnotationBaseTable.polygon_details),
             )
         )
     if ImageExportPreload.CAPTIONS in preload:

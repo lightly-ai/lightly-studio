@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.annotation.annotation_base import (
+    AnnotationType,
     ImageAnnotationView,
     VideoFrameAnnotationView,
 )
@@ -217,6 +218,34 @@ def test_get_all_with_payload__with_video_frame(db_session: Session) -> None:
         annotations_page.annotations[1].parent_sample_data.sample_id
         == video_frame_data.frame_sample_ids[1]
     )
+
+
+def test_get_all_with_payload__polygon_details(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]],
+    )
+
+    annotations_page = annotation_resolver.get_all_with_payload(
+        session=db_session,
+        collection_id=annotation.sample.collection_id,
+    )
+
+    assert len(annotations_page.annotations) == 1
+    polygon_details = annotations_page.annotations[0].annotation.polygon_details
+    assert polygon_details is not None
+    assert polygon_details.polygons == [[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]]
+    assert (polygon_details.x, polygon_details.y) == (0, 0)
+    assert (polygon_details.width, polygon_details.height) == (2, 2)
 
 
 def test_get_all_with_payload__orders_by_text_embedding_similarity(

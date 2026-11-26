@@ -215,7 +215,6 @@ def create_images(
 
 
 def load_into_dataset_from_labelformat(  # noqa: PLR0913
-    session: Session,
     ingestion: IngestionTransport,
     root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
@@ -227,7 +226,6 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     """Load samples and their annotations from a labelformat input into the dataset.
 
     Args:
-        session: The database session for the annotations.
         ingestion: The transport that adds the images.
         root_collection_id: The ID of the root collection to load samples into.
         input_labels: The labelformat input containing images and annotations.
@@ -281,7 +279,6 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     # Phase 2: Annotation creation (only if samples were created)
     if created_sample_ids:
         add_annotations.add_annotations_from_labelformat(
-            session=session,
             root_collection_id=root_collection_id,
             input_labels=input_labels,
             images_root=images_root_abs,
@@ -334,10 +331,9 @@ def load_into_dataset_from_coco_captions(  # noqa: PLR0913
         annotations=coco_payload.get("annotations", [])
     )
 
-    report = FileOutcomeReport()
     images_to_add: list[ImageCreate] = []
     path_to_captions: dict[str, list[str]] = {}
-    for image_info in tqdm(images, desc="Processing images", unit=" images"):
+    for image_info in images:
         image_id = image_info["id"]
         if not isinstance(image_id, int):
             continue
@@ -353,19 +349,27 @@ def load_into_dataset_from_coco_captions(  # noqa: PLR0913
         # A later duplicate of a path is skipped, so the first one gives the captions.
         path_to_captions.setdefault(image.file_path_abs, captions_by_image_id.get(image_id, []))
 
-    result = ingestion.add_images(collection_id=root_collection_id, images=images_to_add)
-    _record_outcomes(report=report, images=images_to_add, outcomes=result.outcomes)
-    created_path_to_id = result.sample_ids
-    _process_batch_captions(
-        session=session,
-        collection_id=root_collection_id,
-        created_path_to_id=created_path_to_id,
-        path_to_captions=path_to_captions,
-    )
+    report = FileOutcomeReport()
+    created_sample_ids: list[UUID] = []
+    # A rerun skips the images that exist, so an interrupted run must not leave many images
+    # without captions. Write the captions of each batch before the next batch.
+    with tqdm(total=len(images_to_add), desc="Processing images", unit=" images") as progress:
+        for batch_start in range(0, len(images_to_add), SAMPLE_BATCH_SIZE):
+            batch = images_to_add[batch_start : batch_start + SAMPLE_BATCH_SIZE]
+            result = ingestion.add_images(collection_id=root_collection_id, images=batch)
+            _record_outcomes(report=report, images=batch, outcomes=result.outcomes)
+            _process_batch_captions(
+                session=session,
+                collection_id=root_collection_id,
+                created_path_to_id=result.sample_ids,
+                path_to_captions=path_to_captions,
+            )
+            created_sample_ids.extend(result.sample_ids.values())
+            progress.update(len(batch))
 
     report.log_summary()
     report.raise_if_all_failed()
-    return list(created_path_to_id.values())
+    return created_sample_ids
 
 
 def tag_samples_by_directory(

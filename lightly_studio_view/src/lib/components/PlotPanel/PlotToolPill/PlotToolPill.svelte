@@ -18,8 +18,8 @@
     interface Props {
         // The element embedding-atlas renders into. Its hidden toolbar is what the pill drives.
         plotContainer: HTMLElement | null;
-        // Owned by the parent on purpose: every filter change unmounts the plot while the new
-        // embeddings load, and local state would drop the user's tool back to pan each time.
+        // Owned by the parent, which keeps it in the plot view store: local state would drop the
+        // user's tool back to pan each time the plot closes.
         activeTool: ToolMode;
     }
 

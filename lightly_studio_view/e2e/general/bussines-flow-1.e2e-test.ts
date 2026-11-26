@@ -88,7 +88,10 @@ test.describe('bussines-flow1', () => {
         await selectBoxes.click();
         await page.waitForTimeout(100);
 
-        await page.getByTestId('navigation-menu-images').click();
+        await page
+            .getByRole('navigation', { name: 'breadcrumb' })
+            .getByRole('link', { name: 'Samples' })
+            .click();
 
         await expect(samplesPage.getSamples().first()).toBeVisible({ timeout: 10000 });
         const selectedSamples = await samplesPage.getNumSelectedSamples();

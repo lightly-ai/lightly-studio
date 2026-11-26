@@ -8,8 +8,8 @@ import type { PanelDock } from '../PanelDockToggle';
 export function useWorkspacePresentation() {
     const { isEditingMode } = useGlobalStorage();
     const showOrthographicViews = useSessionStorage<boolean>(
-        'lightlyStudio_pointCloudShowOrthographicViews',
-        false
+        'lightlyStudio_pointCloudOrthographicViewsEnabled',
+        true
     );
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
     const pointSize = useSessionStorage<number>('lightlyStudio_pointCloudPointSize', 2);

@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 import tempfile
-from collections.abc import Iterable, Sequence
-from itertools import islice
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Self
 from uuid import UUID
@@ -21,13 +19,12 @@ from lightly_studio.core.mcap import (
     dataset_schema,
     folder_labels,
 )
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.group_dataset import McapGroupDataset
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.database import db_manager
-from lightly_studio.dataset import fsspec_lister, remote_storage
-from lightly_studio.embed import embed_mcap_sequences
+from lightly_studio.dataset import remote_storage
 from lightly_studio.errors import ExportError
 from lightly_studio.export import mcap_scene_update_export
 from lightly_studio.models.collection import (
@@ -43,8 +40,6 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
-
-logger = logging.getLogger(__name__)
 
 
 class McapDataset:
@@ -131,7 +126,6 @@ class McapDataset:
 
         root_collection, group_collection = dataset_schema.create_collections(name=name)
         dataset_schema.create_components(
-            session=db_manager.persistent_session(),
             group_collection_id=group_collection.collection_id,
             components=components,
         )
@@ -269,37 +263,19 @@ class McapDataset:
             AllInputFilesFailedError: If every recording under the path failed.
         """
         source = ingest_tracking.get_source(path=path)
-        fsspec_lister.validate_limit(limit)
-        # Configure clients before discovery creates and caches a filesystem.
-        remote_storage.configure_connections(paths=[str(path)])
-        discovered_paths = fsspec_lister.iter_files_from_path(
+        active_transport.get_transport().ingestion.add_mcaps_from_path(
+            collection_id=self.collection_id,
             path=str(path),
-            allowed_extensions=add_mcaps.MCAP_EXTENSIONS,
-            limit=None,
-        )
-        mcap_paths = _recording_paths(
-            discovered_paths=discovered_paths,
-            limit=limit,
-        )
-        logger.info("Found %d MCAP recordings to index in %s.", len(mcap_paths), path)
-
-        sequence_sample_ids = add_mcaps.index_recordings(
-            dataset=self,
-            mcap_paths=mcap_paths,
             sync_component=sync_component,
             components=components,
             max_pairing_diff_ns=max_pairing_diff_ns,
+            limit=limit,
             reference_frame_ids=reference_frame_ids,
+            embed=embed,
         )
         ingest_tracking.track_samples_ingested(
             source=source, sample_type=SampleType.MCAP, ingest_format=IngestFormat.MCAP
         )
-        if embed:
-            embed_mcap_sequences.embed_mcap_sequences(
-                session=self._session,
-                collection_id=self.collection_id,
-                sequence_sample_ids=sequence_sample_ids,
-            )
 
     def add_labels_from_folder(
         self,
@@ -531,14 +507,6 @@ class McapDataset:
                 "The recordings share no coordinate frame. Pass `target_frame_id` explicitly."
             )
         return frame_ids[0]
-
-
-def _recording_paths(discovered_paths: Iterable[str], limit: int | None) -> list[str]:
-    """Filter annotation MCAPs before lazily applying the recording limit."""
-    recordings = (
-        path for path in discovered_paths if not annotation_mcap.is_annotation_mcap(uri=path)
-    )
-    return list(recordings if limit is None else islice(recordings, limit))
 
 
 def _get_duplicate_names(components: Sequence[McapComponentSpec]) -> list[str]:

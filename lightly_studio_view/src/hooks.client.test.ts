@@ -5,10 +5,11 @@ vi.mock('$lib/api/registerApiErrorInterceptor', () => ({
 }));
 
 const { registerApiErrorInterceptor } = await import('$lib/api/registerApiErrorInterceptor');
-await import('./hooks.client');
 
 describe('hooks.client', () => {
-    it('registers the API error interceptor', () => {
+    it('registers the API error interceptor', async () => {
+        await import('./hooks.client');
+
         expect(registerApiErrorInterceptor).toHaveBeenCalledOnce();
     });
 });
