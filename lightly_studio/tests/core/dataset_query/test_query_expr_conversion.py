@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 
 import pytest
 
 from lightly_studio.core.dataset_query import query_expr_conversion, query_translation
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
+from lightly_studio.core.dataset_query.field_expression import OrdinalFieldExpression
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import (
@@ -111,6 +113,11 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
     ("sample_type", "match"),
     [
         (SampleType.IMAGE, ImageSampleField.width > 1.5),
+        (
+            SampleType.IMAGE,
+            OrdinalFieldExpression[Any](field=ImageSampleField.created_at, operator=">", value=0),
+        ),
+        (SampleType.VIDEO, VideoSampleField.fps > float("inf")),
         (SampleType.IMAGE, VideoSampleField.width > 100),
         (SampleType.VIDEO, ImageSampleField.width > 100),
         (SampleType.IMAGE, AND()),
