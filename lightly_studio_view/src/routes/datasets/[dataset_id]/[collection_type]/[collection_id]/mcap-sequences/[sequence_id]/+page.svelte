@@ -1,11 +1,11 @@
 <script lang="ts">
     import type { PageData } from './$types';
-    import { goto } from '$app/navigation';
+    import { afterNavigate, goto } from '$app/navigation';
     import { page } from '$app/state';
     import { useMcapSequenceSummary } from '$lib/hooks';
     import { LayoutCard } from '$lib/components';
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
-    import { getTickNumberFromHash } from './getTickNumberFromHash';
+    import { buildSequenceHash, getCameraFromHash, getTickNumberFromHash } from './sequenceHash';
     import { routeHelpers } from '$lib/routes';
     import { useAdjacentMcapSequences } from '$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences';
 
@@ -18,7 +18,12 @@
         collectionType,
         sequenceId
     } = $derived(data);
-    const tickNumber = $derived(getTickNumberFromHash(page.url.hash));
+    // Playback writes the hash every tick, so the route owns the tick and camera and always
+    // builds the whole hash from both instead of patching a `page.url` that may be stale.
+    let currentTick = $state(getTickNumberFromHash(page.url.hash));
+    let openCamera = $state(getCameraFromHash(page.url.hash));
+    // True while this page session pushed the history entry of the open camera.
+    let pushedCameraEntry = $state(false);
     // The workspace loads the same summary, so this query is deduplicated by TanStack.
     const { summary } = useMcapSequenceSummary({
         getDatasetId: () => datasetId,
@@ -74,17 +79,52 @@
         );
     };
 
-    const updateTickNumber = (nextTickNumber: number) => {
+    const syncFromUrl = () => {
+        currentTick = getTickNumberFromHash(page.url.hash);
+        openCamera = getCameraFromHash(page.url.hash);
+        pushedCameraEntry = false;
+    };
+
+    // Another sequence starts without a hash, so drop the tick and camera of the previous one.
+    let syncedSequenceId: string | undefined;
+    $effect.pre(() => {
+        const previousSequenceId = syncedSequenceId;
+        syncedSequenceId = sequenceId;
+        if (previousSequenceId !== undefined && previousSequenceId !== sequenceId) syncFromUrl();
+    });
+
+    afterNavigate(({ type }) => {
+        if (type === 'popstate') syncFromUrl();
+    });
+
+    const writeHash = (historyMode: 'push' | 'replace') => {
         const url = new URL(page.url);
-        const hash = new URLSearchParams(url.hash.slice(1));
-        hash.set('tick', String(nextTickNumber));
-        url.hash = hash.toString();
+        url.hash = buildSequenceHash({ tick: currentTick, camera: openCamera });
         void goto(url, {
-            replaceState: true,
+            replaceState: historyMode === 'replace',
             noScroll: true,
             keepFocus: true,
             state: page.state
         });
+    };
+
+    const updateTickNumber = (nextTickNumber: number) => {
+        currentTick = nextTickNumber;
+        writeHash('replace');
+    };
+
+    const setOpenCamera = (camera: string | undefined, historyMode: 'push' | 'replace') => {
+        if (camera === undefined && pushedCameraEntry) {
+            // Pop the entry that opened the camera, so back and close leave the same page.
+            openCamera = undefined;
+            pushedCameraEntry = false;
+            history.back();
+            return;
+        }
+        openCamera = camera;
+        if (camera === undefined) pushedCameraEntry = false;
+        else pushedCameraEntry ||= historyMode === 'push';
+        writeHash(historyMode);
     };
 </script>
 
@@ -95,7 +135,9 @@
             {annotationSourceCollectionId}
             {sequenceId}
             {sourcePath}
-            {tickNumber}
+            tickNumber={currentTick}
+            {openCamera}
+            onOpenCameraChange={setOpenCamera}
             onTickChange={updateTickNumber}
             onPreviousSequence={previousSequenceId
                 ? () => goToSequence(previousSequenceId)
