@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
-    import WorkspaceChannelSelect from '../WorkspaceChannelSelect/WorkspaceChannelSelect.svelte';
+    import WorkspaceChannelSelect from '../../WorkspaceChannelSelect/WorkspaceChannelSelect.svelte';
 
     interface Props {
         lidarChannels: ChannelSummaryView[];
