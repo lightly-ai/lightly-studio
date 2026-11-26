@@ -32,8 +32,18 @@ vi.mock('$lib/hooks/useSettings', () => ({
     })
 }));
 
-vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => {
+const mockUpdateLastAnnotationBrushDiameter = vi.fn();
+
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => ({
+        updateLastAnnotationBrushDiameter: mockUpdateLastAnnotationBrushDiameter
+    })
+}));
+
+vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => {
+    const original = await importOriginal<object>();
     return {
+        ...original,
         useSampleDetailsToolbarContext: () => ({
             context: mockContext,
             setBrushMode: (value: BrushMode) => {
@@ -69,6 +79,7 @@ describe('BrushTool component', () => {
                 size: 10
             }
         };
+        mockUpdateLastAnnotationBrushDiameter.mockClear();
         mockAnnotationLabelContext.annotationId = null;
         mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.lastCreatedAnnotationId = null;
@@ -77,7 +88,7 @@ describe('BrushTool component', () => {
     });
 
     it('switches to eraser mode when eraser button is clicked', async () => {
-        const { container } = render(BrushTool);
+        const { container } = render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         const eraserButton = getByLabelText(container, 'Eraser mode');
 
@@ -87,7 +98,7 @@ describe('BrushTool component', () => {
     });
 
     it('switches back to brush mode when brush button is clicked', async () => {
-        const { container } = render(BrushTool);
+        const { container } = render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         const brushButton = getByLabelText(container, 'Brush mode');
 
@@ -96,18 +107,49 @@ describe('BrushTool component', () => {
         expect(mockContext.brush.mode).toBe('brush');
     });
 
-    it('updates brush size when slider changes', async () => {
-        const { getByRole } = render(BrushTool);
+    it('updates and saves brush size when slider changes', async () => {
+        const { getByRole } = render(BrushTool, { props: { collectionId: 'collection-1' } });
 
-        const slider = getByRole('slider') as HTMLInputElement;
+        await fireEvent.input(getByRole('slider'), { target: { value: '1000' } });
 
-        await fireEvent.input(slider, { target: { value: '42' } });
+        expect(mockContext.brush.size).toBe(500);
+        expect(mockUpdateLastAnnotationBrushDiameter).toHaveBeenCalledWith('collection-1', 500);
+    });
 
-        expect(mockContext.brush.size).toBe(42);
+    it('updates and saves brush size when a size is typed', async () => {
+        const { getByLabelText } = render(BrushTool, { props: { collectionId: 'collection-1' } });
+        const field = getByLabelText('Brush size in pixels');
+
+        await fireEvent.input(field, { target: { value: '37' } });
+        await fireEvent.keyDown(field, { key: 'Enter' });
+
+        expect(mockContext.brush.size).toBe(37);
+        expect(mockUpdateLastAnnotationBrushDiameter).toHaveBeenCalledWith('collection-1', 37);
+    });
+
+    it('does not switch mode when typing a shortcut key in the size field', async () => {
+        const { getByLabelText } = render(BrushTool, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.keyDown(getByLabelText('Brush size in pixels'), { key: 'x' });
+
+        expect(mockContext.brush.mode).toBe('brush');
+    });
+
+    it('steps by about 10% when pressing Alt and scrolling', async () => {
+        mockContext.brush.size = 100;
+        render(BrushTool, { props: { collectionId: 'collection-1' } });
+
+        await fireEvent.wheel(window, { deltaY: -100, altKey: true });
+        expect(mockContext.brush.size).toBe(110);
+        expect(mockUpdateLastAnnotationBrushDiameter).toHaveBeenCalledWith('collection-1', 110);
+
+        mockContext.brush.size = 100;
+        await fireEvent.wheel(window, { deltaY: 100, altKey: true });
+        expect(mockContext.brush.size).toBe(90);
     });
 
     it('increases brush size when pressing Alt and scrolling up', async () => {
-        render(BrushTool);
+        render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         await fireEvent.wheel(window, { deltaY: -100, altKey: true });
 
@@ -115,7 +157,7 @@ describe('BrushTool component', () => {
     });
 
     it('decreases brush size when pressing Alt and scrolling down', async () => {
-        render(BrushTool);
+        render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         await fireEvent.wheel(window, { deltaY: 100, altKey: true });
 
@@ -123,7 +165,7 @@ describe('BrushTool component', () => {
     });
 
     it('does not update brush size when pressing Alt and scrolling horizontally', async () => {
-        render(BrushTool);
+        render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         await fireEvent.wheel(window, { deltaX: 100, deltaY: 0, altKey: true });
 
@@ -132,7 +174,7 @@ describe('BrushTool component', () => {
     });
 
     it('updates brush size when pressing Alt and scrolling outside the popup', async () => {
-        render(BrushTool);
+        render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         await fireEvent.wheel(document.body, { deltaY: -100, altKey: true });
 
@@ -142,7 +184,7 @@ describe('BrushTool component', () => {
     it('toggles changing brush size flag while handling Alt + wheel', async () => {
         vi.useFakeTimers();
         try {
-            render(BrushTool);
+            render(BrushTool, { props: { collectionId: 'collection-1' } });
 
             await fireEvent.wheel(window, { deltaY: -100, altKey: true });
             expect(mockAnnotationLabelContext.isChangingBrushSize).toBe(true);
@@ -155,19 +197,19 @@ describe('BrushTool component', () => {
     });
 
     it('keeps brush size within min/max bounds when pressing Alt and scrolling', async () => {
-        render(BrushTool);
+        render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         mockContext.brush.size = 1;
         await fireEvent.wheel(window, { deltaY: 100, altKey: true });
         expect(mockContext.brush.size).toBe(1);
 
-        mockContext.brush.size = 100;
+        mockContext.brush.size = 500;
         await fireEvent.wheel(window, { deltaY: -100, altKey: true });
-        expect(mockContext.brush.size).toBe(100);
+        expect(mockContext.brush.size).toBe(500);
     });
 
     it('does not update brush size when Alt is not pressed', async () => {
-        render(BrushTool);
+        render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         await fireEvent.wheel(window, { deltaY: -100 });
 
@@ -175,7 +217,7 @@ describe('BrushTool component', () => {
     });
 
     it('does not update brush size when wheel target is an input element', async () => {
-        const { getByRole } = render(BrushTool);
+        const { getByRole } = render(BrushTool, { props: { collectionId: 'collection-1' } });
         const slider = getByRole('slider');
 
         await fireEvent.wheel(slider, { deltaY: -100, altKey: true });
@@ -184,7 +226,7 @@ describe('BrushTool component', () => {
     });
 
     it('switches to eraser mode when eraser shortcut is pressed', async () => {
-        render(BrushTool);
+        render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         await fireEvent.keyDown(window, { key: 'x' });
 
@@ -193,7 +235,7 @@ describe('BrushTool component', () => {
 
     it('switches to brush mode when brush shortcut is pressed', async () => {
         mockContext.brush.mode = 'eraser';
-        render(BrushTool);
+        render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         await fireEvent.keyDown(window, { key: 'r' });
 
@@ -202,7 +244,7 @@ describe('BrushTool component', () => {
 
     it('completes the editing by click', async () => {
         mockAnnotationLabelContext.annotationId = 'annotation-1';
-        const { container } = render(BrushTool);
+        const { container } = render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         const finishButton = getByLabelText(container, 'Done');
         expect(finishButton).toBeEnabled();
@@ -214,7 +256,7 @@ describe('BrushTool component', () => {
     });
 
     it('disables the Done button when no annotation is active', () => {
-        const { container } = render(BrushTool);
+        const { container } = render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         const finishButton = getByLabelText(container, 'Done');
 
@@ -224,13 +266,13 @@ describe('BrushTool component', () => {
     it('disables Done while drawing', () => {
         mockAnnotationLabelContext.annotationId = 'annotation-1';
         mockAnnotationLabelContext.isDrawing = true;
-        const view = render(BrushTool);
+        const view = render(BrushTool, { props: { collectionId: 'collection-1' } });
         expect(view.getByRole('button', { name: 'Done' })).toBeDisabled();
     });
 
     it('hides the Done button on annotation details view', async () => {
         mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
-        const { container } = render(BrushTool);
+        const { container } = render(BrushTool, { props: { collectionId: 'collection-1' } });
 
         const finishButton = queryByLabelText(container, 'Done');
 

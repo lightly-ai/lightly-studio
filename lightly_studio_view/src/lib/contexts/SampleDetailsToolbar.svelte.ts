@@ -13,12 +13,17 @@ export type ToolbarStatus =
     | 'slic'
     | AssistedLabelingStatus;
 
+export const MIN_BRUSH_SIZE = 1;
+export const MAX_BRUSH_SIZE = 500;
+export const DEFAULT_BRUSH_SIZE = 100;
+
 export type SampleDetailsToolbarContext = {
     status: ToolbarStatus;
     // The status a Space pan interrupted, restored when the pan ends.
     panFrom?: ToolbarStatus;
     brush: {
         mode: BrushMode;
+        // Diameter in image pixels.
         size: number;
     };
     slic: {
@@ -32,7 +37,7 @@ const CONTEXT_KEY = 'sample-details-toolbar-type';
 export function createSampleDetailsToolbarContext(
     initiaValue: SampleDetailsToolbarContext = {
         status: 'cursor',
-        brush: { mode: 'brush', size: 50 },
+        brush: { mode: 'brush', size: DEFAULT_BRUSH_SIZE },
         slic: { level: 'medium', status: 'idle' }
     }
 ): SampleDetailsToolbarContext {

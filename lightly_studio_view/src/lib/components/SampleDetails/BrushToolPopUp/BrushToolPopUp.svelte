@@ -1,12 +1,21 @@
 <script lang="ts">
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils/isInputElement';
     import Brush from '@lucide/svelte/icons/brush';
     import Eraser from '@lucide/svelte/icons/eraser';
     import { onDestroy, onMount } from 'svelte';
     import FinishAnnotationButton from '../FinishAnnotationButton/FinishAnnotationButton.svelte';
+    import BrushSizeInput from './BrushSizeInput/BrushSizeInput.svelte';
+    import { clampBrushSize, getWheelStep } from './brushSize';
+
+    interface Props {
+        collectionId: string;
+    }
+
+    let { collectionId }: Props = $props();
 
     const {
         context: sampleDetailsToolbarContext,
@@ -14,6 +23,12 @@
         setBrushSize
     } = useSampleDetailsToolbarContext();
     const { settingsStore } = useSettings();
+    const { updateLastAnnotationBrushDiameter } = useGlobalStorage();
+
+    const applyBrushSize = (size: number) => {
+        setBrushSize(size);
+        updateLastAnnotationBrushDiameter(collectionId, size);
+    };
 
     const activateBrushMode = (mode: 'brush' | 'eraser') => {
         setBrushMode(mode);
@@ -22,13 +37,6 @@
     const { setIsChangingBrushSize } = useAnnotationLabelContext();
 
     const normalizeShortcut = (key: string): string => (key.length === 1 ? key.toLowerCase() : key);
-
-    const MIN_BRUSH_SIZE = 1;
-    const MAX_BRUSH_SIZE = 100;
-    const WHEEL_STEP = 1;
-
-    const clampBrushSize = (size: number): number =>
-        Math.min(MAX_BRUSH_SIZE, Math.max(MIN_BRUSH_SIZE, size));
 
     const onKeyDown = (event: KeyboardEvent) => {
         const target = event.target as HTMLElement;
@@ -59,14 +67,13 @@
         clearTimeout(onWheelTimeout);
         setIsChangingBrushSize(true);
 
+        const size = sampleDetailsToolbarContext.brush.size;
         const direction = event.deltaY < 0 ? 1 : -1;
-        const nextSize = clampBrushSize(
-            sampleDetailsToolbarContext.brush.size + direction * WHEEL_STEP
-        );
+        const nextSize = clampBrushSize(size + direction * getWheelStep(size));
 
-        if (nextSize !== sampleDetailsToolbarContext.brush.size) {
+        if (nextSize !== size) {
             event.preventDefault();
-            setBrushSize(nextSize);
+            applyBrushSize(nextSize);
         }
 
         // Prevent enabling zoom immediately
@@ -143,12 +150,9 @@
             <div class="flex items-center gap-4 pb-2 pt-2">
                 <span class="w-16 text-sm text-muted-foreground"> Size: </span>
 
-                <input
-                    type="range"
-                    min="1"
-                    max="100"
-                    bind:value={sampleDetailsToolbarContext.brush.size}
-                    class="w-full accent-primary"
+                <BrushSizeInput
+                    size={sampleDetailsToolbarContext.brush.size}
+                    onChange={applyBrushSize}
                 />
             </div>
         </div>
