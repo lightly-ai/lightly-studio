@@ -1,8 +1,8 @@
 """Convert dataset-query expressions to the query format that the transport sends.
 
-Sample fields, tags, metadata, annotation queries, video event and frame queries, and
-evaluation queries are supported. Other expressions raise `UnsupportedQueryError`, and the
-caller uses the SQL path.
+Sample fields, tags, metadata, parent-video fields of video frames, annotation queries, video
+event and frame queries, and evaluation queries are supported. Other expressions raise
+`UnsupportedQueryError`, and the caller uses the SQL path.
 """
 
 from __future__ import annotations
@@ -54,6 +54,9 @@ from lightly_studio.core.dataset_query.segmentation_mask_query import Segmentati
 from lightly_studio.core.dataset_query.tags_expression import TagsContainsExpression
 from lightly_studio.core.dataset_query.video_event_query import VideoEventQuery
 from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
+from lightly_studio.core.dataset_query.video_frame_sample_field import (
+    ParentVideoTagsContainsExpression,
+)
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import SampleType
@@ -88,6 +91,7 @@ from lightly_studio.models.query_expr import (
 )
 from lightly_studio.models.sample_query import EvaluationMetricSortKey, SortKey
 from lightly_studio.models.sort_direction import SortDirection
+from lightly_studio.models.video import VideoFrameTable
 
 _ScopedQuery = (
     ClassificationQuery
@@ -116,6 +120,8 @@ _SCOPED_QUERIES: dict[type[_ScopedQuery], tuple[type[_ScopedMatchExpr], str]] = 
     VideoFrameQuery: (VideoFrameMatchExpr, "video_frame"),
 }
 
+_PARENT_VIDEO_TABLE = "parent_video"
+
 # The relationships that each scope allows, with the table of the related fields.
 _RELATIONSHIP_TABLES: dict[tuple[str, object], str] = {
     ("classification", AnnotationBaseTable.annotation_label): "classification",
@@ -127,6 +133,7 @@ _RELATIONSHIP_TABLES: dict[tuple[str, object], str] = {
     ("segmentation_mask", AnnotationBaseTable.segmentation_details): "segmentation_mask",
     ("polygon", AnnotationBaseTable.annotation_label): "polygon",
     ("polygon", AnnotationBaseTable.polygon_details): "polygon",
+    ("video_frame", VideoFrameTable.video): _PARENT_VIDEO_TABLE,
 }
 
 
@@ -223,11 +230,8 @@ def _to_subexpr(criterion: MatchExpression, scope: str) -> MatchExpr | None:
 
 
 def _to_leaf_expr(expression: MatchExpression, scope: str) -> MatchExpr:
-    if isinstance(expression, TagsContainsExpression):
-        if not query_translation.has_tags(table=scope):
-            raise UnsupportedQueryError(f"Tags of {scope} are not supported.")
-        tags = FieldRef(table=scope, name="tags")
-        return TagsContainsExpr(field=tags, tag_name=expression.tag_name)
+    if isinstance(expression, (TagsContainsExpression, ParentVideoTagsContainsExpression)):
+        return _to_tags_expr(expression=expression, scope=scope)
     if isinstance(expression, MetadataComparisonExpression):
         operator = OrdinalComparisonOperator(expression.comparison)
         return MetadataComparisonExpr(
@@ -256,6 +260,16 @@ def _check_field_value(value: object, expr_type: type[FieldExpr]) -> None:
     # Pydantic coerces other values to a datetime.
     if expr_type is DatetimeExpr and not isinstance(value, datetime):
         raise UnsupportedQueryError(f"The value {value!r} is not a datetime.")
+
+
+def _to_tags_expr(
+    expression: TagsContainsExpression | ParentVideoTagsContainsExpression, scope: str
+) -> TagsContainsExpr:
+    is_parent_video_tags = isinstance(expression, ParentVideoTagsContainsExpression)
+    table = _PARENT_VIDEO_TABLE if is_parent_video_tags else scope
+    if not query_translation.has_tags(table=table):
+        raise UnsupportedQueryError(f"Tags of {table} are not supported.")
+    return TagsContainsExpr(field=FieldRef(table=table, name="tags"), tag_name=expression.tag_name)
 
 
 def _to_evaluation_expr(query: SampleEvaluationQuery | AnnotationMetricQuery) -> MatchExpr:
