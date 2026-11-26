@@ -95,6 +95,9 @@
             {projectionSettings}
             {onProjectionSettingsChange}
             {onPlaybackToggle}
+            position={{ index: 1, total: 1 }}
+            previousKey="["
+            nextKey="]"
         />
     {:else}
         <div class="flex min-h-0 flex-1 items-center justify-center text-muted-foreground">

@@ -5,6 +5,10 @@
         CameraProjectionView
     } from '$lib/api/lightly_studio_local/types.gen';
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
+    import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import { Button } from '$lib/components/ui/button';
+    import { getCameraKeyAction } from '../cameraNavigation/cameraNavigation';
     import ProjectionControls from '../ProjectionControls.svelte';
     import ProjectionOverlay from '../ProjectionOverlay.svelte';
     import type { ProjectionSettings } from '../projectionSettings';
@@ -21,6 +25,11 @@
         projectionSettings?: ProjectionSettings;
         onProjectionSettingsChange?: (settings: ProjectionSettings) => void;
         onPlaybackToggle?: () => void;
+        position: { index: number; total: number };
+        onPrevious?: () => void;
+        onNext?: () => void;
+        previousKey: string;
+        nextKey: string;
     }
 
     let {
@@ -33,10 +42,22 @@
         projection,
         projectionSettings,
         onProjectionSettingsChange,
-        onPlaybackToggle
+        onPlaybackToggle,
+        position,
+        onPrevious,
+        onNext,
+        previousKey,
+        nextKey
     }: Props = $props();
 
     function handleKeydown(event: KeyboardEvent) {
+        const action = getCameraKeyAction(event, { previous: previousKey, next: nextKey });
+        if (action) {
+            event.preventDefault();
+            event.stopPropagation();
+            (action === 'next' ? onNext : onPrevious)?.();
+            return;
+        }
         if (event.code !== 'Space' || event.repeat) return;
         const target = event.target as HTMLElement;
         if (
@@ -61,15 +82,39 @@
     >
         <div class="flex min-w-0 items-center justify-between gap-3 pr-10">
             <Dialog.Title class="min-w-0 truncate text-sm font-medium">
-                Camera: {label}
+                Camera: {label} · {position.index} / {position.total}
             </Dialog.Title>
-            {#if projectionSettings && onProjectionSettingsChange}
-                <ProjectionControls
-                    settings={projectionSettings}
-                    onChange={onProjectionSettingsChange}
-                    {onPlaybackToggle}
-                />
-            {/if}
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1">
+                    <Button
+                        variant="outline"
+                        size="xs"
+                        aria-label="Previous camera"
+                        title={`Shortcut: ${previousKey}`}
+                        disabled={!onPrevious}
+                        onclick={onPrevious}
+                    >
+                        <ChevronLeft />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="xs"
+                        aria-label="Next camera"
+                        title={`Shortcut: ${nextKey}`}
+                        disabled={!onNext}
+                        onclick={onNext}
+                    >
+                        <ChevronRight />
+                    </Button>
+                </div>
+                {#if projectionSettings && onProjectionSettingsChange}
+                    <ProjectionControls
+                        settings={projectionSettings}
+                        onChange={onProjectionSettingsChange}
+                        {onPlaybackToggle}
+                    />
+                {/if}
+            </div>
         </div>
         <Dialog.Description class="sr-only">Enlarged camera frame</Dialog.Description>
         <div class="relative mx-auto w-fit max-w-full">
