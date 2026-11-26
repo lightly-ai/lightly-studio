@@ -205,6 +205,78 @@ jobs:
           rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
           cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
 
+  prepare-general:
+    name: Prepare General DuckDB fixture
+    needs: check-success
+    if: github.event_name != 'merge_group' && needs.check-success.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      artifact: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache/restore@v6
+        id: general
+        with:
+          lookup-only: true
+          path: lightly_studio/e2e-seed.db
+          key: ${{ needs.check-success.outputs.general }}
+      - uses: actions/cache/restore@v6
+        id: shard-1
+        if: steps.general.outputs.cache-hit != 'true'
+        with:
+          lookup-only: true
+          path: .e2e-success-general-1
+          key: e2e-success-general-1-${{ needs.check-success.outputs.file-hash }}
+      - uses: actions/cache/restore@v6
+        id: shard-2
+        if: steps.general.outputs.cache-hit != 'true'
+        with:
+          lookup-only: true
+          path: .e2e-success-general-2
+          key: e2e-success-general-2-${{ needs.check-success.outputs.file-hash }}
+      - uses: actions/cache/restore@v6
+        id: shard-3
+        if: steps.general.outputs.cache-hit != 'true'
+        with:
+          lookup-only: true
+          path: .e2e-success-general-3
+          key: e2e-success-general-3-${{ needs.check-success.outputs.file-hash }}
+      - id: seed-needed
+        if: >-
+          steps.general.outputs.cache-hit != 'true' &&
+          (steps.shard-1.outputs.cache-hit != 'true' || steps.shard-2.outputs.cache-hit != 'true' ||
+          steps.shard-3.outputs.cache-hit != 'true')
+        run: echo "needed=true" >> "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@v10.0.1
+        if: steps.seed-needed.outputs.needed == 'true'
+        with:
+          version: "0.13.6"
+          python-version: "3.11"
+          enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
+      - uses: ./.github/actions/e2e-media
+        if: steps.seed-needed.outputs.needed == 'true'
+      - uses: ./.github/actions/e2e-model
+        if: steps.seed-needed.outputs.needed == 'true'
+        with:
+          checkpoint: mobileclip_s0.pt
+      - if: steps.seed-needed.outputs.needed == 'true'
+        run: make -C lightly_studio mock-webapp-dist
+      - uses: ./.github/actions/e2e-seed
+        if: steps.seed-needed.outputs.needed == 'true'
+        with:
+          key: ${{ needs.check-success.outputs.general }}
+          script: index_general.py
+      - uses: actions/upload-artifact@v7
+        id: upload
+        if: steps.seed-needed.outputs.needed == 'true' && github.ref != 'refs/heads/main'
+        with:
+          name: general-duckdb-${{ github.run_attempt }}
+          path: lightly_studio/e2e-seed.db
+          if-no-files-found: error
+          retention-days: 1
+
   # The merge queue skips this job: the ruleset requires `End2End Success Check` on the pull request
   # before it can enter the queue, so these tests already passed. The queue still tests the merged
   # code with the Postgres jobs below.
@@ -217,8 +289,10 @@ jobs:
     needs:
       - check-success
       - prepare-caches
+      - prepare-general
     env:
       FIXTURE_KEY: ${{ needs.check-success.outputs[matrix.playwright_project] }}
+      GENERAL_ARTIFACT: ${{ needs.prepare-general.outputs.artifact }}
     strategy:
       fail-fast: false
       matrix:
@@ -349,8 +423,19 @@ jobs:
 
       ### Run e2e tests ###
 
+      - name: Download this run's General fixture
+        id: download-general
+        if: steps.cache-success.outputs.cache-hit != 'true' && matrix.playwright_project == 'general' && !matrix.postgres && env.GENERAL_ARTIFACT != ''
+        # A failed-job rerun can outlive the artifact. Seed locally in that case.
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ env.GENERAL_ARTIFACT }}
+          path: ${{ runner.temp }}/general-fixture
+          merge-multiple: true
+
       - name: Restore or seed the DuckDB fixture
-        if: steps.cache-success.outputs.cache-hit != 'true' && env.FIXTURE_KEY != ''
+        if: steps.cache-success.outputs.cache-hit != 'true' && env.FIXTURE_KEY != '' && steps.download-general.outcome != 'success'
         uses: ./.github/actions/e2e-seed
         with:
           key: ${{ env.FIXTURE_KEY }}
@@ -361,9 +446,14 @@ jobs:
         working-directory: lightly_studio
         env:
           INDEX_SCRIPT: ${{ matrix.index_script }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-general.outcome }}
         run: |
           if [[ -n "${FIXTURE_KEY:-}" ]]; then
-            cp e2e-seed.db lightly_studio.db
+            seed=e2e-seed.db
+            if [[ "$DOWNLOAD_OUTCOME" == "success" ]]; then
+              seed="$RUNNER_TEMP/general-fixture/e2e-seed.db"
+            fi
+            cp "$seed" lightly_studio.db
             uv run lightly-studio gui --db-file lightly_studio.db --no-browser > server.log 2>&1 &
           else
             if [[ "${{ matrix.postgres }}" == "true" ]]; then
