@@ -13,17 +13,29 @@ from lightly_studio.database import db_manager
 
 def run(seed: Callable[[], None], default_db_file: str | None = None) -> None:
     """Run the fixture and serve it, or write a new DuckDB snapshot and exit."""
+    snapshot = _parse_snapshot_path()
+    if snapshot is None:
+        _serve_fixture(seed=seed, db_file=default_db_file)
+    else:
+        _write_snapshot(seed=seed, snapshot=snapshot)
+
+
+def _parse_snapshot_path() -> Path | None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed-db", type=Path, help="Write the fixture to a new DuckDB file.")
     snapshot: Path | None = parser.parse_args().seed_db
-    if snapshot is None:
-        db_manager.connect(db_file=default_db_file, cleanup_existing=True)
-        seed()
-        ls.start_gui(open_browser=False)
-        return
-
-    if snapshot.exists():
+    if snapshot is not None and snapshot.exists():
         parser.error(f"Snapshot already exists: {snapshot}")
+    return snapshot
+
+
+def _serve_fixture(seed: Callable[[], None], db_file: str | None) -> None:
+    db_manager.connect(db_file=db_file, cleanup_existing=True)
+    seed()
+    ls.start_gui(open_browser=False)
+
+
+def _write_snapshot(seed: Callable[[], None], snapshot: Path) -> None:
     with tempfile.TemporaryDirectory(dir=snapshot.parent) as directory:
         staged = Path(directory) / snapshot.name
         db_manager.connect(db_file=str(staged))

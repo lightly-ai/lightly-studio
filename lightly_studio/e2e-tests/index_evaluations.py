@@ -15,27 +15,27 @@ PRED_ANNOTATION_SOURCE = "YOLOv8-m inferences"
 QUERY_GT_ANNOTATION_SOURCE = "Query filter ground truth"
 QUERY_PRED_ANNOTATION_SOURCE = "Query filter predictions"
 
+EVALUATED_SAMPLES_TAG = "evaluated_samples"
 TAGGED_SAMPLES_EVALUATION_NAME = "evaluation-example-tagged-samples"
 ALL_SAMPLES_EVALUATION_NAME = "evaluation-example-all-samples"
 
 
 def seed() -> None:
     """Create the evaluations E2E fixture."""
-    # Create dataset and add images
     dataset = ls.ImageDataset.create(name=DATASET_NAME)
     dataset.add_images_from_path(path=IMAGES_PATH)
+    _add_annotations(dataset=dataset)
+    _add_tags(dataset=dataset)
+    _create_evaluations(dataset=dataset)
 
-    # Add predictions from two different annotation sources.
-    dataset.add_annotations_from_coco(
-        annotations_json=ANNOTATIONS_JSON,
-        images_root=IMAGES_PATH,
-        annotation_source=GT_ANNOTATION_SOURCE,
-    )
-    dataset.add_annotations_from_coco(
-        annotations_json=ANNOTATIONS_JSON,
-        images_root=IMAGES_PATH,
-        annotation_source=PRED_ANNOTATION_SOURCE,
-    )
+
+def _add_annotations(dataset: ls.ImageDataset) -> None:
+    for annotation_source in (GT_ANNOTATION_SOURCE, PRED_ANNOTATION_SOURCE):
+        dataset.add_annotations_from_coco(
+            annotations_json=ANNOTATIONS_JSON,
+            images_root=IMAGES_PATH,
+            annotation_source=annotation_source,
+        )
 
     # Keep query filter metrics independent of annotation edits in the stale-warning test.
     for annotation_source in (QUERY_GT_ANNOTATION_SOURCE, QUERY_PRED_ANNOTATION_SOURCE):
@@ -46,22 +46,24 @@ def seed() -> None:
             embed_annotations=False,
         )
 
-    # Tag a subset of samples to demonstrate evaluating a query
-    tag_name = "evaluated_samples"
-    dataset.query()[:10].add_tag(tag_name=tag_name)
-    tagged_evaluation_query = dataset.query().match(ImageSampleField.tags.contains(tag_name))
 
+def _add_tags(dataset: ls.ImageDataset) -> None:
+    dataset.query()[:10].add_tag(tag_name=EVALUATED_SAMPLES_TAG)
     # Tags for the distribution panel comparison. The first two overlap on [16:32].
     dataset.query()[:32].add_tag(tag_name="distribution_reviewed")
     dataset.query()[16:48].add_tag(tag_name="distribution_priority")
     dataset.query()[:0].add_tag(tag_name="distribution_empty")
 
+
+def _create_evaluations(dataset: ls.ImageDataset) -> None:
     evaluation_config = ObjectDetectionEvaluationConfig(
         iou_threshold=0.5,
         classwise=True,
     )
 
-    # Evaluate only the tagged samples
+    tagged_evaluation_query = dataset.query().match(
+        ImageSampleField.tags.contains(EVALUATED_SAMPLES_TAG)
+    )
     dataset.evaluate(query=tagged_evaluation_query).object_detection(
         name=TAGGED_SAMPLES_EVALUATION_NAME,
         gt_annotation_source=QUERY_GT_ANNOTATION_SOURCE,
@@ -69,7 +71,6 @@ def seed() -> None:
         config=evaluation_config,
     )
 
-    # Evaluate all samples
     dataset.evaluate().object_detection(
         name=ALL_SAMPLES_EVALUATION_NAME,
         gt_annotation_source=GT_ANNOTATION_SOURCE,

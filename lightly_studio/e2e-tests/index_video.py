@@ -17,6 +17,12 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 def seed() -> None:
     """Create the video E2E fixture."""
+    _create_video_query_dataset()
+    # The GUI opens the most recently created root collection.
+    _create_youtube_vis_dataset()
+
+
+def _create_video_query_dataset() -> None:
     # Add detections to the same frame in one video and separate frames in the other.
     query_dataset = VideoDataset.create(name="video-query-fixture")
     person = CreateObjectDetection(class_name="person", x=10, y=10, width=20, height=20)
@@ -48,8 +54,8 @@ def seed() -> None:
         annotation_source="query-fixture",
     )
 
-    # The GUI opens the most recently created root collection.
-    # Create a Dataset from a path
+
+def _create_youtube_vis_dataset() -> None:
     dataset = VideoDataset.create()
     dataset.add_videos_from_youtube_vis(
         annotations_json="datasets/youtube_vis_50_videos/train/instances_50.json",
