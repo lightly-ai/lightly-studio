@@ -74,6 +74,5 @@ export const staticToolShortcuts: readonly StaticShortcutConfig[] = [
 
 /** Non-recordable point cloud shortcut rows (static display only). */
 export const staticPointCloudShortcuts: readonly StaticShortcutConfig[] = [
-    { id: 'camera-alt', label: 'Previous / next camera (alt)', displayValue: 'Shift + ← / →' },
     { id: 'open-camera-n', label: 'Open camera 1–9', displayValue: '1–9' }
 ] as const;

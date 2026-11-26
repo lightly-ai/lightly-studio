@@ -366,9 +366,6 @@ describe('SettingsDialog', () => {
         expect(screen.getByText('Point cloud')).toBeInTheDocument();
         expect(screen.getByLabelText('Previous camera')).toHaveTextContent('[');
         expect(screen.getByLabelText('Next camera')).toHaveTextContent(']');
-        const alt = screen.getByLabelText('Previous / next camera (alt)');
-        expect(alt).toHaveTextContent('Shift + ← / →');
-        expect(alt).toBeDisabled();
         const open = screen.getByLabelText('Open camera 1–9');
         expect(open).toHaveTextContent('1–9');
         expect(open).toBeDisabled();
@@ -391,7 +388,6 @@ describe('SettingsDialog', () => {
             'change-brush-size',
             'previous-camera',
             'next-camera',
-            'camera-alt',
             'open-camera-n'
         ];
 

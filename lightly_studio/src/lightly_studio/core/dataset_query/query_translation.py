@@ -71,6 +71,7 @@ from lightly_studio.models.sort_direction import SortDirection
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
 Number = int | float
+FieldExpr = StringExpr | IntegerExpr | DatetimeExpr | OrdinalFloatExpr | EqualityFloatExpr
 
 
 class _EqualityField(Protocol[T_contra]):  # noqa: PLW1641
@@ -95,6 +96,8 @@ class _TagsAccessor(Protocol):
     def contains(self, tag_name: str) -> MatchExpression: ...
 
 
+_PARENT_VIDEO = VideoFrameSampleField.parent_video
+
 # ---------------------------------------------------------------------------
 # Field mappings: (table, name) → dataset-query field / accessor
 # ---------------------------------------------------------------------------
@@ -114,6 +117,8 @@ _STRING_FIELDS: dict[tuple[str, str], _EqualityField[str]] = {
     ("segmentation_mask", "source"): SegmentationMaskField.source,
     ("polygon", "class_name"): PolygonField.class_name,
     ("polygon", "source"): PolygonField.source,
+    ("parent_video", "file_name"): _PARENT_VIDEO.file_name,
+    ("parent_video", "file_path_abs"): _PARENT_VIDEO.file_path_abs,
 }
 
 _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
@@ -133,10 +138,16 @@ _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
     ("polygon", "y"): PolygonField.y,
     ("polygon", "width"): PolygonField.width,
     ("polygon", "height"): PolygonField.height,
+    ("video_frame", "frame_number"): VideoFrameSampleField.frame_number,
+    ("video_frame", "frame_timestamp_pts"): VideoFrameSampleField.frame_timestamp_pts,
+    ("video_frame", "rotation_deg"): VideoFrameSampleField.rotation_deg,
+    ("parent_video", "width"): _PARENT_VIDEO.width,
+    ("parent_video", "height"): _PARENT_VIDEO.height,
 }
 
 _DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
     ("image", "created_at"): ImageSampleField.created_at,
+    ("video", "created_at"): VideoSampleField.created_at,
 }
 
 _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
@@ -144,11 +155,13 @@ _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("event", "start_time_s"): VideoEventField.start_time_s,
     ("event", "end_time_s"): VideoEventField.end_time_s,
     ("video_frame", "frame_timestamp_s"): VideoFrameSampleField.frame_timestamp_s,
+    ("parent_video", "fps"): _PARENT_VIDEO.fps,
 }
 
 # Nullable numeric columns support ordinal comparisons in the query language.
 _ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "duration_s"): VideoSampleField.duration_s,
+    ("parent_video", "duration_s"): _PARENT_VIDEO.duration_s,
     ("classification", "confidence"): ClassificationField.confidence,
     ("event", "confidence"): VideoEventField.confidence,
     ("object_detection", "confidence"): ObjectDetectionField.confidence,
@@ -165,11 +178,15 @@ _ALL_ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
 _EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {
     ("video", "duration_s"): VideoSampleField.duration_s,
     ("video", "fps"): VideoSampleField.fps,
+    ("parent_video", "duration_s"): _PARENT_VIDEO.duration_s,
+    ("parent_video", "fps"): _PARENT_VIDEO.fps,
 }
 
 _TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
     ("image", "tags"): ImageSampleField.tags,
     ("video", "tags"): VideoSampleField.tags,
+    ("video_frame", "tags"): VideoFrameSampleField.tags,
+    ("parent_video", "tags"): _PARENT_VIDEO.tags,
 }
 
 _SORT_FIELDS: dict[tuple[str, str], Field] = {
@@ -185,6 +202,10 @@ _SORT_FIELDS: dict[tuple[str, str], Field] = {
     ("video", "height"): VideoSampleField.height,
     ("video", "duration_s"): VideoSampleField.duration_s,
     ("video", "fps"): VideoSampleField.fps,
+    ("video_frame", "frame_number"): VideoFrameSampleField.frame_number,
+    ("video_frame", "frame_timestamp_s"): VideoFrameSampleField.frame_timestamp_s,
+    ("video_frame", "frame_timestamp_pts"): VideoFrameSampleField.frame_timestamp_pts,
+    ("video_frame", "rotation_deg"): VideoFrameSampleField.rotation_deg,
 }
 
 
@@ -209,6 +230,30 @@ def _lookup(
 # ---------------------------------------------------------------------------
 # Public entry points
 # ---------------------------------------------------------------------------
+
+
+def field_tables() -> list[tuple[type[FieldExpr], Mapping[tuple[str, str], object]]]:
+    """Return each field table with the expression type of its fields.
+
+    Some float fields are in the ordinal and in the equality table. The ordinal table comes first.
+    """
+    return [
+        (StringExpr, _STRING_FIELDS),
+        (IntegerExpr, _INTEGER_FIELDS),
+        (DatetimeExpr, _DATETIME_FIELDS),
+        (OrdinalFloatExpr, _ALL_ORDINAL_FLOAT_FIELDS),
+        (EqualityFloatExpr, _EQUALITY_FLOAT_FIELDS),
+    ]
+
+
+def has_tags(table: str) -> bool:
+    """Return whether the samples of the table have tags."""
+    return (table, "tags") in _TAGS_FIELDS
+
+
+def has_annotation_source(table: str) -> bool:
+    """Return whether the annotations of the table have a source."""
+    return (table, "source") in _STRING_FIELDS
 
 
 def sort_to_order_by(

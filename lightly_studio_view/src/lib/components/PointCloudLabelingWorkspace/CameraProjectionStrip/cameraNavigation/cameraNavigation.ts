@@ -41,8 +41,6 @@ export function getCameraKeyAction(
     const key = event.key.toLowerCase();
     if (key === keys.previous.toLowerCase()) return 'previous';
     if (key === keys.next.toLowerCase()) return 'next';
-    if (event.shiftKey && event.key === 'ArrowLeft') return 'previous';
-    if (event.shiftKey && event.key === 'ArrowRight') return 'next';
     return undefined;
 }
 

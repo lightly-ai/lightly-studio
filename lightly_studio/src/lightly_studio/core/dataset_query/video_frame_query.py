@@ -32,8 +32,8 @@ class VideoFrameQuery(MatchExpression):
         Raises:
             ValueError: A criterion contains a nested frame or event query.
         """
-        self._criterion = AND(*criteria)
-        _validate_frame_criterion(criterion=self._criterion)
+        self.criterion = AND(*criteria)
+        _validate_frame_criterion(criterion=self.criterion)
 
     def get(self) -> ColumnElement[bool]:
         """Get a single frame-existence expression for the combined criteria."""
@@ -41,7 +41,7 @@ class VideoFrameQuery(MatchExpression):
             select(VideoFrameTable.sample_id)
             .where(
                 col(VideoFrameTable.parent_sample_id) == col(SampleTable.sample_id),
-                VideoFrameTable.sample.has(self._criterion.get()),
+                VideoFrameTable.sample.has(self.criterion.get()),
             )
             .correlate(SampleTable)
             .exists()
