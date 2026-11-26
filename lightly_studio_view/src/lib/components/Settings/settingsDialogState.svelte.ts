@@ -203,7 +203,7 @@ export class SettingsDialogState {
         // Keep recording until the key that the modifier changes.
         if (MODIFIER_KEYS.has(event.key)) return;
         // Keep recording until a key that the point cloud workspace does not use already.
-        if (this.isReservedPointCloudKey(this.recordingShortcut, event.key)) return;
+        if (this.isKeyTakenInPointCloud(this.recordingShortcut, event.key)) return;
 
         // Escape cancels recording. Stopping it also keeps the dialog open.
         if (event.key !== 'Escape') {
@@ -212,13 +212,24 @@ export class SettingsDialogState {
         this.recordingShortcut = null;
     }
 
-    private isReservedPointCloudKey(shortcut: ShortcutSettingKey, key: string): boolean {
-        if (!POINT_CLOUD_SHORTCUTS.has(shortcut)) return false;
+    /**
+     * Whether the point cloud workspace already uses the key for another action: a fixed key,
+     * the edit mode key, or another point cloud shortcut.
+     */
+    private isKeyTakenInPointCloud(shortcut: ShortcutSettingKey, key: string): boolean {
         const lowerKey = key.toLowerCase();
-        return (
-            RESERVED_POINT_CLOUD_KEYS.has(key) ||
-            RESERVED_POINT_CLOUD_KEYS.has(lowerKey) ||
-            lowerKey === this.shortcuts.toggleEditMode.toLowerCase()
+        if (shortcut === 'toggleEditMode') return this.isPointCloudShortcutKey(lowerKey, shortcut);
+        if (!POINT_CLOUD_SHORTCUTS.has(shortcut)) return false;
+        const isFixedKey =
+            RESERVED_POINT_CLOUD_KEYS.has(key) || RESERVED_POINT_CLOUD_KEYS.has(lowerKey);
+        const isEditModeKey = lowerKey === this.shortcuts.toggleEditMode.toLowerCase();
+        return isFixedKey || isEditModeKey || this.isPointCloudShortcutKey(lowerKey, shortcut);
+    }
+
+    private isPointCloudShortcutKey(lowerKey: string, recording: ShortcutSettingKey): boolean {
+        return [...POINT_CLOUD_SHORTCUTS].some(
+            (shortcut) =>
+                shortcut !== recording && this.shortcuts[shortcut].toLowerCase() === lowerKey
         );
     }
 

@@ -171,10 +171,10 @@ describe('SettingsDialogState', () => {
         state.hydrate(TEST_SETTINGS);
         state.startRecording('toggleEditMode');
 
-        const event = new KeyboardEvent('keydown', { key: 'q' });
+        const event = new KeyboardEvent('keydown', { key: 'g' });
         state.handleKeyDown(event);
 
-        expect(state.shortcuts.toggleEditMode).toBe('q');
+        expect(state.shortcuts.toggleEditMode).toBe('g');
         // Other shortcuts remain unchanged
         expect(state.shortcuts.hideAnnotations).toBe('v');
         expect(state.shortcuts.keyToolbarSelection).toBe('s');
@@ -248,6 +248,48 @@ describe('SettingsDialogState', () => {
             expect(state.recordingShortcut).toBe('keyPointCloudSelect');
         }
     );
+
+    it.each([
+        ['keyPointCloudCreateCuboid', 'q'],
+        ['keyPointCloudSelect', ']'],
+        ['keyNextCamera', 'C']
+    ] as const)(
+        'does not record %s on the key of another point cloud shortcut (%s)',
+        (shortcut, key) => {
+            const state = new SettingsDialogState();
+            state.hydrate(TEST_SETTINGS);
+            const before = state.shortcuts[shortcut];
+            state.startRecording(shortcut);
+
+            state.handleKeyDown(new KeyboardEvent('keydown', { key }));
+
+            expect(state.shortcuts[shortcut]).toBe(before);
+            expect(state.recordingShortcut).toBe(shortcut);
+        }
+    );
+
+    it('does not record the edit mode key on a point cloud shortcut key', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('toggleEditMode');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'q' }));
+        expect(state.recordingShortcut).toBe('toggleEditMode');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'g' }));
+
+        expect(state.shortcuts.toggleEditMode).toBe('g');
+    });
+
+    it('records a point cloud shortcut again on its own key', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyPointCloudSelect');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'q' }));
+
+        expect(state.shortcuts.keyPointCloudSelect).toBe('q');
+        expect(state.recordingShortcut).toBeNull();
+    });
 
     it('records the point cloud tool shortcuts and saves them', () => {
         const state = new SettingsDialogState();

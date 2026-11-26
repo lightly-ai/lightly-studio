@@ -13,7 +13,7 @@ import { usePanelVisibility } from './usePanelVisibility/usePanelVisibility.svel
 import { useCollapsiblePane } from './useCollapsiblePane/useCollapsiblePane.svelte';
 import { useCuboidTargetSource } from './useCuboidTargetSource';
 import { useDeleteSelectedCuboidShortcut } from './useDeleteSelectedCuboidShortcut';
-import { useOpenCameraState } from './useOpenCameraState/useOpenCameraState.svelte';
+import { useOpenCameraState } from './useOpenCameraState';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { isSelectedCuboidHidden, useAnnotationVisibility } from './useAnnotationVisibility';
 
@@ -81,6 +81,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
     );
     useDeleteSelectedCuboidShortcut({
         getSelectedCuboidId: () => editing.selectedCuboidId,
+        getIsTickStale: () => data.tick?.isStale ?? false,
         getIsEditingMode: () => presentation.isEditingMode,
         deleteCuboid: editing.handleDeleteCuboid
     });

@@ -5,6 +5,8 @@ const DELETE_KEYS = new Set(['Delete', 'Backspace']);
 interface Params {
     getSelectedCuboidId: () => string | null;
     getIsEditingMode: () => boolean;
+    /** While the next tick loads, the selection can still point at a cuboid of the last tick. */
+    getIsTickStale: () => boolean;
     deleteCuboid: (cuboidId: string) => Promise<void>;
 }
 
@@ -12,12 +14,13 @@ interface Params {
 export function useDeleteSelectedCuboidShortcut({
     getSelectedCuboidId,
     getIsEditingMode,
+    getIsTickStale,
     deleteCuboid
 }: Params): void {
     function onKeyDown(event: KeyboardEvent): void {
         if (!isDeleteShortcut(event)) return;
         const selectedCuboidId = getSelectedCuboidId();
-        if (!getIsEditingMode() || !selectedCuboidId) return;
+        if (!getIsEditingMode() || getIsTickStale() || !selectedCuboidId) return;
         event.preventDefault();
         void deleteCuboid(selectedCuboidId);
     }

@@ -8,13 +8,18 @@ afterEach(() => {
     document.body.replaceChildren();
 });
 
-function setup({ selectedCuboidId = 'cuboid-1' as string | null, isEditingMode = true } = {}) {
+function setup({
+    selectedCuboidId = 'cuboid-1' as string | null,
+    isEditingMode = true,
+    isTickStale = false
+} = {}) {
     const deleteCuboid = vi.fn().mockResolvedValue(undefined);
     disposers.push(
         $effect.root(() => {
             useDeleteSelectedCuboidShortcut({
                 getSelectedCuboidId: () => selectedCuboidId,
                 getIsEditingMode: () => isEditingMode,
+                getIsTickStale: () => isTickStale,
                 deleteCuboid
             });
         })
@@ -42,6 +47,14 @@ describe('useDeleteSelectedCuboidShortcut', () => {
 
     it('does nothing outside edit mode', () => {
         const { deleteCuboid } = setup({ isEditingMode: false });
+
+        pressKey('Delete');
+
+        expect(deleteCuboid).not.toHaveBeenCalled();
+    });
+
+    it('does nothing while the next tick loads', () => {
+        const { deleteCuboid } = setup({ isTickStale: true });
 
         pressKey('Delete');
 
