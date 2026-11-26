@@ -1,175 +1,128 @@
-# ENT-663: Collapsible panels in the 3D annotation workspace
+# ENT-663: Hideable panels in the 3D annotation workspace
 
 Linear: https://linear.app/lightly/issue/ENT-663
 
 ## Intent
 
 In the 3D (point cloud) annotation workspace, labeling happens in the 3D scene. The panels
-around it (orthographic views, right side panel, camera strip, frame timeline) take a lot of
-the screen. Users must be able to collapse each of them, so the 3D scene can fill almost the
-whole workspace, and bring each back with one click.
+around it (orthographic views, details side panel, camera strip, frame timeline) take a lot of
+the screen. Users must be able to hide each of them entirely, so the 3D scene can fill almost
+the whole workspace, and bring each back with one click.
+
+## Decision: header toggle controls
+
+Icons in the workspace header show and hide the panels, like the layout controls of Xcode,
+Claude desktop and VS Code. A hidden panel leaves no bar behind: the 3D scene gets the space.
+This replaces the earlier idea of collapsing each panel to a slim bar with a chevron.
 
 ## Goals
 
-- Every panel around the 3D scene can be collapsed to a slim bar and expanded again.
-- Every panel uses one template: title on the left, settings and the collapse toggle on the
-  right. Collapse controls look the same and sit in the same place everywhere.
-- Collapsed state is remembered per panel across frames, sequences and reloads.
+- One icon toggle per panel in `WorkspaceHeader`, highlighted while the panel shows: orthographic
+  views, camera strip, object tracks, frame tag tracks, right side panel.
+- Every panel also has an X button in its own header that hides it.
+- Every panel uses one template: title on the left, actions and the X on the right.
+- The shown/hidden state is remembered per panel across frames, sequences and reloads.
 - The 3D scene resizes smoothly when panels change: no distortion, camera pose kept.
-- Focus mode: one toggle that collapses all panels and restores the previous layout.
+- Focus mode: one toggle that hides all panels and restores the previous layout.
 - Keyboard shortcuts for focus mode and for stepping frames.
 
 ## Non-goals
 
 - Panels in the 2D image and video views (STU-33, LIG-11580).
 - Moving panels to another side (STU-148).
-- Remembering panel *sizes* across reloads (only collapsed state is required).
+- Remembering panel *sizes* across reloads (only the shown state is required).
 
 ## Anti-goals
 
-- A collapsed panel that still renders WebGL views in the background.
-- Frame navigation becoming impossible while the timeline is collapsed.
+- A hidden panel that still renders WebGL views in the background.
+- Frame navigation becoming impossible while the timeline is hidden.
 - Breaking the existing camera strip behavior.
-
-## Approaches considered
-
-- **A. Paneforge for everything (chosen by Kondrat).** The frame timeline becomes a pane in
-  the main column's vertical `PaneGroup`, the scene's perspective/orthographic split becomes a
-  nested `PaneGroup`, and the right side panel becomes collapsible. One generic hook drives
-  every collapsible pane. Uniform: every panel resizes, and dragging a divider to the edge
-  collapses it. Cost: the timeline's content-driven height and its own track-rows resizer give
-  way to the pane divider.
-- **B. Hybrid.** Paneforge only for the orthographic split and right panel; the timeline keeps
-  its content height and a collapsed flag. Less churn in the timeline, but two collapse
-  mechanisms.
-- **C. Show/hide only.** No resizing of the orthographic strip, which the issue asks for.
-  Dropped.
 
 ## Design
 
 ### Shared building blocks
 
-- **`useCollapsiblePane(storageKey, defaultCollapsed)`**: generalize `useCameraPane` (same file
-  pattern, `useSessionStorage` for the collapsed flag, `$effect` syncing the flag to the
-  `PaneAPI`, `toggle`, `setCollapsed`, bound `pane`). `useCameraPane` is replaced by it; keep
-  the camera strip's existing storage key so users keep their setting.
-- **`WorkspacePanel`: one panel template for every panel in the 3D workspace** (decided by
-  Kondrat). It grows out of `WorkspacePanelHeader` and replaces it.
-  - Header: the title on the left; on the right, an optional `actions` snippet (settings and
-    other controls) and then, at the far right, the collapse toggle. The toggle is shown only
-    when the panel is collapsible.
-  - Style: the compact `WorkspacePanelHeader` style (`text-xs`, muted title, about 28px high),
-    decided by Kondrat.
-  - Toggle: a ghost chevron icon button (`size: 'xs'`, `h-7 w-7 p-0`, like the camera strip's)
-    with aria labels "Collapse <panel>" / "Expand <panel>". The chevron points in the direction
-    the panel will move.
-  - Collapsed: only the title and the toggle stay; actions and body are hidden (body
-    unmounted). For the camera strip this hides its projection settings while collapsed, which
-    is a small change from today (my call, for one consistent collapsed look).
-  - Orientation: `vertical` panels collapse to their header row; the `horizontal` panel (the
-    right column) collapses to a slim vertical bar, one button wide, with the toggle at the top
-    and the title written vertically below it.
-  - The panel only renders header and body and calls `onToggle`; who owns the collapsed state
-    (a paneforge pane through `useCollapsiblePane`, or a plain stored flag) is up to the caller.
-  - Non-collapsible use: the "3D scene" header uses the same template without a toggle.
-- **Pixel collapsed sizes**: paneforge 1.0.2 sizes are percentages. A collapsed bar should be
-  exactly one header high (or one bar wide), so collapsed and minimum sizes are computed from
-  the measured `PaneGroup` size (ResizeObserver) and passed as percentages. If paneforge does
-  not react to a changing `collapsedSize`, the builder may fall back to a fixed percentage
-  (today's camera strip uses `collapsedSize={4}`).
+- **`WorkspaceLayoutToggles`**: a group of ghost icon buttons (`aria-pressed`, tooltip
+  "Hide/Show <panel>"). It takes `toggles` (`id`, `label`, `icon`, `isActive`) and `onToggle`.
+  `WorkspaceHeader` renders one for the panels and, after a divider, one for focus mode.
+- **`useWorkspacePanes(storageKey)`**: generalizes `useCameraPane`. Owns the shown flag
+  (`useSessionStorage`), syncs it to the paneforge `PaneAPI` (`collapse()` / `expand()`), and
+  exposes `toggle`, `hide`, `isShown` and the bound `pane`. Hidden uses `collapsedSize={0}`.
+  `useCameraPane` is replaced by it; keep the camera strip's storage key.
+- **`WorkspacePanel`**: one template for every panel in the 3D workspace (it grows out of
+  `WorkspacePanelHeader` and replaces it).
+  - Header (`text-xs`, muted title, about 32px high): title left; an optional `actions`
+    snippet, then the X button (`onHide`) at the far right.
+  - Body is unmounted while the panel is hidden, so no viewport renders in the background.
+  - A **section** inside a panel (Sequence tags, Frame tags, Annotations) uses
+    the same template with `onToggle` and `collapsed`: it folds in place to its header with a
+    chevron. Sections are not part of the header toggles.
+  - Non-hideable use: the "3D scene" header has no X.
+- **Pixel sizes**: paneforge 1.0.2 sizes are percentages, so default and minimum sizes are
+  percentages. Double-clicking a resizer restores the panel's default size.
 
 ### Panels
 
-1. **Orthographic views strip** (`PointCloudWorkspaceScene.svelte`): the `flex-[3]` /
-   `flex-[2]` divs become a vertical `PaneGroup`: perspective pane (about 60%) and a
-   collapsible orthographic pane (about 40%), with a `PaneResizer` styled like the existing
-   ones. The orthographic pane is a `WorkspacePanel` titled "Orthographic views".
-   Collapsed, it shows only that header and **unmounts** the three viewports.
-   - This replaces the "show orthographic views" checkbox in `SceneViewSettings`: remove the
-     checkbox; `showOrthographicViews` becomes "orthographic pane is expanded". Default stays
-     collapsed (today's default is off). Reuse the
-     `lightlyStudio_pointCloudShowOrthographicViews` storage key or migrate it, builder's call.
-   - The per-view expand buttons (`scene.expandedProjection`) keep working. When one view is
-     expanded, the other views stay mounted and hidden, as today, so cameras keep their pose
-     (builder's call from the review).
-2. **Right side panel** (`WorkspacePanels.svelte`): the 22% pane becomes `collapsible` and
-   is a horizontal `WorkspacePanel` with a title (builder picks the name with the glossary
-   skill, e.g. "Details"). Collapsed, it is the slim vertical bar described above.
-   - Its sections (Sequence tags, Frame tags, Annotations) also become `WorkspacePanel`s
-     instead of `Segment`, decided by Kondrat. They collapse in place (content height, no
-     paneforge), and each one's collapsed state is remembered like the panels' (my call;
-     `Segment` does not remember it today). The frame tags section keeps its `inert` stale
-     wrapper.
-   - Only the 3D workspace changes. `Segment` and `SegmentTags` stay as they are for the 2D
-     views; the builder extracts or reuses the tag list body of `SegmentTags` so the 3D side
-     panel can wrap it in a `WorkspacePanel`.
-3. **Camera strip**: same behavior, moved onto `useCollapsiblePane` and `WorkspacePanel`
-   (projection settings hidden while collapsed, see above).
-4. **Frame timeline** (`PointCloudWorkspaceMainColumn.svelte`, `FrameTimeline`): becomes the
-   third pane of the main column's vertical `PaneGroup` (scene / camera strip / timeline),
-   collapsible, with a resizer above it.
-   - It is a `WorkspacePanel` titled "Timeline". Its header's `actions` hold the transport
-     controls, so expanding adds no extra row (my call).
-   - Collapsed: the title "Timeline" and the expand button, nothing else (decided by Kondrat).
-   - Expanded: the header with the transport controls, then the ruler and the object tracks
-     section filling the rest of the pane with scrolling.
-   - The pane divider replaces `TrackRowsResizer` and `useTrackRowsHeight`; remove both.
-5. **Object tracks section** (inside the expanded timeline): everything below the frame ruler
-   (track toolbar, object track rows, frame tag rows) is a `WorkspacePanel` titled "Object
-   tracks" and collapses on its own (decided by Kondrat). The track toolbar moves into its
-   header's `actions` (my call; it already sticks to the view edges). Collapsed, it leaves only
-   its header; the transport controls and the ruler stay, so frame navigation keeps working.
-   - The timeline then has three states: collapsed (title bar only), compact (transport row,
-     ruler and the "Object tracks" bar), and full.
-   - Collapsing the section shrinks the timeline pane to the compact height; expanding it
-     restores the previous pane size. While the section is collapsed, the timeline divider
-     is not draggable (builder's call: nothing to resize).
-   - Its collapsed state is remembered like the other panels' and is included in focus mode
-     (focus mode collapses the whole timeline; exiting restores this section's state too).
-   - The default timeline size should roughly match today's default (transport row plus 160px
-     of track rows).
+1. **Orthographic views** (`PointCloudWorkspaceScene.svelte`): a horizontal split next to
+   the perspective view (about 25%), hideable. The "show orthographic views" checkbox in
+   `SceneViewSettings` is removed; the header toggle replaces it. Default stays hidden. The
+   A settings button in the panel header switches the layout: views stacked beside the scene
+   (dock right) or in a row below it (dock bottom). The choice is remembered like the panel's
+   shown state. The per-view expand buttons keep working; other views stay mounted so cameras keep their pose.
+2. **Right side panel** (`WorkspacePanels.svelte`): titled "Right side panel" in the prototype
+   (builder picks the final name with the glossary skill), about 22%, (about 22%), hideable. Its
+   sections become `WorkspacePanel` sections that fold in place and remember their state. The
+   frame tags section keeps its `inert` stale wrapper. `Segment` and `SegmentTags` stay for the
+   2D views; the 3D panel reuses the tag list body.
+3. **Camera strip**: same behavior as today, on `useWorkspacePanes` and `WorkspacePanel`.
+4. **Timeline** (`PointCloudWorkspaceMainColumn.svelte`, `FrameTimeline`): the bottom pane of
+   the main column (about 26%). The timeline itself is not hideable: its header (transport
+   controls in `actions`) and the frame ruler always stay, so frame navigation keeps working.
+   Below the ruler sit two separate hideable panels, each with its own header toggle:
+   - **Object tracks**: the track toolbar in its header actions, then the track rows.
+   - **Frame tag tracks**: the tag rows.
+   Hiding a panel removes it. With both hidden, the timeline pane shrinks to the compact height
+   (header plus ruler); showing one restores the previous pane size. The pane divider replaces
+   `TrackRowsResizer` and `useTrackRowsHeight`; remove both. The divider is hidden while
+   both panels are hidden.
 
-### Who opens panels
+### Who shows panels
 
-- Only the user collapses or expands panels (button, divider drag, shortcut, focus mode). The
-  app never opens a collapsed panel by itself, including on cuboid selection or while "Add
-  track" is armed. Moving and resizing cuboids works in the scene without the side panel.
+- Only the user shows or hides panels (header toggle, X, shortcut, focus mode). The app never
+  shows a hidden panel by itself, including on cuboid selection or while "Add track" is armed.
 
 ### Focus mode
 
-- A button in `WorkspaceHeader`, next to fullscreen, labeled "Focus on 3D scene" /
-  "Exit focus".
-- Entering saves which panels are expanded (including the object tracks section), then collapses all of them. Exiting
-  expands the saved ones.
-- Expanding any panel by hand while in focus mode leaves focus mode (the snapshot is dropped,
-  other panels stay as they are).
-- Focus mode itself is not persisted; the panels' collapsed flags are.
-- The camera strip chevron in `WorkspaceHeader` is removed: the strip has its own button, and
-  the header holds workspace-wide controls only.
+- A toggle next to the panel toggles in `WorkspaceHeader`: "Focus on 3D scene" / "Exit focus".
+- Entering saves which panels are shown, then hides all of them. Exiting shows the saved ones.
+- Showing any panel by hand while in focus mode leaves focus mode (the snapshot is dropped).
+- Focus mode itself is not persisted; the panels' shown flags are.
+- The camera strip chevron in `WorkspaceHeader` is replaced by the camera strip toggle.
 
 ### Keyboard shortcuts
 
-- Step to the previous / next frame: `,` / `.` (global, through
-  `useWorkspacePlayback.handleWindowKeydown`, like Space). Needed because a collapsed timeline
-  has no step buttons.
-- Toggle focus mode: a single key, builder picks one that is free.
+- Previous / next frame: `,` / `.` (global, through `useWorkspacePlayback.handleWindowKeydown`,
+  like Space). Needed because a hidden timeline has no step buttons.
+- Toggle focus mode: a single free key the builder picks.
 - Shortcuts are ignored while typing in an input, textarea, select or contenteditable, and
-  while a dialog is open. The builder checks for conflicts with the existing workspace keys
-  (Space, Escape, Enter, arrows, scene navigation letters such as `A`).
+  while a dialog is open. Check conflicts with Space, Escape, Enter, arrows and scene keys.
 - Per-panel toggle shortcuts are out of scope.
 
 ### 3D scene resizing
 
-- `usePointCloudCamera` already observes canvas size (`refitCameraToViewport`). The builder
-  verifies that collapsing/expanding any panel keeps the perspective camera pose and only
-  updates aspect ratio, for both perspective and orthographic views, and fixes it if not.
-- `usePointCloudCamera` lives in `PointCloudViewer/` and is shared with the other point cloud
-  viewer, so any fix there is tested in both places.
+- `usePointCloudCamera` already observes canvas size (`refitCameraToViewport`). Verify that
+  showing or hiding any panel keeps the perspective camera pose and only updates the aspect
+  ratio, for perspective and orthographic views, and fix it if not.
+- `usePointCloudCamera` is shared with the other point cloud viewer, so test any fix in both.
+
+## Prototype
+
+`WorkspaceLayout (prototype)` in Storybook (`WorkspacePanel/WorkspaceLayout.stories.svelte`)
+shows the target layout: header toggles, X buttons, folding sections, and focus mode.
 
 ## Left to the builder
 
 - Exact default pane sizes and min/max sizes.
-- Icons (chevron directions, focus icon) and tooltip wording beyond the labels above.
+- Icons for the toggles and tooltip wording beyond the labels above.
 - Storage key names for the new panels (follow `lightlyStudio_pointCloud*`).
-- Test split between unit tests (hooks) and component/story tests; update the workspace
-  stories so every panel's collapsed state can be seen.
+- Test split between unit tests (hooks) and component/story tests.
