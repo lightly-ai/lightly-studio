@@ -69,7 +69,7 @@ class OrdinalFloatExpr(BaseModel):
     type: Literal["ordinal_float_expr"] = "ordinal_float_expr"
     field: FieldRef
     operator: OrdinalComparisonOperator
-    value: StrictInt | StrictFloat
+    value: StrictInt | Annotated[StrictFloat, Field(allow_inf_nan=False)]
 
 
 class EqualityFloatExpr(BaseModel):
@@ -78,7 +78,7 @@ class EqualityFloatExpr(BaseModel):
     type: Literal["equality_float_expr"] = "equality_float_expr"
     field: FieldRef
     operator: EqualityComparisonOperator
-    value: StrictInt | StrictFloat
+    value: StrictInt | Annotated[StrictFloat, Field(allow_inf_nan=False)]
 
 
 class TagsContainsExpr(BaseModel):

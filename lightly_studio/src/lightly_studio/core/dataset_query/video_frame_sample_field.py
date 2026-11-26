@@ -61,7 +61,7 @@ class _ParentVideoField:
         column=col(VideoTable.height), relationship=VideoFrameTable.video
     )
     fps = ForeignNumericalField(column=col(VideoTable.fps), relationship=VideoFrameTable.video)
-    duration_s = ForeignComparableField(
+    duration_s = ForeignNumericalField(
         column=col(VideoTable.duration_s), relationship=VideoFrameTable.video
     )
 
