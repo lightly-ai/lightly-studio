@@ -20,6 +20,8 @@
     } from './SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationPanelVisibility } from './useAnnotationPanelVisibility.svelte';
     import { useAnnotationRowActions } from './useAnnotationRowActions.svelte';
+    import { useAnnotationLocks } from './useAnnotationLocks';
+    import { AnnotationLockToggle } from '$lib/components/SampleDetails/AnnotationLockToggle';
     import AnnotationSourceGroupList from './AnnotationSourceGroupList/AnnotationSourceGroupList.svelte';
 
     type SampleDetailsAnnotationSegmentProps = {
@@ -53,6 +55,8 @@
         getIsPanModeEnabled: () => isPanModeEnabled,
         refetch: () => refetch()
     });
+
+    const locks = useAnnotationLocks({ getCollectionId: () => collectionId });
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { enforceColoringByClassStore } = useSettings();
@@ -120,14 +124,14 @@
         onClick={() => rowActions.toggleSelection(annotation.sample_id)}
         onDeleteAnnotation={() => rowActions.remove(annotation)}
         isHidden={annotationsIdsToHide.has(annotation.sample_id)}
-        isLocked={annotationLabelContext.lockedAnnotationIds?.has(annotation.sample_id) ?? false}
+        isLocked={locks.isLocked(annotation.sample_id)}
         onToggleShowAnnotation={(e) => {
             e.stopPropagation();
             visibility.toggleAnnotation(annotation.sample_id);
         }}
         onToggleLock={(e) => {
             e.stopPropagation();
-            rowActions.toggleLock(annotation.sample_id);
+            locks.toggle([annotation], 'annotation');
         }}
         onUpdate={refetch}
         onChangeAnnotationLabel={(newLabel) => rowActions.relabel(annotation, newLabel)}
@@ -136,7 +140,17 @@
     />
 {/snippet}
 
-<Segment title="Annotations">
+{#snippet panelLock()}
+    {#if $isEditingMode && locks.hasLockable(annotationsSort)}
+        <AnnotationLockToggle
+            locked={locks.areAllLocked(annotationsSort)}
+            scope="all"
+            onToggle={() => locks.toggle(annotationsSort, 'all')}
+        />
+    {/if}
+{/snippet}
+
+<Segment title="Annotations" actions={panelLock}>
     {#if isGrouped}
         <AnnotationSourceGroupList
             groups={allSourceGroups}
@@ -145,6 +159,8 @@
             {canPickTarget}
             onSetTarget={setTargetSource}
             {visibility}
+            canLock={$isEditingMode}
+            {locks}
             {colorBySource}
             row={annotationRow}
         />

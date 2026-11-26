@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Switch cameras in the enlarged camera view of the point cloud workspace with `[` / `]` (configurable in Settings → Shortcuts), also during playback, and press 1–9 to open a camera. The open camera is kept in the URL.
 - Show or hide the panels of the 3D workspace with toggles in its header. Dock the orthographic views and the camera strip below or to the right of the 3D scene with the dock button in their panel header.
+- Lock or unlock all annotations of a sample at once in edit mode, from the Annotations panel header or from the header of each annotation source.
 
 ### Changed
 

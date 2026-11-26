@@ -23,7 +23,12 @@ const mocks = vi.hoisted(() => ({
     lastAnnotationSource: undefined as unknown as Writable<Record<string, string>>,
     context: undefined as unknown as AnnotationLabelContext,
     addReversibleAction: vi.fn(),
-    deleteAnnotation: vi.fn()
+    deleteAnnotation: vi.fn(),
+    trackEvent: vi.fn()
+}));
+
+vi.mock('$lib/hooks/usePostHog', () => ({
+    usePostHog: () => ({ trackEvent: mocks.trackEvent })
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -714,6 +719,164 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(
                 screen.queryByTestId('annotation-source-group-subtitle')
             ).not.toBeInTheDocument();
+        });
+    });
+
+    describe('locking annotations', () => {
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource, predictionsSource];
+            // Predictions is unselected in the grid, so its annotations start hidden.
+            mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+            mocks.isEditingMode.set(true);
+        });
+
+        const annotations = [
+            {
+                ...createAnnotation('gt-mask-1', groundTruthSource.collection_id, 'cat'),
+                annotation_type: 'segmentation_mask' as const
+            },
+            {
+                ...createAnnotation('gt-mask-2', groundTruthSource.collection_id, 'dog'),
+                annotation_type: 'segmentation_mask' as const
+            },
+            createAnnotation('gt-box', groundTruthSource.collection_id, 'bird'),
+            {
+                ...createAnnotation('pred-mask', predictionsSource.collection_id, 'cat'),
+                annotation_type: 'segmentation_mask' as const
+            }
+        ];
+
+        it('locks and unlocks the masks of one source with its header lock', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(
+                within(screen.getAllByTestId('annotation-source-group-header')[0]).getByRole(
+                    'button',
+                    { name: 'Lock all annotations in this source' }
+                )
+            );
+
+            expect(mocks.context.lockedAnnotationIds).toEqual(new Set(['gt-mask-1', 'gt-mask-2']));
+            expect(getRow('gt-mask-1')).toHaveAttribute('data-locked', 'true');
+            expect(mocks.trackEvent).toHaveBeenCalledWith('annotation_lock_toggled', {
+                collection_id: 'collection-1',
+                locked: true,
+                scope: 'source',
+                count: 2
+            });
+
+            await user.click(
+                screen.getByRole('button', { name: 'Unlock all annotations in this source' })
+            );
+
+            expect(mocks.context.lockedAnnotationIds).toEqual(new Set());
+            expect(mocks.trackEvent).toHaveBeenLastCalledWith('annotation_lock_toggled', {
+                collection_id: 'collection-1',
+                locked: false,
+                scope: 'source',
+                count: 2
+            });
+        });
+
+        it('locks the masks of a hidden source', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(
+                within(screen.getAllByTestId('annotation-source-group-header')[1]).getByRole(
+                    'button',
+                    { name: 'Lock all annotations in this source' }
+                )
+            );
+
+            expect(mocks.context.lockedAnnotationIds).toEqual(new Set(['pred-mask']));
+        });
+
+        it('locks the masks of every source with the panel lock without collapsing', async () => {
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByRole('button', { name: 'Lock all annotations' }));
+
+            expect(mocks.context.lockedAnnotationIds).toEqual(
+                new Set(['gt-mask-1', 'gt-mask-2', 'pred-mask'])
+            );
+            expect(screen.getAllByTestId('mock-annotation-row')).toHaveLength(4);
+            expect(mocks.trackEvent).toHaveBeenCalledWith('annotation_lock_toggled', {
+                collection_id: 'collection-1',
+                locked: true,
+                scope: 'all',
+                count: 3
+            });
+        });
+
+        it('shows the panel lock as locked only when every mask is locked', async () => {
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(within(getRow('gt-mask-1')).getByTestId('mock-annotation-row-lock'));
+            await user.click(within(getRow('gt-mask-2')).getByTestId('mock-annotation-row-lock'));
+            expect(
+                screen.getByRole('button', { name: 'Lock all annotations' })
+            ).toBeInTheDocument();
+
+            await user.click(within(getRow('pred-mask')).getByTestId('mock-annotation-row-lock'));
+            expect(
+                screen.getByRole('button', { name: 'Unlock all annotations' })
+            ).toBeInTheDocument();
+
+            await user.click(screen.getByRole('button', { name: 'Unlock all annotations' }));
+            expect(getRow('gt-mask-1')).toHaveAttribute('data-locked', 'false');
+        });
+
+        it('tracks a row lock with the annotation scope', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(within(getRow('gt-mask-1')).getByTestId('mock-annotation-row-lock'));
+
+            expect(mocks.trackEvent).toHaveBeenCalledWith('annotation_lock_toggled', {
+                collection_id: 'collection-1',
+                locked: true,
+                scope: 'annotation',
+                count: 1
+            });
+        });
+
+        it('shows the panel lock for a sample with a single source', () => {
+            mocks.collections = [groundTruthSource];
+            render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: annotations.slice(0, 2) }
+            });
+
+            expect(screen.queryByTestId('annotation-source-group-header')).not.toBeInTheDocument();
+            expect(
+                screen.getByRole('button', { name: 'Lock all annotations' })
+            ).toBeInTheDocument();
+        });
+
+        it('hides the locks when there are only object detection annotations', () => {
+            render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: [annotations[2]] }
+            });
+
+            expect(screen.queryByRole('button', { name: /lock all/i })).not.toBeInTheDocument();
+        });
+
+        it('hides the locks outside edit mode', () => {
+            mocks.isEditingMode.set(false);
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(screen.queryByRole('button', { name: /lock all/i })).not.toBeInTheDocument();
         });
     });
 
