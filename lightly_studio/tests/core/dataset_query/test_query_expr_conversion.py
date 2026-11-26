@@ -19,6 +19,7 @@ from lightly_studio.core.dataset_query.classification_query import (
     ClassificationQuery,
 )
 from lightly_studio.core.dataset_query.evaluation_metric_expression import EvaluationMetricField
+from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.field_expression import OrdinalFieldExpression
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
@@ -115,6 +116,70 @@ def test_to_query_expr() -> None:
             ],
         }
     }
+
+
+@pytest.mark.parametrize(
+    ("match", "expr_type", "table", "name"),
+    [
+        (VideoFrameSampleField.frame_number > 10, "integer_expr", "video_frame", "frame_number"),
+        (
+            VideoFrameSampleField.frame_timestamp_pts <= 1000,
+            "integer_expr",
+            "video_frame",
+            "frame_timestamp_pts",
+        ),
+        (VideoFrameSampleField.rotation_deg == 90, "integer_expr", "video_frame", "rotation_deg"),
+        (
+            VideoFrameSampleField.frame_timestamp_s != 1.5,
+            "ordinal_float_expr",
+            "video_frame",
+            "frame_timestamp_s",
+        ),
+        (VideoFrameSampleField.tags.contains("cat"), "tags_contains_expr", "video_frame", "tags"),
+        (
+            VideoFrameSampleField.parent_video.file_name == "a.mp4",
+            "string_expr",
+            "parent_video",
+            "file_name",
+        ),
+        (
+            VideoFrameSampleField.parent_video.file_path_abs != "/a.mp4",
+            "string_expr",
+            "parent_video",
+            "file_path_abs",
+        ),
+        (VideoFrameSampleField.parent_video.width >= 1920, "integer_expr", "parent_video", "width"),
+        (
+            VideoFrameSampleField.parent_video.height < 1080,
+            "integer_expr",
+            "parent_video",
+            "height",
+        ),
+        (VideoFrameSampleField.parent_video.fps == 30, "ordinal_float_expr", "parent_video", "fps"),
+        (
+            VideoFrameSampleField.parent_video.duration_s == 2.5,
+            "ordinal_float_expr",
+            "parent_video",
+            "duration_s",
+        ),
+        (
+            VideoFrameSampleField.parent_video.tags.contains("cat"),
+            "tags_contains_expr",
+            "parent_video",
+            "tags",
+        ),
+    ],
+)
+def test_to_query_expr__video_frame_fields(
+    match: MatchExpression, expr_type: str, table: str, name: str
+) -> None:
+    query_expr = query_expr_conversion.to_query_expr(
+        match_expression=match, sample_type=SampleType.VIDEO_FRAME
+    )
+
+    match_expr = query_expr.model_dump(mode="json")["match_expr"]
+    assert match_expr["type"] == expr_type
+    assert match_expr["field"] == {"table": table, "name": name}
 
 
 @pytest.mark.parametrize(
@@ -324,6 +389,25 @@ def test_to_sort_keys() -> None:
         SortKey(field=FieldRef(table="image", name="width"), direction=SortDirection.desc),
         SortKey(field=FieldRef(table="metadata", name="weather"), direction=SortDirection.asc),
         EvaluationMetricSortKey(run_name="run", metric_name="miou", direction=SortDirection.desc),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("field", "name"),
+    [
+        (VideoFrameSampleField.frame_number, "frame_number"),
+        (VideoFrameSampleField.frame_timestamp_s, "frame_timestamp_s"),
+        (VideoFrameSampleField.frame_timestamp_pts, "frame_timestamp_pts"),
+        (VideoFrameSampleField.rotation_deg, "rotation_deg"),
+    ],
+)
+def test_to_sort_keys__video_frame_fields(field: Field, name: str) -> None:
+    sort_keys = query_expr_conversion.to_sort_keys(
+        order_by=[OrderByField(field)], sample_type=SampleType.VIDEO_FRAME
+    )
+
+    assert sort_keys == [
+        SortKey(field=FieldRef(table="video_frame", name=name), direction=SortDirection.asc)
     ]
 
 
