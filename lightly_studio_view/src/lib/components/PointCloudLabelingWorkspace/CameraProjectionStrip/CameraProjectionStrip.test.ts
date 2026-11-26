@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import { fireEvent } from '@testing-library/dom';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -163,6 +163,27 @@ describe('CameraProjectionStrip', () => {
             await fireEvent.click(screen.getByRole('button', { name: 'Enlarge CAM_B' }));
 
             expect(onOpenCameraChange).toHaveBeenCalledWith('CAM_B', 'push');
+        });
+
+        it('toggles playback on Space after opening from a tile without switching camera', async () => {
+            const onOpenCameraChange = vi.fn();
+            const onPlaybackToggle = vi.fn();
+            const props = { ...cameraProps, onOpenCameraChange, onPlaybackToggle };
+            const { rerender } = render(CameraProjectionStrip, { props });
+            const tile = screen.getByRole('button', { name: 'Enlarge CAM_B' });
+            tile.focus();
+            await fireEvent.click(tile);
+            onOpenCameraChange.mockClear();
+
+            await rerender({ ...props, openCamera: 'CAM_B' });
+
+            await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('dialog')));
+            await fireEvent.keyDown(document.activeElement as HTMLElement, {
+                key: ' ',
+                code: 'Space'
+            });
+            expect(onPlaybackToggle).toHaveBeenCalledTimes(1);
+            expect(onOpenCameraChange).not.toHaveBeenCalled();
         });
 
         it('shows one dialog for the open camera with its position', () => {

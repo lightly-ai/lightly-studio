@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { tick } from 'svelte';
     import * as Dialog from '$lib/components/ui/dialog';
     import type {
         AnnotationView,
@@ -49,6 +50,16 @@
         nextKey
     }: Props = $props();
 
+    let content = $state<HTMLElement | null>(null);
+
+    // Keep focus on the dialog itself: no button gets focus, so Space toggles playback instead of
+    // activating the tile that opened the dialog.
+    async function focusContent(event: Event) {
+        event.preventDefault();
+        await tick();
+        content?.focus();
+    }
+
     function handleKeydown(event: KeyboardEvent) {
         if (event.code !== 'Space' || event.repeat) return;
         const target = event.target as HTMLElement;
@@ -67,8 +78,10 @@
 
 <Dialog.Root bind:open>
     <Dialog.Content
+        bind:ref={content}
+        tabindex={-1}
         class="max-w-[90vw] gap-2 p-3 outline-none sm:max-w-[90vw]"
-        onOpenAutoFocus={(event) => event.preventDefault()}
+        onOpenAutoFocus={focusContent}
         onCloseAutoFocus={(event) => event.preventDefault()}
         onkeydown={handleKeydown}
     >

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import CameraProjectionDialog from './CameraProjectionDialog.svelte';
 import { DEFAULT_PROJECTION_SETTINGS } from '../projectionSettings';
@@ -46,6 +46,23 @@ describe('CameraProjectionDialog', () => {
 
         await fireEvent.keyDown(dialog, { key: ' ', code: 'Space' });
         expect(onPlaybackToggle).toHaveBeenCalledTimes(1);
+    });
+
+    it('focuses the dialog so Space toggles playback once', async () => {
+        const onPlaybackToggle = vi.fn();
+        const windowKeydown = vi.fn();
+        window.addEventListener('keydown', windowKeydown);
+        render(CameraProjectionDialog, { props: { ...defaultProps, onPlaybackToggle } });
+        await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('dialog')));
+
+        await fireEvent.keyDown(document.activeElement as HTMLElement, {
+            key: ' ',
+            code: 'Space'
+        });
+
+        expect(onPlaybackToggle).toHaveBeenCalledTimes(1);
+        expect(windowKeydown).not.toHaveBeenCalled();
+        window.removeEventListener('keydown', windowKeydown);
     });
 
     it('updates the image while the dialog stays open', async () => {
