@@ -1,52 +1,28 @@
-import { flushSync } from 'svelte';
-import { afterEach, expect, it, vi } from 'vitest';
-import type { PaneAPI } from 'paneforge';
-import { useCollapsiblePane } from './useCollapsiblePane.svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { afterEach, expect, it } from 'vitest';
+import CollapsiblePaneHarness from './CollapsiblePaneHarness.test.svelte';
 
 const storageKey = 'lightlyStudio_pointCloudTestPaneCollapsed';
-let dispose = () => {};
-afterEach(() => {
-    dispose();
-    sessionStorage.removeItem(storageKey);
+afterEach(() => sessionStorage.removeItem(storageKey));
+
+it('keeps a stored collapsed preference through the initial pane layout', async () => {
+    sessionStorage.setItem(storageKey, 'true');
+    render(CollapsiblePaneHarness, { props: { storageKey } });
+    await screen.findByText('Details');
+
+    expect(screen.getByTestId('collapsed')).toHaveTextContent('true');
+    expect(sessionStorage.getItem(storageKey)).toBe('true');
 });
 
-it('restores a collapsed preference after the pane binds and persists subsequent toggles', () => {
-    sessionStorage.setItem(storageKey, 'true');
-    let hook!: ReturnType<typeof useCollapsiblePane>;
-    dispose = $effect.root(() => {
-        hook = useCollapsiblePane(storageKey);
-    });
-    flushSync();
-    expect(() => hook.toggle()).not.toThrow();
-    let collapsed = false;
-    const pane = {
-        isCollapsed: () => collapsed,
-        isExpanded: () => !collapsed,
-        collapse: vi.fn(() => {
-            collapsed = true;
-            hook.setCollapsed(true);
-        }),
-        expand: vi.fn(() => {
-            collapsed = false;
-            hook.setCollapsed(false);
-        })
-    };
-    hook.pane = pane as unknown as PaneAPI;
-    flushSync();
-    expect(pane.collapse).toHaveBeenCalledOnce();
-    expect(hook.collapsed).toBe(true);
-
-    hook.toggle();
-    flushSync();
-    expect(pane.expand).toHaveBeenCalledOnce();
-    expect(sessionStorage.getItem(storageKey)).toBe('false');
-    hook.toggle();
-    flushSync();
+it('persists toggles and restores them in a new pane', async () => {
+    const { unmount } = render(CollapsiblePaneHarness, { props: { storageKey } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Toggle' }));
     expect(sessionStorage.getItem(storageKey)).toBe('true');
-    dispose();
+    unmount();
 
-    dispose = $effect.root(() => {
-        hook = useCollapsiblePane(storageKey);
-    });
-    expect(hook.collapsed).toBe(true);
+    render(CollapsiblePaneHarness, { props: { storageKey } });
+    await screen.findByText('Details');
+    expect(screen.getByTestId('collapsed')).toHaveTextContent('true');
+    await fireEvent.click(screen.getByRole('button', { name: 'Toggle' }));
+    expect(sessionStorage.getItem(storageKey)).toBe('false');
 });

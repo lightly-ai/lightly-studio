@@ -110,7 +110,7 @@
             dock === 'right' ? 'flex-col overflow-x-hidden overflow-y-scroll' : 'overflow-x-scroll'
         )}
     >
-        {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel}
+        {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel (summaryChannel.channel_id)}
             {@const channel =
                 tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
             <CameraProjectionFrame

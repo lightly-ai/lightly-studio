@@ -7,12 +7,24 @@ export function useCollapsiblePane(storageKey: string) {
     const collapsedStore = useSessionStorage<boolean>(storageKey, false);
     const collapsed = fromStore(collapsedStore);
     let pane = $state<PaneAPI>();
+    // Paneforge reports the first layout of a pane as a change. That report must restore the
+    // stored preference, not overwrite it.
+    let hasLayout = false;
 
-    $effect(() => {
-        if (!pane) return;
-        if (collapsed.current && pane.isExpanded()) pane.collapse();
-        if (!collapsed.current && pane.isCollapsed()) pane.expand();
-    });
+    const restoreStoredState = () => {
+        if (collapsed.current) pane?.collapse();
+        else pane?.expand();
+    };
+
+    /** Records a collapse or expand that the pane reports. */
+    const setCollapsed = (isCollapsed: boolean) => {
+        if (hasLayout) {
+            collapsedStore.set(isCollapsed);
+            return;
+        }
+        hasLayout = true;
+        if (isCollapsed !== collapsed.current) restoreStoredState();
+    };
 
     const toggle = () => {
         if (!pane) return;
@@ -26,11 +38,12 @@ export function useCollapsiblePane(storageKey: string) {
         },
         set pane(value) {
             pane = value;
+            hasLayout = false;
         },
         get collapsed() {
             return collapsed.current;
         },
-        setCollapsed: collapsedStore.set,
+        setCollapsed,
         toggle
     };
 }

@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
 - Pressing Delete or Backspace deletes the selected annotation in editing mode.
 - Edit, Undo, Plugins and Settings actions are now in the breadcrumb row on sample detail pages.
-- Hide the 3D workspace panels from header toggles
+- Show or hide the panels of the 3D workspace with toggles in its header. Dock the orthographic views and the camera strip below or to the right of the 3D scene with the dock button in their panel header.
 
 ### Changed
 
