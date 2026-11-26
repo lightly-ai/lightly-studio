@@ -15,7 +15,7 @@
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { getBrushOutlinePath, useSegmentationMaskPreview } from '$lib/hooks';
+    import { getBrushCursor, useSegmentationMaskPreview } from '$lib/hooks';
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
@@ -85,9 +85,7 @@
 
     // The slider sets a radius; the eraser clears a disc of 2 * radius pixels.
     const brushSize = $derived(brushRadius * 2);
-    const brushOutlinePath = $derived(
-        mousePosition ? getBrushOutlinePath(mousePosition, brushSize) : ''
-    );
+    const brushCursor = $derived(mousePosition ? getBrushCursor(mousePosition, brushSize) : null);
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
@@ -247,9 +245,20 @@
     };
 </script>
 
-{#if mousePosition}
+{#if brushCursor?.type === 'outline'}
     <path
-        d={brushOutlinePath}
+        d={brushCursor.path}
+        fill="rgba(255, 255, 255, 0.15)"
+        stroke="white"
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+        pointer-events="none"
+    />
+{:else if brushCursor?.type === 'circle'}
+    <circle
+        cx={brushCursor.center.x}
+        cy={brushCursor.center.y}
+        r={brushCursor.radius}
         fill="rgba(255, 255, 255, 0.15)"
         stroke="white"
         stroke-width="1"

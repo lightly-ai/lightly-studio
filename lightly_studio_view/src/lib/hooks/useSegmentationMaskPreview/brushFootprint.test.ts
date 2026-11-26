@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     getBrushAnchor,
+    getBrushCursor,
     getBrushOutlinePath,
     getBrushSpans,
     getStrokeAnchors,
@@ -199,5 +200,30 @@ describe('getBrushOutlinePath', () => {
         expect(getBrushOutlinePath({ x: 10.4, y: 19.6 }, 4)).toBe(
             'M9 18H11V19H12V20H12V21H11V22H9V21H8V20H8V19H9V18Z'
         );
+    });
+});
+
+describe('getBrushCursor', () => {
+    it('outlines the exact pixels for a size of 3', () => {
+        expect(getBrushCursor({ x: 3.7, y: 5.2 }, 3)).toEqual({
+            type: 'outline',
+            path: 'M2 4H5V5H5V6H5V7H2V6H2V5H2V4Z'
+        });
+    });
+
+    it('shows a circle on the nearest pixel corner for an even size above 3', () => {
+        expect(getBrushCursor({ x: 10.4, y: 19.6 }, 4)).toEqual({
+            type: 'circle',
+            center: { x: 10, y: 20 },
+            radius: 2
+        });
+    });
+
+    it('shows a circle on the center of the pixel under the cursor for an odd size above 3', () => {
+        expect(getBrushCursor({ x: 3.7, y: 5.2 }, 5)).toEqual({
+            type: 'circle',
+            center: { x: 3.5, y: 5.5 },
+            radius: 2.5
+        });
     });
 });

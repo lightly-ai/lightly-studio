@@ -258,6 +258,25 @@ describe('SampleSegmentationMaskRect', () => {
         expect(container.querySelector('path')?.getAttribute('d')).toBe('M3 4H5V5H5V6H3V5H3V4Z');
     });
 
+    it('shows a circle around the brush pixels for a size above 3', () => {
+        const { container } = render(SampleSegmentationMaskRect, {
+            props: {
+                ...baseProps,
+                brushRadius: 2,
+                mousePosition: { x: 10.4, y: 19.6 },
+                sampleId: 'sample-1',
+                sample: { width: 100, height: 100, annotations: [] }
+            }
+        });
+
+        const circle = container.querySelector('circle');
+        expect([
+            circle?.getAttribute('cx'),
+            circle?.getAttribute('cy'),
+            circle?.getAttribute('r')
+        ]).toEqual(['10', '20', '2']);
+    });
+
     it('uses the latest sample id for brush commit after rerender', async () => {
         const { container, rerender } = render(SampleSegmentationMaskRect, {
             props: {

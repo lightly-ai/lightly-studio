@@ -13,7 +13,7 @@
         useCollectionWithChildren,
         useSegmentationMaskBrush,
         useSegmentationMaskPreview,
-        getBrushOutlinePath,
+        getBrushCursor,
         useAnnotationLabels,
         useAnnotation,
         useAnnotationLabelContext,
@@ -123,9 +123,7 @@
 
     // The slider sets a radius; the brush paints a disc of 2 * radius pixels.
     const brushSize = $derived(brushRadius * 2);
-    const brushOutlinePath = $derived(
-        mousePosition ? getBrushOutlinePath(mousePosition, brushSize) : ''
-    );
+    const brushCursor = $derived(mousePosition ? getBrushCursor(mousePosition, brushSize) : null);
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
@@ -282,9 +280,20 @@
     };
 </script>
 
-{#if mousePosition}
+{#if brushCursor?.type === 'outline'}
     <path
-        d={brushOutlinePath}
+        d={brushCursor.path}
+        fill={withAlpha(drawerStrokeColor, 0.25)}
+        stroke={drawerStrokeColor}
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+        pointer-events="none"
+    />
+{:else if brushCursor?.type === 'circle'}
+    <circle
+        cx={brushCursor.center.x}
+        cy={brushCursor.center.y}
+        r={brushCursor.radius}
         fill={withAlpha(drawerStrokeColor, 0.25)}
         stroke={drawerStrokeColor}
         stroke-width="1"

@@ -79,6 +79,33 @@ export function getBrushOutlinePath(point: BrushPoint, size: number): string {
     return toOutlinePath(getBrushSpans(getBrushAnchor(point, size), size));
 }
 
+/** The brush cursor: an outline of the exact pixels, or a circle around them. */
+export type BrushCursor =
+    | { type: 'outline'; path: string }
+    | { type: 'circle'; center: BrushPoint; radius: number };
+
+// Up to this size the painted disc is a square or near square, so a circle does not match it.
+const MAX_SIZE_FOR_PIXEL_OUTLINE = 3;
+
+/**
+ * Return the brush cursor at `point`. The circle is centered on the painted disc,
+ * so it stays in the same place as the pixel outline.
+ */
+export function getBrushCursor(point: BrushPoint, size: number): BrushCursor {
+    const wholeSize = toWholePixels(size);
+    if (wholeSize <= MAX_SIZE_FOR_PIXEL_OUTLINE) {
+        return { type: 'outline', path: getBrushOutlinePath(point, wholeSize) };
+    }
+    return { type: 'circle', center: getDiscCenter(point, wholeSize), radius: wholeSize / 2 };
+}
+
+// The anchor of an odd size is the top-left corner of the center pixel.
+function getDiscCenter(point: BrushPoint, size: number): BrushPoint {
+    const anchor = getBrushAnchor(point, size);
+    const centerShift = isOdd(size) ? 0.5 : 0;
+    return { x: anchor.x + centerShift, y: anchor.y + centerShift };
+}
+
 // Spans are ordered top to bottom.
 function toOutlinePath(spans: BrushSpan[]): string {
     if (spans.length === 0) return '';

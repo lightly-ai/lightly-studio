@@ -1,2 +1,2 @@
 export { useSegmentationMaskPreview } from './useSegmentationMaskPreview';
-export { getBrushOutlinePath } from './brushFootprint';
+export { getBrushCursor } from './brushFootprint';
