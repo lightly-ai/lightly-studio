@@ -22,6 +22,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     object_track_resolver,
 )
+from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 from lightly_studio.services import annotations_service
 
 
@@ -94,6 +95,16 @@ class LocalAnnotationTransport:
             annotations=annotations,
             collection_name=collection_name,
             covered_sample_ids=covered_sample_ids,
+        )
+
+    def update_bounding_box(
+        self, annotation_id: UUID, bounding_box: BoundingBoxCoordinates
+    ) -> None:
+        """Replace the bounding box of an annotation. Mark the evaluation runs stale."""
+        annotations_service.update_annotation_bounding_box(
+            session=db_manager.persistent_session(),
+            annotation_id=annotation_id,
+            bounding_box=bounding_box,
         )
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:

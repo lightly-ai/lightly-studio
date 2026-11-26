@@ -10,6 +10,7 @@ import httpx
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationView
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation_label import AnnotationLabelView
+from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 
 
 class HttpAnnotationTransport:
@@ -48,6 +49,12 @@ class HttpAnnotationTransport:
     ) -> list[UUID]:
         """Add annotations to samples. Not supported over HTTP yet."""
         raise NotImplementedError("Adding annotations over HTTP is not supported yet.")
+
+    def update_bounding_box(
+        self, annotation_id: UUID, bounding_box: BoundingBoxCoordinates
+    ) -> None:
+        """Replace the bounding box of an annotation. Not supported over HTTP yet."""
+        raise NotImplementedError("Updating annotations over HTTP is not supported yet.")
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
         """Delete annotations by ID. Not supported over HTTP yet."""

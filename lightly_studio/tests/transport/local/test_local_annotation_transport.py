@@ -16,6 +16,7 @@ from lightly_studio.resolvers import (
     object_track_resolver,
     sequence_resolver,
 )
+from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.local.local_annotation_transport import LocalAnnotationTransport
 from tests.helpers_resolvers import (
@@ -155,6 +156,22 @@ class TestLocalAnnotationTransport:
         )
         assert set(covered_sample_ids) == {image.sample_id, covered.sample_id}
 
+    def test_update_bounding_box(self) -> None:
+        image_id, annotation_id = _create_annotated_image(
+            annotation_type=AnnotationType.OBJECT_DETECTION
+        )
+        transport: AnnotationTransport = LocalAnnotationTransport()
+
+        transport.update_bounding_box(
+            annotation_id=annotation_id,
+            bounding_box=BoundingBoxCoordinates(x=1, y=2, width=3, height=4),
+        )
+
+        (annotation,) = transport.get_by_sample_ids(sample_ids=[image_id])
+        box = annotation.object_detection_details
+        assert box is not None
+        assert (box.x, box.y, box.width, box.height) == (1, 2, 3, 4)
+
     def test_delete(self) -> None:
         session = db_manager.persistent_session()
         collection_id = create_collection(session=session).collection_id
@@ -224,3 +241,18 @@ class TestLocalAnnotationTransport:
             for track_id in track_ids
         ]
         assert [track.object_track_number for track in tracks if track is not None] == [7, 3]
+
+
+def _create_annotated_image(annotation_type: AnnotationType) -> tuple[uuid.UUID, uuid.UUID]:
+    session = db_manager.persistent_session()
+    collection_id = create_collection(session=session).collection_id
+    image = create_image(session=session, collection_id=collection_id)
+    label = create_annotation_label(session=session, root_collection_id=collection_id)
+    annotation = create_annotation(
+        session=session,
+        collection_id=collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=annotation_type,
+    )
+    return image.sample_id, annotation.sample_id

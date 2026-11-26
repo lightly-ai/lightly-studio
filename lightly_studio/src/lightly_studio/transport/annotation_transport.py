@@ -9,6 +9,7 @@ from uuid import UUID
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationView
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation_label import AnnotationLabelView
+from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 
 
 class AnnotationTransport(Protocol):
@@ -52,6 +53,11 @@ class AnnotationTransport(Protocol):
         Returns:
             The IDs of the new annotations, in the order of `annotations`.
         """
+
+    def update_bounding_box(
+        self, annotation_id: UUID, bounding_box: BoundingBoxCoordinates
+    ) -> None:
+        """Replace the bounding box of an object detection or segmentation mask annotation."""
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
         """Delete annotations by ID."""
