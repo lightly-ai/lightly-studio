@@ -7,6 +7,7 @@ from typing import Protocol
 from uuid import UUID
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationView
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation_label import AnnotationLabelView
 
 
@@ -43,3 +44,14 @@ class AnnotationTransport(Protocol):
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
         """Delete annotations by ID."""
+
+    # TODO(Iunir, 11/2026): Merge with create_object_tracks. Two clients can get the same numbers.
+    def get_free_object_track_numbers(self, dataset_id: UUID, count: int) -> list[int]:
+        """Get the `count` lowest positive object track numbers that the dataset does not use."""
+
+    def create_object_tracks(self, tracks: Sequence[ObjectTrackCreate]) -> list[UUID]:
+        """Add object tracks.
+
+        Returns:
+            The IDs of the new object tracks, in the order of `tracks`.
+        """

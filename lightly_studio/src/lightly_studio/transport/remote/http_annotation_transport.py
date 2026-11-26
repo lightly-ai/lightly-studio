@@ -8,6 +8,7 @@ from uuid import UUID
 import httpx
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationView
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation_label import AnnotationLabelView
 
 
@@ -41,3 +42,11 @@ class HttpAnnotationTransport:
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
         """Delete annotations by ID. Not supported over HTTP yet."""
         raise NotImplementedError("Deleting annotations over HTTP is not supported yet.")
+
+    def get_free_object_track_numbers(self, dataset_id: UUID, count: int) -> list[int]:
+        """Get free object track numbers. Not supported over HTTP yet."""
+        raise NotImplementedError("Object tracks over HTTP are not supported yet.")
+
+    def create_object_tracks(self, tracks: Sequence[ObjectTrackCreate]) -> list[UUID]:
+        """Add object tracks. Not supported over HTTP yet."""
+        raise NotImplementedError("Object tracks over HTTP are not supported yet.")

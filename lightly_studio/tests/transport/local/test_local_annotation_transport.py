@@ -7,7 +7,12 @@ import pytest
 from lightly_studio.database import db_manager
 from lightly_studio.errors import NotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
-from lightly_studio.resolvers import annotation_collection_coverage_resolver, collection_resolver
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.resolvers import (
+    annotation_collection_coverage_resolver,
+    collection_resolver,
+    object_track_resolver,
+)
 from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.local.local_annotation_transport import LocalAnnotationTransport
 from tests.helpers_resolvers import (
@@ -115,3 +120,34 @@ class TestLocalAnnotationTransport:
 
         transport.delete(annotation_ids=[annotation.sample_id])
         assert transport.get_by_sample_ids(sample_ids=[image.sample_id]) == []
+
+    def test_get_free_object_track_numbers(self) -> None:
+        session = db_manager.persistent_session()
+        dataset_id = create_collection(session=session).dataset_id
+        object_track_resolver.create_many(
+            session=session,
+            tracks=[ObjectTrackCreate(object_track_number=2, dataset_id=dataset_id)],
+        )
+        transport: AnnotationTransport = LocalAnnotationTransport()
+
+        numbers = transport.get_free_object_track_numbers(dataset_id=dataset_id, count=2)
+
+        assert numbers == [1, 3]
+
+    def test_create_object_tracks(self) -> None:
+        session = db_manager.persistent_session()
+        dataset_id = create_collection(session=session).dataset_id
+        transport: AnnotationTransport = LocalAnnotationTransport()
+
+        track_ids = transport.create_object_tracks(
+            tracks=[
+                ObjectTrackCreate(object_track_number=7, dataset_id=dataset_id),
+                ObjectTrackCreate(object_track_number=3, dataset_id=dataset_id),
+            ]
+        )
+
+        tracks = [
+            object_track_resolver.get_by_id(session=session, object_track_id=track_id)
+            for track_id in track_ids
+        ]
+        assert [track.object_track_number for track in tracks if track is not None] == [7, 3]
