@@ -109,8 +109,8 @@ export const cocoDataset = {
             sampleCount: 61,
             annotationCount: 67,
             /**
-             * Samples with a person segmentation mask. Only crowd annotations (`iscrowd=1`)
-             * load as segmentation masks, the others load as polygons.
+             * Samples with a person segmentation mask. RLE masks load as segmentation masks,
+             * polygons load as polygons. Only the crowd annotations of this dataset use RLE.
              */
             segmentationMaskSampleCount: 8
         },

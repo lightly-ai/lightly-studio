@@ -131,9 +131,9 @@
                 <Dialog.Header>
                     <Dialog.Title class="text-foreground">Create Sampling</Dialog.Title>
                     <Dialog.Description class="text-foreground">
-                        Sample from the <strong class="font-semibold text-primary"
-                            >{$sampleCountLabel}</strong
-                        > currently matching your filters.
+                        Sample from the <strong class="font-semibold text-primary">
+                            {$sampleCountLabel}
+                        </strong> currently matching your filters.
                     </Dialog.Description>
                 </Dialog.Header>
 
@@ -208,9 +208,9 @@
 
                         <div class="grid gap-2">
                             <div class="flex items-center gap-1.5">
-                                <Label for="n-samples" class="text-foreground"
-                                    >Number of Samples</Label
-                                >
+                                <Label for="n-samples" class="text-foreground">
+                                    Number of Samples
+                                </Label>
                                 <FieldTooltip
                                     content="How many samples will be written to the output tag. Cannot exceed the number of samples matching the current filters."
                                 />

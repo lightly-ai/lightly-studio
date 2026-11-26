@@ -1,7 +1,7 @@
 <script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { fn } from 'storybook/test';
-    import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
     import FrameTimeline from './FrameTimeline.svelte';
 
     // Placeholder ruler with no timestamps yet, mirroring the pre-frame-loading state.
@@ -15,6 +15,23 @@
         seq_number: index,
         timestamp_ns: 1_700_000_000_000_000_000 + index * 100_000_000
     }));
+
+    const track = (number: number, label: string, seqNumbers: number[]): SequenceTrackView => ({
+        object_track_id: `track-${number}`,
+        object_track_number: number,
+        annotation_source_id: 'source',
+        annotation_source_name: 'ground_truth',
+        annotation_label_name: label,
+        annotations: seqNumbers.map((seq_number) => ({
+            seq_number,
+            annotation_id: `annotation-${number}-${seq_number}`,
+            annotation_source_id: 'source',
+            frame_id: 'odom',
+            interpolated: false
+        }))
+    });
+    const range = (start: number, end: number) =>
+        Array.from({ length: end - start + 1 }, (_, index) => start + index);
 
     const { Story } = defineMeta({
         title: 'Components/PointCloudLabelingWorkspace/FrameTimeline',
@@ -40,6 +57,12 @@
 
 {#snippet frame(args)}
     <div class="h-24 w-full">
+        <FrameTimeline {...args} />
+    </div>
+{/snippet}
+
+{#snippet tall(args)}
+    <div class="h-96 w-full">
         <FrameTimeline {...args} />
     </div>
 {/snippet}
@@ -82,4 +105,29 @@
         bufferedRanges: [{ startIndex: 0, endIndex: 400 }]
     }}
     template={frame}
+/>
+
+<Story
+    name="Object tracks and frame tag tracks"
+    args={{
+        ticks,
+        currentTick: 8,
+        tracks: [track(1, 'car', range(0, 16)), track(2, 'pedestrian', range(4, 12))],
+        showObjectTracks: true,
+        onHideObjectTracks: fn(),
+        showFrameTags: true,
+        onHideFrameTags: fn(),
+        frameTags: [
+            { tag_id: 'tag-1', name: 'occluded', seq_numbers: [3, 4, 5, 14] },
+            { tag_id: 'tag-2', name: 'night', seq_numbers: range(0, 23) }
+        ]
+    }}
+    template={tall}
+    parameters={{
+        docs: {
+            description: {
+                story: 'Object tracks and frame tag tracks are separate panels; each has its own close button.'
+            }
+        }
+    }}
 />

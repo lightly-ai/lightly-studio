@@ -1,6 +1,7 @@
 <script lang="ts">
     import WorkspacePanelHeader from '../WorkspacePanelHeader/WorkspacePanelHeader.svelte';
     import SceneViewSettings from '../SceneViewSettings/SceneViewSettings.svelte';
+    import WorkspaceSceneFilters from '../WorkspaceSceneFilters/WorkspaceSceneFilters.svelte';
     import ViewportExpandButton from '../ViewportExpandButton/ViewportExpandButton.svelte';
     import { usePointCloudWorkspaceLayoutContext } from '../pointCloudWorkspaceLayoutContext.svelte';
     import { useWorkspaceSceneLayout } from '../workspaceSceneLayoutContext.svelte';
@@ -20,12 +21,25 @@
         {/if}
         <SceneViewSettings
             accumulation={layout.accumulation}
-            orthographicViewsEnabled={layout.orthographicViewsEnabled}
             pointSize={layout.pointSize}
             showNavigationHelpers={layout.showNavigationHelpers}
-            onOrthographicViewsEnabledChange={layout.onOrthographicViewsEnabledChange}
             onPointSizeChange={layout.onPointSizeChange}
             onToggleNavigationHelpers={layout.onToggleNavigationHelpers}
-        />
+        >
+            {#snippet filters()}
+                <WorkspaceSceneFilters
+                    referenceFrames={layout.workspace.referenceFrames}
+                    referenceFrameId={layout.workspace.referenceFrameId}
+                    onSelectReferenceFrame={layout.workspace.selectReferenceFrame}
+                    isShowingSensorFrames={layout.workspace.isShowingSensorFrames}
+                    colorMode={layout.colorMode}
+                    onColorModeChange={layout.onColorModeChange}
+                    lidarChannels={layout.workspace.lidarChannels}
+                    selectedLidarChannels={layout.selectedLidarChannelIds}
+                    onToggleLidarChannel={layout.onToggleLidarChannel}
+                    onSetLidarChannels={layout.onSetLidarChannels}
+                />
+            {/snippet}
+        </SceneViewSettings>
     {/snippet}
 </WorkspacePanelHeader>

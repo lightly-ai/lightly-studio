@@ -12,7 +12,8 @@
     const [before, match, after] = $derived(splitMatch(title, highlightRange(title, getSearch())));
 </script>
 
-<span class="truncate"
-    >{before}{#if match}<mark class="rounded-sm bg-primary/25 text-foreground">{match}</mark
-        >{/if}{after}</span
->
+<span class="truncate">
+    {before}{#if match}<mark class="rounded-sm bg-primary/25 text-foreground">
+            {match}
+        </mark>{/if}{after}
+</span>

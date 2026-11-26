@@ -226,8 +226,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_type: Deprecated. Use `annotation_task` instead.
             embed_annotations: If True, generate embeddings for the annotation crops.
             annotation_task: What to read from the file. `OBJECT_DETECTION` (default) reads
-                the boxes. `INSTANCE_SEGMENTATION` reads the segmentations: `iscrowd=0`
-                becomes polygons and `iscrowd=1` becomes masks.
+                the boxes. `INSTANCE_SEGMENTATION` reads the segmentations: polygons
+                become polygon annotations and RLE masks become segmentation masks.
 
         Raises:
             ValueError: If both `annotation_task` and `annotation_type` are set.
@@ -546,8 +546,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 tag for each of the first `N` directory levels (see `add_images_from_path`).
                 These tags are added on top of the `split` tag.
             annotation_task: What to read from the file. `OBJECT_DETECTION` (default) reads
-                the boxes. `INSTANCE_SEGMENTATION` reads the segmentations: `iscrowd=0`
-                becomes polygons and `iscrowd=1` becomes masks.
+                the boxes. `INSTANCE_SEGMENTATION` reads the segmentations: polygons
+                become polygon annotations and RLE masks become segmentation masks.
 
         Raises:
             ValueError: If tag_depth is negative, or if limit is not None and not greater

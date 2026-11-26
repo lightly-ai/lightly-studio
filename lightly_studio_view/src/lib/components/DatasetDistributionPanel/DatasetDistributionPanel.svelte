@@ -435,9 +435,9 @@
         <div class="mt-2 flex flex-col gap-2" data-testid="dataset-distribution-source">
             {#if hasSourceSelector}
                 <div class="flex items-center gap-2">
-                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground"
-                        >Distribution</span
-                    >
+                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground">
+                        Distribution
+                    </span>
                     <Select
                         items={sourceItems}
                         value={activeSource.id}
@@ -454,9 +454,9 @@
 
             {#if groupItems.length > 0}
                 <div class="flex items-center gap-2">
-                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground"
-                        >{activeSource.groupLabel ?? 'Field'}</span
-                    >
+                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground">
+                        {activeSource.groupLabel ?? 'Field'}
+                    </span>
                     <Select
                         items={groupItems}
                         value={activeGroup?.id}
@@ -595,8 +595,10 @@
                                 class: 'max-sm:min-h-11',
                                 onclick: onCategoricalRetry,
                                 'data-testid': 'metadata-categorical-retry'
-                            }}>Retry</Button
+                            }}
                         >
+                            Retry
+                        </Button>
                     {/if}
                 </div>
             {:else if !plotLoading || activeData.length > 0}

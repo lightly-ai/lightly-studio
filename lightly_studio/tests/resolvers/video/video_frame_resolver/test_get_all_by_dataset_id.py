@@ -2,6 +2,12 @@ from sqlmodel import Session
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.query_expr import (
+    FieldRef,
+    IntegerExpr,
+    OrdinalComparisonOperator,
+    QueryExpr,
+)
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
     collection_resolver,
@@ -134,6 +140,29 @@ def test_get_all_by_collection_id__with_frame_number_filter(db_session: Session)
     assert len(samples) == 2
     assert samples[0].sample_id == video_frame_data.frame_sample_ids[2]
     assert samples[1].sample_id == video_frame_data.frame_sample_ids[3]
+
+
+def test_get_all_by_collection_id__with_query_expr(db_session: Session) -> None:
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    ).collection_id
+    video_frame_data = create_video_with_frames(
+        session=db_session,
+        collection_id=collection_id,
+        video=VideoStub(path="/path/to/sample1.mp4", duration_s=5, fps=1),
+    )
+    field = FieldRef(table="video_frame", name="frame_number")
+    expr = IntegerExpr(field=field, operator=OrdinalComparisonOperator.GTE, value=3)
+
+    samples = video_frame_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=video_frame_data.video_frames_collection_id,
+        video_frame_filter=VideoFrameFilter(
+            sample_filter=SampleFilter(query_expr=QueryExpr(match_expr=expr))
+        ),
+    ).samples
+
+    assert [sample.sample_id for sample in samples] == video_frame_data.frame_sample_ids[3:]
 
 
 def test_get_all_by_collection_id__with_annotations_filter(db_session: Session) -> None:

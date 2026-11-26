@@ -5,6 +5,7 @@ import uuid
 import httpx
 import pytest
 
+from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.remote.http_annotation_transport import HttpAnnotationTransport
 
@@ -22,6 +23,20 @@ class TestHttpAnnotationTransport:
         with pytest.raises(NotImplementedError):
             transport.get_by_sample_ids(sample_ids=[uuid.uuid4()])
 
+    def test_get_by_sample_ids_and_collection(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.get_by_sample_ids_and_collection(
+                sample_ids=[uuid.uuid4()], annotation_collection_id=uuid.uuid4()
+            )
+
+    def test_get_covered_sequence_ids(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError, match="Finding labeled sequences"):
+            transport.get_covered_sequence_ids(annotation_collection_id=uuid.uuid4())
+
     def test_create(self) -> None:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
 
@@ -33,8 +48,47 @@ class TestHttpAnnotationTransport:
                 covered_sample_ids=[],
             )
 
+    def test_update_bounding_box(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.update_bounding_box(
+                annotation_id=uuid.uuid4(),
+                bounding_box=BoundingBoxCoordinates(x=0, y=0, width=1, height=1),
+            )
+
+    def test_update_segmentation_mask(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.update_segmentation_mask(annotation_id=uuid.uuid4(), segmentation_mask=[1])
+
+    def test_update_polygons(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.update_polygons(annotation_id=uuid.uuid4(), polygons=[])
+
     def test_delete(self) -> None:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
 
         with pytest.raises(NotImplementedError):
             transport.delete(annotation_ids=[uuid.uuid4()])
+
+    def test_delete_empty_object_tracks(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.delete_empty_object_tracks(object_track_ids=[uuid.uuid4()])
+
+    def test_get_free_object_track_numbers(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.get_free_object_track_numbers(dataset_id=uuid.uuid4(), count=1)
+
+    def test_create_object_tracks(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.create_object_tracks(tracks=[])

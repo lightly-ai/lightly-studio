@@ -18,6 +18,7 @@ from lightly_studio.resolvers.object_track_resolver.get_all_with_class_name_by_d
     get_all_with_class_name_by_dataset_id,
 )
 from lightly_studio.resolvers.object_track_resolver.get_by_id import get_by_id
+from lightly_studio.resolvers.object_track_resolver.get_free_numbers import get_free_numbers
 from lightly_studio.resolvers.object_track_resolver.has_cuboid_on_parent_sample import (
     has_cuboid_on_parent_sample,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "get_all_by_dataset_id",
     "get_all_with_class_name_by_dataset_id",
     "get_by_id",
+    "get_free_numbers",
     "has_cuboid_on_parent_sample",
     "update_parent_track",
 ]

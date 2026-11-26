@@ -1,62 +1,48 @@
 <script lang="ts">
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import ChevronUp from '@lucide/svelte/icons/chevron-up';
-    import { Button } from '$lib/components';
     import WorkspaceViewport from '../WorkspaceViewport/WorkspaceViewport.svelte';
-    import WorkspacePanelHeader from '../WorkspacePanelHeader/WorkspacePanelHeader.svelte';
     import { useWorkspaceSceneLayout } from '../workspaceSceneLayoutContext.svelte';
+    import { usePointCloudWorkspaceLayoutContext } from '../pointCloudWorkspaceLayoutContext.svelte';
     import { cn } from '$lib/utils';
-
-    interface Props {
-        /** When true, only the header shows and the views are not rendered. */
-        collapsed: boolean;
-        /** Collapses or expands the strip. */
-        onToggleCollapsed: () => void;
-    }
-
-    let { collapsed, onToggleCollapsed }: Props = $props();
+    import { PanelDockToggle } from '../PanelDockToggle';
+    import { WorkspacePanel } from '../WorkspacePanel';
     const scene = useWorkspaceSceneLayout();
+    const getLayout = usePointCloudWorkspaceLayoutContext();
+    const layout = $derived(getLayout());
+    // On the right of the scene the views stack in a column, below it they sit in a row. The
+    // 1px gaps show the border color between the views, so the panel reads as one card.
+    const gridClass = $derived(
+        layout.orthographicDock === 'right' ? 'grid-rows-3 gap-px' : 'grid-cols-3 gap-px'
+    );
     const views = ['top', 'side', 'front'] as const;
 </script>
 
-<div class="flex h-full min-h-0 flex-col bg-card" data-testid="orthographic-projection-strip">
-    {#if !scene.expandedProjection}
-        <div class="border-t-8 border-card">
-            <WorkspacePanelHeader title="Orthographic projections">
-                {#snippet actions()}
-                    <Button
-                        variant="ghost"
-                        icon={collapsed ? ChevronUp : ChevronDown}
-                        ariaLabel={collapsed
-                            ? 'Expand orthographic projections'
-                            : 'Collapse orthographic projections'}
-                        buttonProps={{
-                            type: 'button',
-                            size: 'xs',
-                            class: 'h-7 w-7 p-0',
-                            onclick: onToggleCollapsed
-                        }}
-                    />
-                {/snippet}
-            </WorkspacePanelHeader>
-        </div>
-    {/if}
-    {#if !collapsed}
-        <div
-            class={cn(
-                'grid min-h-0 flex-1',
-                scene.expandedProjection ? 'grid-cols-1' : 'grid-cols-3 gap-2'
-            )}
-        >
-            {#each views as mode (mode)}
-                <div
-                    class="relative min-h-0 min-w-0 overflow-hidden"
-                    hidden={scene.expandedProjection !== null && scene.expandedProjection !== mode}
-                    data-testid={`projection-${mode}`}
-                >
-                    <WorkspaceViewport cameraMode={mode} />
-                </div>
-            {/each}
-        </div>
-    {/if}
-</div>
+<WorkspacePanel
+    title="Orthographic views"
+    onHide={() => layout.onToggleOrthographicProjections(false)}
+    class="h-full"
+    testId="orthographic-views-panel"
+>
+    {#snippet actions()}
+        <PanelDockToggle
+            dock={layout.orthographicDock}
+            label="orthographic views"
+            onChange={layout.onOrthographicDockChange}
+        />
+    {/snippet}
+    <div
+        class={cn(
+            'grid h-full min-h-0 bg-border',
+            scene.expandedProjection ? 'grid-cols-1' : gridClass
+        )}
+    >
+        {#each views as mode (mode)}
+            <div
+                class="relative min-h-0 min-w-0 overflow-hidden"
+                hidden={scene.expandedProjection !== null && scene.expandedProjection !== mode}
+                data-testid={`projection-${mode}`}
+            >
+                <WorkspaceViewport cameraMode={mode} />
+            </div>
+        {/each}
+    </div>
+</WorkspacePanel>

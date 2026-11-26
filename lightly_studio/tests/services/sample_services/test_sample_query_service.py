@@ -11,7 +11,12 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     QueryExpr,
 )
-from lightly_studio.models.sample_query import SampleInclude, SampleQueryRequest, SortKey
+from lightly_studio.models.sample_query import (
+    EvaluationMetricSortKey,
+    SampleInclude,
+    SampleQueryRequest,
+    SortKey,
+)
 from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.services.sample_services import sample_query_cursor, sample_query_service
@@ -72,7 +77,9 @@ def test_query_samples__filter_field_of_other_table__raises(
 
 
 @pytest.mark.parametrize("sort", [[], [SortKey(field=WIDTH)]])
-def test_query_samples__pages(db_session: Session, sort: list[SortKey]) -> None:
+def test_query_samples__pages(
+    db_session: Session, sort: list[SortKey | EvaluationMetricSortKey]
+) -> None:
     collection_id = create_collection(session=db_session).collection_id
     for path in ["/a.png", "/b.png", "/c.png", "/d.png", "/e.png"]:
         create_image(session=db_session, collection_id=collection_id, file_path_abs=path, width=7)
@@ -186,6 +193,26 @@ def test_query_samples__not_supported__raises(
     with pytest.raises(error):
         sample_query_service.query_samples(
             session=db_session, collection_id=collection_id, request=request_
+        )
+
+
+@pytest.mark.parametrize(
+    ("sort_key", "message"),
+    [
+        (SortKey(field=FieldRef(table="metadata", name="weather")), "by metadata"),
+        (EvaluationMetricSortKey(run_name="run", metric_name="miou"), "by an evaluation metric"),
+    ],
+)
+def test_query_samples__sort_without_keyset__raises(
+    db_session: Session, sort_key: SortKey | EvaluationMetricSortKey, message: str
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    with pytest.raises(QueryExprError, match=f"Sorting {message} is not supported yet"):
+        sample_query_service.query_samples(
+            session=db_session,
+            collection_id=collection_id,
+            request=SampleQueryRequest(sort=[sort_key]),
         )
 
 

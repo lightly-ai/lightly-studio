@@ -104,8 +104,10 @@
                 {#if subtitle}
                     <span
                         class="text-xs text-primary"
-                        data-testid="annotation-source-group-subtitle">{subtitle}</span
+                        data-testid="annotation-source-group-subtitle"
                     >
+                        {subtitle}
+                    </span>
                 {/if}
             </span>
             <div class="flex shrink-0 items-center gap-2">

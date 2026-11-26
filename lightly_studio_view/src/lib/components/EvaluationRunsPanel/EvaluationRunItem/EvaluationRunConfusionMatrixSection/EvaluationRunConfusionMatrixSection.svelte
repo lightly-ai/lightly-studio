@@ -87,8 +87,9 @@
 
 {#if query.isLoading || query.isError || query.data}
     <section data-testid="evaluation-run-confusion-matrix">
-        <Typography variant="subtitle2" component="h3" className="mb-3">Confusion Matrix</Typography
-        >
+        <Typography variant="subtitle2" component="h3" className="mb-3">
+            Confusion Matrix
+        </Typography>
 
         {#if query.isLoading}
             <div

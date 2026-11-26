@@ -109,6 +109,21 @@ class TestDatasetQueryOrderBy:
         assert result_samples[3].sample_id == image3.sample_id  # B.jpg, width=200, height=300
         assert result_samples[4].sample_id == image5.sample_id  # D.jpg, width=200, height=300
 
+    def test_order_by__ties_by_sample_id(self, db_session: Session) -> None:
+        dataset = create_collection(session=db_session)
+        images = [
+            create_image(
+                session=db_session, collection_id=dataset.collection_id, file_path_abs=path
+            )
+            for path in ["/a.jpg", "/b.jpg", "/c.jpg", "/d.jpg", "/e.jpg"]
+        ]
+
+        query = DatasetQuery(dataset=dataset, session=db_session)
+        result_samples = query.order_by(OrderByField(ImageSampleField.width).desc()).to_list()
+
+        sample_ids = [sample.sample_id for sample in result_samples]
+        assert sample_ids == sorted(image.sample_id for image in images)
+
     def test_order_by__multiple_calls_raises_error(self, db_session: Session) -> None:
         """Test that calling order_by() twice raises ValueError."""
         # Arrange

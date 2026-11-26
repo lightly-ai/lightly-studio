@@ -13,9 +13,10 @@
 </script>
 
 <div class="flex gap-1.5">
-    <Button class="h-8 flex-1" disabled={!canSave || isSaving} onclick={onSave}
-        >{isSaving ? 'Saving…' : saveLabel}</Button
-    >
-    <Button variant="outline" class="h-8 flex-1" disabled={isSaving} onclick={onClear}>Reset</Button
-    >
+    <Button class="h-8 flex-1" disabled={!canSave || isSaving} onclick={onSave}>
+        {isSaving ? 'Saving…' : saveLabel}
+    </Button>
+    <Button variant="outline" class="h-8 flex-1" disabled={isSaving} onclick={onClear}>
+        Reset
+    </Button>
 </div>

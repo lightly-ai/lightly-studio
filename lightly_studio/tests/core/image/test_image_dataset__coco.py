@@ -180,7 +180,7 @@ class TestDataset:
         )
         assert len(list(dataset)) == 2
 
-    def test_add_samples_from_coco__instance_segmentation_mixed_crowd(
+    def test_add_samples_from_coco__instance_segmentation_polygon_and_rle(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -188,7 +188,7 @@ class TestDataset:
         annotations_path = tmp_path / "annotations.json"
         annotations_path.write_text(
             json.dumps(
-                _coco_dict_mixed_crowd(
+                _coco_dict_polygon_and_rle(
                     polygon_segmentation=[[1, 1, 5, 1, 5, 5], [6, 6, 9, 6, 9, 9]]
                 )
             )
@@ -214,7 +214,7 @@ class TestDataset:
     ) -> None:
         annotations_path = tmp_path / "annotations.json"
         annotations_path.write_text(
-            json.dumps(_coco_dict_mixed_crowd(polygon_segmentation=[[1, 1, 5, 1, 5, 5]]))
+            json.dumps(_coco_dict_polygon_and_rle(polygon_segmentation=[[1, 1, 5, 1, 5, 5]]))
         )
         images_path = _create_valid_samples(tmp_path)
 
@@ -835,8 +835,8 @@ class TestDataset:
         assert Path(samples[1].file_path_abs).is_absolute()
 
 
-def _coco_dict_mixed_crowd(polygon_segmentation: Sequence[Sequence[float]]) -> dict[str, Any]:
-    """Return a COCO dict with one polygon annotation and one crowd RLE annotation."""
+def _coco_dict_polygon_and_rle(polygon_segmentation: Sequence[Sequence[float]]) -> dict[str, Any]:
+    """Return a COCO dict with one polygon annotation and one RLE annotation."""
     return {
         "images": [{"id": 1, "file_name": "image1.jpg", "width": 10, "height": 10}],
         "annotations": [
@@ -855,7 +855,7 @@ def _coco_dict_mixed_crowd(polygon_segmentation: Sequence[Sequence[float]]) -> d
                 "category_id": 1,
                 "bbox": [0, 0, 10, 2],
                 "area": 10,
-                "iscrowd": 1,
+                "iscrowd": 0,
                 "segmentation": {"counts": [20, 10, 70], "size": [10, 10]},
             },
         ],

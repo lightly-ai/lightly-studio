@@ -64,9 +64,9 @@
             {/if}
         {:else}
             <div class="pointer-events-none flex items-start justify-between px-2 py-1">
-                <span class="rounded bg-background/80 px-1.5 py-0.5 text-xs text-muted-foreground"
-                    >{labels[cameraMode]}</span
-                >
+                <span class="rounded bg-background/80 px-1.5 py-0.5 text-xs text-muted-foreground">
+                    {labels[cameraMode]}
+                </span>
                 <div class="pointer-events-auto">
                     <ViewportExpandButton
                         expanded={scene.expandedProjection === cameraMode}

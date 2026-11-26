@@ -25,6 +25,7 @@ from lightly_studio.models.query_expr import (
 )
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_query import (
+    EvaluationMetricSortKey,
     ImageSampleRecord,
     SampleInclude,
     SamplePage,
@@ -119,18 +120,28 @@ def _check_filter_fields(value: object, table: str) -> None:
             _check_filter_fields(value=child, table=table)
 
 
-def _sort_columns(sort: Sequence[SortKey]) -> list[_SortColumn]:
+def _sort_columns(sort: Sequence[SortKey | EvaluationMetricSortKey]) -> list[_SortColumn]:
     keys = sort or [SortKey(field=FieldRef(table="image", name="created_at"))]
     columns = []
     for key in keys:
-        if key.field.table != "image" or key.field.name not in _SORT_FIELDS:
-            raise QueryExprError(f"Unknown sort field: {key.field.table}.{key.field.name}")
-        parse = _CURSOR_PARSERS[key.field.name]
+        field = _keyset_sort_field(key=key)
+        parse = _CURSOR_PARSERS[field.name]
         ascending = key.direction == SortDirection.asc
-        columns.append(_SortColumn(name=key.field.name, ascending=ascending, parse=parse))
+        columns.append(_SortColumn(name=field.name, ascending=ascending, parse=parse))
     # The sample ID breaks ties, so the order is total and no sample is skipped.
     columns.append(_SortColumn(name="sample_id", ascending=True, parse=_parse_uuid))
     return columns
+
+
+def _keyset_sort_field(key: SortKey | EvaluationMetricSortKey) -> FieldRef:
+    """Get the field of a sort key that keyset paging can use."""
+    if isinstance(key, EvaluationMetricSortKey):
+        raise QueryExprError("Sorting by an evaluation metric is not supported yet.")
+    if key.field.table == "metadata":
+        raise QueryExprError("Sorting by metadata is not supported yet.")
+    if key.field.table != "image" or key.field.name not in _SORT_FIELDS:
+        raise QueryExprError(f"Unknown sort field: {key.field.table}.{key.field.name}")
+    return key.field
 
 
 def _after(sort_columns: Sequence[_SortColumn], values: Sequence[Any]) -> ColumnElement[bool]:

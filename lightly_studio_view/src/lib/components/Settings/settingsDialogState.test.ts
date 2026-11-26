@@ -28,7 +28,9 @@ const TEST_SETTINGS: SettingView = {
     key_toolbar_bounding_box: 'b',
     key_toolbar_segmentation_mask: 'm',
     key_toolbar_brush: 'r',
-    key_toolbar_eraser: 'x'
+    key_toolbar_eraser: 'x',
+    key_previous_camera: '[',
+    key_next_camera: ']'
 };
 
 describe('createSettingsDialogFormState', () => {
@@ -43,7 +45,9 @@ describe('createSettingsDialogFormState', () => {
                 keyToolbarSegmentationMask: 'm',
                 keyToolbarSlic: 'a',
                 keyToolbarBrush: 'r',
-                keyToolbarEraser: 'x'
+                keyToolbarEraser: 'x',
+                keyPreviousCamera: '[',
+                keyNextCamera: ']'
             },
             gridViewRendering: 'contain',
             gridViewThumbnailQuality: 'raw',
@@ -69,7 +73,9 @@ describe('createSettingsSavePayload', () => {
                     keyToolbarSegmentationMask: 'w',
                     keyToolbarSlic: 'f',
                     keyToolbarBrush: 'p',
-                    keyToolbarEraser: 'o'
+                    keyToolbarEraser: 'o',
+                    keyPreviousCamera: ',',
+                    keyNextCamera: '.'
                 },
                 gridViewRendering: 'cover',
                 gridViewThumbnailQuality: 'high',
@@ -95,7 +101,9 @@ describe('createSettingsSavePayload', () => {
             key_toolbar_segmentation_mask: 'w',
             key_toolbar_slic: 'f',
             key_toolbar_brush: 'p',
-            key_toolbar_eraser: 'o'
+            key_toolbar_eraser: 'o',
+            key_previous_camera: ',',
+            key_next_camera: '.'
         });
     });
 });
@@ -176,6 +184,47 @@ describe('SettingsDialogState', () => {
         expect(state.shortcuts.hideAnnotations).toBe('v');
         expect(state.recordingShortcut).toBeNull();
         expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('records the next camera shortcut and saves it', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyNextCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: '.' }));
+
+        expect(state.shortcuts.keyNextCamera).toBe('.');
+        expect(state.shortcuts.keyPreviousCamera).toBe('[');
+        expect(state.getSavePayload().key_next_camera).toBe('.');
+    });
+
+    it('keeps recording past modifier keys and records the typed character', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyNextCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'AltGraph' }));
+        expect(state.recordingShortcut).toBe('keyNextCamera');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'Shift' }));
+        expect(state.recordingShortcut).toBe('keyNextCamera');
+
+        state.handleKeyDown(
+            new KeyboardEvent('keydown', { key: ']', altKey: true, ctrlKey: true })
+        );
+
+        expect(state.shortcuts.keyNextCamera).toBe(']');
+        expect(state.recordingShortcut).toBeNull();
+    });
+
+    it('does not record Space as a camera shortcut', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyPreviousCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
+
+        expect(state.shortcuts.keyPreviousCamera).toBe('[');
+        expect(state.recordingShortcut).toBe('keyPreviousCamera');
     });
 
     it('ignores keydown when not recording', () => {
