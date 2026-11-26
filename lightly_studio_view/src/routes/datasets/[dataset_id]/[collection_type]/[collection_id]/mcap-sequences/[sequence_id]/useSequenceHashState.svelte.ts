@@ -24,6 +24,8 @@ export function useSequenceHashState({ getSequenceId }: UseSequenceHashStatePara
     let openCamera = $state(getCameraFromHash(page.url.hash));
     // True from the moment this page calls history.back() until the popstate lands.
     let isHistoryBackPending = false;
+    // Whether the current history entry is one that this page pushed to open a camera.
+    let isOnCameraEntry = page.state.cameraEntry ?? false;
 
     const syncFromUrl = () => {
         ({ tick: currentTick, camera: openCamera } = getUrlState(page.url.hash));
@@ -64,15 +66,20 @@ export function useSequenceHashState({ getSequenceId }: UseSequenceHashStatePara
     });
 
     afterNavigate(({ type, from, to }) => {
+        const wasClosingCamera = isHistoryBackPending;
+        const leftCameraEntry = isOnCameraEntry;
         // A newer navigation can supersede the popstate of history.back(), so any landed
         // navigation ends the wait.
         isHistoryBackPending = false;
+        isOnCameraEntry = page.state.cameraEntry ?? false;
         if (type !== 'popstate') return;
-        if (from?.url.pathname !== to?.url.pathname) {
+        const crossesCameraEntry = wasClosingCamera || leftCameraEntry || isOnCameraEntry;
+        if (from?.url.pathname !== to?.url.pathname || !crossesCameraEntry) {
             syncFromUrl();
             return;
         }
-        // The landed entry holds a stale tick, so keep the live one and stamp it onto the entry.
+        // Moving on or off a camera entry only opens or closes the camera. The entry holds the
+        // tick from when the camera opened, so keep the live one and stamp it onto the entry.
         openCamera = getCameraFromHash(page.url.hash);
         writeHash('replace');
     });

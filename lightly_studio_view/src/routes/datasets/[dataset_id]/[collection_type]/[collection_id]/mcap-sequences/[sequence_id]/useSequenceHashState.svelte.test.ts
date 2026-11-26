@@ -245,6 +245,33 @@ describe('useSequenceHashState', () => {
         expect(lastGoto().hash).toBe('#tick=11&camera=CAM_B');
     });
 
+    it('restores the tick of an entry that no camera opened on Back', () => {
+        const { hashState } = setup();
+        hashState.setTick(8);
+        commitLastGoto();
+        vi.mocked(goto).mockClear();
+
+        popstate(`${SEQUENCE_URL}#tick=2`);
+
+        expect(hashState.tick).toBe(2);
+        expect(hashState.openCamera).toBeUndefined();
+        expect(goto).not.toHaveBeenCalled();
+    });
+
+    it('keeps the live tick when Back leaves a camera entry', () => {
+        const { hashState } = setup();
+        hashState.setOpenCamera('CAM_A', 'push');
+        commitLastGoto();
+        hashState.setTick(9);
+        commitLastGoto();
+
+        popstate(`${SEQUENCE_URL}#tick=2`);
+
+        expect(hashState.tick).toBe(9);
+        expect(hashState.openCamera).toBeUndefined();
+        expect(lastGoto().hash).toBe('#tick=9');
+    });
+
     it('applies a hash edited in the address bar', () => {
         const { hashState } = setup();
 
