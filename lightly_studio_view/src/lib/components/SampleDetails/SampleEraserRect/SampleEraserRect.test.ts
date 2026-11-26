@@ -61,4 +61,22 @@ describe('SampleEraserRect', () => {
 
         expect(container.querySelector('foreignObject')?.getAttribute('opacity')).toBe('0.3');
     });
+
+    it('outlines the exact pixels the eraser paints under the cursor', () => {
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+
+        const { container } = render(SampleEraserRect, {
+            props: {
+                sample: { width: 100, height: 100, annotations: [] },
+                mousePosition: { x: 3.7, y: 5.2 },
+                collectionId: 'collection-1',
+                brushRadius: 1,
+                drawerStrokeColor: 'rgb(0, 0, 255)',
+                previewOpacity: 0.3,
+                refetch: vi.fn()
+            }
+        });
+
+        expect(container.querySelector('path')?.getAttribute('d')).toBe('M3 4H5V5H5V6H3V5H3V4Z');
+    });
 });

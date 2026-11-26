@@ -23,7 +23,8 @@ export interface SchedulePreviewComposeParams {
 
 export interface DrawBrushDotParams {
     point: BrushPoint;
-    brushRadius: number;
+    /** Brush diameter in image pixels. */
+    brushSize: number;
     width: number;
     height: number;
     compositeOperation?: GlobalCompositeOperation;
@@ -32,7 +33,8 @@ export interface DrawBrushDotParams {
 export interface DrawBrushLineParams {
     from: BrushPoint;
     to: BrushPoint;
-    brushRadius: number;
+    /** Brush diameter in image pixels. */
+    brushSize: number;
     width: number;
     height: number;
     compositeOperation?: GlobalCompositeOperation;
