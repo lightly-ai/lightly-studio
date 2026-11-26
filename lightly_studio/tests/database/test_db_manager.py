@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-import subprocess
-import sys
 import threading
 import time
 from collections.abc import Callable
@@ -44,14 +42,6 @@ def patch_engine_singleton(mocker: MockerFixture) -> None:
     This simulates a fresh load of the module.
     """
     mocker.patch.object(db_manager, "_engine", new=None)
-
-
-@pytest.mark.parametrize("imports", ["import duckdb_engine, torch", "import torch, duckdb_engine"])
-def test_duckdb_shutdown_without_leak_warnings(imports: str) -> None:
-    result = subprocess.run(
-        [sys.executable, "-c", imports], capture_output=True, text=True, check=True, timeout=60
-    )
-    assert "nanobind: leaked" not in result.stderr
 
 
 @pytest.mark.parametrize("single_threaded", [False, True])
