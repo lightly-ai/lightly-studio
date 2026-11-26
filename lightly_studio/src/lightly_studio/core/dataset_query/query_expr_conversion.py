@@ -1,7 +1,8 @@
 """Convert dataset-query expressions to the query format that the transport sends.
 
-Sample fields, tags, metadata, annotation queries, and video event and frame queries are
-supported. Other expressions raise `UnsupportedQueryError`, and the caller uses the SQL path.
+Sample fields, tags, metadata, annotation queries, video event and frame queries, and
+evaluation queries are supported. Other expressions raise `UnsupportedQueryError`, and the
+caller uses the SQL path.
 """
 
 from __future__ import annotations
@@ -14,12 +15,19 @@ from typing import Any
 from pydantic import ValidationError
 
 from lightly_studio.core.dataset_query import query_translation, video_query_validation
+from lightly_studio.core.dataset_query.annotation_evaluation_metric_expression import (
+    AnnotationEvaluationMetricMatchExpression,
+)
+from lightly_studio.core.dataset_query.annotation_evaluation_query import AnnotationMetricQuery
 from lightly_studio.core.dataset_query.annotation_expression import (
     AnnotationSourceMatchExpression,
     RelationshipMatchExpression,
 )
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.classification_query import ClassificationQuery
+from lightly_studio.core.dataset_query.evaluation_metric_expression import (
+    EvaluationMetricMatchExpression,
+)
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.field_expression import (
     ComparableFieldExpression,
@@ -35,6 +43,7 @@ from lightly_studio.core.dataset_query.object_detection_query import ObjectDetec
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.core.dataset_query.polygon_query import PolygonQuery
 from lightly_studio.core.dataset_query.query_translation import FieldExpr
+from lightly_studio.core.dataset_query.sample_evaluation_query import SampleEvaluationQuery
 from lightly_studio.core.dataset_query.segmentation_mask_query import SegmentationMaskQuery
 from lightly_studio.core.dataset_query.tags_expression import TagsContainsExpression
 from lightly_studio.core.dataset_query.video_event_query import VideoEventQuery
@@ -45,8 +54,15 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
+    ConfusionMatchExpr,
     DatetimeExpr,
     EqualityComparisonOperator,
+    EvaluationMetricAndExpr,
+    EvaluationMetricComparisonExpr,
+    EvaluationMetricNotExpr,
+    EvaluationMetricOrExpr,
+    FalseNegativeMatchExpr,
+    FalsePositiveMatchExpr,
     FieldRef,
     MatchExpr,
     MetadataComparisonExpr,
@@ -56,6 +72,8 @@ from lightly_studio.models.query_expr import (
     OrExpr,
     PolygonMatchExpr,
     QueryExpr,
+    SampleEvaluationMatchExpr,
+    SampleEvaluationMetricExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
@@ -205,6 +223,8 @@ def _to_leaf_expr(expression: MatchExpression, scope: str) -> MatchExpr:
             EqualityComparisonOperator.NEQ if expression.negate else EqualityComparisonOperator.EQ
         )
         return StringExpr(field=source, operator=equality, value=expression.source_name)
+    if isinstance(expression, (SampleEvaluationQuery, AnnotationMetricQuery)):
+        return _to_evaluation_expr(query=expression)
     raise UnsupportedQueryError(f"The filter {type(expression).__name__} is not supported.")
 
 
@@ -212,6 +232,72 @@ def _check_field_value(value: object, expr_type: type[FieldExpr]) -> None:
     # Pydantic coerces other values to a datetime.
     if expr_type is DatetimeExpr and not isinstance(value, datetime):
         raise UnsupportedQueryError(f"The value {value!r} is not a datetime.")
+
+
+def _to_evaluation_expr(query: SampleEvaluationQuery | AnnotationMetricQuery) -> MatchExpr:
+    if isinstance(query, AnnotationMetricQuery):
+        return _to_annotation_metric_expr(query=query)
+    return SampleEvaluationMatchExpr(
+        run_name=query.run_name,
+        criteria=[_to_sample_metric_expr(expression=term) for term in query.criteria],
+    )
+
+
+def _to_sample_metric_expr(expression: MatchExpression) -> SampleEvaluationMetricExpr:
+    if isinstance(expression, AND):
+        return EvaluationMetricAndExpr(
+            children=[_to_sample_metric_expr(expression=term) for term in expression.terms]
+        )
+    if isinstance(expression, OR):
+        return EvaluationMetricOrExpr(
+            children=[_to_sample_metric_expr(expression=term) for term in expression.terms]
+        )
+    if isinstance(expression, NOT):
+        return EvaluationMetricNotExpr(child=_to_sample_metric_expr(expression=expression.term))
+    if isinstance(expression, EvaluationMetricMatchExpression):
+        return _to_metric_comparison_expr(metric=expression)
+    raise UnsupportedQueryError(
+        f"The sample evaluation criterion {type(expression).__name__} is not supported."
+    )
+
+
+def _to_annotation_metric_expr(query: AnnotationMetricQuery) -> MatchExpr:
+    """Convert the query states that the `AnnotationMetricQuery` class methods create."""
+    ground_truth, prediction = query.gt_label_name, query.pred_label_name
+    if query.match_kind == "confusion" and ground_truth is not None and prediction is not None:
+        return ConfusionMatchExpr(
+            run_name=query.run_name,
+            ground_truth=ground_truth,
+            prediction=prediction,
+            criteria=[_to_annotation_metric_criterion(criterion=term) for term in query.criteria],
+        )
+    if query.criteria:
+        raise UnsupportedQueryError("Only confusion queries support metric criteria.")
+    if query.match_kind == "false_positive" and ground_truth is None and prediction is not None:
+        return FalsePositiveMatchExpr(run_name=query.run_name, prediction=prediction)
+    if query.match_kind == "false_negative" and ground_truth is not None and prediction is None:
+        return FalseNegativeMatchExpr(run_name=query.run_name, ground_truth=ground_truth)
+    raise UnsupportedQueryError(
+        f"The {query.match_kind} query with these class names is not supported."
+    )
+
+
+def _to_annotation_metric_criterion(criterion: MatchExpression) -> EvaluationMetricComparisonExpr:
+    if not isinstance(criterion, AnnotationEvaluationMetricMatchExpression):
+        raise UnsupportedQueryError(
+            f"The annotation metric criterion {type(criterion).__name__} is not supported."
+        )
+    return _to_metric_comparison_expr(metric=criterion)
+
+
+def _to_metric_comparison_expr(
+    metric: EvaluationMetricMatchExpression | AnnotationEvaluationMetricMatchExpression,
+) -> EvaluationMetricComparisonExpr:
+    return EvaluationMetricComparisonExpr(
+        metric_name=metric.metric_name,
+        operator=OrdinalComparisonOperator(metric.operator),
+        value=metric.value,
+    )
 
 
 def _lookup_field(field: Field, scope: str) -> tuple[FieldRef, type[FieldExpr]]:

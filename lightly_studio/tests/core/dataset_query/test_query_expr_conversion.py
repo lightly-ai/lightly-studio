@@ -7,11 +7,16 @@ import numpy as np
 import pytest
 
 from lightly_studio.core.dataset_query import query_expr_conversion, query_translation
+from lightly_studio.core.dataset_query.annotation_evaluation_metric_expression import (
+    AnnotationEvaluationMetricField,
+)
+from lightly_studio.core.dataset_query.annotation_evaluation_query import AnnotationMetricQuery
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.classification_query import (
     ClassificationField,
     ClassificationQuery,
 )
+from lightly_studio.core.dataset_query.evaluation_metric_expression import EvaluationMetricField
 from lightly_studio.core.dataset_query.field_expression import OrdinalFieldExpression
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
@@ -26,6 +31,7 @@ from lightly_studio.core.dataset_query.order_by import (
 )
 from lightly_studio.core.dataset_query.polygon_query import PolygonField, PolygonQuery
 from lightly_studio.core.dataset_query.query_expr_conversion import UnsupportedQueryError
+from lightly_studio.core.dataset_query.sample_evaluation_query import SampleEvaluationQuery
 from lightly_studio.core.dataset_query.segmentation_mask_query import (
     SegmentationMaskField,
     SegmentationMaskQuery,
@@ -147,6 +153,32 @@ def test_to_query_expr() -> None:
                 ClassificationQuery(ClassificationField.class_name == "cat"),
             ),
         ),
+        (SampleType.IMAGE, SampleEvaluationQuery("run")),
+        (
+            SampleType.IMAGE,
+            SampleEvaluationQuery(
+                "run",
+                EvaluationMetricField("miou") < 0.3,
+                OR(EvaluationMetricField("f1") >= 1, NOT(EvaluationMetricField("p") != 0.5)),
+                AND(EvaluationMetricField("r") == 2),
+            ),
+        ),
+        (SampleType.IMAGE, AnnotationMetricQuery.confusion("run", "cat", "dog")),
+        (
+            SampleType.IMAGE,
+            AnnotationMetricQuery.confusion(
+                "run",
+                "cat",
+                "cat",
+                AnnotationEvaluationMetricField("iou") > 0.3,
+                AnnotationEvaluationMetricField("iou") <= 0.9,
+            ),
+        ),
+        (SampleType.IMAGE, AnnotationMetricQuery.false_positive(run_name="run", prediction="dog")),
+        (
+            SampleType.VIDEO,
+            NOT(AnnotationMetricQuery.false_negative(run_name="run", ground_truth="cat")),
+        ),
     ],
 )
 def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression) -> None:
@@ -189,11 +221,59 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
         (SampleType.VIDEO, VideoEventQuery()),
         (SampleType.VIDEO, VideoFrameSampleField.frame_timestamp_s > 1),
         (SampleType.VIDEO, VideoFrameSampleField.parent_video.width > 1),
+        (SampleType.IMAGE, EvaluationMetricField("miou") < 0.3),
+        (SampleType.IMAGE, AnnotationEvaluationMetricField("iou") > 0.3),
+        (
+            SampleType.IMAGE,
+            SampleEvaluationQuery("run", AnnotationEvaluationMetricField("iou") > 1),
+        ),
+        (SampleType.IMAGE, SampleEvaluationQuery("run", AND())),
+        (
+            SampleType.IMAGE,
+            AnnotationMetricQuery(
+                match_kind="false_positive",
+                run_name="run",
+                gt_label_name=None,
+                pred_label_name="dog",
+                criteria=[AnnotationEvaluationMetricField("iou") > 0.3],
+            ),
+        ),
+        (
+            SampleType.IMAGE,
+            AnnotationMetricQuery(
+                match_kind="confusion",
+                run_name="run",
+                gt_label_name=None,
+                pred_label_name="dog",
+                criteria=[],
+            ),
+        ),
+        (SampleType.IMAGE, ObjectDetectionQuery(SampleEvaluationQuery("run"))),
+        (
+            SampleType.VIDEO,
+            VideoEventQuery(AnnotationMetricQuery.false_positive(run_name="run", prediction="dog")),
+        ),
+        (SampleType.VIDEO, VideoFrameQuery(SampleEvaluationQuery("run"))),
     ],
 )
 def test_to_query_expr__not_supported(sample_type: SampleType, match: MatchExpression) -> None:
     with pytest.raises(UnsupportedQueryError):
         query_expr_conversion.to_query_expr(match_expression=match, sample_type=sample_type)
+
+
+@pytest.mark.parametrize(
+    "criterion",
+    [
+        NOT(AnnotationEvaluationMetricField("iou") > 0.3),
+        AND(AnnotationEvaluationMetricField("iou") > 0.3),
+        EvaluationMetricField("miou") < 0.3,
+    ],
+)
+def test_to_query_expr__confusion_criterion_not_supported(criterion: Any) -> None:
+    match = AnnotationMetricQuery.confusion("run", "cat", "dog", criterion)
+
+    with pytest.raises(UnsupportedQueryError):
+        query_expr_conversion.to_query_expr(match_expression=match, sample_type=SampleType.IMAGE)
 
 
 def test_to_sort_keys() -> None:
