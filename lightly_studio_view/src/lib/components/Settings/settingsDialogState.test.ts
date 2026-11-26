@@ -216,6 +216,17 @@ describe('SettingsDialogState', () => {
         expect(state.recordingShortcut).toBeNull();
     });
 
+    it('does not record Space as a camera shortcut', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyPreviousCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
+
+        expect(state.shortcuts.keyPreviousCamera).toBe('[');
+        expect(state.recordingShortcut).toBe('keyPreviousCamera');
+    });
+
     it('ignores keydown when not recording', () => {
         const state = new SettingsDialogState();
         state.hydrate(TEST_SETTINGS);

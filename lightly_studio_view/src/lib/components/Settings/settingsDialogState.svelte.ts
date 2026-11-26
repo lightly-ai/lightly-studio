@@ -90,6 +90,8 @@ export function createSettingsSavePayload(
 
 // A modifier alone is never a shortcut: AltGr and Shift come before the character they type.
 const MODIFIER_KEYS = new Set(['Alt', 'AltGraph', 'Control', 'Meta', 'Shift']);
+// Space toggles playback in the camera dialog, so it can never switch cameras.
+const CAMERA_SHORTCUTS = new Set<ShortcutSettingKey>(['keyPreviousCamera', 'keyNextCamera']);
 
 export function normalizeShortcutKey(event: ShortcutKeyboardEvent): string {
     if (event.key === ' ') {
@@ -173,6 +175,8 @@ export class SettingsDialogState {
 
         // Keep recording until the key that the modifier changes.
         if (MODIFIER_KEYS.has(event.key)) return;
+        // Keep recording until a key that can switch cameras.
+        if (event.key === ' ' && CAMERA_SHORTCUTS.has(this.recordingShortcut)) return;
 
         // Escape cancels recording. Stopping it also keeps the dialog open.
         if (event.key !== 'Escape') {
