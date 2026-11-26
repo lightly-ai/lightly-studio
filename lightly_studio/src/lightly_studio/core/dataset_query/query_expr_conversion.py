@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any
 
 from pydantic import ValidationError
+from sqlalchemy.orm import InstrumentedAttribute
 
 from lightly_studio.core.dataset_query import query_translation, video_query_validation
 from lightly_studio.core.dataset_query.annotation_evaluation_metric_expression import (
@@ -153,8 +154,8 @@ def to_sort_keys(order_by: Sequence[OrderByExpression], sample_type: SampleType)
     """Convert order-by expressions on samples of the sample type to sort keys.
 
     Raises:
-        UnsupportedQueryError: If a sort is not on a sample field of the sample type or on
-            metadata.
+        UnsupportedQueryError: If a sort is not on a non-nullable sample field of the sample
+            type or on metadata.
     """
     return [_to_sort_key(expression=expression, scope=sample_type.value) for expression in order_by]
 
@@ -330,11 +331,20 @@ def _lookup_sort_field(field: Field, scope: str) -> FieldRef:
 
 @functools.cache
 def _sort_fields_by_column() -> dict[tuple[str, Any], FieldRef]:
-    """Map (table, column) to the field reference of the sort field."""
+    """Map (table, column) to the field reference of the sort field.
+
+    Nullable columns are left out, as the keyset paging of the server skips NULL values.
+    """
     return {
         (table, field.get_sqlmodel_field()): FieldRef(table=table, name=name)
         for (table, name), field in query_translation.sort_fields().items()
+        if not _is_nullable(field=field)
     }
+
+
+def _is_nullable(field: Field) -> bool:
+    column = field.get_sqlmodel_field()
+    return not isinstance(column, InstrumentedAttribute) or bool(column.expression.nullable)
 
 
 @functools.cache
