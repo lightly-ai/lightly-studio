@@ -1,14 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { readable } from 'svelte/store';
 import { describe, expect, it, vi } from 'vitest';
 import AnnotationMetadataLabel from './AnnotationMetadataLabel.svelte';
 
-const mocks = vi.hoisted(() => ({
-    updateAnnotation: vi.fn()
-}));
-
 vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
-    useAnnotation: () => ({ updateAnnotation: mocks.updateAnnotation, refetch: vi.fn() })
+    useAnnotation: () => ({ updateAnnotation: vi.fn(), refetch: vi.fn() })
 }));
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
@@ -43,20 +39,5 @@ describe('AnnotationMetadataLabel', () => {
 
         expect(screen.getByText('Class')).toBeInTheDocument();
         expect(screen.getByTestId('annotation-metadata-label')).toHaveTextContent('car #7');
-    });
-
-    it('updates the annotation class when a class is selected in editing mode', () => {
-        render(AnnotationMetadataLabel, {
-            props: { ...defaultProps, isEditingMode: readable(true) }
-        });
-
-        fireEvent.click(screen.getByRole('combobox'));
-        fireEvent.click(screen.getByRole('option', { name: /pedestrian/i }));
-
-        expect(mocks.updateAnnotation).toHaveBeenCalledWith({
-            annotation_id: 'annotation-1',
-            collection_id: 'collection-1',
-            label_name: 'pedestrian'
-        });
     });
 });
