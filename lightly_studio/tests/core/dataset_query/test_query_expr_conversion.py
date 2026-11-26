@@ -322,6 +322,14 @@ def test_to_sort_keys__nullable_field() -> None:
         query_expr_conversion.to_sort_keys(order_by=[order_by], sample_type=SampleType.VIDEO)
 
 
+@pytest.mark.parametrize("sample_type", [SampleType.VIDEO, SampleType.VIDEO_FRAME])
+def test_to_sort_keys__evaluation_metric_of_non_image__raises(sample_type: SampleType) -> None:
+    order_by = OrderByEvaluationMetricField(evaluation_run_name="run", metric_name="miou")
+
+    with pytest.raises(UnsupportedQueryError, match="Evaluation metric sorts"):
+        query_expr_conversion.to_sort_keys(order_by=[order_by], sample_type=sample_type)
+
+
 @pytest.mark.parametrize(
     ("sample_type", "order_by", "table", "name", "direction"),
     [

@@ -158,7 +158,7 @@ def to_sort_keys(
 
     Raises:
         UnsupportedQueryError: If a sort is not on a non-nullable sample field of the sample
-            type, on metadata, or on an evaluation metric.
+            type, on metadata, or on an evaluation metric of images.
     """
     return [_to_sort_key(expression=expression, scope=sample_type.value) for expression in order_by]
 
@@ -166,6 +166,8 @@ def to_sort_keys(
 def _to_sort_key(expression: OrderByExpression, scope: str) -> SortKey | EvaluationMetricSortKey:
     direction = SortDirection.asc if expression.ascending else SortDirection.desc
     if isinstance(expression, OrderByEvaluationMetricField):
+        if scope != SampleType.IMAGE.value:
+            raise UnsupportedQueryError(f"Evaluation metric sorts of {scope} are not supported.")
         return EvaluationMetricSortKey(
             run_name=expression.evaluation_run_name,
             metric_name=expression.metric_name,
