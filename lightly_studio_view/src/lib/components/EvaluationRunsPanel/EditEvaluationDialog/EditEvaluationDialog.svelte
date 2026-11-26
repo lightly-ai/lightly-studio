@@ -65,8 +65,9 @@
                 <Button
                     variant="outline"
                     buttonProps={{ type: 'button', disabled: mutation.isPending, onclick: close }}
-                    >Cancel</Button
                 >
+                    Cancel
+                </Button>
                 <Button
                     isPending={mutation.isPending}
                     buttonProps={{ type: 'submit', disabled: mutation.isPending }}

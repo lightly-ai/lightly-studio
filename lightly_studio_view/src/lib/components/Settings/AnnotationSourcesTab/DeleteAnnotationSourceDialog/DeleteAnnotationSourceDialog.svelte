@@ -48,8 +48,10 @@
         <Dialog.Footer>
             <Button
                 variant="outline"
-                buttonProps={{ disabled: mutation.isPending, onclick: onClose }}>Cancel</Button
+                buttonProps={{ disabled: mutation.isPending, onclick: onClose }}
             >
+                Cancel
+            </Button>
             <Button
                 variant="destructive"
                 isPending={mutation.isPending}

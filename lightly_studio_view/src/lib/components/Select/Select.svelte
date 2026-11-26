@@ -156,9 +156,9 @@
         {#if TriggerIcon}
             <TriggerIcon class={cn(iconSizeClass[size], 'shrink-0')} />
         {/if}
-        <span class="truncate"
-            >{triggerLabel ?? (value ? (selectedItem?.label ?? value) : placeholder)}</span
-        >
+        <span class="truncate">
+            {triggerLabel ?? (value ? (selectedItem?.label ?? value) : placeholder)}
+        </span>
     </SelectPrimitive.Trigger>
 
     <SelectPrimitive.Content>

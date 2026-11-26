@@ -48,7 +48,7 @@
         value={referenceFrameId}
         triggerLabel={frameTriggerLabel}
         size="xs"
-        class="w-40"
+        class="w-full"
         testId="workspace-frame-select"
         onValueChange={onSelectReferenceFrame}
     />
@@ -63,7 +63,7 @@
     value={colorMode}
     triggerLabel={colorTriggerLabel}
     size="xs"
-    class="w-40"
+    class="w-full"
     testId="workspace-color-select"
     onValueChange={(value) => onColorModeChange(value as Exclude<ColorMode, 'none'>)}
 />

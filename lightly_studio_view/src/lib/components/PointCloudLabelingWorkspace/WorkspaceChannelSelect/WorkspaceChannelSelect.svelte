@@ -60,7 +60,7 @@
     itemNounPlural="channels"
     showSelectAll
     disabled={channels.length === 0}
-    triggerClass="m-0 w-56 rounded-md"
+    triggerClass="m-0 w-full rounded-md"
     align="start"
     {testId}
 />

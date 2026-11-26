@@ -42,8 +42,9 @@
             <Button
                 variant="outline"
                 buttonProps={{ disabled: mutation.isPending, onclick: () => (open = false) }}
-                >Cancel</Button
             >
+                Cancel
+            </Button>
             <Button
                 variant="destructive"
                 isPending={mutation.isPending}

@@ -99,8 +99,10 @@
                     disabled: readOnly,
                     'data-testid': 'query-editor-apply-button',
                     onclick: handleSave
-                }}>{applyLabel}</Button
+                }}
             >
+                {applyLabel}
+            </Button>
         </div>
     {/if}
 </div>

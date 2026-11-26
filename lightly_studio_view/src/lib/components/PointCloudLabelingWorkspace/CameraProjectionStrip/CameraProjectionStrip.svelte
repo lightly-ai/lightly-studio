@@ -8,11 +8,11 @@
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
     import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
     import ProjectionControls from './ProjectionControls.svelte';
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import ChevronUp from '@lucide/svelte/icons/chevron-up';
-    import { Button } from '$lib/components';
     import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';
-    import WorkspacePanelHeader from '../WorkspacePanelHeader/WorkspacePanelHeader.svelte';
+    import { WorkspacePanel } from '../WorkspacePanel';
+    import { PanelDockToggle, type PanelDock } from '../PanelDockToggle';
+    import { WorkspaceChannelSelect } from '../WorkspaceChannelSelect';
+    import { cn } from '$lib/utils';
 
     interface Props {
         datasetId: string;
@@ -26,8 +26,16 @@
         annotationClasses?: readonly AnnotationClassColor[];
         canProject?: boolean;
         onPlaybackToggle?: () => void;
-        collapsed?: boolean;
-        onToggleCollapsed?: () => void;
+        /** Hides the strip; the panel shows no close button without it. */
+        onHide?: () => void;
+        /** Where the strip sits: below the scene (tiles in a row) or on its right (in a column). */
+        dock?: PanelDock;
+        /** Moves the strip; the panel shows no dock toggle without it. */
+        onDockChange?: (dock: PanelDock) => void;
+        /** Toggles a camera channel; the settings show no channel select without it. */
+        onToggleCameraChannel?: (channelId: number) => void;
+        /** Replaces the shown camera channels. */
+        onSetCameraChannels?: (channelIds: number[]) => void;
     }
 
     let {
@@ -42,8 +50,11 @@
         annotationClasses = [],
         canProject = true,
         onPlaybackToggle,
-        collapsed = false,
-        onToggleCollapsed
+        onHide,
+        dock = 'bottom',
+        onDockChange,
+        onToggleCameraChannel,
+        onSetCameraChannels
     }: Props = $props();
     const projectionSettings = useProjectionSettings();
 
@@ -62,56 +73,63 @@
     }));
 </script>
 
-<div
-    class="flex h-full min-h-0 flex-col bg-background"
-    class:justify-center={collapsed}
-    data-testid="workspace-projection-strip"
->
-    <WorkspacePanelHeader title="Camera projections">
-        {#snippet actions()}
-            <ProjectionControls
-                settings={$projectionSettings}
-                onChange={(settings) => projectionSettings.set(settings)}
-                {onPlaybackToggle}
-            />
-            {#if onToggleCollapsed}
-                <Button
-                    variant="ghost"
-                    icon={collapsed ? ChevronUp : ChevronDown}
-                    ariaLabel={collapsed ? 'Expand camera strip' : 'Collapse camera strip'}
-                    buttonProps={{
-                        type: 'button',
-                        size: 'xs',
-                        class: 'h-7 w-7 p-0',
-                        onclick: onToggleCollapsed
-                    }}
-                />
-            {/if}
-        {/snippet}
-    </WorkspacePanelHeader>
-    {#if !collapsed}
-        <!-- Reserve scrollbar height so resizing the tiles cannot toggle overflow in a loop. -->
-        <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-scroll px-2 pb-2">
-            {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel}
-                {@const channel =
-                    tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
-                <CameraProjectionFrame
-                    {datasetId}
-                    {recordingId}
-                    channelId={summaryChannel.channel_id}
-                    keyframeTimestampNs={channel?.keyframe_log_time_ns ?? undefined}
-                    logTimeNs={channel?.log_time_ns}
-                    blob={cameraFrames.data?.[summaryChannel.channel_id]}
-                    label={summaryChannel.group_component_name}
-                    {batch}
-                    {annotations}
-                    {annotationClasses}
-                    projection={canProject ? (channel?.projection ?? undefined) : undefined}
-                    {onPlaybackToggle}
-                    projectionSettings={$projectionSettings}
-                    onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
-                />
-            {/each}
-        </div>
+{#snippet cameraChannelSelect()}
+    {#if onToggleCameraChannel && onSetCameraChannels}
+        <WorkspaceChannelSelect
+            label="Camera"
+            channels={summaryCameraChannels}
+            selectedChannels={selectedChannelIds}
+            onToggleChannel={onToggleCameraChannel}
+            onSetChannels={onSetCameraChannels}
+            testId="workspace-camera-select"
+        />
     {/if}
-</div>
+{/snippet}
+
+<WorkspacePanel
+    title="Camera projections"
+    {onHide}
+    class="h-full"
+    testId="workspace-projection-strip"
+>
+    {#snippet actions()}
+        <ProjectionControls
+            settings={$projectionSettings}
+            onChange={(settings) => projectionSettings.set(settings)}
+            {onPlaybackToggle}
+            filters={onToggleCameraChannel && onSetCameraChannels ? cameraChannelSelect : undefined}
+        />
+        {#if onDockChange}
+            <PanelDockToggle {dock} label="camera projections" onChange={onDockChange} />
+        {/if}
+    {/snippet}
+    <!-- Reserve the scrollbar so resizing the tiles cannot toggle overflow in a loop. -->
+    <div
+        class={cn(
+            'scrollbar-thin flex h-full min-h-0 gap-2 px-2 pb-2',
+            dock === 'right' ? 'flex-col overflow-x-hidden overflow-y-scroll' : 'overflow-x-scroll'
+        )}
+    >
+        {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel (summaryChannel.channel_id)}
+            {@const channel =
+                tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
+            <CameraProjectionFrame
+                {datasetId}
+                {recordingId}
+                channelId={summaryChannel.channel_id}
+                keyframeTimestampNs={channel?.keyframe_log_time_ns ?? undefined}
+                logTimeNs={channel?.log_time_ns}
+                blob={cameraFrames.data?.[summaryChannel.channel_id]}
+                label={summaryChannel.group_component_name}
+                {batch}
+                {annotations}
+                {annotationClasses}
+                projection={canProject ? (channel?.projection ?? undefined) : undefined}
+                {onPlaybackToggle}
+                projectionSettings={$projectionSettings}
+                onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
+                layout={dock === 'right' ? 'column' : 'row'}
+            />
+        {/each}
+    </div>
+</WorkspacePanel>

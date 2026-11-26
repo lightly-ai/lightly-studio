@@ -115,9 +115,9 @@
                     {$currentMode === 'temp' ? 'Refine Temporary Classifier' : 'Refine Classifier'}
                 </Dialog.Title>
                 <Dialog.Description class="py-4 text-foreground">
-                    You are refining classifier: <span class="font-medium"
-                        >{$currentClassifierName}</span
-                    >
+                    You are refining classifier: <span class="font-medium">
+                        {$currentClassifierName}
+                    </span>
                 </Dialog.Description>
             </Dialog.Header>
 

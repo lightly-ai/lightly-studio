@@ -39,8 +39,9 @@
             disabled={$pending || !sources.isSuccess}
             aria-label="Duplicate to another annotation source"
             onclick={(event) => event.stopPropagation()}
-            ><CopyPlus class="size-4" /></Popover.Trigger
         >
+            <CopyPlus class="size-4" />
+        </Popover.Trigger>
     </Tooltip>
     <Popover.Content class="w-64 p-0" align="end">
         <Command.Root label="Annotation source">

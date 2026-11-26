@@ -102,4 +102,17 @@ describe('WorkspaceChannelSelect', () => {
 
         expect(screen.getByTestId('workspace-camera-select')).toBeDisabled();
     });
+
+    it('selects all channels and clears them', async () => {
+        const user = userEvent.setup();
+        const onSetChannels = vi.fn();
+        render(WorkspaceChannelSelect, { props: { ...defaultProps, onSetChannels } });
+
+        await user.click(screen.getByTestId('workspace-camera-select'));
+        await user.click(screen.getByRole('button', { name: 'Clear' }));
+        expect(onSetChannels).toHaveBeenLastCalledWith([]);
+
+        await user.click(screen.getByRole('button', { name: 'Select all' }));
+        expect(onSetChannels).toHaveBeenLastCalledWith([2, 3]);
+    });
 });
