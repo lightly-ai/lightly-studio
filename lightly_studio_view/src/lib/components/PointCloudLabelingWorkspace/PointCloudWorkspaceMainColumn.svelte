@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Pane, PaneGroup, PaneResizer } from 'paneforge';
+    import { cn } from '$lib/utils';
     import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import PointCloudWorkspaceScene from './PointCloudWorkspaceScene/PointCloudWorkspaceScene.svelte';
@@ -78,7 +79,10 @@
         </div>
     </Pane>
     <PaneResizer
-        class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
+        class={cn(
+            'group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card',
+            layout.cameraStripCollapsed && 'hidden'
+        )}
     >
         <div class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100">
             <span class="size-1 rounded-full bg-muted-foreground"></span>
@@ -90,30 +94,31 @@
         bind:this={cameraPane.pane}
         defaultSize={26}
         minSize={12}
-        collapsedSize={4}
+        collapsedSize={0}
         maxSize={45}
         collapsible
         onCollapse={() => layout.onCameraStripCollapsedChange(true)}
         onExpand={() => layout.onCameraStripCollapsedChange(false)}
         class="min-h-0"
     >
-        <CameraProjectionStrip
-            datasetId={layout.datasetId}
-            sequenceId={layout.sequenceId}
-            cameraChannels={layout.workspace.cameraChannels}
-            seqNumber={layout.workspace.currentTick}
-            displayFrameId={layout.workspace.referenceFrameId}
-            selectedChannelIds={layout.selectedCameraChannelIds}
-            batch={layout.cameraBatch}
-            annotations={layout.snapshotAnnotations.filter(
-                (annotation) => !layout.isTickAnnotationHidden(annotation)
-            )}
-            annotationClasses={layout.annotationClasses}
-            canProject={!layout.workspace.isShowingSensorFrames}
-            onPlaybackToggle={layout.onPlayToggle}
-            collapsed={layout.cameraStripCollapsed}
-            onToggleCollapsed={cameraPane.toggle}
-        />
+        {#if !layout.cameraStripCollapsed}
+            <CameraProjectionStrip
+                datasetId={layout.datasetId}
+                sequenceId={layout.sequenceId}
+                cameraChannels={layout.workspace.cameraChannels}
+                seqNumber={layout.workspace.currentTick}
+                displayFrameId={layout.workspace.referenceFrameId}
+                selectedChannelIds={layout.selectedCameraChannelIds}
+                batch={layout.cameraBatch}
+                annotations={layout.snapshotAnnotations.filter(
+                    (annotation) => !layout.isTickAnnotationHidden(annotation)
+                )}
+                annotationClasses={layout.annotationClasses}
+                canProject={!layout.workspace.isShowingSensorFrames}
+                onPlaybackToggle={layout.onPlayToggle}
+                onHide={cameraPane.toggle}
+            />
+        {/if}
     </Pane>
 </PaneGroup>
 
