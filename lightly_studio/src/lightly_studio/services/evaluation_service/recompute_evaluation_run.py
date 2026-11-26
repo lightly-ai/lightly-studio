@@ -11,6 +11,7 @@ from sqlmodel import Session
 from lightly_studio.evaluation import (
     average_precision,
     classification_metric,
+    evaluation_data,
     instance_segmentation_metric,
     semantic_segmentation_metric,
     validators,
@@ -99,7 +100,7 @@ def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> Eval
         evaluation_run_id=run.id,
         expected_stale_since=observed_stale_since,
     )
-    return EvaluationResult.from_evaluation_data(data)
+    return evaluation_data.to_evaluation_result(data=data)
 
 
 def _fetch_annotations_for_run(session: Session, run: EvaluationRunTable) -> EvaluationData:

@@ -1,4 +1,4 @@
-"""Shared input shape for per-task evaluation metric modules."""
+"""Prepared input of an evaluation run and its result summary."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_task import EvaluationResult
 
 
 @dataclass
@@ -28,3 +29,13 @@ class EvaluationData:
     selected_sample_ids: set[UUID]
     gt_per_sample: dict[UUID, list[AnnotationBaseTable]]
     pred_per_sample: dict[UUID, list[AnnotationBaseTable]]
+
+
+def to_evaluation_result(data: EvaluationData) -> EvaluationResult:
+    """Build the result of an evaluation run from its prepared data."""
+    return EvaluationResult(
+        evaluation_run_id=data.evaluation_run_id,
+        sample_count=len(data.selected_sample_ids),
+        gt_annotation_count=sum(len(v) for v in data.gt_per_sample.values()),
+        pred_annotation_count=sum(len(v) for v in data.pred_per_sample.values()),
+    )
