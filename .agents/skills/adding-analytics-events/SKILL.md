@@ -54,10 +54,12 @@ name as a constant in `lightly_studio/src/lightly_studio/analytics/tracking.py`,
 - **Name:** snake_case, `<object>_<past tense verb>`, such as `annotation_deleted` or
   `export_triggered`. Reuse an existing name if one fits. To list the names in use, run
   `grep -rhoE "trackEvent\('[a-z_]+'" lightly_studio_view/src | sort -u` and read the constants
-  in `analytics/tracking.py`.
+  in `analytics/tracking.py`. Some calls build the name at runtime, for example
+  `` `annotation_class_${action}` ``. To find them, run
+  `grep -rn "trackEvent(" lightly_studio_view/src | grep -v "trackEvent('"` and read each hit.
 - **Properties:** IDs, counts, types, enums, booleans. Never emails, names, file paths, class
-  names, tag names, captions, or other text that a user typed. Tracking is anonymous, and such
-  text can hold personal or customer data.
+  names, tag names, captions, or other text that a user typed. In enterprise sessions, events are
+  linked to the user's email, and such text can hold personal or customer data.
 - Fire once per action, after success. Not per item, not on error or cancel. For a bulk action,
   send one event with a count.
 

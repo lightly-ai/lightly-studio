@@ -19,8 +19,8 @@ When the task matches, also load:
 - [glossary](./.agents/skills/glossary/SKILL.md): names for anything that users see.
 - [pull-requests](./.agents/skills/pull-requests/SKILL.md): a pull request.
 - [adding-analytics-events](./.agents/skills/adding-analytics-events/SKILL.md): a change that adds or
-  changes a user action in the GUI, SDK, or CLI. Each such action fires one PostHog event in the
-  same PR.
+  changes a user action in the GUI, SDK, or CLI. Each action that the skill marks as eligible fires
+  one PostHog event in the same PR.
 - [Contributing](./CONTRIBUTING.md): setup and tests.
 
 Claude Code gives you a reminder. A `PreToolUse` hook (`.claude/settings.json` and
