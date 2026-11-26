@@ -97,7 +97,7 @@ jobs:
             'lightly_studio/alembic.ini', 'lightly_studio/src/**', 'lightly_studio_serve/src/**',
             'lightly_studio/pyproject.toml', 'lightly_studio_serve/pyproject.toml', 'pyproject.toml', 'uv.lock') }}
         run: |
-          prefix="e2e-duckdb-v1-$RUNNER_OS-$RUNNER_ARCH-py3.11-$DATASET_REVISION-$SEED_INPUTS"
+          prefix="e2e-duckdb-v1-$RUNNER_OS-$RUNNER_ARCH-$DATASET_REVISION-$SEED_INPUTS"
           echo "general=$prefix-${{ hashFiles('lightly_studio/e2e-tests/index_general.py') }}" >> "$GITHUB_OUTPUT"
           echo "videos=$prefix-${{ hashFiles('lightly_studio/e2e-tests/index_video.py', 'lightly_studio/e2e-tests/query_events.json') }}" >> "$GITHUB_OUTPUT"
           echo "evaluations=$prefix-${{ hashFiles('lightly_studio/e2e-tests/index_evaluations.py') }}" >> "$GITHUB_OUTPUT"
@@ -466,7 +466,7 @@ jobs:
 
       ### Cleanup steps ###
       - name: Show server logs after failure
-        if: failure() && steps.cache-success.outputs.cache-hit != 'true'
+        if: failure() && env.SERVER_PID != ''
         working-directory: lightly_studio
         run: |
           echo "::group::Full backend server log"
@@ -503,9 +503,8 @@ jobs:
           retention-days: 5
 
       - name: Stop lightly_studio application running in background
-        if: always() && steps.cache-success.outputs.cache-hit != 'true'
-        run: |
-          kill ${{ env.SERVER_PID }} || true
+        if: always() && env.SERVER_PID != ''
+        run: kill "$SERVER_PID" || true
 
       - name: Log runner memory use
         if: always()
