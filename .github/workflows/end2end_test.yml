@@ -35,6 +35,9 @@ jobs:
     timeout-minutes: 5
     outputs:
       file-hash: ${{ steps.file-hash.outputs.hash }}
+      general: ${{ steps.fixture-keys.outputs.general }}
+      videos: ${{ steps.fixture-keys.outputs.videos }}
+      evaluations: ${{ steps.fixture-keys.outputs.evaluations }}
       # Draft pull requests skip the tests. To run them on a draft, add the `run-e2e` or
       # `run-e2e-merge-queue` label and push again.
       skip: >-
@@ -84,6 +87,20 @@ jobs:
           ) }}"
           [ -n "$hash" ] || { echo "::error::No files match the cache key file hash."; exit 1; }
           echo "hash=$hash" >> "$GITHUB_OUTPUT"
+
+      # Hash tracked inputs before any build or Python import writes into the source tree.
+      - name: Compute DuckDB fixture keys
+        id: fixture-keys
+        env:
+          SEED_INPUTS: >-
+            ${{ hashFiles('.github/actions/e2e-*/**', 'lightly_studio/e2e-tests/e2e_fixture.py',
+            'lightly_studio/alembic.ini', 'lightly_studio/src/**', 'lightly_studio_serve/src/**',
+            'lightly_studio/pyproject.toml', 'lightly_studio_serve/pyproject.toml', 'pyproject.toml', 'uv.lock') }}
+        run: |
+          prefix="e2e-duckdb-v1-$RUNNER_OS-$RUNNER_ARCH-$DATASET_REVISION-$SEED_INPUTS"
+          echo "general=$prefix-${{ hashFiles('lightly_studio/e2e-tests/index_general.py') }}" >> "$GITHUB_OUTPUT"
+          echo "videos=$prefix-${{ hashFiles('lightly_studio/e2e-tests/index_video.py', 'lightly_studio/e2e-tests/query_events.json') }}" >> "$GITHUB_OUTPUT"
+          echo "evaluations=$prefix-${{ hashFiles('lightly_studio/e2e-tests/index_evaluations.py') }}" >> "$GITHUB_OUTPUT"
 
       # Push and dispatch also run `end-to-end-after-merge`, which the marker does not cover.
       - name: Check e2e success cache for all matrix jobs
@@ -200,6 +217,8 @@ jobs:
     needs:
       - check-success
       - prepare-caches
+    env:
+      FIXTURE_KEY: ${{ needs.check-success.outputs[matrix.playwright_project] }}
     strategy:
       fail-fast: false
       matrix:
@@ -330,18 +349,29 @@ jobs:
 
       ### Run e2e tests ###
 
-      - name: Index dataset with using lightly_studio pypi package
+      - name: Restore or seed the DuckDB fixture
+        if: steps.cache-success.outputs.cache-hit != 'true' && env.FIXTURE_KEY != ''
+        uses: ./.github/actions/e2e-seed
+        with:
+          key: ${{ env.FIXTURE_KEY }}
+          script: ${{ matrix.index_script }}
+
+      - name: Start the E2E server
         if: steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio
+        env:
+          INDEX_SCRIPT: ${{ matrix.index_script }}
         run: |
-          if [ "${{ matrix.postgres }}" = "true" ]; then
-            LIGHTLY_STUDIO_DATABASE_URL=postgresql://lightly:lightly@localhost:5432/lightly_studio \
-              uv run e2e-tests/${{ matrix.index_script }} > server.log 2>&1 &
+          if [[ -n "${FIXTURE_KEY:-}" ]]; then
+            cp e2e-seed.db lightly_studio.db
+            uv run lightly-studio gui --db-file lightly_studio.db --no-browser > server.log 2>&1 &
           else
-            uv run e2e-tests/${{ matrix.index_script }} > server.log 2>&1 &
+            if [[ "${{ matrix.postgres }}" == "true" ]]; then
+              export LIGHTLY_STUDIO_DATABASE_URL=postgresql://lightly:lightly@localhost:5432/lightly_studio
+            fi
+            uv run "e2e-tests/$INDEX_SCRIPT" > server.log 2>&1 &
           fi
-          echo "SERVER_PID=$!" >> $GITHUB_ENV
-        id: server
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
 
       - name: Wait for the server to start
         if: steps.cache-success.outputs.cache-hit != 'true'
@@ -436,7 +466,7 @@ jobs:
 
       ### Cleanup steps ###
       - name: Show server logs after failure
-        if: failure() && steps.cache-success.outputs.cache-hit != 'true'
+        if: failure() && env.SERVER_PID != ''
         working-directory: lightly_studio
         run: |
           echo "::group::Full backend server log"
@@ -473,9 +503,8 @@ jobs:
           retention-days: 5
 
       - name: Stop lightly_studio application running in background
-        if: always() && steps.cache-success.outputs.cache-hit != 'true'
-        run: |
-          kill ${{ env.SERVER_PID }} || true
+        if: always() && env.SERVER_PID != ''
+        run: kill "$SERVER_PID" || true
 
       - name: Log runner memory use
         if: always()
