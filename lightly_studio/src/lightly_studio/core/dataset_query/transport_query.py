@@ -39,9 +39,11 @@ def build_request(
         query_expr = (
             None
             if match_expression is None
-            else query_expr_conversion.to_query_expr(match_expression=match_expression)
+            else query_expr_conversion.to_query_expr(
+                match_expression=match_expression, sample_type=sample_type
+            )
         )
-        sort = query_expr_conversion.to_sort_keys(order_by=order_by)
+        sort = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=sample_type)
     except UnsupportedQueryError:
         if active_transport.is_remote():
             raise
