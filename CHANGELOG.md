@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Edit, Undo, Plugins and Settings actions are now in the breadcrumb row on sample detail pages.
 
 ### Changed
+- The embedding plot loads faster for large datasets, up to two times faster.
 
 - The "Image Segmentation Mask (COCO)" export is now "Image Segmentation (COCO)" and includes polygons.
 - BREAKING: In the video query editor, `classification(...)` now matches whole-video classifications. Use `event(...)` for temporal events, or combine both with `OR` to include both kinds.

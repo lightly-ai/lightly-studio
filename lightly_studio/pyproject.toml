@@ -182,6 +182,10 @@ module = "sklearn.manifold.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "sklearn.decomposition.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "pgvector.*"
 ignore_missing_imports = true
 
