@@ -575,7 +575,7 @@ def test_export_collection_annotations_prepare__segmentation_mask_coco(
     export_job = db_session.get(ExportJobTable, export_key)
     assert export_job is not None
     content = json.loads(Path(export_job.export_path).read_text())
-    content["annotations"].sort(key=lambda annotation: annotation["iscrowd"])
+    content["annotations"].sort(key=lambda annotation: isinstance(annotation["segmentation"], dict))
     assert content == {
         "images": [{"id": 0, "file_name": "img1.jpg", "width": 10, "height": 10}],
         "categories": [{"id": 0, "name": "cat"}],
@@ -592,7 +592,7 @@ def test_export_collection_annotations_prepare__segmentation_mask_coco(
                 "category_id": 0,
                 "segmentation": {"counts": [20, 2, 8, 2, 8, 1, 59], "size": [10, 10]},
                 "bbox": [2.0, 0.0, 3.0, 2.0],
-                "iscrowd": 1,
+                "iscrowd": 0,
             },
         ],
     }
@@ -976,7 +976,7 @@ def test_export_collection_youtube_vis_prepare(
                     None,
                 ],
                 "areas": [1.0, None],
-                "iscrowd": 1,
+                "iscrowd": 0,
                 "height": 2,
                 "width": 3,
                 "length": 2,

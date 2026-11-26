@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+- Segmentation masks exported to COCO and YouTube-VIS are no longer marked as crowd annotations. COCO evaluation tools now use them instead of ignoring them. Crowd annotations from imported COCO files are also exported as non-crowd.
+- COCO import reads RLE segmentation masks that are not marked as crowd annotations.
 
 ### Security
 
