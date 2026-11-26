@@ -55,6 +55,7 @@ jobs:
           hash="${{ hashFiles(
             '.github/workflows/end2end_test.yml',
             '.github/actions/e2e-*/**',
+            '.github/actions/frontend-build-cache/**',
             'Makefile',
             'lightly_studio/Makefile',
             'lightly_studio/alembic.ini',
@@ -127,13 +128,7 @@ jobs:
 
       - name: Cache build
         id: cache-build
-        uses: actions/cache@v6
-        with:
-          lookup-only: true
-          path: &cache-build-path |
-            lightly_studio_view/build
-            lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          key: python-build-${{ needs.check-success.outputs.file-hash }}
+        uses: ./.github/actions/frontend-build-cache
 
       - name: Cache Playwright browsers
         id: cache-playwright-browsers
@@ -195,15 +190,7 @@ jobs:
       - name: Build the ui application
         if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio_view
-        run: |
-          rm -rf build
-          npm run build
-
-      - name: Copy the built ui app to lightly_studio source folder
-        if: steps.cache-build.outputs.cache-hit != 'true'
-        run: |
-          rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
-          cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
+        run: npm run build
 
   # The merge queue skips this job: the ruleset requires `End2End Success Check` on the pull request
   # before it can enter the queue, so these tests already passed. The queue still tests the merged
@@ -286,12 +273,13 @@ jobs:
 
       - name: Cache build
         if: steps.cache-success.outputs.cache-hit != 'true'
-        id: cache-build
-        uses: actions/cache@v6
+        uses: ./.github/actions/frontend-build-cache
         with:
-          fail-on-cache-miss: true
-          path: *cache-build-path
-          key: python-build-${{ needs.check-success.outputs.file-hash }}
+          lookup-only: 'false'
+
+      - name: Install the frontend bundle for the E2E server
+        if: steps.cache-success.outputs.cache-hit != 'true'
+        run: cp -r lightly_studio_view/build lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
 
       - name: Cache Playwright browsers
         if: steps.cache-success.outputs.cache-hit != 'true'
