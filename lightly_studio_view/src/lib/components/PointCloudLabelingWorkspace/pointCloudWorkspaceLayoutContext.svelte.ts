@@ -57,6 +57,8 @@ export interface PointCloudWorkspaceLayoutState {
     showOrthographicViews: boolean;
     /** Where the orthographic views sit next to the 3D scene. */
     orthographicDock: PanelDock;
+    /** Where the camera strip sits next to the scene column. */
+    cameraStripDock: PanelDock;
     /** Screen-space point size in CSS pixels. */
     pointSize: number;
     /** Whether navigation buttons and shortcut hints are shown. */
@@ -99,6 +101,8 @@ export interface PointCloudWorkspaceLayoutState {
     onToggleOrthographicProjections: (show: boolean) => void | Promise<void>;
     /** Moves the orthographic views. */
     onOrthographicDockChange: (dock: PanelDock) => void;
+    /** Moves the camera strip. */
+    onCameraStripDockChange: (dock: PanelDock) => void;
     /** Updates the preferred point size. */
     onPointSizeChange: (value: number) => void;
     /** Updates navigation helper visibility. */

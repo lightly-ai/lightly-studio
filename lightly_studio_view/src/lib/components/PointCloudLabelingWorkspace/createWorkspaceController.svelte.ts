@@ -106,6 +106,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         isEditingMode: presentation.isEditingMode,
         showOrthographicViews: presentation.showOrthographicViews,
         orthographicDock: presentation.orthographicDock,
+        cameraStripDock: presentation.cameraStripDock,
         pointSize: presentation.pointSize,
         showNavigationHelpers: presentation.showNavigationHelpers,
         accumulation,
@@ -128,6 +129,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         onCameraStripCollapsedChange: cameraPane.setCollapsed,
         onToggleOrthographicProjections: presentation.toggleOrthographicProjections,
         onOrthographicDockChange: presentation.setOrthographicDock,
+        onCameraStripDockChange: presentation.setCameraStripDock,
         onPointSizeChange: presentation.setPointSize,
         onToggleNavigationHelpers: presentation.setShowNavigationHelpers,
         onToolChange: (tool) => {

@@ -21,8 +21,13 @@ export function useWorkspacePresentation() {
         'lightlyStudio_pointCloudOrthographicViewsDock',
         'bottom'
     );
+    const cameraStripDockStore = useSessionStorage<PanelDock>(
+        'lightlyStudio_pointCloudCameraStripDock',
+        'bottom'
+    );
     const orthographic = fromStore(showOrthographicViews);
     const orthographicDock = fromStore(orthographicDockStore);
+    const cameraStripDock = fromStore(cameraStripDockStore);
     const editing = fromStore(isEditingMode);
     const points = fromStore(pointSize);
     const helpers = fromStore(showNavigationHelpers);
@@ -36,6 +41,9 @@ export function useWorkspacePresentation() {
         },
         get orthographicDock() {
             return orthographicDock.current;
+        },
+        get cameraStripDock() {
+            return cameraStripDock.current;
         },
         get pointSize() {
             return points.current;
@@ -52,6 +60,7 @@ export function useWorkspacePresentation() {
         setPointSize: pointSize.set,
         setShowNavigationHelpers: showNavigationHelpers.set,
         toggleOrthographicProjections: showOrthographicViews.set,
-        setOrthographicDock: orthographicDockStore.set
+        setOrthographicDock: orthographicDockStore.set,
+        setCameraStripDock: cameraStripDockStore.set
     };
 }

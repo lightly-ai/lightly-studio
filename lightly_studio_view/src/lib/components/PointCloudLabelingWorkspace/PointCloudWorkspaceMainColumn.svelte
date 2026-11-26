@@ -16,6 +16,7 @@
     const { cameraPane, objectTracksPanel, tagTracksPanel } = useWorkspaceControllerContext();
     const getLayout = usePointCloudWorkspaceLayoutContext();
     const layout = $derived(getLayout());
+    const cameraStripIsRight = $derived(layout.cameraStripDock === 'right');
     const tracksQuery = useSequenceTracks(() => ({
         datasetId: layout.datasetId,
         sequenceId: layout.sequenceId,
@@ -71,7 +72,7 @@
     provideCameraRgbColors(() => cameraRgb.colors);
 </script>
 
-<PaneGroup direction="vertical" class="min-h-0 flex-1">
+<PaneGroup direction={cameraStripIsRight ? 'horizontal' : 'vertical'} class="min-h-0 flex-1">
     <Pane defaultSize={62} minSize={30} class="min-h-0">
         <div class="flex h-full min-h-0 flex-col">
             <PointCloudWorkspaceScene />
@@ -79,11 +80,17 @@
     </Pane>
     <PaneResizer
         class={cn(
-            'group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card',
+            'group relative flex items-center justify-center bg-card transition-colors hover:bg-card',
+            cameraStripIsRight ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize',
             layout.cameraStripCollapsed && 'hidden'
         )}
     >
-        <div class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100">
+        <div
+            class={cn(
+                'flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100',
+                cameraStripIsRight && 'flex-col'
+            )}
+        >
             <span class="size-1 rounded-full bg-muted-foreground"></span>
             <span class="size-1 rounded-full bg-muted-foreground"></span>
             <span class="size-1 rounded-full bg-muted-foreground"></span>
@@ -116,6 +123,8 @@
                 canProject={!layout.workspace.isShowingSensorFrames}
                 onPlaybackToggle={layout.onPlayToggle}
                 onHide={cameraPane.toggle}
+                dock={layout.cameraStripDock}
+                onDockChange={layout.onCameraStripDockChange}
                 onToggleCameraChannel={layout.onToggleCameraChannel}
                 onSetCameraChannels={layout.onSetCameraChannels}
             />

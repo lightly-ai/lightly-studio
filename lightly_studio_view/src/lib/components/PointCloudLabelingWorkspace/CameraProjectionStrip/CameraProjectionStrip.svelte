@@ -10,7 +10,9 @@
     import ProjectionControls from './ProjectionControls.svelte';
     import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';
     import { WorkspacePanel } from '../WorkspacePanel';
+    import { PanelDockToggle, type PanelDock } from '../PanelDockToggle';
     import { WorkspaceChannelSelect } from '../WorkspaceChannelSelect';
+    import { cn } from '$lib/utils';
 
     interface Props {
         datasetId: string;
@@ -26,6 +28,10 @@
         onPlaybackToggle?: () => void;
         /** Hides the strip; the panel shows no close button without it. */
         onHide?: () => void;
+        /** Where the strip sits: below the scene (tiles in a row) or on its right (in a column). */
+        dock?: PanelDock;
+        /** Moves the strip; the panel shows no dock toggle without it. */
+        onDockChange?: (dock: PanelDock) => void;
         /** Toggles a camera channel; the settings show no channel select without it. */
         onToggleCameraChannel?: (channelId: number) => void;
         /** Replaces the shown camera channels. */
@@ -45,6 +51,8 @@
         canProject = true,
         onPlaybackToggle,
         onHide,
+        dock = 'bottom',
+        onDockChange,
         onToggleCameraChannel,
         onSetCameraChannels
     }: Props = $props();
@@ -91,9 +99,17 @@
             {onPlaybackToggle}
             filters={onToggleCameraChannel && onSetCameraChannels ? cameraChannelSelect : undefined}
         />
+        {#if onDockChange}
+            <PanelDockToggle {dock} label="camera projections" onChange={onDockChange} />
+        {/if}
     {/snippet}
     <!-- Reserve the scrollbar so resizing the tiles cannot toggle overflow in a loop. -->
-    <div class="scrollbar-thin flex h-full min-h-0 gap-2 overflow-x-scroll px-2 pb-2">
+    <div
+        class={cn(
+            'scrollbar-thin flex h-full min-h-0 gap-2 px-2 pb-2',
+            dock === 'right' ? 'flex-col overflow-x-hidden overflow-y-scroll' : 'overflow-x-scroll'
+        )}
+    >
         {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel}
             {@const channel =
                 tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
@@ -112,6 +128,7 @@
                 {onPlaybackToggle}
                 projectionSettings={$projectionSettings}
                 onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
+                layout={dock === 'right' ? 'column' : 'row'}
             />
         {/each}
     </div>
