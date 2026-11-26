@@ -12,7 +12,7 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.video import VideoTable
+from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.type_definitions import QueryType
 
@@ -102,4 +102,8 @@ def _apply_sample_filter(
 ) -> QueryType:
     if filters.query_expr is not None:
         query = query.outerjoin(VideoTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
+        if sample_type == SampleType.VIDEO_FRAME:
+            query = query.outerjoin(
+                VideoFrameTable, col(VideoFrameTable.sample_id) == col(SampleTable.sample_id)
+            )
     return filters.apply(query=query, sample_type=sample_type)

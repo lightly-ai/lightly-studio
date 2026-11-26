@@ -62,9 +62,8 @@ def test_sort_to_order_by__video_frame_fields(name: str) -> None:
     assert not order_by.ascending
 
 
-def test_to_match_expression__video_frame_tags_in_database(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
+@pytest.mark.usefixtures("patch_collection")
+def test_to_match_expression__video_frame_tags_in_database() -> None:
     dataset = VideoDataset.create(name="ds")
     for path, fps in (("/data/a.mp4", 3.0), ("/data/b.mp4", 2.0)):
         create_video_with_frames(
