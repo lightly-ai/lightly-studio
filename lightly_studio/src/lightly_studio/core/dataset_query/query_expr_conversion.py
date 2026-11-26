@@ -148,12 +148,17 @@ class UnsupportedQueryError(NotImplementedError):
     """The transport cannot send this query yet."""
 
 
-def to_query_expr(match_expression: MatchExpression, sample_type: SampleType) -> QueryExpr:
+def to_query_expr(match_expression: MatchExpression, sample_type: SampleType) -> QueryExpr | None:
     """Convert a match expression on samples of the sample type to a `QueryExpr`.
+
+    Returns:
+        The `QueryExpr`, or None if the expression is an empty AND that matches all samples.
 
     Raises:
         UnsupportedQueryError: If the expression uses a field that is not supported.
     """
+    if _is_empty_and(expression=match_expression):
+        return None
     try:
         match_expr = _to_match_expr(expression=match_expression, scope=sample_type.value)
         video_query_validation.validate(expr=match_expr, scope=sample_type.value)
@@ -195,9 +200,8 @@ def _to_sort_key(expression: OrderByExpression, scope: str) -> SortKey | Evaluat
 
 def _to_match_expr(expression: MatchExpression, scope: str) -> MatchExpr:
     if isinstance(expression, AND):
-        return AndExpr(
-            children=[_to_match_expr(expression=term, scope=scope) for term in expression.terms]
-        )
+        terms = _without_empty_ands(terms=expression.terms)
+        return AndExpr(children=[_to_match_expr(expression=term, scope=scope) for term in terms])
     if isinstance(expression, OR):
         return OrExpr(
             children=[_to_match_expr(expression=term, scope=scope) for term in expression.terms]
@@ -225,12 +229,25 @@ def _to_scoped_match_expr(query: _ScopedQuery) -> MatchExpr:
 
 def _to_subexpr(criterion: MatchExpression, scope: str) -> MatchExpr | None:
     """Convert the criteria of a scoped query. None means that the query has no criteria."""
-    terms = criterion.terms if isinstance(criterion, AND) else (criterion,)
+    terms = _without_empty_ands(
+        terms=criterion.terms if isinstance(criterion, AND) else (criterion,)
+    )
     if not terms:
         return None
     if len(terms) == 1:
         return _to_match_expr(expression=terms[0], scope=scope)
     return AndExpr(children=[_to_match_expr(expression=term, scope=scope) for term in terms])
+
+
+def _without_empty_ands(terms: Sequence[MatchExpression]) -> list[MatchExpression]:
+    """Drop the empty AND terms. They match everything, and the query format has no true node."""
+    return [term for term in terms if not _is_empty_and(expression=term)]
+
+
+def _is_empty_and(expression: MatchExpression) -> bool:
+    return isinstance(expression, AND) and all(
+        _is_empty_and(expression=term) for term in expression.terms
+    )
 
 
 def _to_leaf_expr(expression: MatchExpression, scope: str) -> MatchExpr:
@@ -281,14 +298,18 @@ def _to_evaluation_expr(query: SampleEvaluationQuery | AnnotationMetricQuery) ->
         return _to_annotation_metric_expr(query=query)
     return SampleEvaluationMatchExpr(
         run_name=query.run_name,
-        criteria=[_to_sample_metric_expr(expression=term) for term in query.criteria],
+        criteria=[
+            _to_sample_metric_expr(expression=term)
+            for term in _without_empty_ands(terms=query.criteria)
+        ],
     )
 
 
 def _to_sample_metric_expr(expression: MatchExpression) -> SampleEvaluationMetricExpr:
     if isinstance(expression, AND):
+        terms = _without_empty_ands(terms=expression.terms)
         return EvaluationMetricAndExpr(
-            children=[_to_sample_metric_expr(expression=term) for term in expression.terms]
+            children=[_to_sample_metric_expr(expression=term) for term in terms]
         )
     if isinstance(expression, OR):
         return EvaluationMetricOrExpr(

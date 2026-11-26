@@ -41,6 +41,21 @@ def test_build_request__flag_off(mocker: MockerFixture) -> None:
     assert request is None
 
 
+@pytest.mark.parametrize("match", [AND(), AND(AND())])
+@pytest.mark.usefixtures("_transport_queries")
+def test_build_request__empty_and(match: AND) -> None:
+    request = transport_query.build_request(
+        sample_type=SampleType.IMAGE,
+        match_expression=match,
+        order_by=[],
+        filters_sample_ids=False,
+        offset=0,
+    )
+
+    assert request is not None
+    assert request.query_expr is None
+
+
 @pytest.mark.parametrize(
     "order_by",
     [
