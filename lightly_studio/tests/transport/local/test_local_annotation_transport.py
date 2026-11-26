@@ -67,6 +67,30 @@ class TestLocalAnnotationTransport:
         assert annotations[0].annotation_label.annotation_label_name == label.annotation_label_name
         assert annotations[0].object_detection_details is not None
 
+    def test_get_by_sample_ids_and_collection(self) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+        image = create_image(session=session, collection_id=collection_id)
+        label = create_annotation_label(session=session, root_collection_id=collection_id)
+        annotations = [
+            create_annotation(
+                session=session,
+                collection_id=collection_id,
+                sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+                annotation_collection_name=name,
+            )
+            for name in ["gt", "predictions"]
+        ]
+        transport: AnnotationTransport = LocalAnnotationTransport()
+
+        found = transport.get_by_sample_ids_and_collection(
+            sample_ids=[image.sample_id],
+            annotation_collection_id=annotations[0].sample.collection_id,
+        )
+
+        assert [a.sample_id for a in found] == [annotations[0].sample_id]
+
     def test_create(self) -> None:
         session = db_manager.persistent_session()
         collection_id = create_collection(session=session).collection_id
@@ -120,6 +144,24 @@ class TestLocalAnnotationTransport:
 
         transport.delete(annotation_ids=[annotation.sample_id])
         assert transport.get_by_sample_ids(sample_ids=[image.sample_id]) == []
+
+    def test_delete_empty_object_tracks(self) -> None:
+        session = db_manager.persistent_session()
+        dataset_id = create_collection(session=session).dataset_id
+        track_ids = object_track_resolver.create_many(
+            session=session,
+            tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=dataset_id)],
+        )
+        transport: AnnotationTransport = LocalAnnotationTransport()
+
+        deleted_count = transport.delete_empty_object_tracks(
+            object_track_ids=[track_ids[0], uuid.uuid4()]
+        )
+
+        assert deleted_count == 1
+        assert (
+            object_track_resolver.get_by_id(session=session, object_track_id=track_ids[0]) is None
+        )
 
     def test_get_free_object_track_numbers(self) -> None:
         session = db_manager.persistent_session()

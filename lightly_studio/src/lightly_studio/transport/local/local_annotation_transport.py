@@ -52,6 +52,21 @@ class LocalAnnotationTransport:
             for annotation in annotations
         ]
 
+    def get_by_sample_ids_and_collection(
+        self, sample_ids: Sequence[UUID], annotation_collection_id: UUID
+    ) -> list[AnnotationView]:
+        """Get the annotations of samples that are in one annotation collection."""
+        annotations = annotation_resolver.get_all_by_parent_sample_ids_and_annotation_collection_id(
+            session=db_manager.persistent_session(),
+            parent_sample_ids=sample_ids,
+            annotation_collection_id=annotation_collection_id,
+            load_view_relationships=True,
+        )
+        return [
+            AnnotationView.from_annotation_table(annotation=annotation)
+            for annotation in annotations
+        ]
+
     def create(
         self,
         parent_collection_id: UUID,
@@ -81,6 +96,12 @@ class LocalAnnotationTransport:
             raise NotFoundError(f"Annotations not found: {sorted(str(id_) for id_ in missing_ids)}")
         annotation_resolver.delete_annotations_by_ids(
             session=session, annotation_ids=annotation_ids
+        )
+
+    def delete_empty_object_tracks(self, object_track_ids: Sequence[UUID]) -> int:
+        """Delete the object tracks that have no annotations and no child tracks."""
+        return object_track_resolver.delete_empty_by_ids(
+            session=db_manager.persistent_session(), object_track_ids=object_track_ids
         )
 
     def get_free_object_track_numbers(self, dataset_id: UUID, count: int) -> list[int]:
