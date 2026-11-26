@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
-from lightly_studio.core.sample import Sample
 from lightly_studio.export.lightly_studio_label_input import SampleToImage
+
+if TYPE_CHECKING:
+    from lightly_studio.core.sample import Sample
 
 
 class CocoCaptionImage(TypedDict):

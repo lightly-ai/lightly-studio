@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from collections.abc import Iterable, Sequence
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 from uuid import UUID
 
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
@@ -30,10 +30,12 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core.sample import Sample
 from lightly_studio.export import annotation_batches
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.resolvers import annotation_label_resolver
+
+if TYPE_CHECKING:
+    from lightly_studio.core.sample import Sample
 
 
 class SampleToImage(Protocol):

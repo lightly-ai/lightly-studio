@@ -7,6 +7,7 @@ import logging
 import warnings
 from collections.abc import Iterable
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from labelformat.formats import (
@@ -18,7 +19,6 @@ from labelformat.formats import (
 )
 from sqlmodel import Session
 
-from lightly_studio.core.sample import Sample
 from lightly_studio.export import annotation_batches, coco_captions
 from lightly_studio.export.lightly_studio_label_input import (
     LightlyStudioInstanceSegmentationInput,
@@ -30,6 +30,9 @@ from lightly_studio.export.lightly_studio_label_input import (
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.type_definitions import PathLike
+
+if TYPE_CHECKING:
+    from lightly_studio.core.sample import Sample
 
 logger = logging.getLogger(__name__)
 
