@@ -11,21 +11,26 @@
     let {
         isImages = false,
         isVideos = false,
+        isPointClouds = false,
         hasEmbeddings = false,
         collection
     } = $props<{
         isImages?: boolean;
         isVideos?: boolean;
+        isPointClouds?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
     }>();
 
     const hasClassifier = $derived(isImages && hasEmbeddings);
     const hasSelection = $derived(isImages || isVideos);
+    const hasSampling = $derived(hasSelection || isPointClouds);
     const isImageCollection = $derived(collection.sample_type == 'image');
     const isVideoCollection = $derived(
         collection.sample_type == 'video' || collection.sample_type == 'video_frame'
     );
+
+    const isSequenceCollection = $derived(collection.sample_type == 'sequence');
 
     const { isDialogOpen: isClassifiersDialogOpen } = useClassifiersMenu();
     const { datasetSplitCollectionId, closeDatasetSplitDialog } = useDatasetSplitDialog();
@@ -57,13 +62,13 @@
     {/await}
 {/if}
 
-{#if hasSelection && $isSamplingDialogOpen}
+{#if hasSampling && $isSamplingDialogOpen}
     {#await import('$lib/components/Sampling/SamplingCombinationDialog.svelte') then { default: SamplingCombinationDialog }}
         <SamplingCombinationDialog />
     {/await}
 {/if}
 
-{#if (isImageCollection || isVideoCollection) && $isExportDialogOpen}
+{#if (isImageCollection || isVideoCollection || isSequenceCollection) && $isExportDialogOpen}
     {#await import('$lib/components/ExportSamples/ExportSamples.svelte') then { default: ExportSamples }}
         <ExportSamples />
     {/await}

@@ -1,9 +1,20 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
-    import type { ToolMode } from './PlotToolPill/selectionTool';
+    import PlotSelectionChip from './PlotSelectionChip/PlotSelectionChip.svelte';
+    import { getPickHint } from './PlotSelectionChip/PlotSelectionChip.helpers';
+    import { useLingeringValue } from '$lib/hooks';
+    import { PlotAxesEditor } from './PlotAxesEditor';
+    import { PlotAxesLabels } from './PlotAxesLabels';
+    import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
+    import { usePointPicking } from './usePointPicking/usePointPicking';
+    import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
+    import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
+    import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
+    import { usePlotViewState } from './usePlotViewState/usePlotViewState';
     import {
         EmbeddingView,
         type DataPoint,
@@ -15,22 +26,29 @@
     import PlotHoverPreview from './PlotHoverPreview/PlotHoverPreview.svelte';
     import { getHoverPreviewState } from './PlotHoverPreview/hoverPreviewState';
     import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
-    import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
+    import {
+        createQuerySelection,
+        createSelectablePointCheck,
+        createThumbnailResolver
+    } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import {
         clearPlotSelectionCount,
-        setPlotSelectionCount
+        EMPTY_PLOT_SELECTION,
+        getPlotSelectionCount,
+        setPlotSelectionCount,
+        type PlotSelection
     } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
-    import { useArrowData } from './useArrowData/useArrowData';
+    import { getPlotRequestFilter } from './getPlotRequestFilter/getPlotRequestFilter';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
+    import PlotComputePrompt from './PlotComputePrompt/PlotComputePrompt.svelte';
+    import { usePlotComputeGate } from './usePlotComputeGate/usePlotComputeGate.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
-    import { isEqual } from 'lodash-es';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import {
         EXCLUDED_BY_FILTERS_CATEGORY,
@@ -39,14 +57,19 @@
         NO_CATEGORY_LABEL
     } from './plotCategories';
     import { page } from '$app/state';
-    import { isAnnotationsRoute, isVideosRoute } from '$lib/routes';
+    import { cn } from '$lib/utils';
+    import { isAnnotationsRoute, isMcapSequencesRoute, isVideosRoute } from '$lib/routes';
+    import { useMcapSequenceFilters } from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
+    import { buildSequencePlotFilter } from './buildSequencePlotFilter/buildSequencePlotFilter';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import { writable, get } from 'svelte/store';
+    import { writable, get, readable, toStore } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
+
+    const NO_LEGEND = new Map<number, string>();
 
     let { collectionId }: { collectionId: string } = $props();
     const { trackEvent } = usePostHog();
@@ -65,21 +88,34 @@
     const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
     // Detect if we're on the annotations route
     const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
-    // Everything that isn't videos or annotations is the images grid.
-    const isImages = $derived(!isVideos && !isAnnotations);
+    // The MCAP sequences grid lives on the point clouds route.
+    const isSequences = $derived(isMcapSequencesRoute(page.route?.id ?? null));
+    // Everything that isn't videos, annotations or sequences is the images grid.
+    const isImages = $derived(!isVideos && !isAnnotations && !isSequences);
+    const itemLabel = $derived(
+        isAnnotations ? 'annotation' : isVideos ? 'video' : isSequences ? 'sequence' : 'image'
+    );
+    const plotSelectionCount = $derived(getPlotSelectionCount(readable(collectionId)));
 
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
-    const { annotationPlotRegion, saveRegion: saveAnnotationRegion } = useAnnotationPlotSelection();
+    const sequenceFilters = useMcapSequenceFilters();
+    const {
+        annotationPlotRegion,
+        annotationPlotPickedSampleIds,
+        savePlotSelection: saveAnnotationPlotSelection
+    } = useAnnotationPlotSelection();
 
-    const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
+    const imageFilter = $derived(isVideos || isSequences ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
-    // Only videos still track their lasso selection as a resolved sample-id list; images and
-    // annotations send it to the backend as region geometry (see LIG-9903).
-    const activeSampleIds = $derived(
-        isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
-    );
+    const sequenceFilter = $derived(isSequences ? sequenceFilters.mcapSequenceFilter : null);
+    const pickedSampleIds = $derived.by(() => {
+        if (isVideos) return $videoFilter?.sample_filter?.sample_ids ?? [];
+        if (isImages) return $imageFilter?.sample_filter?.sample_ids ?? [];
+        if (isAnnotations) return $annotationPlotPickedSampleIds;
+        return [];
+    });
 
     // The active annotation label/tag filter, mirroring what the annotations grid applies.
     const { annotationFilter: selectedAnnotationsFilter } = $derived.by(() =>
@@ -93,35 +129,28 @@
         if (isAnnotations) {
             return $selectedAnnotationsFilter ?? { filter_type: 'annotations' as const };
         }
-        const currentFilter = isVideos ? $videoFilter : $imageFilter;
-        if (!currentFilter) return null;
-
-        if (!currentFilter.sample_filter) {
-            return currentFilter;
+        if (isSequences) {
+            return buildSequencePlotFilter($sequenceFilter);
         }
-
-        return {
-            ...currentFilter,
-            sample_filter: {
-                ...currentFilter.sample_filter,
-                sample_ids: [],
-                // The lasso only scopes the grid, not the plot: the plot shows every point and
-                // highlights the in-selection ones, so drop the region from this request.
-                embedding_region: undefined
-            }
-        };
+        return getPlotRequestFilter(isVideos ? $videoFilter : $imageFilter);
     });
 
     const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
-    // Annotation samples carry annotation-kind tags. Captured once at mount, like
-    // collectionId above.
+    const viewState = usePlotViewState(untrack(() => collectionId));
+    const { activeTool, viewport: userViewport } = viewState;
+    // Captured once at mount, like collectionId above.
     const { tags } = useTags({
-        collection_id: untrack(() => collectionId),
-        kind: isAnnotationsRoute(page.route?.id ?? null) ? ['annotation'] : ['sample']
+        collection_id: untrack(() => collectionId)
     });
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
-    const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
+    const annotationLabels = writable<{ annotation_label_id: string }[] | undefined>(undefined);
     $effect(() => {
+        // Without labels the plot still loads: it colors nothing instead of waiting forever.
+        if (annotationLabelsQuery.isError) {
+            annotationLabels.set([]);
+            return;
+        }
+        if (!annotationLabelsQuery.isSuccess) return;
         annotationLabels.set(
             (annotationLabelsQuery.data ?? []).filter(
                 (l): l is { annotation_label_id: string } & typeof l =>
@@ -132,19 +161,43 @@
     const { colorBy, selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
         selectedColorByType,
         tags,
-        annotationLabels
+        annotationLabels,
+        selectedColorByKey: viewState.selectedColorByKey
     });
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy));
-
     const {
-        data: arrowData,
-        colorLegend,
-        error: arrowError
-    } = $derived(
-        useArrowData({
-            blobData: embeddingsData.data as Blob
-        })
+        plotLayout,
+        textAxesDraft,
+        appliedTextAxes,
+        isEmbeddingAxes,
+        plotAxes,
+        commitTextAxes
+    } = usePlotLayout(untrack(() => collectionId));
+    const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
+
+    const plotComputeGate = usePlotComputeGate({
+        getCollectionId: () => collectionId,
+        getIsAxesLayout: () => $plotAxes !== null,
+        getPlotRequestKey: () => JSON.stringify([filter, $colorBy, $plotAxes])
+    });
+    const embeddingsData = useEmbeddings(() => ({
+        collectionId,
+        filters: filter,
+        colorBy: $colorBy ?? null,
+        axes: $plotAxes,
+        // No request until the color-by is known, so the plot fetches once.
+        enabled: $colorBy !== undefined && plotComputeGate.isPlotRequestEnabled,
+        getIsComputing: () => plotComputeGate.view === 'computing',
+        onCompute: plotComputeGate.trackCompute
+    }));
+    // The query parses the Arrow data. A new color-by or axes is a new query with its own data,
+    // so the old points never show under a new layout.
+    const arrowData = $derived(embeddingsData.data?.columns);
+    const colorLegend = $derived(embeddingsData.data?.legend ?? NO_LEGEND);
+    const isWaitingForFirstData = $derived(embeddingsData.isLoading || $colorBy === undefined);
+    // A filter change keeps the cached plot on screen while the status check runs.
+    const isCheckingWithoutPlot = $derived(
+        plotComputeGate.view === 'checking' && !embeddingsData.data
     );
     // Category 1 means "passes the filter but has no color value". Its label tracks the same
     // `color_by` signal that drives its color (see `getCategoryColors` below), so the two never disagree.
@@ -155,49 +208,52 @@
         hiddenCategories,
         toggleCategoryVisibility,
         focusCategoryVisibility,
-        resetCategoryVisibility
+        clearForColorByMode
     } = useCategoryVisibility({
         getCollectionId: () => collectionId,
-        getColorByType: () => get(selectedColorByType)
+        getColorByType: () => get(selectedColorByType),
+        colorLegend: toStore(() => colorLegend),
+        hiddenKeys: viewState.hiddenKeys
     });
 
-    // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
-    // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
-    // survives. INCLUDED is relabeled with the color-by mode, so it survives only a filter-only
-    // change — else a hidden "No category" would empty the plot once all points collapse into it.
-    let previousColorByKey: string | undefined = undefined;
+    // Other color-by modes have other labels. The tag and label IDs in the color-by change when
+    // the user creates a tag or a label, so only the type and the metadata key count as the mode.
+    let previousColorByMode: string | undefined = undefined;
     $effect(() => {
-        void $colorLegend;
-        const colorByKey = JSON.stringify($colorBy);
-        const colorByChanged = colorByKey !== previousColorByKey;
-        previousColorByKey = colorByKey;
-        resetCategoryVisibility(
-            colorByChanged
-                ? [EXCLUDED_BY_FILTERS_CATEGORY]
-                : [EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]
-        );
+        const colorByMode = JSON.stringify([$selectedColorByType, $selectedColorByKey]);
+        const isModeChange =
+            previousColorByMode !== undefined && colorByMode !== previousColorByMode;
+        previousColorByMode = colorByMode;
+        if (isModeChange) untrack(clearForColorByMode);
     });
 
-    const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
+    const hasActiveFilter = $derived(filter !== null || pickedSampleIds.length > 0);
 
-    // Images and annotations commit the lasso as region geometry, not as sample ids. After the
+    // Videos, images and annotations commit the lasso as region geometry. After the
     // selection is committed the live rangeSelection is cleared, so the plot re-derives the
-    // highlight from the stored polygon to keep reflecting the actually selected points. Images
-    // keep the region on the image filter store; annotations in the shared plot region store.
+    // highlight from the stored polygon to keep reflecting the actually selected points. Videos
+    // and images keep the region on their filter stores; annotations use the shared plot store.
+    const committedSampleRegion = $derived(
+        isSequences
+            ? ($sequenceFilter?.sample_filter?.embedding_region ?? null)
+            : isVideos
+              ? ($videoFilter?.sample_filter?.embedding_region ?? null)
+              : isImages
+                ? ($imageFilter?.sample_filter?.embedding_region ?? null)
+                : null
+    );
     const committedHighlightRegion = $derived(
-        isImages
-            ? ($imageFilter?.sample_filter?.embedding_region?.polygon ?? null)
-            : isAnnotations
-              ? ($annotationPlotRegion?.polygon ?? null)
-              : null
+        isAnnotations
+            ? ($annotationPlotRegion?.polygon ?? null)
+            : (committedSampleRegion?.polygon ?? null)
     );
 
-    // Activating a lasso (or a committed region) unhides the Excluded category, otherwise
-    // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
-    // canvas. The legend keeps showing the user's real toggle state.
+    // While the user draws or picks, the points outside the selection count as Excluded. A hidden
+    // Excluded would then empty the canvas under the cursor, or leave no point to pick next. So
+    // Excluded shows while the user draws or has picks. A committed region follows the legend.
     const effectiveHiddenCategories = $derived.by(() => {
-        const hasSelectionHighlight = $rangeSelection !== null || committedHighlightRegion !== null;
-        if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+        const isSelecting = $rangeSelection !== null || pickedSampleIds.length > 0;
+        if (!isSelecting || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }
         const next = new Set($hiddenCategories);
@@ -207,82 +263,98 @@
 
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
-            arrowData: $arrowData,
+            arrowData: arrowData,
             rangeSelection: $rangeSelection,
             highlightRegion: committedHighlightRegion,
-            highlightedSampleIds: activeSampleIds,
+            highlightedSampleIds: pickedSampleIds,
             hasActiveFilter: hasActiveFilter,
             hiddenCategories: effectiveHiddenCategories
         })
     );
-    const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
+    const categoryCount = $derived.by(() => getCategoryCount(colorLegend));
     const useLabelColors = $derived($selectedColorByType === 'annotation_label');
     const categoryColors = $derived.by(() =>
-        getCategoryColors($colorLegend, useLabelColors, $colorBy !== null)
+        getCategoryColors(colorLegend, useLabelColors, $colorBy !== null)
     );
     const legendEntries = $derived.by(() =>
-        getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
+        getLegendEntries(colorLegend, $hiddenCategories, useLabelColors)
     );
-    // Images and annotations send the lasso to the backend as region geometry rather than a
-    // resolved sample-id list (see LIG-9903); the sidebar chip reads the selected count from the
-    // plot-propagated count store, and clearing removes the region entirely. Images keep the
-    // region on the image filter store; annotations have no such store, so it lives in the
-    // shared annotation-plot region store instead.
-    const saveRegion = (region: EmbeddingRegion | null) => {
+    // Videos, images and annotations send the lasso as region geometry rather than a resolved
+    // sample-id list. The sidebar chip reads the count from the plot-propagated store, and
+    // clearing removes the region entirely.
+    const savePlotSelection = (selection: PlotSelection) => {
         if (isImages) {
-            imageFilters.updateEmbeddingRegion(region);
+            imageFilters.updatePlotSelection(selection);
+        } else if (isVideos) {
+            videoFilters.updatePlotSelection(selection);
+        } else if (isSequences) {
+            sequenceFilters.updateEmbeddingRegion(selection.embeddingRegion);
         } else {
-            saveAnnotationRegion(region);
+            saveAnnotationPlotSelection(selection);
         }
     };
+    // A region drawn on the plot carries the axes of the layout, so the server resolves the
+    // region in the same layout.
     const commitRegion = (polygon: Point[], count: number) => {
-        saveRegion({ polygon });
+        const embeddingRegion = $plotAxes ? { polygon, axes: $plotAxes } : { polygon };
+        savePlotSelection({ embeddingRegion, sampleIds: [] });
         setPlotSelectionCount(collectionId, count);
     };
-    const clearRegion = () => {
-        saveRegion(null);
+    // A gesture that starts on the old points stays ignored, even when the new points land
+    // before the release.
+    let isPressOnOldPoints = false;
+    const isOnOldPoints = () => embeddingsData.isPlaceholderData || isPressOnOldPoints;
+    // The sequences grid has no sample-id filter, so it does not support picks. While new points
+    // load, a pick on the old points could select a point that the new filter excludes.
+    const commitPickedSampleIds = (sampleIds: string[]) => {
+        if (isSequences || isOnOldPoints()) return;
+        if (sampleIds.length === 0) {
+            clearPlotFilter();
+            return;
+        }
+        savePlotSelection({ embeddingRegion: null, sampleIds });
+        setPlotSelectionCount(collectionId, sampleIds.length);
+        trackEvent('embedding_selection_made', {
+            collection_id: collectionId,
+            selection_type: 'pick',
+            selected_count: sampleIds.length
+        });
+    };
+    const clearPlotFilter = () => {
+        savePlotSelection(EMPTY_PLOT_SELECTION);
         clearPlotSelectionCount(collectionId);
     };
 
-    const handleMouseUp = () => {
+    const selectableCount = $derived(
+        (arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
+            return fulfils !== 0 ? count + 1 : count;
+        }, 0) ?? null
+    );
+    const handleMouseUp = (event: MouseEvent) => {
         if ($rangeSelection === null) {
             return;
         }
+        // While new points load, the counts below come from the old points, so the drawn
+        // selection is dropped.
+        if (isOnOldPoints()) {
+            setRangeSelection(null);
+            pendingSelectionType = null;
+            return;
+        }
+        if (isShortShiftDrag(event)) {
+            setRangeSelection(null);
+            pendingSelectionType = null;
+            pickPressedPoint();
+            return;
+        }
         const polygon = $rangeSelection;
-
-        const selectableCount =
-            ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
-                return fulfils !== 0 ? count + 1 : count;
-            }, 0) ?? null;
         const selectedCount = $selectedSampleIds.length;
         // Selecting nothing, or every selectable point, is equivalent to no filter at all.
         const selectsNothingOrEverything =
             selectedCount === 0 || (selectableCount !== null && selectedCount === selectableCount);
 
-        // Videos still commit the resolved sample-id list; images and annotations send geometry.
-        if (isVideos) {
-            const currentSampleIds = $videoFilter?.sample_filter?.sample_ids ?? [];
-            if (selectsNothingOrEverything) {
-                if (currentSampleIds.length > 0) {
-                    videoFilters.updateSampleIds([]);
-                }
-            } else if (!isEqual($selectedSampleIds, currentSampleIds)) {
-                videoFilters.updateSampleIds($selectedSampleIds);
-                if (pendingSelectionType) {
-                    trackEvent('embedding_selection_made', {
-                        collection_id: collectionId,
-                        selection_type: pendingSelectionType,
-                        selected_count: selectedCount
-                    });
-                }
-            }
-            setRangeSelection(null);
-            pendingSelectionType = null;
-            return;
-        }
-
         if (selectsNothingOrEverything) {
-            clearRegion();
+            clearPlotFilter();
         } else {
             commitRegion(polygon, selectedCount);
             if (pendingSelectionType) {
@@ -345,14 +417,10 @@
     });
 
     const reset = () => {
-        viewportState = null;
+        userViewport.set(null);
     };
 
     const isReady = true;
-
-    // Lives here, not in PlotToolPill: a new filter (a tag, a region) starts a fresh embeddings
-    // query, and the plot unmounts while it loads. State inside the pill would not survive that.
-    let activeTool = $state<ToolMode>('pan');
 
     type RangeSelection = Rectangle | Point[] | null;
 
@@ -373,27 +441,20 @@
 
     const clearSelection = () => {
         setRangeSelection(null);
-        if (isVideos) {
-            videoFilters.updateSampleIds([]);
-        } else {
-            clearRegion();
-        }
+        clearPlotFilter();
     };
-    // Images and annotations track their committed selection as region geometry, not sample ids:
-    // images on the image filter store, annotations in the shared annotation-plot region store.
+    // Videos and images track their committed selection on their filter stores; annotations use
+    // the shared plot region store.
     const regionSelected = $derived(
-        isImages
-            ? ($imageFilter?.sample_filter?.embedding_region ?? null) !== null
-            : isAnnotations
-              ? $annotationPlotRegion !== null
-              : false
+        isAnnotations ? $annotationPlotRegion !== null : committedSampleRegion !== null
     );
     const hasActiveSelection = $derived(
-        $rangeSelection !== null || activeSampleIds.length > 0 || regionSelected
+        $rangeSelection !== null || pickedSampleIds.length > 0 || regionSelected
     );
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Escape') {
+        // An open popover handles Escape itself and prevents the default.
+        if (event.defaultPrevented || event.key !== 'Escape') {
             return;
         }
         if (!hasActiveSelection) {
@@ -423,18 +484,70 @@
         setRangeSelection(normalizedSelection);
     };
 
-    let viewportState: ViewportState | null = $state(null);
+    // The viewport after the user pans or zooms. Until then, the default follows the plot size,
+    // because the size is 0 when the panel mounts and the default scale depends on it.
+    const viewportState = $derived(
+        $userViewport ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
+    );
     const onViewportState = (state: ViewportState) => {
-        viewportState = state;
+        userViewport.set(state);
+    };
+
+    // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
+    // region belongs to the layout it was drawn on.
+    const resetForNewLayout = () => {
+        userViewport.set(null);
+        if (hasActiveSelection) clearSelection();
+    };
+    const selectPlotLayout = (layout: PlotLayout) => {
+        plotLayout.set(layout);
+        resetForNewLayout();
+    };
+    const commitPlotAxes = async (textAxes: Parameters<typeof commitTextAxes>[0]) => {
+        if ($plotLayout === 'text' && areTextAxesEqual(textAxes, $appliedTextAxes)) return true;
+        const success = await commitTextAxes(textAxes);
+        if (success) resetForNewLayout();
+        return success;
     };
 
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
     // The array-based EmbeddingView only emits hover tooltips when querySelection
     // is provided; ours returns the nearest visible point with its sample ID.
-    let tooltip: DataPoint | null = $state(null);
+    let tooltip = $state<DataPoint | null>(null);
     const onTooltip = (value: DataPoint | null) => {
         tooltip = value;
     };
+    const {
+        librarySelection,
+        onPointerDown: onPickPointerDown,
+        onSelection,
+        isShortShiftDrag,
+        pickPressedPoint
+    } = usePointPicking({
+        getPickedSampleIds: () => pickedSampleIds,
+        getHoveredSampleId: () =>
+            typeof tooltip?.identifier === 'string' ? tooltip.identifier : null,
+        commitPickedSampleIds
+    });
+    const onPlotPointerDown = (event: PointerEvent) => {
+        isPressOnOldPoints = embeddingsData.isPlaceholderData;
+        onPickPointerDown(event);
+    };
+    const hoveredSampleId = $derived(
+        typeof tooltip?.identifier === 'string' && $rangeSelection === null
+            ? tooltip.identifier
+            : null
+    );
+    // Picking does not work on sequences.
+    const pickHint = $derived(
+        isSequences ? null : getPickHint({ hoveredSampleId, pickedSampleIds })
+    );
+    // A drag drops the hint at once, so it cannot come back on release.
+    const isDragging = () => $rangeSelection !== null;
+    const shownPickHint = useLingeringValue(() => pickHint, 400, isDragging);
+    const selectionKind = $derived(
+        $plotSelectionCount === 0 ? null : pickedSampleIds.length > 0 ? 'picks' : 'region'
+    );
     // The card is rendered by this component (not the library's tooltip container)
     // so it always sits directly above the hovered point; the overlay proxy
     // provides the data → pixel conversion.
@@ -454,33 +567,57 @@
     );
     const querySelection = $derived.by(() =>
         createQuerySelection({
-            x: $arrowData?.x as Float32Array | undefined,
-            y: $arrowData?.y as Float32Array | undefined,
-            sampleIds: $arrowData?.sample_id as string[] | undefined,
-            category: $plotData?.category as Uint8Array | undefined
+            x: arrowData?.x as Float32Array | undefined,
+            y: arrowData?.y as Float32Array | undefined,
+            sampleIds: arrowData?.sample_id as string[] | undefined,
+            category: $plotData?.category as Uint8Array | undefined,
+            isSelectable: createSelectablePointCheck({
+                category: $plotData?.category as Uint8Array | undefined,
+                sampleIds: arrowData?.sample_id as string[] | undefined,
+                fulfilsFilter: hasActiveFilter
+                    ? (arrowData?.fulfils_filter as Uint8Array | undefined)
+                    : undefined,
+                pickedSampleIds
+            })
         })
     );
     const resolveThumbnail = $derived.by(() =>
         createThumbnailResolver({
-            route: isAnnotations ? 'annotations' : isVideos ? 'videos' : 'images',
+            route: isAnnotations
+                ? 'annotations'
+                : isVideos
+                  ? 'videos'
+                  : isSequences
+                    ? 'mcap_sequences'
+                    : 'images',
             collectionId
         })
     );
 
     const errorText = $derived.by(() => {
-        if (embeddingsData.isError) {
-            return embeddingsData.error?.message ?? 'Unknown error';
+        // A text axes plot does not use the status, so a failed status request must not hide it.
+        if (plotComputeGate.view === 'error') {
+            return plotComputeGate.statusError;
         }
-        if ($arrowError) {
-            return $arrowError;
+        if (embeddingsData.isError) {
+            return embeddingsData.error?.message || 'Unknown error';
         }
         return null;
     });
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
-    <div class="mb-5 mt-2 flex items-center justify-between">
-        <div class="text-lg font-semibold">Embedding Plot</div>
+    <div class="mb-5 mt-2 flex items-start justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="text-lg font-semibold">Embedding Plot</div>
+            <PlotAxesEditor
+                bind:draft={$textAxesDraft}
+                active={$plotLayout === 'text'}
+                isPending={$isEmbeddingAxes}
+                onCommit={commitPlotAxes}
+                onReset={() => selectPlotLayout('pacmap')}
+            />
+        </div>
         <Button
             variant="ghost"
             buttonProps={{
@@ -493,20 +630,54 @@
             ✕
         </Button>
     </div>
-    <div class="flex min-h-0 flex-1 flex-col space-y-6">
-        {#if embeddingsData.isLoading}
-            <div class="flex items-center justify-center p-8">
+    <div class="relative flex min-h-0 flex-1 flex-col">
+        {#if plotComputeGate.view === 'prompt'}
+            <PlotComputePrompt
+                view="prompt"
+                embeddingCount={plotComputeGate.embeddingCount}
+                {itemLabel}
+                startedAt={plotComputeGate.startedAt}
+                onCompute={plotComputeGate.startCompute}
+            />
+            <!-- A failed compute returns to the prompt, so the next compute still asks first. -->
+            {#if embeddingsData.isError}
+                <div class="absolute inset-x-0 top-0 p-3 text-center text-sm text-red-500">
+                    The last plot request failed: {embeddingsData.error?.message || 'Unknown error'}
+                </div>
+            {/if}
+        {:else if plotComputeGate.view === 'computing' && embeddingsData.isFetching}
+            <PlotComputePrompt
+                view="computing"
+                embeddingCount={plotComputeGate.embeddingCount}
+                {itemLabel}
+                startedAt={plotComputeGate.startedAt}
+                onCompute={plotComputeGate.startCompute}
+            />
+        {:else if isCheckingWithoutPlot || isWaitingForFirstData}
+            <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
         {:else if errorText}
-            <div class="flex items-center justify-center p-8 text-red-500">
+            <div class="flex flex-1 items-center justify-center p-8 text-red-500">
                 <div class="text-lg">Error loading embeddings: {errorText}</div>
             </div>
         {:else if isReady}
             <div
                 class="embedding-plot-wrapper relative min-h-0 flex-1 overflow-hidden bg-black"
                 bind:this={plotContainer}
+                onpointerdowncapture={onPlotPointerDown}
             >
+                {#if embeddingsData.isPlaceholderData}
+                    <div
+                        class="pointer-events-none absolute right-2 top-2 z-10 flex size-[30px] items-center justify-center rounded-lg border border-white/10 bg-black/60 text-white backdrop-blur-sm"
+                        data-testid="plot-loading-indicator"
+                        role="status"
+                        aria-label="Loading embeddings"
+                    >
+                        <LoaderCircle class="size-3.5 animate-spin" />
+                    </div>
+                {/if}
+
                 {#if $plotData && width >= MIN_RENDER_SIZE && height >= MIN_RENDER_SIZE}
                     <div class="embedding-view h-full w-full">
                         <EmbeddingView
@@ -518,6 +689,8 @@
                             {categoryColors}
                             tooltip={$rangeSelection ? null : tooltip}
                             {onTooltip}
+                            selection={$librarySelection}
+                            {onSelection}
                             {querySelection}
                             customTooltip={NoopTooltip}
                             customOverlay={OverlayProxyReporter}
@@ -528,6 +701,34 @@
                             rangeSelection={$rangeSelection}
                         />
                     </div>
+
+                    <!-- Only the Text layout has a meaningful origin: x = 0 is where a sample is
+                         as close to X− as to X+. -->
+                    {#if $plotAxes && overlayProxy}
+                        <PlotAxisLines proxy={overlayProxy} />
+                    {/if}
+
+                    {#if showAxesLabels && $appliedTextAxes}
+                        <PlotAxesLabels axes={$appliedTextAxes} />
+                    {/if}
+
+                    {#if $plotSelectionCount > 0 || shownPickHint.current !== null}
+                        <!-- Below the top axis label, which it would overlap on a narrow plot. -->
+                        <div
+                            class={cn(
+                                'pointer-events-none absolute left-2 right-2 z-10',
+                                showAxesLabels ? 'top-11' : 'top-2'
+                            )}
+                        >
+                            <PlotSelectionChip
+                                {selectionKind}
+                                count={$plotSelectionCount}
+                                {itemLabel}
+                                onClear={clearSelection}
+                                pickHint={shownPickHint.current}
+                            />
+                        </div>
+                    {/if}
 
                     {#if hoverPreview}
                         <div
@@ -559,7 +760,7 @@
                             }}
                         />
 
-                        <PlotToolPill {plotContainer} bind:activeTool />
+                        <PlotToolPill {plotContainer} bind:activeTool={$activeTool} />
                     </div>
                 {/if}
             </div>
@@ -577,7 +778,7 @@
             <PlotColorByPopover
                 {collectionId}
                 withTags={$tags.length > 0}
-                withAnnotationLabels={$annotationLabels.length > 0}
+                withAnnotationLabels={($annotationLabels ?? []).length > 0}
                 selectedKey={$selectedColorByKey}
                 onSelectedKeyChange={(key) => {
                     setSelectedColorByKey(key);

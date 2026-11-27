@@ -24,7 +24,7 @@ def build_point_cloud_columns(
     xyz: NDArray[np.float32],
     valid: NDArray[np.bool_],
 ) -> dict[str, pa.Array]:
-    """Build the Arrow columns for coordinates, optional intensity, and color.
+    """Build the Arrow columns for coordinates, optional reflectivity, and color.
 
     N is the number of points in the message.
 
@@ -42,9 +42,10 @@ def build_point_cloud_columns(
         name: pa.array(xyz[valid, index], type=pa.float32())
         for index, name in enumerate(("x", "y", "z"))
     }
-    if "intensity" in fields:
+    reflectivity_field = fields.get("reflectivity") or fields.get("intensity")
+    if reflectivity_field is not None:
         intensity = read_point_cloud_field.read_point_cloud_field(
-            data=data, field=fields["intensity"], layout=layout
+            data=data, field=reflectivity_field, layout=layout
         )
         columns["intensity"] = pa.array(
             normalize_point_cloud_intensity.normalize_point_cloud_intensity(

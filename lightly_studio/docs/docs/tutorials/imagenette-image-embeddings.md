@@ -36,7 +36,7 @@ reference.
 This tutorial uses the 320 px variant, where each image has a shortest side of 320 pixels.
 
 Install LightlyStudio in your Python environment. LightlyStudio works on Windows, Linux,
-and macOS with **Python 3.9 to 3.14**.
+and macOS with **Python 3.11 to 3.15**.
 
 ```bash
 pip install lightly-studio
@@ -169,7 +169,7 @@ which makes it slower than later runs.
 Click **Embed** <span class="ls-inline-icon ls-inline-icon--embed"></span> in the right-hand
 tab rail to open the embedding plot. Each point is one image, placed by a two-dimensional
 projection (PaCMAP) of its embedding. See
-[the embedding plot](../core_concepts/embeddings.md#the-embedding-plot-gui).
+[the embedding plot](../workflows/embeddings.md#the-embedding-plot-gui).
 
 !!! note "No Embed tab?"
     The tab only appears when the dataset has embeddings. If it is missing, ingestion ran
@@ -206,7 +206,7 @@ also select with these shortcuts:
 | Shift + Cmd + drag (Ctrl on Windows) | Freehand lasso selection. |
 
 Draw around a small group. On release, the image grid scopes to the samples in that
-region, and an **Embedding Plot Filter** entry appears in the sidebar with the count.
+region, and a **Plot Filter** entry appears in the sidebar with the count.
 
 A lasso scopes the grid. It does not create annotations, and the plot keeps showing every
 point, highlighting the ones inside your region.
@@ -540,8 +540,8 @@ A follow-up workflow could use embeddings and a small set of annotated examples 
 generate nearest-neighbor suggestions. Keep suggestions in their own annotation source
 and inspect them before you accept them.
 
-Related guides: [Embeddings](../core_concepts/embeddings.md), which also shows how to
-[load precomputed embeddings](../core_concepts/embeddings.md#loading-precomputed-embeddings)
+Related guides: [Embeddings](../workflows/embeddings.md), which also shows how to
+[load precomputed embeddings](../workflows/embeddings.md#loading-precomputed-embeddings)
 instead of computing them at ingestion,
 [Image Dataset](../workflows/image_dataset.md), and
 [Annotations](../workflows/annotations.md).

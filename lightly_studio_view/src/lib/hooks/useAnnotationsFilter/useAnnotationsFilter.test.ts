@@ -3,9 +3,11 @@ import { get, writable } from 'svelte/store';
 import type { AnnotationLabel } from '$lib/services/types';
 
 const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
-vi.mock('$lib/hooks', () => ({
-    usePostHog: () => ({ trackEvent })
-}));
+vi.mock('$lib/hooks', async () => {
+    const { useUnannotatedSamplesFilter } =
+        await import('../useUnannotatedSamplesFilter/useUnannotatedSamplesFilter');
+    return { usePostHog: () => ({ trackEvent }), useUnannotatedSamplesFilter };
+});
 
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const setSelectedAnnotationFilterIds = vi.fn((id: string) => {
@@ -29,6 +31,8 @@ vi.mock('../useGlobalStorage', () => ({
     useGlobalStorage: () => ({
         selectedAnnotationFilterIds,
         setSelectedAnnotationFilterIds,
+        replaceSelectedAnnotationFilterIds: (ids: Iterable<string>) =>
+            selectedAnnotationFilterIds.set(new Set(ids)),
         clearSelectedAnnotationFilterIds
     })
 }));
@@ -41,6 +45,9 @@ vi.mock('../useTags/useTags', () => ({
 }));
 
 import { useSelectedAnnotationsFilter, useAnnotationsFilter } from './useAnnotationsFilter';
+import { useUnannotatedSamplesFilter } from '$lib/hooks';
+
+const { setIncludeUnannotatedSamples } = useUnannotatedSamplesFilter();
 
 describe('useSelectedAnnotationsFilter', () => {
     beforeEach(() => {
@@ -124,6 +131,37 @@ describe('useAnnotationsFilter', () => {
         selectedAnnotationFilterIds.set(new Set());
         annotationLabels = writable<AnnotationLabel[] | undefined>(mockLabels);
         trackEvent.mockClear();
+        setIncludeUnannotatedSamples(false);
+    });
+
+    it('puts the no annotations row first when its count is set', () => {
+        setIncludeUnannotatedSamples(true);
+        const { annotationFilterRows, setAnnotationCounts, setUnannotatedSampleCount } =
+            useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationCounts([{ label_name: 'cat', total_count: 10, current_count: 5 }]);
+        setUnannotatedSampleCount({ current_count: 2, total_count: 3 });
+
+        expect(get(annotationFilterRows)).toEqual([
+            {
+                label_name: 'No annotations',
+                total_count: 3,
+                current_count: 2,
+                selected: true,
+                isNoAnnotationsRow: true
+            },
+            { label_name: 'cat', total_count: 10, current_count: 5, selected: false }
+        ]);
+    });
+
+    it('leaves out the no annotations row when there are no annotation classes', () => {
+        const { annotationFilterRows, setAnnotationCounts, setUnannotatedSampleCount } =
+            useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationCounts([]);
+        setUnannotatedSampleCount({ current_count: 3, total_count: 3 });
+
+        expect(get(annotationFilterRows)).toEqual([]);
     });
 
     it('returns empty annotationFilterRows when no counts set', () => {
@@ -150,6 +188,56 @@ describe('useAnnotationsFilter', () => {
             { label_name: 'cat', total_count: 10, current_count: 5, selected: true },
             { label_name: 'dog', total_count: 8, selected: false }
         ]);
+    });
+
+    it('setAnnotationFilterSelection leaves only the given labels selected', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-2']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection(['cat']);
+
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
+    });
+
+    it('setAnnotationFilterSelection with no labels clears the selection', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1', 'id-2']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection([]);
+
+        expect(get(selectedAnnotationFilterIds).size).toBe(0);
+    });
+
+    it('setAnnotationFilterSelection drops ids missing from the label map', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1', 'stale-id']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection(['cat']);
+
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
+    });
+
+    it('setAnnotationFilterSelection tracks each changed label', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-2']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection(['cat'], 'col-1');
+
+        expect(trackEvent).toHaveBeenCalledTimes(2);
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_label',
+            filter_value: 'cat',
+            action: 'selected',
+            active_count: 1
+        });
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_label',
+            filter_value: 'dog',
+            action: 'unselected',
+            active_count: 1
+        });
     });
 
     it('toggleAnnotationFilterSelection maps label name to id', () => {

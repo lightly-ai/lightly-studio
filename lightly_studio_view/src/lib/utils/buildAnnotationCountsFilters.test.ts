@@ -1,7 +1,4 @@
-import {
-    buildVideoAnnotationCountsFilter,
-    buildVideoFrameAnnotationCountsFilter
-} from './buildAnnotationCountsFilters';
+import { buildVideoFrameAnnotationCountsFilter } from './buildAnnotationCountsFilters';
 
 describe('buildAnnotationCountsFilters', () => {
     test('buildVideoFrameAnnotationCountsFilter builds sample_filter and merges bounds', () => {
@@ -25,36 +22,6 @@ describe('buildAnnotationCountsFilters', () => {
             metadataFilters: undefined,
             annotationFilter: undefined,
             videoFramesBoundsValues: null
-        });
-
-        expect(result).toEqual({
-            sample_filter: {
-                metadata_filters: undefined
-            }
-        });
-    });
-
-    test('buildVideoAnnotationCountsFilter uses frame_annotation_filter and merges bounds', () => {
-        const result = buildVideoAnnotationCountsFilter({
-            metadataFilters: [{ key: 'k', operator: 'eq', value: 'v' }] as never,
-            annotationFilter: { annotation_label_ids: ['x', 'y'] },
-            videoBoundsValues: { time: { min: 0, max: 5 } } as never
-        });
-
-        expect(result).toEqual({
-            sample_filter: {
-                metadata_filters: [{ key: 'k', operator: 'eq', value: 'v' }]
-            },
-            frame_annotation_filter: { annotation_label_ids: ['x', 'y'] },
-            time: { min: 0, max: 5 }
-        });
-    });
-
-    test('buildVideoAnnotationCountsFilter omits frame_annotation_filter when undefined', () => {
-        const result = buildVideoAnnotationCountsFilter({
-            metadataFilters: undefined,
-            annotationFilter: undefined,
-            videoBoundsValues: undefined
         });
 
         expect(result).toEqual({

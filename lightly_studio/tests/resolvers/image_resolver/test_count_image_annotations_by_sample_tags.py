@@ -7,9 +7,11 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.resolvers.image_resolver.annotation_count_types import (
     AnnotationCountMode,
 )
@@ -22,6 +24,8 @@ from tests.helpers_resolvers import (
     create_image,
     create_tag,
 )
+from tests.resolvers.image_resolver import annotation_count_cases
+from tests.resolvers.image_resolver.annotation_count_cases import BuildFilter
 
 
 def test_count_image_annotations_by_sample_tags__overlap_order_and_zero_fill(
@@ -206,19 +210,18 @@ def test_count_image_annotations_by_sample_tags__annotation_source_and_type_scop
     assert [(row.label_name, row.count) for row in result[0].counts] == [("scene", 1)]
 
 
-@pytest.mark.parametrize("invalid_tag_kind", ["missing", "foreign", "annotation"])
+@pytest.mark.parametrize("invalid_tag_case", ["missing", "foreign"])
 def test_count_image_annotations_by_sample_tags__rejects_invalid_tags(
     db_session: Session,
-    invalid_tag_kind: str,
+    invalid_tag_case: str,
 ) -> None:
     collection = create_collection(session=db_session)
     invalid_tag_id = _create_invalid_tag_id(
         session=db_session,
-        collection_id=collection.collection_id,
-        invalid_tag_kind=invalid_tag_kind,
+        invalid_tag_case=invalid_tag_case,
     )
 
-    with pytest.raises(ValueError, match="must be sample tags belonging to collection"):
+    with pytest.raises(ValueError, match="must belong to collection"):
         image_resolver.count_image_annotations_by_sample_tags(
             session=db_session,
             collection_id=collection.collection_id,
@@ -238,18 +241,136 @@ def test_count_image_annotations_by_sample_tags__empty_selection(db_session: Ses
     assert result == []
 
 
+@pytest.mark.parametrize("count_mode", [AnnotationCountMode.OBJECTS, AnnotationCountMode.SAMPLES])
+@pytest.mark.parametrize("annotation_type", [None, AnnotationType.OBJECT_DETECTION])
+@pytest.mark.parametrize("build_filter", annotation_count_cases.BUILD_FILTERS)
+def test_count_image_annotations_by_sample_tags__matches_unstripped_counts(
+    db_session: Session,
+    build_filter: BuildFilter,
+    annotation_type: AnnotationType | None,
+    count_mode: AnnotationCountMode,
+) -> None:
+    data = annotation_count_cases.create_count_data(session=db_session)
+    # The helpers on an unstripped filter still add the parent IN.
+    expected_filter = build_filter(data)
+    annotation_collection_ids = annotation_count_helpers.get_annotation_collection_ids(
+        image_filter=expected_filter
+    )
+    class_names = list(
+        annotation_count_helpers.get_total_counts(
+            session=db_session,
+            collection_id=data.collection_id,
+            annotation_type=annotation_type,
+            count_mode=count_mode,
+            annotation_collection_ids=annotation_collection_ids,
+        )
+    )
+    grouped_counts = annotation_count_helpers.get_counts_grouped_by_sample_tag(
+        session=db_session,
+        collection_id=data.collection_id,
+        sample_tag_ids=data.image_tag_ids,
+        image_filter=expected_filter,
+        annotation_type=annotation_type,
+        annotation_collection_ids=annotation_collection_ids,
+        count_mode=count_mode,
+    )
+    expected = annotation_count_helpers.build_sample_tag_counts(
+        sample_tag_ids=data.image_tag_ids,
+        sample_tags=annotation_count_helpers.get_and_validate_sample_tags(
+            session=db_session,
+            collection_id=data.collection_id,
+            sample_tag_ids=data.image_tag_ids,
+        ),
+        class_names=class_names,
+        grouped_counts=grouped_counts,
+    )
+
+    result = image_resolver.count_image_annotations_by_sample_tags(
+        session=db_session,
+        collection_id=data.collection_id,
+        sample_tag_ids=data.image_tag_ids,
+        image_filter=build_filter(data),
+        annotation_type=annotation_type,
+        count_mode=count_mode,
+    )
+
+    assert class_names
+    assert result == expected
+
+
+@pytest.mark.parametrize(("group", "build_filter"), annotation_count_cases.CASES)
+def test_count_image_annotations_by_sample_tags__parent_in_only_when_needed(
+    db_session: Session, group: str, build_filter: BuildFilter
+) -> None:
+    data = annotation_count_cases.create_count_data(session=db_session)
+
+    with annotation_count_cases.record_statements(session=db_session) as statements:
+        image_resolver.count_image_annotations_by_sample_tags(
+            session=db_session,
+            collection_id=data.collection_id,
+            sample_tag_ids=data.image_tag_ids,
+            image_filter=build_filter(data),
+        )
+
+    has_parent_in = any(annotation_count_cases.PARENT_IN_MARKER in s for s in statements)
+    assert has_parent_in == (group == "keep")
+
+
+def test_count_image_annotations_by_sample_tags__sources_with_embedding_region(
+    db_session: Session,
+) -> None:
+    collection_id, images = annotation_count_cases.create_images_in_plot(
+        session=db_session, coordinates=[(1.0, 1.0), (5.0, 5.0), (100.0, 100.0)]
+    )
+    car = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    source = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id, annotation_label_id=car.annotation_label_id
+            )
+            for image in images
+        ],
+        collection_name="source",
+    )
+    all_images_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="all")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session,
+        tag_id=all_images_tag.tag_id,
+        sample_ids=[image.sample_id for image in images],
+    )
+
+    # The square encloses the first two plot points, but not (100, 100).
+    region = EmbeddingRegion(
+        polygon=[Point2D(x=0, y=0), Point2D(x=10, y=0), Point2D(x=10, y=10), Point2D(x=0, y=10)]
+    )
+    result = image_resolver.count_image_annotations_by_sample_tags(
+        session=db_session,
+        collection_id=collection_id,
+        sample_tag_ids=[all_images_tag.tag_id],
+        image_filter=ImageFilter(
+            sample_filter=SampleFilter(
+                embedding_region=region,
+                annotations_filter=AnnotationsFilter(
+                    collection_ids=[source[0].annotation_collection_id]
+                ),
+            )
+        ),
+    )
+
+    assert [[(row.label_name, row.count) for row in series.counts] for series in result] == [
+        [("car", 2)]
+    ]
+
+
 def _create_invalid_tag_id(
     session: Session,
-    collection_id: UUID,
-    invalid_tag_kind: str,
+    invalid_tag_case: str,
 ) -> UUID:
-    if invalid_tag_kind == "missing":
+    if invalid_tag_case == "missing":
         return uuid.uuid4()
-    if invalid_tag_kind == "annotation":
-        return create_tag(
-            session=session,
-            collection_id=collection_id,
-            kind="annotation",
-        ).tag_id
     foreign_collection = create_collection(session=session)
     return create_tag(session=session, collection_id=foreign_collection.collection_id).tag_id

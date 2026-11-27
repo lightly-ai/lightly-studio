@@ -1,7 +1,7 @@
 <script lang="ts">
     import DistributionPlotContainer from './DistributionPlotContainer/DistributionPlotContainer.svelte';
     import { untrack } from 'svelte';
-    import { X } from '@lucide/svelte';
+    import X from '@lucide/svelte/icons/x';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
@@ -58,6 +58,14 @@
          */
         initialCountMode?: AnnotationCountMode;
         /**
+         * Source and group that the user picked. Bind them so that the parent
+         * keeps the pick when the panel unmounts, for example while a sample is
+         * open. Unknown IDs fall back to the default source and group, and a
+         * fallback is never written back.
+         */
+        selectedSourceId?: string;
+        selectedGroupId?: string;
+        /**
          * Shows the count mode select in the config and expand dialogs. Set to
          * false when the host supports only one count mode, and pass that mode
          * as `initialCountMode`. For example, a host that counts only samples
@@ -77,6 +85,8 @@
         onHistogramBinCountChange?: (binCount: number) => void;
         /** Called when a concrete categorical value or Missing is toggled. */
         onCategoricalValueToggle?: (groupId: string, value: CategoricalMetadataValue) => void;
+        /** Replaces the categorical values selected for the given group. */
+        onCategoricalValuesSet?: (groupId: string, values: CategoricalMetadataValue[]) => void;
         /** Removes every categorical value selected for the given group. */
         onCategoricalValuesClear?: (groupId: string) => void;
         /** Retries a failed categorical distribution request. */
@@ -91,7 +101,7 @@
         onGroupChange?: (sourceId: string, groupId?: string) => void;
     }
 
-    const {
+    let {
         data,
         sources,
         title = 'Distribution',
@@ -100,11 +110,14 @@
         onBarClick,
         onCountModeChange,
         initialCountMode = AnnotationCountMode.OBJECTS,
+        selectedSourceId = $bindable(),
+        selectedGroupId = $bindable(),
         showCountMode = true,
         onHistogramRangeSelect,
         histogramBinCount = 20,
         onHistogramBinCountChange,
         onCategoricalValueToggle,
+        onCategoricalValuesSet,
         onCategoricalValuesClear,
         onCategoricalRetry,
         comparisonTagItems = [],
@@ -118,9 +131,6 @@
         sources ?? [{ id: 'class', label: 'Annotation classes', data: data ?? [] }]
     );
     const hasSourceSelector = $derived(resolvedSources.length > 1);
-
-    let selectedSourceId = $state<string | undefined>(undefined);
-    let selectedGroupId = $state<string | undefined>(undefined);
 
     const groupHasContent = (group: DistributionSourceGroup): boolean =>
         (group.data?.length ?? 0) > 0 || group.histogram != null || group.categorical != null;
@@ -326,7 +336,11 @@
         resolvedSources.map((source) => ({ value: source.id, label: source.label }))
     );
     const groupItems = $derived<SelectItem[]>(
-        (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
+        (activeSource.groups ?? []).map((group) => ({
+            value: group.id,
+            label: group.label,
+            group: group.section
+        }))
     );
 
     const activeViewConfig = $derived<DistributionConfig>(
@@ -421,9 +435,9 @@
         <div class="mt-2 flex flex-col gap-2" data-testid="dataset-distribution-source">
             {#if hasSourceSelector}
                 <div class="flex items-center gap-2">
-                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground"
-                        >Distribution</span
-                    >
+                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground">
+                        Distribution
+                    </span>
                     <Select
                         items={sourceItems}
                         value={activeSource.id}
@@ -440,9 +454,9 @@
 
             {#if groupItems.length > 0}
                 <div class="flex items-center gap-2">
-                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground"
-                        >{activeSource.groupLabel ?? 'Field'}</span
-                    >
+                    <span class="w-[100px] shrink-0 text-xs text-muted-foreground">
+                        {activeSource.groupLabel ?? 'Field'}
+                    </span>
                     <Select
                         items={groupItems}
                         value={activeGroup?.id}
@@ -495,6 +509,7 @@
             error={activeCategorical.error}
             onRetry={onCategoricalRetry}
             onToggle={(value) => onCategoricalValueToggle?.(activeGroup.id, value)}
+            onSetValues={(values) => onCategoricalValuesSet?.(activeGroup.id, values)}
             onClear={() => onCategoricalValuesClear?.(activeGroup.id)}
         />
         {#if categoricalData.length > 0}
@@ -580,8 +595,10 @@
                                 class: 'max-sm:min-h-11',
                                 onclick: onCategoricalRetry,
                                 'data-testid': 'metadata-categorical-retry'
-                            }}>Retry</Button
+                            }}
                         >
+                            Retry
+                        </Button>
                     {/if}
                 </div>
             {:else if !plotLoading || activeData.length > 0}

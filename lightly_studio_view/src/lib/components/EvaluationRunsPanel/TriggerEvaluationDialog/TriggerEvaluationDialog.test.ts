@@ -43,16 +43,20 @@ describe('TriggerEvaluationDialog', () => {
         isPending = false;
     });
 
-    it('renders the form with type select, source selects, and a duration note', () => {
+    it('renders the form with task and source selections', () => {
         render(TriggerEvaluationDialog, { props: defaultProps });
 
         expect(
-            screen.getByText('Evaluate predictions against ground truth on this dataset.')
+            screen.getByText(
+                'Find mistakes by comparing predictions with your reference annotations.'
+            )
         ).toBeInTheDocument();
         expect(screen.getByTestId('evaluation-type-select')).toBeInTheDocument();
         expect(screen.getByTestId('gt-source-select')).toBeInTheDocument();
         expect(screen.getByTestId('pred-source-select')).toBeInTheDocument();
-        expect(screen.getByTestId('evaluation-duration-note')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'New evaluation' })).toBeInTheDocument();
+        expect(screen.getByText('Task to evaluate')).toBeInTheDocument();
+        expect(screen.queryByTestId('evaluation-duration-note')).not.toBeInTheDocument();
 
         // Editable name, empty by default with the auto-name shown as placeholder.
         const nameInput = screen.getByTestId('evaluation-name-input') as HTMLInputElement;

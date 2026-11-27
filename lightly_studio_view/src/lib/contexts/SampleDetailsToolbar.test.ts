@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import {
     createSampleDetailsToolbarContext,
+    isAssistedLabelingStatus,
     useSampleDetailsToolbarContext
 } from './SampleDetailsToolbar.svelte';
 
@@ -27,4 +28,10 @@ it('initializes and reuses toolbar state and applies tool settings', () => {
         slic: { level: 'fine', status: 'computing' },
         brush: { mode: 'eraser', size: 25 }
     });
+});
+
+it('tells the assisted labeling statuses apart', () => {
+    expect(isAssistedLabelingStatus('smart-select')).toBe(true);
+    expect(isAssistedLabelingStatus('find-instances')).toBe(true);
+    expect(isAssistedLabelingStatus('brush')).toBe(false);
 });

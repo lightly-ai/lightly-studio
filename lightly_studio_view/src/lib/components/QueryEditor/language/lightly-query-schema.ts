@@ -13,7 +13,68 @@
 
 import type { FieldDoc, KeywordDoc, Scope, ScopeDoc } from './types';
 
+const classificationFields: FieldDoc[] = [
+    {
+        name: 'class_name',
+        type: 'string',
+        description: 'Annotation class of the classification.'
+    },
+    {
+        name: 'source',
+        type: 'string',
+        description: 'Annotation source.'
+    },
+    {
+        name: 'confidence',
+        type: 'float',
+        description: 'Classification confidence score.'
+    }
+];
+
 export const SCOPES: Record<Scope, ScopeDoc> = {
+    sample_evaluation: {
+        scope: 'sample_evaluation',
+        title: 'Sample evaluation',
+        description: 'Metrics for a sample in the selected evaluation run.',
+        fields: [
+            {
+                name: 'name',
+                type: 'string',
+                description: 'Evaluation run name. Start with name = "run-name".'
+            },
+            {
+                name: 'tp',
+                insertText: '"tp"',
+                type: 'float',
+                description: 'True positive metric in the selected run.'
+            },
+            {
+                name: 'fp',
+                insertText: '"fp"',
+                type: 'float',
+                description: 'False positive metric in the selected run.'
+            },
+            {
+                name: 'fn',
+                insertText: '"fn"',
+                type: 'float',
+                description: 'False negative metric in the selected run.'
+            },
+            {
+                name: 'disagreement',
+                insertText: '"disagreement"',
+                type: 'float',
+                description: 'Classification disagreement score in the selected run.'
+            },
+            {
+                name: 'miou',
+                insertText: '"miou"',
+                type: 'float',
+                description:
+                    'Mean intersection over union for semantic segmentation in the selected run.'
+            }
+        ]
+    },
     image: {
         scope: 'image',
         title: 'Image',
@@ -34,6 +95,36 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             }
         ]
     },
+    frame: {
+        scope: 'frame',
+        title: 'Frame',
+        description: 'A single frame of the video.',
+        fields: [
+            {
+                name: 'frame_timestamp_s',
+                type: 'float',
+                description: 'Frame presentation timestamp in seconds on the video timeline.'
+            }
+        ]
+    },
+    event: {
+        scope: 'event',
+        title: 'Event',
+        description: 'A temporal classification annotation on a video.',
+        fields: [
+            ...classificationFields,
+            {
+                name: 'start_time_s',
+                type: 'float',
+                description: 'Event start in seconds from the start of the video.'
+            },
+            {
+                name: 'end_time_s',
+                type: 'float',
+                description: 'Event end in seconds from the start of the video.'
+            }
+        ]
+    },
     video: {
         scope: 'video',
         title: 'Video',
@@ -44,7 +135,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             {
                 name: 'fps',
                 type: 'float',
-                description: 'Frames per second. Equality only (`=`, `!=`).'
+                description: 'Frames per second.'
             },
             { name: 'duration_s', type: 'float', description: 'Duration in seconds.' },
             { name: 'file_name', type: 'string', description: 'Video file name.' },
@@ -58,7 +149,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     object_detection: {
         scope: 'object_detection',
         title: 'ObjectDetection',
-        description: 'Detected object inside an image. Used inside `object_detection(...)`.',
+        description: 'Object detection on a sample. Used inside `object_detection(...)`.',
         fields: [
             {
                 name: 'class_name',
@@ -68,7 +159,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             {
                 name: 'source',
                 type: 'string',
-                description: 'Annotation source collection name.'
+                description: 'Annotation source.'
             },
             {
                 name: 'confidence',
@@ -84,30 +175,14 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     classification: {
         scope: 'classification',
         title: 'Classification',
-        description: 'Classification annotation on an image. Used inside `classification(...)`.',
-        fields: [
-            {
-                name: 'class_name',
-                type: 'string',
-                description: 'Annotation class of the classification.'
-            },
-            {
-                name: 'source',
-                type: 'string',
-                description: 'Annotation source collection name.'
-            },
-            {
-                name: 'confidence',
-                type: 'float',
-                description: 'Classification confidence score.'
-            }
-        ]
+        description: 'Classification annotation on a sample. Used inside `classification(...)`.',
+        fields: classificationFields
     },
     segmentation_mask: {
         scope: 'segmentation_mask',
         title: 'SegmentationMask',
         description:
-            'Segmentation mask annotation on an image. Used inside `segmentation_mask(...)`.',
+            'Segmentation mask annotation on a sample. Used inside `segmentation_mask(...)`.',
         fields: [
             {
                 name: 'class_name',
@@ -117,7 +192,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             {
                 name: 'source',
                 type: 'string',
-                description: 'Annotation source collection name.'
+                description: 'Annotation source.'
             },
             {
                 name: 'confidence',
@@ -132,7 +207,40 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     }
 };
 
+export const BOOLEAN_KEYWORDS: KeywordDoc[] = [
+    { name: 'true', description: 'Boolean true. Use with `=` or `!=` on sample metadata.' },
+    { name: 'false', description: 'Boolean false. Use with `=` or `!=` on sample metadata.' }
+];
+
+export const VIDEO_KEYWORDS: KeywordDoc[] = [
+    {
+        name: 'frame',
+        description: 'Match a video if at least one frame satisfies the expression.',
+        insertText: 'frame(object_detection(class_name = "${1:person}"))'
+    },
+    {
+        name: 'event',
+        description: 'Match a video if at least one temporal event satisfies the expression.',
+        insertText: 'event(class_name = "${1:...}")'
+    }
+];
+
 export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
+    {
+        name: 'sample_evaluation',
+        description:
+            'Filter samples evaluated by a named run. All metric names require single or double quotes, including "tp", "fp", "fn", "disagreement", and "miou". Use numeric comparisons and AND/OR/NOT. Missing metrics do not match comparisons, including !=. Inner NOT still requires membership in the run.',
+        insertText: 'sample_evaluation(name = "${1:run-name}" AND "${2:tp}" >= ${3:1})'
+    },
+    {
+        name: 'metadata',
+        description:
+            'Sample metadata at a quoted path, e.g. `metadata["camera"] = "front"` or `metadata["odometry.acc[1]"] < -0.2`. ' +
+            'Numbers support `=`, `!=`, `<`, `<=`, `>`, and `>=`. Strings and booleans support `=` and `!=`. ' +
+            'Missing paths, null, and values of another type do not match, including for `!=`. ' +
+            '`NOT metadata["camera"] = "front"` also matches missing paths, null, and values of another type.',
+        insertText: 'metadata["${1:path}"]'
+    },
     { name: 'AND', description: 'Boolean AND. Combines two conditions.' },
     { name: 'OR', description: 'Boolean OR.' },
     { name: 'NOT', description: 'Boolean NOT.' },
@@ -149,26 +257,29 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     },
     {
         name: 'object_detection',
-        description: 'Filter on detections inside an image.',
-        insertText: 'object_detection(${1:class_name = "..."})'
+        description: 'Match an object detection.',
+        insertText: 'object_detection(class_name = "${1:...}")'
     },
     {
         name: 'classification',
-        description: 'Filter on the image classification annotation.',
-        insertText: 'classification(${1:class_name = "..."})'
+        description:
+            'Match an image, frame, or whole-video classification. Use event(...) for temporal events.',
+        insertText: 'classification(class_name = "${1:...}")'
     },
     {
         name: 'segmentation_mask',
-        description: 'Filter on segmentation mask annotations inside an image.',
-        insertText: 'segmentation_mask(${1:class_name = "..."})'
+        description: 'Match a segmentation mask annotation.',
+        insertText: 'segmentation_mask(class_name = "${1:...}")'
     }
 ];
 
 export function findFieldInScope(scope: Scope, name: string): FieldDoc | undefined {
-    return SCOPES[scope].fields.find((f) => f.name === name);
+    return SCOPES[scope].fields.find((f) => f.name === name || f.insertText === name);
 }
 
 export function findKeyword(name: string): KeywordDoc | undefined {
-    return TOP_LEVEL_KEYWORDS.find((k) => k.name.toLowerCase() === name.toLowerCase());
+    return [...TOP_LEVEL_KEYWORDS, ...VIDEO_KEYWORDS, ...BOOLEAN_KEYWORDS].find(
+        (k) => k.name.toLowerCase() === name.toLowerCase()
+    );
 }
 export { detectScopeAt } from './detectScopeAt';

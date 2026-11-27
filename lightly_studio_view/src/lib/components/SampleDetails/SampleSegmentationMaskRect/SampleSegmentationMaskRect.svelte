@@ -36,6 +36,7 @@
         collectionId: string;
         brushRadius: number;
         drawerStrokeColor: string;
+        previewOpacity: number;
         annotationLabel?: string | null | undefined;
         annotationType?: string | null | undefined;
         refetch: () => void;
@@ -49,6 +50,7 @@
         collectionId,
         brushRadius,
         drawerStrokeColor,
+        previewOpacity,
         mousePosition,
         refetch,
         onFinishBrushPendingChange
@@ -210,6 +212,19 @@
         return sample.annotations.find((a) => a.sample_id === activeAnnotationId) ?? null;
     };
 
+    const isLocked = (annotation: ReturnType<typeof resolveSelectedAnnotation>) =>
+        Boolean(annotation && annotationLabelContext.isAnnotationLocked?.(annotation.sample_id));
+
+    const trackDrawStart = () => {
+        if (drawStartFired) return;
+        trackEvent('annotation_draw_started', {
+            collection_id: collectionId,
+            tool: 'brush',
+            parent_sample_type: page.params.collection_type
+        });
+        drawStartFired = true;
+    };
+
     const releasePointerCapture = (e: PointerEvent) => {
         const pointerTarget = e.currentTarget as Element | null;
         pointerTarget?.releasePointerCapture?.(e.pointerId);
@@ -221,10 +236,7 @@
         resetPreviewState({ clearDrawing: false });
 
         const targetAnnotation = resolveSelectedAnnotation();
-        if (
-            targetAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
-        ) {
+        if (isLocked(targetAnnotation)) {
             setIsDrawing(false);
             return;
         }
@@ -243,7 +255,8 @@
                 await brushApi.finishBrush(
                     updatedMask,
                     targetAnnotation,
-                    labels.data ?? [],
+                    // Wait for the class list, so an existing class does not count as missing.
+                    labels.data ?? labels.refetch().then((result) => result.data),
                     updateAnnotation,
                     annotationLabelContext.lockedAnnotationIds
                 );
@@ -275,19 +288,20 @@
     y="0"
     width={sample.width}
     height={sample.height}
+    opacity={previewOpacity}
     class:previewHidden={!isPreviewVisible}
 >
     <canvas
         bind:this={previewCanvas}
         width={sample.width}
         height={sample.height}
-        style="width: 100%; height: 100%; pointer-events: none; opacity: 0.85;"
+        style="width: 100%; height: 100%; pointer-events: none;"
     ></canvas>
 </foreignObject>
 <SampleAnnotationRect
     bind:interactionRect
     {sample}
-    cursor={'crosshair'}
+    cursor="crosshair"
     onpointermove={(e) => {
         if (!annotationLabelContext.isDrawing) return;
         const currentAnnotation = resolveSelectedAnnotation();
@@ -344,23 +358,12 @@
             setAnnotationId(activeAnnotationId);
         }
 
-        const targetAnnotation = resolveSelectedAnnotation();
-        if (
-            targetAnnotation &&
-            annotationLabelContext.isAnnotationLocked?.(targetAnnotation.sample_id)
-        ) {
-            e.currentTarget?.releasePointerCapture?.(e.pointerId);
+        if (isLocked(resolveSelectedAnnotation())) {
+            releasePointerCapture(e);
             return;
         }
 
-        if (!drawStartFired) {
-            trackEvent('annotation_draw_started', {
-                collection_id: collectionId,
-                tool: 'brush',
-                parent_sample_type: page.params.collection_type
-            });
-            drawStartFired = true;
-        }
+        trackDrawStart();
         setIsDrawing(true);
         lastBrushPoint = point;
         isPreviewVisible = false;

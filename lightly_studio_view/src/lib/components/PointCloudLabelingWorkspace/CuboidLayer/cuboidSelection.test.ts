@@ -1,24 +1,91 @@
-import { describe, expect, it, vi } from 'vitest';
-import { selectCuboid } from './cuboidSelection';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { addCuboidSelectionListeners, pickSmallestFromIntersections } from './cuboidSelection';
 
-describe('selectCuboid', () => {
-    it('selects a cuboid only with the select tool active', () => {
-        const onselect = vi.fn();
+describe('pickSmallestFromIntersections', () => {
+    it('returns null when there are no intersections', () => {
+        expect(pickSmallestFromIntersections([])).toBeNull();
+    });
 
-        const selected = selectCuboid({
-            annotationId: 'cuboid-1',
-            activeTool: 'select',
-            onselect
-        });
-        const ignored = selectCuboid({
-            annotationId: 'cuboid-1',
-            activeTool: 'rotate',
-            onselect
-        });
+    it('returns the annotation ID of the only intersected cuboid', () => {
+        expect(pickSmallestFromIntersections([{ annotationId: 'cuboid-1', volume: 8 }])).toBe(
+            'cuboid-1'
+        );
+    });
 
-        expect(selected).toBe(true);
-        expect(ignored).toBe(false);
-        expect(onselect).toHaveBeenCalledTimes(1);
-        expect(onselect).toHaveBeenCalledWith('cuboid-1');
+    it('returns the smallest-volume cuboid when multiple cuboids are hit', () => {
+        expect(
+            pickSmallestFromIntersections([
+                { annotationId: 'outer', volume: 100 },
+                { annotationId: 'inner', volume: 4 }
+            ])
+        ).toBe('inner');
+    });
+
+    it('returns the smallest-volume cuboid regardless of intersection order', () => {
+        expect(
+            pickSmallestFromIntersections([
+                { annotationId: 'inner', volume: 4 },
+                { annotationId: 'outer', volume: 100 }
+            ])
+        ).toBe('inner');
+    });
+});
+
+describe('addCuboidSelectionListeners', () => {
+    const canvas = document.createElement('canvas');
+    const onselect = vi.fn();
+    let cuboidClicked = false;
+    let cleanup = () => {};
+    const defaultParams: Parameters<typeof addCuboidSelectionListeners>[0] = {
+        canvas,
+        activeTool: 'select',
+        onselect,
+        isCuboidClicked: () => cuboidClicked,
+        resetCuboidClicked: () => (cuboidClicked = false)
+    };
+    beforeEach(() => {
+        vi.clearAllMocks();
+        cuboidClicked = false;
+    });
+    afterEach(() => cleanup());
+
+    it('deselects on Escape and empty canvas clicks with the select tool', async () => {
+        cleanup = addCuboidSelectionListeners(defaultParams);
+
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        expect(onselect).toHaveBeenCalledWith(null);
+        onselect.mockClear();
+        canvas.click();
+        await Promise.resolve();
+        expect(onselect).toHaveBeenCalledExactlyOnceWith(null);
+    });
+
+    it('preserves selection on a gizmo click, then allows an empty canvas click to clear it', async () => {
+        cleanup = addCuboidSelectionListeners(defaultParams);
+        cuboidClicked = true;
+
+        canvas.click();
+        await Promise.resolve();
+        expect(onselect).not.toHaveBeenCalled();
+        canvas.click();
+        await Promise.resolve();
+        expect(onselect).toHaveBeenCalledExactlyOnceWith(null);
+    });
+
+    it('leaves selection unchanged while creating cuboids', async () => {
+        cleanup = addCuboidSelectionListeners({ ...defaultParams, activeTool: 'create-cuboid' });
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        canvas.click();
+        await Promise.resolve();
+        expect(onselect).not.toHaveBeenCalled();
+    });
+
+    it('removes the listeners when the layer is disposed', async () => {
+        cleanup = addCuboidSelectionListeners(defaultParams);
+        cleanup();
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        canvas.click();
+        await Promise.resolve();
+        expect(onselect).not.toHaveBeenCalled();
     });
 });

@@ -1,11 +1,12 @@
 """Utility functions for building database queries."""
 
-from typing import Literal, Optional
+from typing import Literal
 from uuid import UUID
 
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.image_filter import FilterDimensions
@@ -16,9 +17,9 @@ from lightly_studio.type_definitions import QueryType
 class VideoFrameFilter(GridFilterBase):
     """Encapsulates filter parameters for querying video frames."""
 
-    frame_number: Optional[FilterDimensions] = None
-    video_id: Optional[UUID] = None
-    sample_filter: Optional[SampleFilter] = None
+    frame_number: FilterDimensions | None = None
+    video_id: UUID | None = None
+    sample_filter: SampleFilter | None = None
     filter_type: Literal["video_frame"] = "video_frame"
 
     def apply(self, query: QueryType) -> QueryType:
@@ -27,7 +28,7 @@ class VideoFrameFilter(GridFilterBase):
         query = self._apply_video_id(query)
 
         if self.sample_filter:
-            query = self.sample_filter.apply(query)
+            query = self.sample_filter.apply(query=query, sample_type=SampleType.VIDEO_FRAME)
 
         return query
 

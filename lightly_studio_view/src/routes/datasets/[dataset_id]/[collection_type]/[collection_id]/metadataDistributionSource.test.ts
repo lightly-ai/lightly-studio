@@ -76,6 +76,53 @@ describe('buildMetadataDistributionSource', () => {
         expect(source?.groups?.map(({ id }) => id)).toEqual(['city']);
     });
 
+    it('keeps the source when only image fields exist', () => {
+        const source = buildMetadataDistributionSource({
+            ...params,
+            imageFields: [{ id: 'image:width', label: 'width' }],
+            histograms: {},
+            numericKeys: [],
+            categoricalKeys: []
+        });
+        expect(source?.groups?.map(({ id }) => id)).toEqual(['image:width']);
+    });
+
+    it('lists image fields in an Image section before the metadata keys', () => {
+        const imageWidth = { binEdges: [100, 200, 300], counts: [5, 1] };
+        const source = buildMetadataDistributionSource({
+            ...params,
+            imageFields: [{ id: 'image:width', label: 'width' }],
+            histograms: { width, 'image:width': imageWidth },
+            selectedRanges: { width: { min: 0, max: 1 }, 'image:width': { min: 100, max: 200 } },
+            tagDistributions: [
+                {
+                    id: 'tag-a',
+                    label: 'Reviewed',
+                    histograms: { 'image:width': imageWidth },
+                    categorical: {}
+                }
+            ]
+        });
+        // A user metadata key with the same name as an image field stays a separate group.
+        expect(source?.groups).toMatchObject([
+            {
+                id: 'image:width',
+                label: 'width',
+                section: 'Image',
+                histogram: imageWidth,
+                histogramSeries: [{ id: 'tag-a', label: 'Reviewed', data: imageWidth }],
+                selectedRange: { min: 100, max: 200 }
+            },
+            { id: 'width', label: 'width', section: 'Custom', histogram: width },
+            { id: 'city', section: 'Custom' }
+        ]);
+    });
+
+    it('lists metadata keys without a section when there are no image fields', () => {
+        const source = buildMetadataDistributionSource(params);
+        expect(source?.groups?.map(({ section }) => section)).toEqual([undefined, undefined]);
+    });
+
     it('renders numeric keys first, each with its tag series and filter range', () => {
         const source = buildMetadataDistributionSource(params);
         expect(source).toMatchObject({

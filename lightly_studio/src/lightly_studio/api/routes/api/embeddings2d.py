@@ -7,6 +7,7 @@ import json
 from typing import Annotated
 from uuid import UUID
 
+import numpy as np
 import pyarrow as pa
 from fastapi import APIRouter, HTTPException, Path, Response
 from pyarrow import ipc
@@ -15,16 +16,24 @@ from pydantic import BaseModel, Field
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.errors import NotFoundError
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.projection_axes import ProjectionAxes
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_embedding_model_resolver,
+    embedding_plot_resolver,
     image_resolver,
+    mcap_group_sequence_resolver,
+    sample_embedding_resolver,
     twodim_embedding_resolver,
     video_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 embeddings2d_router = APIRouter()
@@ -33,10 +42,23 @@ embeddings2d_router = APIRouter()
 class GetEmbeddings2DRequest(BaseModel):
     """Request body for retrieving 2D embeddings."""
 
-    filters: ImageFilter | VideoFilter | AnnotationsFilter = Field(
+    filters: ImageFilter | VideoFilter | AnnotationsFilter | McapSequenceFilter = Field(
         description="Filter parameters identifying matching samples"
     )
     color_by: ColorBy | None = None
+    axes: ProjectionAxes | None = Field(
+        default=None,
+        description="Project the embeddings onto two axes instead of using PaCMAP",
+    )
+
+
+class Embeddings2DStatus(BaseModel):
+    """Saved state of the embedding plot for the default embedding model."""
+
+    is_computed: bool = Field(description="A clean plot is saved and loads without a compute")
+    embedding_count: int | None = Field(
+        description="Number of embeddings that a plot compute uses, None if a plot is saved"
+    )
 
 
 @embeddings2d_router.post("/collections/{collection_id}/embeddings2d/default")
@@ -62,19 +84,50 @@ def get_2d_embeddings(
     if embedding_model_id is None:
         raise ValueError("No embedding model configured.")
 
-    x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
-        session=session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model_id,
-    )
+    filter_values = body.filters.model_dump(exclude_none=True, exclude_defaults=True)
+    # The frontend can send an empty sample filter even when no filter is active.
+    if filter_values.get("sample_filter") == {}:
+        del filter_values["sample_filter"]
+    if not filter_values and body.color_by is None and body.axes is None:
+        data = twodim_embedding_resolver.get_plot(
+            session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+        )
+        table = ipc.open_stream(data).read_all()
+        table = table.append_column(
+            "fulfils_filter", pa.array(np.ones(table.num_rows, dtype=np.uint8))
+        ).append_column(
+            "color_categories",
+            # Repeated zero offsets represent empty lists without per-sample Python objects.
+            pa.ListArray.from_arrays(
+                np.zeros(table.num_rows + 1, dtype=np.int32), pa.array([], type=pa.uint8())
+            ),
+        )
+        table = table.select(["x", "y", "fulfils_filter", "color_categories", "sample_id"])
+        return _arrow_response(table=table.replace_schema_metadata({"color_legend": "{}"}))
+
+    # A region drawn on this plot carries the same axes, so that
+    # embedding_region_resolver.get_sample_ids_in_region computes the same layout.
+    if body.axes is None:
+        x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+        )
+    else:
+        x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            direction_x=body.axes.x,
+            direction_y=body.axes.y,
+        )
 
     matching_sample_ids: set[UUID] | None = None
-    filters = body.filters if body else None
-    if filters:
+    if filter_values:
         matching_sample_ids = _get_matching_sample_ids(
             session=session,
             collection_id=collection_id,
-            filters=filters,
+            filters=body.filters,
         )
 
     if matching_sample_ids is None:
@@ -113,7 +166,39 @@ def get_2d_embeddings(
         },
         schema=schema,
     )
+    return _arrow_response(table=table)
 
+
+@embeddings2d_router.get("/collections/{collection_id}/embeddings2d/status")
+def get_2d_embeddings_status(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="Collection Id")],
+) -> Embeddings2DStatus:
+    """Return whether the plot is saved and, if not, how many embeddings a compute uses."""
+    if session.get(CollectionTable, collection_id) is None:
+        raise NotFoundError(f"Collection {collection_id} not found.")
+    embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+    )
+    if embedding_model_id is None:
+        raise NotFoundError(f"Collection {collection_id} has no default embedding model.")
+    is_computed = embedding_plot_resolver.is_computed(
+        session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+    )
+    # Counting a large collection is slow, and only a compute needs the count.
+    embedding_count = (
+        None
+        if is_computed
+        else sample_embedding_resolver.get_embedding_count(
+            session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+        )
+    )
+    return Embeddings2DStatus(is_computed=is_computed, embedding_count=embedding_count)
+
+
+def _arrow_response(table: pa.Table) -> Response:
+    """Serialize a plot with the same schema and headers for every request path."""
     buffer = io.BytesIO()
     with ipc.new_stream(buffer, table.schema) as writer:
         writer.write_table(table)
@@ -133,7 +218,7 @@ def get_2d_embeddings(
 def _get_matching_sample_ids(
     session: SessionDep,
     collection_id: UUID,
-    filters: ImageFilter | VideoFilter | AnnotationsFilter,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter | McapSequenceFilter,
 ) -> set[UUID]:
     """Get the set of sample IDs that match the given filters.
 
@@ -159,6 +244,12 @@ def _get_matching_sample_ids(
             collection_id=collection_id,
             filters=filters,
         )
+    if isinstance(filters, McapSequenceFilter):
+        return mcap_group_sequence_resolver.get_sample_ids(
+            session=session,
+            collection_id=collection_id,
+            filters=filters,
+        )
     # Default to image_resolver for ImageFilter
     return image_resolver.get_sample_ids(
         session=session,
@@ -169,13 +260,15 @@ def _get_matching_sample_ids(
 
 def _validate_filter_type(
     collection: CollectionTable,
-    filters: ImageFilter | VideoFilter | AnnotationsFilter,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter | McapSequenceFilter,
 ) -> None:
     if collection.sample_type == SampleType.IMAGE and isinstance(filters, ImageFilter):
         return
     if collection.sample_type == SampleType.VIDEO and isinstance(filters, VideoFilter):
         return
     if collection.sample_type == SampleType.ANNOTATION and isinstance(filters, AnnotationsFilter):
+        return
+    if collection.sample_type == SampleType.SEQUENCE and isinstance(filters, McapSequenceFilter):
         return
     raise HTTPException(
         status_code=HTTP_STATUS_BAD_REQUEST,

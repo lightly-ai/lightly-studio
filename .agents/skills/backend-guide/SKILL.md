@@ -17,9 +17,12 @@ The backend lives in `lightly_studio/src/lightly_studio`. It is a Python package
 
 ## Main packages
 
-- `api/`: FastAPI app setup, route registration, exception handling, media endpoints, and webapp serving. `api/app.py` is the composition root.
+- `api/`: FastAPI app setup, route registration, exception handling, media endpoints, and webapp serving. `api/app.py` is the composition root. The API routes are in `api/routes/api/`.
 - `services/`: Small orchestration layer for workflows that span multiple resolvers or need branching business logic. Not every endpoint needs a service.
 - `resolvers/`: Database-facing query and mutation functions. This is where most persistence logic lives.
+    - A resolver package has one public function per file, and `<entity>_resolver/__init__.py` exports it. Private helpers of that function stay in the same file.
+    - The tests use the same layout: `tests/resolvers/<entity>_resolver/test_<function>.py`.
+    - Resolvers and services call `session.commit()`. Routes do not.
 - `models/`: SQLModel tables plus Pydantic/SQLModel request and view models shared across layers.
 - `core/`, `dataset/`, `export/`, `metadata/`, `plugins/`, `few_shot_classifier/`: Product-specific modules used by routes, services, or resolvers when the logic is not just CRUD.
 
@@ -53,13 +56,31 @@ Thin endpoints may call resolvers directly. Services are mainly for cross-entity
 
 ## Error handling
 
-- Raise specific exceptions in the `api/` layer. FastAPI will handle converting them to HTTP responses. Do not raise `HTTPException` directly.
-- We let exceptions raised from the rest of Python code propagate cleanly to the api layer, and be ultimately handled by FastAPI.
+- Raise a domain error from `errors.py`, for example `NotFoundError`. Add a new error class there
+  if none fits.
+- `api/routes/api/exceptions.py` has the handlers that convert these errors to HTTP responses. A
+  new error class needs a handler there.
+- Do not raise `HTTPException`. Existing routes that raise it are legacy; do not copy them, and
+  convert a route when you change it. The conversion changes the key of the response body from
+  `detail` to `error`, so update the tests and the frontend code that read `detail`.
+- Use the `HTTP_STATUS_*` constants from `api/routes/api/status.py`, not numeric literals.
+- Do not catch an exception in a resolver or a service to convert it. Let it go to the `api/`
+  layer.
+
+```python
+# Bad
+if tag is None:
+    raise HTTPException(status_code=404, detail="Tag not found")
+
+# Good
+if tag is None:
+    raise NotFoundError(f"Tag {tag_id} does not exist.")
+```
 
 ## Runtime, persistence and the database
 
-- `db_manager.py` centralizes engine and session management.
-- FastAPI dependencies provide short-lived sessions for request handling.
+- `database/db_manager.py` centralizes engine and session management.
+- FastAPI dependencies provide short-lived sessions for request handling. A route gets its session from the `SessionDep` argument type by default. The media routes (`api/routes/images.py`, `video_media.py`, `video_frames_media.py`) do not use `SessionDep`: they open and close a session before the file I/O, because the dependency holds a thread pool slot for the full request.
 - The app lifespan also initializes and shuts down plugins, then closes the database engine cleanly.
 - Python API classes in `core/` use a long-lived `db_manager.persistent_session()`. Currently this is a design limitation, causing issues with DuckDB's single-writer model.
 
@@ -69,6 +90,7 @@ Schema is created with `SQLModel.metadata.create_all()` on startup.
 
 ### PostgreSQL and Alembic
 
+A change to a `*Table` model needs an Alembic revision. In `lightly_studio/`, run `make migration-revision-postgresql MSG=<name>`. The command replaces the local `lightly-studio-postgres` container, and the data in it is lost.
 See `lightly_studio/MIGRATIONS.md` for full details on Alembic setup, startup behavior, adding schema changes, and validation.
 
 ## Build and generated artifacts
@@ -82,7 +104,7 @@ See `lightly_studio/MIGRATIONS.md` for full details on Alembic setup, startup be
 
 ## How to navigate the codebase
 
-- Start in `api/routes/` if the change is triggered by an HTTP endpoint.
+- Start in `api/routes/` if the change is triggered by an HTTP endpoint. Most routes are in `api/routes/api/`; the media, MCAP sequence, and recording routes are next to it.
 - Check `services/` when the endpoint coordinates multiple entities or sample types.
 - Go to `resolvers/` for query logic, filtering, and persistence details.
 - Look in `models/` for request bodies, response models, and database tables.

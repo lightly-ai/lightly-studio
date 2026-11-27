@@ -11,9 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add the conformance kit, `lightly-studio-serve conformance <url>`. It checks any
-  server that claims to speak the protocol, reports one outcome per capability, and needs no
-  dataset.
+- `serve` and `create_app` accept `labeling_model`, to serve a labeling model with or without an embedder.
 
 ### Changed
 
@@ -24,6 +22,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## \[0.2.0\] - 2026-11-18
+
+### Added
+
+- Python 3.15 support.
+- Add `LabelingModel`, the base class for your own model that labels images in the
+  LightlyStudio GUI, with the `ModelTask` and `PredictedAnnotation` types.
+
+### Removed
+
+- BREAKING: Dropped Python 3.9 and 3.10 support. Upgrade to Python 3.11–3.15.
+
+## \[0.1.2\] - 2026-10-07
+
+### Added
+
+- Add the conformance kit, `lightly-studio-serve conformance <url>`. It checks any
+  server that claims to speak the protocol, reports one outcome per capability, and needs no
+  dataset.
 
 ## \[0.1.1\] - 2026-09-21
 

@@ -5,7 +5,8 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict
-from sqlmodel import Field, SQLModel
+from sqlalchemy.orm import Mapped, relationship
+from sqlmodel import Field, Relationship, SQLModel
 
 
 class ObjectTrackTable(SQLModel, table=True):
@@ -32,6 +33,19 @@ class ObjectTrackTable(SQLModel, table=True):
     # Parent track for nested boxes, e.g. a truck cabin or bed.
     parent_object_track_id: UUID | None = Field(
         default=None, foreign_key="object_track.object_track_id", index=True
+    )
+
+    parent_object_track: Mapped[ObjectTrackTable | None] = Relationship(
+        sa_relationship=relationship(
+            "ObjectTrackTable",
+            primaryjoin=(
+                "ObjectTrackTable.parent_object_track_id == ObjectTrackTable.object_track_id"
+            ),
+            foreign_keys="[ObjectTrackTable.parent_object_track_id]",
+            remote_side="[ObjectTrackTable.object_track_id]",
+            lazy="select",
+            uselist=False,
+        )
     )
 
 
@@ -63,3 +77,18 @@ class ObjectTrackWithCountView(BaseModel):
 
     tracks: list[ObjectTrackView]
     total_count: int
+
+
+class ObjectTrackUpdate(BaseModel):
+    """Input model for updating an object track's parent relationship."""
+
+    parent_object_track_id: UUID | None = None
+
+
+class TrackWithClassNameView(BaseModel):
+    """Track response enriched with the annotation class name."""
+
+    object_track_id: UUID
+    object_track_number: int
+    annotation_class_name: str | None = None
+    parent_object_track_id: UUID | None = None

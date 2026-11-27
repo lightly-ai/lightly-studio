@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { CircleAlert, LoaderCircle, Wrench } from '@lucide/svelte';
+    import CircleAlert from '@lucide/svelte/icons/circle-alert';
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+    import Wrench from '@lucide/svelte/icons/wrench';
     import { cn } from '$lib/utils/shadcn';
 
     interface Props {

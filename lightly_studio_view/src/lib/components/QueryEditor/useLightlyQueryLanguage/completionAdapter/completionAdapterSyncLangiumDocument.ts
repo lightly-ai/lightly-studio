@@ -5,7 +5,8 @@ import type { LightlyQueryServicesBundle } from '../../language/lightly-query-mo
 /** Rebuild the Langium document from Monaco text so providers see fresh content. */
 export async function syncLangiumDocument(
     model: monaco.editor.ITextModel,
-    services: LightlyQueryServicesBundle
+    services: LightlyQueryServicesBundle,
+    text = model.getValue()
 ) {
     const {
         shared: {
@@ -15,7 +16,7 @@ export async function syncLangiumDocument(
 
     const uri = URI.parse(model.uri.toString());
     documents.deleteDocument(uri);
-    const doc = documents.createDocument(uri, model.getValue());
+    const doc = documents.createDocument(uri, text);
     await builder.build([doc], { validation: false });
     return doc;
 }

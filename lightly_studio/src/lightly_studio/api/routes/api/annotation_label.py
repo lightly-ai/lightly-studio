@@ -5,8 +5,10 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
+import pydantic
 from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel
+from pydantic_core import PydanticCustomError
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
@@ -14,9 +16,11 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.errors import NotFoundError
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
+    AnnotationLabelWithCountView,
 )
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_label_resolver
@@ -28,6 +32,27 @@ class AnnotationLabelCreateRequest(BaseModel):
     """Request model for creating or updating an annotation label."""
 
     annotation_label_name: str
+
+
+class AnnotationLabelColorRequest(BaseModel):
+    """Request model for setting or clearing the color of an annotation label.
+
+    Both fields are set to choose a color, or both are null to restore the default color.
+    """
+
+    color: str | None = pydantic.Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    alpha: float | None = pydantic.Field(ge=0, le=1)
+
+    @pydantic.model_validator(mode="after")
+    def validate_color_and_alpha_are_set_together(self) -> AnnotationLabelColorRequest:  # noqa: N804
+        """Require color and alpha to be set together or cleared together."""
+        if (self.color is None) != (self.alpha is None):
+            # PydanticCustomError keeps the 422 body JSON serializable. A plain ValueError
+            # puts the exception object into the error context.
+            raise PydanticCustomError(
+                "color_alpha_mismatch", "Set both color and alpha, or set both to null."
+            )
+        return self
 
 
 @annotations_label_router.post(
@@ -67,6 +92,33 @@ def read_annotation_labels(
     return annotation_label_resolver.get_all(session=session, dataset_id=collection.dataset_id)
 
 
+@annotations_label_router.get("/collections/{collection_id}/annotation_labels_with_counts")
+def read_annotation_labels_with_counts(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[AnnotationLabelWithCountView]:
+    """Retrieve the annotation labels of a dataset with their numbers of annotations."""
+    labels = annotation_label_resolver.get_all(session=session, dataset_id=collection.dataset_id)
+    counts = annotation_label_resolver.get_annotation_counts(
+        session=session, dataset_id=collection.dataset_id
+    )
+    return [
+        AnnotationLabelWithCountView(
+            dataset_id=label.dataset_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_label_name=label.annotation_label_name,
+            color=label.color,
+            alpha=label.alpha,
+            annotation_count=counts.get(label.annotation_label_id, 0),
+        )
+        for label in labels
+    ]
+
+
 @annotations_label_router.get("/annotation_labels/{label_id}")
 def read_annotation_label(
     label_id: UUID,
@@ -100,15 +152,30 @@ def update_annotation_label(
     return label
 
 
+@annotations_label_router.put("/annotation_labels/{label_id}/color")
+def set_annotation_label_color(
+    label_id: UUID,
+    color_input: AnnotationLabelColorRequest,
+    session: SessionDep,
+) -> AnnotationLabelTable:
+    """Set or clear the color of an annotation label."""
+    label = annotation_label_resolver.set_color(
+        session=session,
+        label_id=label_id,
+        color=color_input.color,
+        alpha=color_input.alpha,
+    )
+    if not label:
+        raise NotFoundError("Annotation label not found")
+    return label
+
+
 @annotations_label_router.delete("/annotation_labels/{label_id}")
 def delete_annotation_label(
     label_id: UUID,
     session: SessionDep,
 ) -> dict[str, str]:
-    """Delete an annotation label from the database."""
+    """Delete an annotation label and all annotations that use it."""
     if not annotation_label_resolver.delete(session=session, label_id=label_id):
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail="Annotation label not found",
-        )
+        raise NotFoundError("Annotation label not found")
     return {"status": "deleted"}

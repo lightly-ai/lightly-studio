@@ -7,57 +7,63 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Protocol, TypeVar, Union
+from typing import Protocol, TypeVar, assert_never
 
-from typing_extensions import assert_never
-
+from lightly_studio.core.dataset_query import evaluation_query_translation, video_query_validation
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.classification_query import (
     ClassificationField,
     ClassificationQuery,
 )
-from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.core.dataset_query.metadata_expression import MetadataField
 from lightly_studio.core.dataset_query.object_detection_query import (
     ObjectDetectionField,
     ObjectDetectionQuery,
 )
-from lightly_studio.core.dataset_query.order_by import (
-    OrderByEvaluationMetricField,
-    OrderByExpression,
-    OrderByField,
-    OrderByMetadataField,
-)
+from lightly_studio.core.dataset_query.polygon_query import PolygonField, PolygonQuery
 from lightly_studio.core.dataset_query.segmentation_mask_query import (
     SegmentationMaskField,
     SegmentationMaskQuery,
 )
+from lightly_studio.core.dataset_query.video_event_query import VideoEventField, VideoEventQuery
+from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
+from lightly_studio.core.dataset_query.video_frame_sample_field import VideoFrameSampleField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.errors import QueryExprError
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
+    ConfusionMatchExpr,
     DatetimeExpr,
     EqualityComparisonOperator,
     EqualityFloatExpr,
+    FalseNegativeMatchExpr,
+    FalsePositiveMatchExpr,
     FieldRef,
     IntegerExpr,
     MatchExpr,
+    MetadataComparisonExpr,
     NotExpr,
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    PolygonMatchExpr,
+    SampleEvaluationMatchExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
+    VideoEventMatchExpr,
+    VideoFrameMatchExpr,
 )
-from lightly_studio.models.sort_direction import SortDirection
 
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
-Number = Union[int, float]
+Number = int | float
+FieldExpr = StringExpr | IntegerExpr | DatetimeExpr | OrdinalFloatExpr | EqualityFloatExpr
 
 
 class _EqualityField(Protocol[T_contra]):  # noqa: PLW1641
@@ -82,6 +88,8 @@ class _TagsAccessor(Protocol):
     def contains(self, tag_name: str) -> MatchExpression: ...
 
 
+_PARENT_VIDEO = VideoFrameSampleField.parent_video
+
 # ---------------------------------------------------------------------------
 # Field mappings: (table, name) → dataset-query field / accessor
 # ---------------------------------------------------------------------------
@@ -93,10 +101,16 @@ _STRING_FIELDS: dict[tuple[str, str], _EqualityField[str]] = {
     ("video", "file_path_abs"): VideoSampleField.file_path_abs,
     ("classification", "class_name"): ClassificationField.class_name,
     ("classification", "source"): ClassificationField.source,
+    ("event", "class_name"): VideoEventField.class_name,
+    ("event", "source"): VideoEventField.source,
     ("object_detection", "class_name"): ObjectDetectionField.class_name,
     ("object_detection", "source"): ObjectDetectionField.source,
     ("segmentation_mask", "class_name"): SegmentationMaskField.class_name,
     ("segmentation_mask", "source"): SegmentationMaskField.source,
+    ("polygon", "class_name"): PolygonField.class_name,
+    ("polygon", "source"): PolygonField.source,
+    ("parent_video", "file_name"): _PARENT_VIDEO.file_name,
+    ("parent_video", "file_path_abs"): _PARENT_VIDEO.file_path_abs,
 }
 
 _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
@@ -112,22 +126,39 @@ _INTEGER_FIELDS: dict[tuple[str, str], _OrdinalField[int]] = {
     ("segmentation_mask", "y"): SegmentationMaskField.y,
     ("segmentation_mask", "width"): SegmentationMaskField.width,
     ("segmentation_mask", "height"): SegmentationMaskField.height,
+    ("polygon", "x"): PolygonField.x,
+    ("polygon", "y"): PolygonField.y,
+    ("polygon", "width"): PolygonField.width,
+    ("polygon", "height"): PolygonField.height,
+    ("video_frame", "frame_number"): VideoFrameSampleField.frame_number,
+    ("video_frame", "frame_timestamp_pts"): VideoFrameSampleField.frame_timestamp_pts,
+    ("video_frame", "rotation_deg"): VideoFrameSampleField.rotation_deg,
+    ("parent_video", "width"): _PARENT_VIDEO.width,
+    ("parent_video", "height"): _PARENT_VIDEO.height,
 }
 
 _DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
     ("image", "created_at"): ImageSampleField.created_at,
+    ("video", "created_at"): VideoSampleField.created_at,
 }
 
 _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "fps"): VideoSampleField.fps,
+    ("event", "start_time_s"): VideoEventField.start_time_s,
+    ("event", "end_time_s"): VideoEventField.end_time_s,
+    ("video_frame", "frame_timestamp_s"): VideoFrameSampleField.frame_timestamp_s,
+    ("parent_video", "fps"): _PARENT_VIDEO.fps,
 }
 
-# Annotation confidence is stored in a nullable column, but still supports
-# ordinal numeric comparisons in the query language.
+# Nullable numeric columns support ordinal comparisons in the query language.
 _ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
+    ("video", "duration_s"): VideoSampleField.duration_s,
+    ("parent_video", "duration_s"): _PARENT_VIDEO.duration_s,
     ("classification", "confidence"): ClassificationField.confidence,
+    ("event", "confidence"): VideoEventField.confidence,
     ("object_detection", "confidence"): ObjectDetectionField.confidence,
     ("segmentation_mask", "confidence"): SegmentationMaskField.confidence,
+    ("polygon", "confidence"): PolygonField.confidence,
 }
 # We can merge ordinal fields with nullable, as NULL values fail any comparison in SQL, so it just
 # works as expected.
@@ -138,26 +169,16 @@ _ALL_ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
 
 _EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {
     ("video", "duration_s"): VideoSampleField.duration_s,
+    ("video", "fps"): VideoSampleField.fps,
+    ("parent_video", "duration_s"): _PARENT_VIDEO.duration_s,
+    ("parent_video", "fps"): _PARENT_VIDEO.fps,
 }
 
 _TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
     ("image", "tags"): ImageSampleField.tags,
     ("video", "tags"): VideoSampleField.tags,
-}
-
-_SORT_FIELDS: dict[tuple[str, str], Field] = {
-    ("image", "file_name"): ImageSampleField.file_name,
-    ("image", "file_path_abs"): ImageSampleField.file_path_abs,
-    ("image", "created_at"): ImageSampleField.created_at,
-    ("image", "width"): ImageSampleField.width,
-    ("image", "height"): ImageSampleField.height,
-    ("video", "file_name"): VideoSampleField.file_name,
-    ("video", "file_path_abs"): VideoSampleField.file_path_abs,
-    ("video", "created_at"): VideoSampleField.created_at,
-    ("video", "width"): VideoSampleField.width,
-    ("video", "height"): VideoSampleField.height,
-    ("video", "duration_s"): VideoSampleField.duration_s,
-    ("video", "fps"): VideoSampleField.fps,
+    ("video_frame", "tags"): VideoFrameSampleField.tags,
+    ("parent_video", "tags"): _PARENT_VIDEO.tags,
 }
 
 
@@ -184,62 +205,40 @@ def _lookup(
 # ---------------------------------------------------------------------------
 
 
-def sort_to_order_by(
-    key: tuple[str, str],
-    direction: SortDirection,
-) -> OrderByExpression:
-    """Translate a (source, field_name) key and direction to an OrderByExpression.
+def field_tables() -> list[tuple[type[FieldExpr], Mapping[tuple[str, str], object]]]:
+    """Return each field table with the expression type of its fields.
 
-    Args:
-        key: A (source, field_name) tuple identifying the sort field (e.g.,
-            ``("image", "width")`` or ``("metadata", "brightness")``).
-        direction: Sort direction, either "asc" or "desc".
-
-    Returns:
-        An OrderByExpression ready to be applied to a database query.
-
-    Raises:
-        QueryExprError: If the key does not correspond to a known sort field.
+    Some float fields are in the ordinal and in the equality table. The ordinal table comes first.
     """
-    order_by: OrderByExpression
-    source, field_name = key
-    if source == "metadata":
-        order_by = OrderByMetadataField(field_name=field_name)
-    elif key in _SORT_FIELDS:
-        order_by = OrderByField(_SORT_FIELDS[key])
-    else:
-        raise QueryExprError(f"Unknown sort field: {key[0]}.{key[1]}")
-    if direction == "desc":
-        order_by.desc()
-    return order_by
+    return [
+        (StringExpr, _STRING_FIELDS),
+        (IntegerExpr, _INTEGER_FIELDS),
+        (DatetimeExpr, _DATETIME_FIELDS),
+        (OrdinalFloatExpr, _ALL_ORDINAL_FLOAT_FIELDS),
+        (EqualityFloatExpr, _EQUALITY_FLOAT_FIELDS),
+    ]
 
 
-def evaluation_metric_sort_to_order_by(
-    evaluation_run_name: str,
-    metric_name: str,
-    direction: SortDirection,
-) -> OrderByExpression:
-    """Translate an evaluation run name, metric name, and direction to an OrderByExpression.
-
-    Args:
-        evaluation_run_name: The name of the evaluation run to sort by.
-        metric_name: The metric name to sort by.
-        direction: Sort direction, either "asc" or "desc".
-
-    Returns:
-        An OrderByExpression ready to be applied to a database query.
-    """
-    order_by: OrderByExpression = OrderByEvaluationMetricField(
-        evaluation_run_name=evaluation_run_name,
-        metric_name=metric_name,
-    )
-    if direction == "desc":
-        order_by.desc()
-    return order_by
+def has_tags(table: str) -> bool:
+    """Return whether the samples of the table have tags."""
+    return (table, "tags") in _TAGS_FIELDS
 
 
-def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C901
+def has_annotation_source(table: str) -> bool:
+    """Return whether the annotations of the table have a source."""
+    return (table, "source") in _STRING_FIELDS
+
+
+def to_match_expression(expr: MatchExpr, sample_type: SampleType | None = None) -> MatchExpression:
+    """Validate video scope and translate a query expression."""
+    video_query_validation.validate(expr=expr, scope=sample_type.value if sample_type else None)
+    return _to_match_expression(expr=expr)
+
+
+def _to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PLR0912 C901
     """Translate a validated query-language expression to a dataset-query expression."""
+    if isinstance(expr, MetadataComparisonExpr):
+        return _metadata_to_match_expression(expr=expr)
     if isinstance(expr, StringExpr):
         return _apply_equality_operator(
             field=_lookup(mapping=_STRING_FIELDS, field=expr.field, type_="string"),
@@ -277,19 +276,52 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
     if isinstance(expr, TagsContainsExpr):
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
+    if isinstance(expr, VideoFrameMatchExpr):
+        return VideoFrameQuery(_to_match_expression(expr=expr.subexpr))
+    if isinstance(expr, VideoEventMatchExpr):
+        return VideoEventQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery(to_match_expression(expr=expr.subexpr))
+        return ClassificationQuery(*_annotation_criteria(subexpr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery(to_match_expression(expr=expr.subexpr))
+        return ObjectDetectionQuery(*_annotation_criteria(subexpr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
-        return SegmentationMaskQuery(to_match_expression(expr=expr.subexpr))
+        return SegmentationMaskQuery(*_annotation_criteria(subexpr=expr.subexpr))
+    if isinstance(expr, PolygonMatchExpr):
+        return PolygonQuery(_to_match_expression(expr=expr.subexpr))
+    if isinstance(
+        expr,
+        (
+            SampleEvaluationMatchExpr,
+            ConfusionMatchExpr,
+            FalsePositiveMatchExpr,
+            FalseNegativeMatchExpr,
+        ),
+    ):
+        return evaluation_query_translation.to_match_expression(expr=expr)
     if isinstance(expr, AndExpr):
-        return AND(*(to_match_expression(expr=child) for child in expr.children))
+        return AND(*(_to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):
-        return OR(*(to_match_expression(expr=child) for child in expr.children))
+        return OR(*(_to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, NotExpr):
-        return NOT(to_match_expression(expr=expr.child))
+        return NOT(_to_match_expression(expr=expr.child))
     assert_never(expr)
+
+
+def _annotation_criteria(subexpr: MatchExpr | None) -> tuple[MatchExpression, ...]:
+    if subexpr is None:
+        return ()
+    return (_to_match_expression(expr=subexpr),)
+
+
+def _metadata_to_match_expression(expr: MetadataComparisonExpr) -> MatchExpression:
+    field = MetadataField(path=expr.path)
+    if expr.operator is OrdinalComparisonOperator.EQ:
+        return field == expr.value
+    if expr.operator is OrdinalComparisonOperator.NEQ:
+        return field != expr.value
+    if isinstance(expr.value, (int, float)) and not isinstance(expr.value, bool):
+        return _apply_ordinal_operator(field=field, operator=expr.operator, value=expr.value)
+    raise QueryExprError("Metadata ordering comparisons require a number.")
 
 
 def _apply_equality_operator(

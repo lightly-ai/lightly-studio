@@ -9,33 +9,40 @@
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import { get } from 'svelte/store';
     import { useGlobalStorage } from '$lib/hooks';
-    import {
-        Split as SplitIcon,
-        Puzzle as PuzzleIcon,
-        Download as DownloadIcon,
-        Settings as SettingsIcon,
-        BrainCircuit as BrainCircuitIcon,
-        WandSparkles as WandSparklesIcon,
-        Menu as MenuIcon
-    } from '@lucide/svelte';
+    import SplitIcon from '@lucide/svelte/icons/split';
+    import PuzzleIcon from '@lucide/svelte/icons/puzzle';
+    import DownloadIcon from '@lucide/svelte/icons/download';
+    import SettingsIcon from '@lucide/svelte/icons/settings';
+    import BrainCircuitIcon from '@lucide/svelte/icons/brain-circuit';
+    import WandSparklesIcon from '@lucide/svelte/icons/wand-sparkles';
+    import MenuIcon from '@lucide/svelte/icons/menu';
+    import CompassIcon from '@lucide/svelte/icons/compass';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import type { LightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
 
-    let {
-        isImages = false,
-        isVideos = false,
-        hasEmbeddings = false,
-        collection,
-        user
-    } = $props<{
+    interface Props {
         isImages?: boolean;
         isVideos?: boolean;
+        isPointClouds?: boolean;
         hasEmbeddings?: boolean;
         collection: CollectionView;
         user?: LightlyEnterpriseSession['user'];
-    }>();
+        showTour?: boolean;
+        onShowTour?: () => void;
+    }
+
+    let {
+        isImages = false,
+        isVideos = false,
+        isPointClouds = false,
+        hasEmbeddings = false,
+        collection,
+        user,
+        showTour = false,
+        onShowTour
+    }: Props = $props();
 
     const { openDatasetSplitDialog } = useDatasetSplitDialog();
     const { openClassifiersMenu } = useClassifiersMenu();
@@ -52,11 +59,12 @@
     };
 
     const hasClassifier = $derived(isImages && hasEmbeddings);
-    const hasSampling = $derived(isImages || isVideos);
+    const hasSampling = $derived(isImages || isVideos || isPointClouds);
     const hasExport = $derived(
         collection.sample_type == 'image' ||
             collection.sample_type == 'video' ||
-            collection.sample_type == 'video_frame'
+            collection.sample_type == 'video_frame' ||
+            collection.sample_type == 'sequence'
     );
 
     const isEditor = $derived(hasMinimumRole(user?.role, 'editor'));
@@ -118,6 +126,14 @@
             icon: SettingsIcon,
             testId: 'menu-settings',
             onSelect: openSettingsDialog
+        });
+
+        addAction(items, showTour && !!onShowTour, {
+            value: 'menu-show-tour',
+            label: 'Show tour',
+            icon: CompassIcon,
+            testId: 'menu-show-tour',
+            onSelect: () => onShowTour?.()
         });
 
         return items;

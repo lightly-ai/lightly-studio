@@ -1,52 +1,100 @@
 <script lang="ts">
-    import { Camera } from '@lucide/svelte';
-    import { getCameraFrameUrl } from '../getCameraFrameUrl/getCameraFrameUrl';
-
-    /**
-     * A single camera tile in the projection strip. Renders the channel's frame
-     * for the active tick, falling back to a placeholder camera icon when the
-     * image fails to load.
-     */
+    import Camera from '@lucide/svelte/icons/camera';
+    import ProjectionOverlay from '../ProjectionOverlay.svelte';
+    import type {
+        AnnotationView,
+        CameraProjectionView
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import type { PointBatch } from '$lib/components/PointCloudViewer';
+    import type { ProjectionSettings } from '../projectionSettings';
+    import type { AnnotationClassColor } from '../projectionOverlay';
+    import { useCameraFrame } from './useCameraFrame/useCameraFrame.svelte';
     interface Props {
-        /** Dataset the recording belongs to. */
         datasetId: string;
-        /** Recording that owns the frame. */
-        recordingId: string;
-        /** MCAP channel to render. */
+        recordingId?: string;
         channelId: number;
-        /** Frame timestamp in nanoseconds, as a string to preserve full precision. */
-        timestampNs?: string;
-        /** Studio slot name shown as the caption, e.g. `front`. */
+        keyframeTimestampNs?: string;
+        logTimeNs?: string;
+        blob?: Blob;
         label: string;
+        batch?: PointBatch;
+        annotations?: readonly AnnotationView[];
+        annotationClasses?: readonly AnnotationClassColor[];
+        projection?: CameraProjectionView;
+        onEnlarge?: () => void;
+        projectionSettings?: ProjectionSettings;
+        /** `row`: the strip's height sizes the tile; `column`: the strip's width does. */
+        layout?: 'row' | 'column';
     }
+    let {
+        datasetId,
+        recordingId,
+        channelId,
+        keyframeTimestampNs,
+        logTimeNs,
+        blob,
+        label,
+        batch,
+        annotations = [],
+        annotationClasses = [],
+        projection,
+        onEnlarge,
+        projectionSettings,
+        layout = 'row'
+    }: Props = $props();
 
-    let { datasetId, recordingId, channelId, timestampNs, label }: Props = $props();
-
-    const frameUrl = $derived(
-        timestampNs ? getCameraFrameUrl({ datasetId, recordingId, channelId, timestampNs }) : null
-    );
-
-    let failedFrameUrl = $state<string | null>(null);
+    const frame = useCameraFrame(() => ({
+        datasetId,
+        recordingId,
+        channelId,
+        keyframeTimestampNs,
+        logTimeNs,
+        blob,
+        label
+    }));
 </script>
 
 <figure
-    class="flex aspect-square h-full shrink-0 flex-col overflow-hidden rounded-md border bg-muted/30"
+    class="flex shrink-0 flex-col overflow-hidden bg-muted/30 {layout === 'column'
+        ? 'w-full min-w-0'
+        : 'h-full'}"
+    style:width={layout === 'row' ? `${frame.tileWidth}px` : undefined}
+    style:height={layout === 'column' ? `${frame.tileHeight}px` : undefined}
+    bind:clientHeight={frame.figureHeight}
+    bind:clientWidth={frame.figureWidth}
 >
-    {#if frameUrl && frameUrl !== failedFrameUrl}
-        <a href={frameUrl} target="_blank" rel="noopener noreferrer" class="flex min-h-0 flex-1">
-            <img
-                src={frameUrl}
-                alt={label}
-                class="min-h-0 flex-1 object-cover"
-                onerror={() => (failedFrameUrl = frameUrl)}
-            />
-        </a>
+    {#if frame.frameUrl && frame.frameUrl !== frame.failedFrameUrl}
+        <button
+            type="button"
+            class="flex min-h-0 w-full min-w-0 flex-1 cursor-zoom-in flex-col"
+            aria-label={`Enlarge ${label}`}
+            onclick={onEnlarge}
+        >
+            <div class="relative min-h-0 w-full flex-1">
+                <img
+                    src={frame.frameUrl}
+                    alt={label}
+                    class="h-full w-full object-contain"
+                    onload={frame.handleLoad}
+                    onerror={frame.handleError}
+                />
+                <ProjectionOverlay
+                    {batch}
+                    {annotations}
+                    {annotationClasses}
+                    {projection}
+                    settings={projectionSettings}
+                />
+            </div>
+        </button>
     {:else}
         <div class="flex min-h-0 flex-1 items-center justify-center text-muted-foreground">
             <Camera class="size-5" aria-hidden="true" />
         </div>
     {/if}
-    <figcaption class="shrink-0 px-2 py-1 text-center text-xs text-muted-foreground">
+    <figcaption
+        class="h-6 shrink-0 truncate px-2 text-center text-xs leading-6 text-muted-foreground"
+    >
         {label}
     </figcaption>
 </figure>

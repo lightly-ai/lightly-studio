@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { ChevronDown, Pencil } from '@lucide/svelte';
+import ChevronDown from '@lucide/svelte/icons/chevron-down';
+import Pencil from '@lucide/svelte/icons/pencil';
 import '@testing-library/jest-dom';
 import ButtonTestWrapper from './ButtonTestWrapper.test.svelte';
 
@@ -56,6 +57,16 @@ describe('Button', () => {
 
         const svgs = container.querySelectorAll(iconSelector);
         expect(svgs.length).toBe(2);
+    });
+
+    it('merges iconClass with the default size class on the leading icon', () => {
+        const { container } = render(ButtonTestWrapper, {
+            props: { label: 'Undo', icon: Pencil, iconClass: 'animate-spin' }
+        });
+
+        const svg = container.querySelector('button > svg');
+        expect(svg?.getAttribute('class')).toContain('size-4');
+        expect(svg?.getAttribute('class')).toContain('animate-spin');
     });
 
     it('merges iconAfterClass with the default size class on the trailing icon', () => {
@@ -182,6 +193,29 @@ describe('Button', () => {
             });
 
             expect(screen.getByRole('button', { name: 'Edit annotations' })).toBeInTheDocument();
+        });
+    });
+
+    describe('disabledReason', () => {
+        it('disables the button when disabledReason is provided', () => {
+            const { container } = render(ButtonTestWrapper, {
+                props: { label: 'Save', disabledReason: 'Not enough samples' }
+            });
+
+            expect(container.querySelector('button')).toBeDisabled();
+        });
+
+        it('renders as a disabled button (not an anchor) when href and disabledReason are both set', () => {
+            const { container } = render(ButtonTestWrapper, {
+                props: {
+                    label: 'View',
+                    buttonProps: { href: '/some/path' },
+                    disabledReason: 'No access'
+                }
+            });
+
+            expect(container.querySelector('a')).toBeNull();
+            expect(container.querySelector('button')).toBeDisabled();
         });
     });
 

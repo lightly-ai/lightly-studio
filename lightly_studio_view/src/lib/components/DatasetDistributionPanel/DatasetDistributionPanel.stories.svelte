@@ -14,7 +14,7 @@
 </script>
 
 <script lang="ts">
-    import { GripVertical } from '@lucide/svelte';
+    import GripVertical from '@lucide/svelte/icons/grip-vertical';
     import { Pane, PaneGroup, PaneResizer } from 'paneforge';
     import { balanced, empty, longLabels, longTail, many80Classes } from '../BarChart/fixtures';
     import {

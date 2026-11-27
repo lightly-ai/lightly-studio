@@ -1,25 +1,31 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import { BoxIcon } from '@lucide/svelte';
-    import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
+    import BoxIcon from '@lucide/svelte/icons/box';
     import type { McapSequenceFrame } from '$lib/api/lightly_studio_local/types.gen';
+    import { getMcapSequenceFrameURL } from '$lib/utils';
+    import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
 
     interface Props {
         sampleCount: number;
         width: number;
         height: number;
         sequenceFrame: McapSequenceFrame | null | undefined;
+        displayTextOnImage?: string;
+        /** Similarity to the search query, when search is active. */
+        similarityScore?: number | null;
     }
 
-    let { sampleCount, width, height, sequenceFrame }: Props = $props();
+    let {
+        sampleCount,
+        width,
+        height,
+        sequenceFrame,
+        displayTextOnImage,
+        similarityScore = null
+    }: Props = $props();
 
     const frameUrl = $derived(
-        sequenceFrame
-            ? `${PUBLIC_LIGHTLY_STUDIO_API_URL}datasets/${sequenceFrame.dataset_id}/recordings/${sequenceFrame.recording_id}/camera-frame` +
-                  `?channel_id=${sequenceFrame.channel_id}` +
-                  `&keyframe_timestamp_ns=${sequenceFrame.keyframe_log_time_ns}` +
-                  `&w=${Math.round(width)}&h=${Math.round(height)}`
-            : null
+        sequenceFrame ? getMcapSequenceFrameURL(sequenceFrame, width, height) : null
     );
 
     // Debounce the URL so that rapid width/height changes during a panel resize or
@@ -65,12 +71,32 @@
             <span class="text-sm font-medium">MCAP sequence</span>
         </div>
     {/if}
+    {#if displayTextOnImage}
+        <div
+            class="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-lg bg-black/60 px-2 py-1 text-xs font-medium text-white"
+            data-testid="mcap-sequence-file-name"
+        >
+            <span class="block truncate" title={displayTextOnImage}>
+                {displayTextOnImage}
+            </span>
+        </div>
+    {/if}
     {#if sampleCount > 1}
         <div
-            class="absolute bottom-1 right-1 rounded-sm bg-black/60 px-1.5 py-0.5 text-xs font-bold text-white"
+            class="absolute right-1 rounded-sm {displayTextOnImage
+                ? 'bottom-8'
+                : 'bottom-1'} bg-black/60 px-1.5 py-0.5 text-xs font-bold text-white"
             data-testid="mcap-sequence-frame-count"
         >
             +{sampleCount - 1}
         </div>
     {/if}
+    <!-- Lifted above the file name and the frame count, which take the same corner. -->
+    <div
+        class="pointer-events-none absolute inset-x-0 top-0 {displayTextOnImage
+            ? 'bottom-7'
+            : 'bottom-0'}"
+    >
+        <SampleValueBadge {similarityScore} hasBottomOverlay={sampleCount > 1} />
+    </div>
 </div>

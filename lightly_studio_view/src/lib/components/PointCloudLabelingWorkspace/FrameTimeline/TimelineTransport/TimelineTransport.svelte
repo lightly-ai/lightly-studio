@@ -1,12 +1,37 @@
 <script lang="ts">
-    import { ChevronLeft, ChevronRight, Pause, Play } from '@lucide/svelte';
+    import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import Pause from '@lucide/svelte/icons/pause';
+    import Play from '@lucide/svelte/icons/play';
+    import SkipBack from '@lucide/svelte/icons/skip-back';
+    import SkipForward from '@lucide/svelte/icons/skip-forward';
     import { Button } from '$lib/components';
-    import { Input } from '$lib/components/ui/input';
+    import { Select } from '$lib/components/Select';
+    import { Checkbox } from '$lib/components/ui/checkbox';
+    import type { ComponentProps } from 'svelte';
+    import TimelineBufferStatus from '../TimelineBufferStatus/TimelineBufferStatus.svelte';
+    import { TimelineZoomControls } from '../TimelineViewport';
 
-    /** Transport controls (step, play/pause) and the frame counter for the timeline. */
+    /** Playback interval at 1x speed, i.e. 10 Hz. */
+    const BASE_INTERVAL_MS = 100;
+    /** Item values are the interval multiplier relative to 1x (0.2x speed is 5x the interval). */
+    const speedItems = [0.1, 0.2, 0.5, 0.8, 1].map((speed) => ({
+        value: String(1 / speed),
+        label: `${speed}×`
+    }));
+
+    /**
+     * Transport controls (sequence and frame step, play/pause) and the frame counter for the
+     * timeline.
+     */
     interface Props {
         /** One-based `Frame n / total`, or an em-dash placeholder when the sequence is empty. */
         frameLabel: string;
+        bufferStatus?: ComponentProps<typeof TimelineBufferStatus>['status'];
+        /** Whether the complete sequence should be prefetched. */
+        bufferEntireSequence: boolean;
+        /** Called when the complete-sequence buffering option changes. */
+        onBufferEntireSequenceChange: (enabled: boolean) => void;
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
         playbackIntervalMs: number;
@@ -23,10 +48,17 @@
         /** Toggle playback between playing and paused. */
         onPlayToggle: () => void;
         onPlaybackIntervalChange: (intervalMs: number) => void;
+        /** Open the previous sequence; the control is disabled when absent. */
+        onPreviousSequence?: () => void;
+        /** Open the next sequence; the control is disabled when absent. */
+        onNextSequence?: () => void;
     }
 
     let {
         frameLabel,
+        bufferStatus,
+        bufferEntireSequence,
+        onBufferEntireSequenceChange,
         isPlaying,
         playbackIntervalMs,
         hasTicks,
@@ -35,11 +67,24 @@
         onPreviousFrame,
         onNextFrame,
         onPlayToggle,
-        onPlaybackIntervalChange
+        onPlaybackIntervalChange,
+        onPreviousSequence,
+        onNextSequence
     }: Props = $props();
 </script>
 
-<div class="flex shrink-0 items-center gap-1 border-b px-2 py-1">
+<div class="flex shrink-0 select-none items-center gap-1 border-b px-2 py-1">
+    <Button
+        variant="ghost"
+        icon={SkipBack}
+        ariaLabel="Previous sequence"
+        buttonProps={{
+            onclick: onPreviousSequence,
+            disabled: !onPreviousSequence,
+            size: 'sm',
+            class: 'h-7 w-7 p-0'
+        }}
+    />
     <Button
         variant="ghost"
         icon={ChevronLeft}
@@ -62,26 +107,16 @@
             class: 'h-7 w-7 p-0'
         }}
     />
-    <label class="ml-1 flex items-center gap-1 text-xs text-muted-foreground">
-        Interval
-        <Input
-            aria-label="Playback interval in seconds"
-            class="h-7 w-14 px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            wrapperClass="w-14"
-            type="number"
-            min="0.1"
-            max="5"
-            step="0.1"
-            value={playbackIntervalMs / 1000}
-            oninput={(event) => {
-                const seconds = Number(event.currentTarget.value);
-                if (Number.isFinite(seconds)) {
-                    onPlaybackIntervalChange(Math.min(5000, Math.max(100, seconds * 1000)));
-                }
-            }}
-        />
-        s
-    </label>
+    <Select
+        items={speedItems}
+        value={String(playbackIntervalMs / BASE_INTERVAL_MS)}
+        size="xs"
+        variant="ghost"
+        class="ml-1 h-7 w-auto"
+        testId="playback-speed-select"
+        selectProps={{ 'aria-label': 'Playback speed' }}
+        onValueChange={(slowdown) => onPlaybackIntervalChange(BASE_INTERVAL_MS * Number(slowdown))}
+    />
     <Button
         variant="ghost"
         icon={ChevronRight}
@@ -93,5 +128,28 @@
             class: 'h-7 w-7 p-0'
         }}
     />
+    <Button
+        variant="ghost"
+        icon={SkipForward}
+        ariaLabel="Next sequence"
+        buttonProps={{
+            onclick: onNextSequence,
+            disabled: !onNextSequence,
+            size: 'sm',
+            class: 'h-7 w-7 p-0'
+        }}
+    />
     <span class="ml-2 text-xs text-muted-foreground">{frameLabel}</span>
+    <div class="ml-auto flex items-center gap-2">
+        <TimelineZoomControls />
+        <TimelineBufferStatus status={bufferStatus} />
+    </div>
+    <label class="ml-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Checkbox
+            aria-label="Buffer entire sequence"
+            checked={bufferEntireSequence}
+            onCheckedChange={(checked) => onBufferEntireSequenceChange(checked === true)}
+        />
+        <span>Buffer entire sequence</span>
+    </label>
 </div>

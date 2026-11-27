@@ -1,9 +1,7 @@
 <script lang="ts">
-    import {
-        Check as CheckIcon,
-        ChevronsUpDown as ChevronsUpDownIcon,
-        LoaderCircle as Loader2Icon
-    } from '@lucide/svelte';
+    import CheckIcon from '@lucide/svelte/icons/check';
+    import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
+    import Loader2Icon from '@lucide/svelte/icons/loader-circle';
     import { tick, untrack, type Snippet } from 'svelte';
     import * as Command from '$lib/components/ui/command/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
@@ -42,8 +40,12 @@
         autoFocus = false,
         disabled = false,
         isLoading = false,
+        allowCreate = true,
         onKeyboardConfirm,
-        labelledBy
+        onCreate,
+        labelledBy,
+        pinnedTop = [],
+        pinnedBottom = []
     }: {
         placeholder?: string;
         name?: string;
@@ -55,11 +57,16 @@
         autoFocus?: boolean;
         selectedItem?: ListItem;
         items: ListItem[];
+        pinnedTop?: ListItem[];
+        pinnedBottom?: ListItem[];
         notFound?: Snippet<[{ inputValue: string }]>;
         onSelect?: (item: ListItem) => void;
         disabled?: boolean;
         isLoading?: boolean;
+        allowCreate?: boolean;
         onKeyboardConfirm?: (item: ListItem) => void;
+        // Called when the user creates an item from the typed text, before onSelect.
+        onCreate?: (item: ListItem) => void;
     } = $props();
 
     // Part of the trigger's accessible name, so it reads as "<field label> <selected value>".
@@ -69,6 +76,7 @@
     let inputValue = $state('');
     let highlightedValue = $state('');
 
+    const allItems = $derived([...pinnedTop, ...items, ...pinnedBottom]);
     const selectedValue = $derived(selectedItem?.value);
 
     $effect(() => {
@@ -84,16 +92,17 @@
         closeAndFocusTrigger();
     };
 
-    const createNewItem = (item: string) => {
-        const existingItem = items.find((i) => i.value.toLowerCase() === item.toLowerCase());
+    // Returns the item that matches the text, ignoring case, or creates a new one.
+    // Returns undefined when there is no match and creating is not allowed.
+    const getOrCreateItem = (text: string): ListItem | undefined => {
+        const existingItem = allItems.find((i) => i.value.toLowerCase() === text.toLowerCase());
+        if (existingItem) return existingItem;
+        if (!allowCreate) return undefined;
 
-        if (existingItem) {
-            handleOnSelect(existingItem);
-        } else {
-            const newItem = { value: item, label: item };
-            items.push(newItem);
-            handleOnSelect(newItem);
-        }
+        const newItem = { value: text, label: text };
+        items.push(newItem);
+        onCreate?.(newItem);
+        return newItem;
     };
 
     const confirmWithKeyboard = (item: ListItem) => {
@@ -103,33 +112,31 @@
         closeAndFocusTrigger();
     };
 
+    const getTypedItem = (): ListItem | undefined =>
+        inputValue.trim() ? getOrCreateItem(inputValue) : undefined;
+
+    // With onKeyboardConfirm, Enter confirms the highlighted or typed item. Without it,
+    // Enter on a highlighted item is left to the command list.
+    const getEnterItem = (): ListItem | undefined => {
+        if (onKeyboardConfirm) {
+            return allItems.find((item) => item.value === highlightedValue) ?? getTypedItem();
+        }
+        return highlightedValue ? undefined : getTypedItem();
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Enter' || !onKeyboardConfirm) {
-            if (event.key === 'Enter' && !highlightedValue && inputValue) {
-                createNewItem(inputValue);
-                event.preventDefault();
-                event.stopPropagation();
-            } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-                event.stopPropagation();
-            }
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.stopPropagation();
             return;
         }
+        if (event.key !== 'Enter') return;
 
-        const highlightedItem = items.find((item) => item.value === highlightedValue);
-
-        if (highlightedItem) {
-            confirmWithKeyboard(highlightedItem);
-        } else if (inputValue) {
-            const existingItem = items.find(
-                (item) => item.value.toLowerCase() === inputValue.toLowerCase()
-            );
-            const item = existingItem ?? { value: inputValue, label: inputValue };
-
-            if (!existingItem) items.push(item);
-
+        const item = getEnterItem();
+        if (!item) return;
+        if (onKeyboardConfirm) {
             confirmWithKeyboard(item);
         } else {
-            return;
+            handleOnSelect(item);
         }
 
         event.preventDefault();
@@ -144,6 +151,13 @@
         inputRef.focus();
     };
 </script>
+
+{#snippet pinnedItem(item: ListItem)}
+    <Command.Item value={item.value} onSelect={() => handleOnSelect(item)} forceMount keywords={[]}>
+        <CheckIcon class={cn(selectedValue !== item.value && 'text-transparent')} />
+        <span class="min-w-0 flex-1 truncate" title={item.label}>{item.label}</span>
+    </Command.Item>
+{/snippet}
 
 <Popover.Root bind:open>
     <Popover.Trigger bind:ref={triggerRef}>
@@ -164,9 +178,9 @@
                     <span
                         id={valueId}
                         class="min-w-0 flex-1 truncate text-left"
-                        title={selectedItem?.label || label}
+                        title={selectedItem?.label ?? label}
                     >
-                        {selectedItem?.label || label}
+                        {selectedItem?.label ?? label}
                     </span>
                     <ChevronsUpDownIcon class="shrink-0 opacity-50" />
                 </Button>
@@ -198,26 +212,31 @@
                         Item not found
                     {/if}
                 </Command.Empty>
+                {#each pinnedTop as item (item.value)}
+                    {@render pinnedItem(item)}
+                {/each}
                 <Command.Group value={name}>
                     {#each items as item (item.value)}
                         <Command.Item value={item.value} onSelect={() => handleOnSelect(item)}>
                             <CheckIcon
                                 class={cn(selectedValue !== item.value && 'text-transparent')}
                             />
-                            <span class="min-w-0 flex-1 truncate" title={item.label}
-                                >{item.label}</span
-                            >
+                            <span class="min-w-0 flex-1 truncate" title={item.label}>
+                                {item.label}
+                            </span>
                         </Command.Item>
                     {/each}
                 </Command.Group>
-                {#if inputValue.trim()}
+                {#each pinnedBottom as item (item.value)}
+                    {@render pinnedItem(item)}
+                {/each}
+                {#if allowCreate && inputValue.trim()}
                     <div class="border-t">
                         <Command.Item
                             value="__create__"
                             onSelect={() => {
-                                const newItem = { value: inputValue, label: inputValue };
-                                items.push(newItem);
-                                handleOnSelect(newItem);
+                                const item = getOrCreateItem(inputValue);
+                                if (item) handleOnSelect(item);
                             }}
                             forceMount
                             keywords={[]}

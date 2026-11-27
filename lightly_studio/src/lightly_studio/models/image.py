@@ -1,7 +1,7 @@
 """This module defines the User model for the application."""
 
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -10,6 +10,7 @@ from sqlalchemy import Index
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Relationship, SQLModel
 
+from lightly_studio.core.file_outcome_report import FileOutcome
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.collection import SampleType
@@ -37,6 +38,16 @@ class ImageCreate(ImageBase):
     """Image class when inserting."""
 
 
+class AddImagesResult(BaseModel):
+    """The result of adding a list of images to a collection."""
+
+    sample_ids: dict[str, UUID]
+    """The sample ID of each new image, by its absolute file path."""
+
+    outcomes: list[FileOutcome]
+    """The outcome of each input image, in the order of the input."""
+
+
 class ImageTable(ImageBase, table=True):
     """This class defines the Image model."""
 
@@ -53,12 +64,6 @@ class ImageTable(ImageBase, table=True):
     sample: Mapped["SampleTable"] = Relationship()
 
 
-TagKind = Literal[
-    "sample",
-    "annotation",
-]
-
-
 class ImageView(BaseModel):
     """Image class when retrieving."""
 
@@ -67,7 +72,6 @@ class ImageView(BaseModel):
 
         tag_id: UUID
         name: str
-        kind: TagKind
         created_at: datetime
         updated_at: datetime
 
@@ -85,15 +89,15 @@ class ImageView(BaseModel):
     tags: list[ImageViewTag]
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: list[CaptionView] = []
-    similarity_score: Optional[float] = None
-    order_value: Optional[float] = None
+    similarity_score: float | None = None
+    order_value: float | None = None
 
     @classmethod
     def from_image_table(
         cls,
         image: "ImageTable",
-        similarity_score: Optional[float] = None,
-        order_value: Optional[float] = None,
+        similarity_score: float | None = None,
+        order_value: float | None = None,
     ) -> "ImageView":
         """Convert an ImageTable to an ImageView.
 
@@ -116,7 +120,6 @@ class ImageView(BaseModel):
                 ImageView.ImageViewTag(
                     tag_id=tag.tag_id,
                     name=tag.name,
-                    kind=tag.kind,
                     created_at=tag.created_at,
                     updated_at=tag.updated_at,
                 )
@@ -140,4 +143,4 @@ class ImageViewsWithCount(BaseModel):
 
     samples: list[ImageView] = PydanticField(..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+    next_cursor: int | None = PydanticField(None, alias="nextCursor")

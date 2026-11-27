@@ -19,8 +19,7 @@ from lightly_studio.resolvers import (
     evaluation_annotation_metric_resolver,
     evaluation_sample_metric_resolver,
 )
-
-METRIC_BATCH_SIZE = 32  # Buffer size for evaluation_sample_metric_resolver.create_many
+from lightly_studio.utils import batching
 
 
 class Matchable(Protocol):
@@ -207,45 +206,35 @@ def create_and_persist_metrics_per_sample(
         data: Prepared evaluation data (selected samples and per-sample annotations).
         match_sample: Returns the matching result for one sample, given its id.
     """
-    sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
-    annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
+    # Match all samples before commits expire the loaded annotations and force reloads.
+    matching_results = {
+        sample_id: match_sample(sample_id) for sample_id in data.selected_sample_ids
+    }
+    for sample_id_batch in batching.batched(items=data.selected_sample_ids):
+        sample_metrics_to_persist: list[EvaluationSampleMetricCreate] = []
+        annotation_metrics_to_persist: list[EvaluationAnnotationMetricCreate] = []
+        for sample_id in sample_id_batch:
+            matching_result = matching_results[sample_id]
 
-    for sample_id in data.selected_sample_ids:
-        matching_result = match_sample(sample_id)
+            sample_metrics_to_persist.extend(
+                get_sample_metric_records(
+                    evaluation_run_id=data.evaluation_run_id,
+                    sample_id=sample_id,
+                    matching_result=matching_result,
+                )
+            )
+            annotation_metrics_to_persist.extend(
+                get_annotation_metric_records(
+                    evaluation_run_id=data.evaluation_run_id,
+                    sample_id=sample_id,
+                    matching_result=matching_result,
+                )
+            )
 
-        sample_metrics_to_persist.extend(
-            get_sample_metric_records(
-                evaluation_run_id=data.evaluation_run_id,
-                sample_id=sample_id,
-                matching_result=matching_result,
-            )
-        )
-        annotation_metrics_to_persist.extend(
-            get_annotation_metric_records(
-                evaluation_run_id=data.evaluation_run_id,
-                sample_id=sample_id,
-                matching_result=matching_result,
-            )
-        )
-        if len(sample_metrics_to_persist) >= METRIC_BATCH_SIZE:
-            evaluation_sample_metric_resolver.create_many(
-                session=session,
-                records=sample_metrics_to_persist,
-            )
-            sample_metrics_to_persist.clear()
-        if len(annotation_metrics_to_persist) >= METRIC_BATCH_SIZE:
-            evaluation_annotation_metric_resolver.create_many(
-                session=session,
-                records=annotation_metrics_to_persist,
-            )
-            annotation_metrics_to_persist.clear()
-
-    if sample_metrics_to_persist:
         evaluation_sample_metric_resolver.create_many(
             session=session,
             records=sample_metrics_to_persist,
         )
-    if annotation_metrics_to_persist:
         evaluation_annotation_metric_resolver.create_many(
             session=session,
             records=annotation_metrics_to_persist,
@@ -262,8 +251,8 @@ def create_and_persist_object_detection_metrics_per_sample(
 
     def match_sample(sample_id: UUID) -> MatchingResult:
         return match_image(
-            predictions=_to_bounding_boxes(annotations=data.pred_per_sample.get(sample_id, [])),
-            ground_truths=_to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, [])),
+            predictions=to_bounding_boxes(annotations=data.pred_per_sample.get(sample_id, [])),
+            ground_truths=to_bounding_boxes(annotations=data.gt_per_sample.get(sample_id, [])),
             iou_threshold=iou_threshold,
             classwise=classwise,
         )
@@ -414,7 +403,7 @@ def _box_iou_matrix(
     )
 
 
-def _to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingBox]:
+def to_bounding_boxes(annotations: list[AnnotationBaseTable]) -> list[BoundingBox]:
     """Convert object-detection annotations into matcher-ready bounding boxes."""
     boxes: list[BoundingBox] = []
     for annotation in annotations:

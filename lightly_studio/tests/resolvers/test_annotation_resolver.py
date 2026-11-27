@@ -527,18 +527,6 @@ def test_get_all_ordered_by_sample_file_path(db_session: Session) -> None:
 
 def test_get_all__with_tag_filtering(db_session: Session) -> None:
     collection = create_collection(session=db_session)
-    tag_1 = create_tag(
-        session=db_session,
-        collection_id=collection.collection_id,
-        tag_name="tag_all",
-        kind="annotation",
-    )
-    tag_2 = create_tag(
-        session=db_session,
-        collection_id=collection.collection_id,
-        tag_name="tag_odd",
-        kind="annotation",
-    )
     image = create_image(session=db_session, collection_id=collection.collection_id)
     anno_label_cat = create_annotation_label(
         session=db_session, root_collection_id=collection.collection_id, label_name="cat"
@@ -559,6 +547,18 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
             else anno_label_dog.annotation_label_id,
         )
         annotations.append(annotation)
+
+    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
+    tag_1 = create_tag(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        tag_name="tag_all",
+    )
+    tag_2 = create_tag(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        tag_name="tag_odd",
+    )
 
     # add first half to tag_1
     tag_resolver.add_sample_ids_to_tag_id(
@@ -581,8 +581,6 @@ def test_get_all__with_tag_filtering(db_session: Session) -> None:
             if annotation.annotation_label_id == anno_label_dog.annotation_label_id
         ],
     )
-
-    annotation_collection_id = _get_annotation_collection_id(db_session, collection.collection_id)
 
     # Test filtering by tags
     annotations_part1 = annotation_resolver.get_all(
@@ -642,14 +640,11 @@ def test_create_many_annotations(db_session: Session) -> None:
         )
         for i in range(3)
     ]
-    # A classification annotation additionally carrying a temporal span.
     annotations_to_create.append(
         AnnotationCreate(
             parent_sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
             annotation_type=AnnotationType.CLASSIFICATION,
-            start_time_s=1.5,
-            end_time_s=4.0,
         )
     )
 
@@ -674,13 +669,9 @@ def test_create_many_annotations(db_session: Session) -> None:
         anno.annotation_label_id == cat_label.annotation_label_id for anno in created_annotations
     )
 
-    # The temporal span is stored and surfaced through the annotation view.
-    classification = next(
-        anno
-        for anno in created_annotations
-        if anno.annotation_type == AnnotationType.CLASSIFICATION
-    )
-    view = AnnotationView.from_annotation_table(classification)
+
+def test_annotation_view__includes_video_event_span(video_event: AnnotationBaseTable) -> None:
+    view = AnnotationView.from_annotation_table(video_event)
     assert view.temporal_span_details is not None
     assert view.temporal_span_details.start_time_s == 1.5
     assert view.temporal_span_details.end_time_s == 4.0

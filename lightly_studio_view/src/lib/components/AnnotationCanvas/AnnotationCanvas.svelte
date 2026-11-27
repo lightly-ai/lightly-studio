@@ -15,7 +15,8 @@
 <script lang="ts">
     import { onDestroy, onMount, untrack } from 'svelte';
     import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
-    import { getColorByLabel } from '$lib/utils';
+    import { useCustomSourceColors } from '$lib/hooks';
+    import { getColorByLabel, getColorBySource } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
     import {
         acquireMaskRendererWorker,
@@ -35,6 +36,8 @@
         object_detection_details?: BoundingBox;
         color?: string;
         opacity?: number;
+        // If set, color by this source instead of by class.
+        sourceName?: string;
     }
 
     interface ObjectDetectionAnnotation {
@@ -44,6 +47,8 @@
         segmentation_mask?: undefined;
         color?: string;
         opacity?: number;
+        // If set, color by this source instead of by class.
+        sourceName?: string;
     }
 
     type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
@@ -78,6 +83,7 @@
     const canvasHeight = $derived(Math.max(1, Math.round(outputHeight ?? sourceHeight)));
 
     const { customLabelColorsStore } = useCustomLabelColors();
+    const { customSourceColorsStore } = useCustomSourceColors();
 
     let canvasEl: HTMLCanvasElement | null = null;
     let worker: Worker | null = null;
@@ -126,6 +132,10 @@
     };
 
     type CustomLabelColorMap = Record<string, CustomColor>;
+    interface CustomColorMaps {
+        label: CustomLabelColorMap;
+        source: CustomLabelColorMap;
+    }
 
     interface ContextOptions {
         willReadFrequently?: boolean;
@@ -145,14 +155,15 @@
 
     const clampAlpha = (value: number): number => Math.max(0, Math.min(value, 1));
 
-    const resolveLabelColor = (
-        labelName: string,
+    const resolveNamedColor = (
+        name: string,
         colorAlpha: number,
-        customLabelColors: CustomLabelColorMap
+        customColors: CustomLabelColorMap,
+        getDefaultColor: typeof getColorByLabel
     ): [number, number, number, number] => {
-        const customColor = customLabelColors[labelName];
+        const customColor = customColors[name];
         if (!customColor) {
-            return rgbaParser(getColorByLabel(labelName, colorAlpha).color);
+            return rgbaParser(getDefaultColor(name, colorAlpha).color);
         }
 
         const [r, g, b] = rgbaParser(customColor.color);
@@ -163,13 +174,22 @@
     const resolveAnnotationColor = (
         annotation: AnnotationCanvasAnnotation,
         colorAlpha: number,
-        customLabelColors: CustomLabelColorMap
+        customColorMaps: CustomColorMaps
     ): [number, number, number, number] => {
         if (!annotation.color) {
-            return resolveLabelColor(
+            if (annotation.sourceName) {
+                return resolveNamedColor(
+                    annotation.sourceName,
+                    colorAlpha,
+                    customColorMaps.source,
+                    getColorBySource
+                );
+            }
+            return resolveNamedColor(
                 annotation.annotation_label_name || 'label',
                 colorAlpha,
-                customLabelColors
+                customColorMaps.label,
+                getColorByLabel
             );
         }
 
@@ -192,7 +212,7 @@
 
     // Collect mask RLEs and any available bounding boxes in image space.
     const buildRenderPayload = (
-        customLabelColors: CustomLabelColorMap
+        customColorMaps: CustomColorMaps
     ): { masks: MaskPayload[]; boxes: BoxPayload[] } => {
         const masks: MaskPayload[] = [];
         const boxes: BoxPayload[] = [];
@@ -202,7 +222,7 @@
             if (rle.length) {
                 masks.push({
                     rle,
-                    color: resolveAnnotationColor(annotation, alpha, customLabelColors)
+                    color: resolveAnnotationColor(annotation, alpha, customColorMaps)
                 });
             }
 
@@ -214,7 +234,7 @@
                     y: Math.round(bbox.y),
                     width: Math.round(bbox.width),
                     height: Math.round(bbox.height),
-                    color: resolveAnnotationColor(annotation, 1, customLabelColors)
+                    color: resolveAnnotationColor(annotation, 1, customColorMaps)
                 });
             }
         }
@@ -222,8 +242,13 @@
         return { masks, boxes };
     };
 
-    const render = (customLabelColors: CustomLabelColorMap = $customLabelColorsStore) => {
-        const payload = buildRenderPayload(customLabelColors);
+    const render = (
+        customColorMaps: CustomColorMaps = {
+            label: $customLabelColorsStore,
+            source: $customSourceColorsStore
+        }
+    ) => {
+        const payload = buildRenderPayload(customColorMaps);
         const geometry: RenderGeometry = {
             sourceWidth,
             sourceHeight,
@@ -356,8 +381,7 @@
     });
 
     $effect(() => {
-        const customLabelColors = $customLabelColorsStore;
-        render(customLabelColors);
+        render({ label: $customLabelColorsStore, source: $customSourceColorsStore });
     });
 </script>
 

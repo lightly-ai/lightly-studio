@@ -6,12 +6,14 @@ import pytest
 from sqlmodel import Session, col, select
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
@@ -27,12 +29,14 @@ from lightly_studio.models.sequence import SampleSequenceLinkTable, SequenceTabl
 from lightly_studio.models.static_transform import StaticTransformTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
+    annotation_label_resolver,
     annotation_resolver,
     collection_embedding_model_resolver,
     collection_resolver,
     dataset_resolver,
     embedding_model_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     image_resolver,
@@ -966,6 +970,106 @@ def test_deep_copy__with_evaluation_sample_metrics(db_session: Session) -> None:
     assert len(original_metrics) == 2
 
 
+def test_deep_copy__with_evaluation_class_metrics(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="original")
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id
+    )
+    cat = create_annotation_label(
+        session=db_session, root_collection_id=dataset.collection_id, label_name="cat"
+    )
+    dog = create_annotation_label(
+        session=db_session, root_collection_id=dataset.collection_id, label_name="dog"
+    )
+    evaluation_class_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run.id,
+                annotation_label_id=cat.annotation_label_id,
+                metric_name="average_precision",
+                value=0.6,
+            ),
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run.id,
+                annotation_label_id=dog.annotation_label_id,
+                metric_name="average_precision",
+                config_override={"iou_threshold": 0.75},
+                value=0.4,
+            ),
+        ],
+    )
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert - the copied run has the same class metrics
+    copied_runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session,
+        dataset_id=copied.dataset_id,
+    )
+    assert len(copied_runs) == 1
+    assert copied_runs[0].id != run.id
+    copied_metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=copied_runs[0].id,
+    )
+    # The copied metrics point at the copied labels, not at the original ones.
+    copied_labels = annotation_label_resolver.get_by_ids(
+        session=db_session, ids=[m.annotation_label_id for m in copied_metrics]
+    )
+    assert {label.dataset_id for label in copied_labels} == {copied.dataset_id}
+    label_names = {
+        label.annotation_label_id: label.annotation_label_name for label in copied_labels
+    }
+    assert {label_names[m.annotation_label_id]: m.value for m in copied_metrics} == pytest.approx(
+        {"cat": 0.6, "dog": 0.4}
+    )
+    assert {label_names[m.annotation_label_id]: m.config_override for m in copied_metrics} == {
+        "cat": {},
+        "dog": {"iou_threshold": 0.75},
+    }
+
+    # Assert - original run metrics are untouched
+    original_metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run.id,
+    )
+    assert len(original_metrics) == 2
+
+
+def test_deep_copy__annotation_label_color(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="original")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=dataset.collection_id, label_name="cat"
+    )
+    label.color = "#ff8040"
+    label.alpha = 0.5
+    db_session.add(label)
+    db_session.commit()
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert
+    copied_label = annotation_label_resolver.get_by_label_name(
+        session=db_session, dataset_id=copied.dataset_id, label_name="cat"
+    )
+    assert copied_label is not None
+    assert copied_label.color == "#ff8040"
+    assert copied_label.alpha == 0.5
+
+
 def test_deep_copy__raises_for_nonexistent_dataset(db_session: Session) -> None:
     # Arrange
     nonexistent_id = uuid.uuid4()
@@ -1001,8 +1105,6 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
                 sample_id=img.sample_id,
                 annotation_label_id=label.annotation_label_id,
                 annotation_type=AnnotationType.CLASSIFICATION,
-                start_time_s=1.5,
-                end_time_s=4.0,
             ),
             AnnotationDetails(
                 sample_id=img.sample_id,
@@ -1054,16 +1156,11 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     # Build lookup by annotation type for copied annotations
     copied_by_type = {a.annotation_type: a for a in result.annotations}
 
-    # Assert - classification annotation copied (no bbox/mask detail tables) with its temporal span
+    # Assert - classification annotation copied (no bbox/mask detail tables)
     copied_cls = copied_by_type[AnnotationType.CLASSIFICATION]
     assert copied_cls.annotation_type == AnnotationType.CLASSIFICATION
     assert copied_cls.object_detection_details is None
     assert copied_cls.segmentation_details is None
-    copied_span = db_session.get(TemporalSpanTable, copied_cls.sample_id)
-    assert copied_span is not None
-    assert copied_span.start_time_s == 1.5
-    assert copied_span.end_time_s == 4.0
-
     # Assert - object detection detail table copied
     copied_od = copied_by_type[AnnotationType.OBJECT_DETECTION]
     od_detail = db_session.get(ObjectDetectionAnnotationTable, copied_od.sample_id)
@@ -1090,6 +1187,57 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert is_detail.width == 6
     assert is_detail.height == 8
     assert is_detail.segmentation_mask == [1, 0, 0, 1]
+
+
+def test_deep_copy__polygon(db_session: Session) -> None:
+    original = create_collection(session=db_session, collection_name="original")
+    img = create_image(
+        session=db_session, collection_id=original.collection_id, file_path_abs="/a.png"
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=original.collection_id, label_name="test"
+    )
+    polygon = create_annotation(
+        session=db_session,
+        collection_id=original.collection_id,
+        sample_id=img.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(1.5, 2.0), (11.0, 2.0), (11.0, 22.25)]],
+    )
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=original.dataset_id,
+        copy_name="copied",
+    )
+
+    (copied_polygon,) = annotation_resolver.get_all(
+        session=db_session,
+        filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
+    ).annotations
+    assert copied_polygon.sample_id != polygon.sample_id
+    copied_detail = db_session.get(PolygonAnnotationTable, copied_polygon.sample_id)
+    assert copied_detail is not None
+    assert (copied_detail.x, copied_detail.y) == (1, 2)
+    assert (copied_detail.width, copied_detail.height) == (10, 21)
+    assert copied_detail.polygons == [[[1.5, 2.0], [11.0, 2.0], [11.0, 22.25]]]
+
+
+def test_deep_copy__preserves_video_event_span(
+    db_session: Session, video_event: AnnotationBaseTable
+) -> None:
+    copied = dataset_resolver.deep_copy(
+        session=db_session, dataset_id=video_event.sample.collection.dataset_id, copy_name="copied"
+    )
+    (event,) = annotation_resolver.get_all(
+        session=db_session,
+        filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
+    ).annotations
+    assert event.sample_id != video_event.sample_id
+    span = db_session.get(TemporalSpanTable, event.sample_id)
+    assert span is not None
+    assert (span.start_time_s, span.end_time_s) == (1.5, 4.0)
 
 
 @pytest.mark.skip(reason="On an M4 Pro, it takes 47s for duckdb and 38s for postgres.")

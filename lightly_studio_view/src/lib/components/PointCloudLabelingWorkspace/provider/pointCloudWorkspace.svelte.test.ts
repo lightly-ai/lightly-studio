@@ -111,11 +111,17 @@ describe('PointCloudWorkspace', () => {
         cloudState.data = undefined;
     });
 
-    it('defaults to the first reference frame, or none without frames', () => {
+    it('defaults to CABIN, then the first reference frame, or none without frames', () => {
         expect(createWorkspace().referenceFrameId).toBe('');
 
         summaryState.data = summaryWithFrames;
-        expect(createWorkspace().referenceFrameId).toBe('map');
+        expect(createWorkspace().referenceFrameId).toBe('CABIN');
+
+        summaryState.data = {
+            ...summaryWithFrames,
+            reference_frames: [{ name: 'odom' }, { name: 'map' }]
+        };
+        expect(createWorkspace().referenceFrameId).toBe('odom');
     });
 
     it('selects a known reference frame and ignores an unknown one', () => {
@@ -135,7 +141,7 @@ describe('PointCloudWorkspace', () => {
 
         summaryState.data = summaryWithFrames;
         const workspace = createWorkspace();
-        expect(tickDetailsParams.getDisplayFrameId?.()).toBe('map');
+        expect(tickDetailsParams.getDisplayFrameId?.()).toBe('CABIN');
 
         workspace.selectReferenceFrame('CABIN');
         expect(tickDetailsParams.getDisplayFrameId?.()).toBe('CABIN');
@@ -149,7 +155,7 @@ describe('PointCloudWorkspace', () => {
 
         sequenceId = 'seq-2';
 
-        expect(workspace.referenceFrameId).toBe('map');
+        expect(workspace.referenceFrameId).toBe('CABIN');
     });
 
     it.each<[Array<{ frameId: string }>, boolean]>([
@@ -192,6 +198,24 @@ describe('PointCloudWorkspace', () => {
         const workspace = createWorkspace();
         expect(workspace.lidarChannels).toHaveLength(1);
         expect(workspace.cameraChannels[0].group_component_name).toBe('front');
+    });
+
+    it('exposes the sequence sample from the summary, or none without data', () => {
+        expect(createWorkspace().sequenceSample).toBeUndefined();
+
+        const tags = [{ tag_id: 'tag-1', name: 'night_drive' }];
+        summaryState.data = { ...summaryWithChannels, collection_id: 'sequence-collection', tags };
+        expect(createWorkspace().sequenceSample).toEqual({
+            sampleId: 'seq-1',
+            collectionId: 'sequence-collection',
+            tags
+        });
+    });
+
+    it('re-fetches the summary when the sequence tags change', () => {
+        createWorkspace().refetchSequenceSample();
+
+        expect(refetch).toHaveBeenCalledOnce();
     });
 
     it('starts on the initial tick when one is given', () => {

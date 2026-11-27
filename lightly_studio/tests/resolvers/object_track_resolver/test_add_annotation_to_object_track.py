@@ -28,6 +28,7 @@ def test_add_annotation_to_object_track(db_session: Session) -> None:
         annotation_label_id=label.annotation_label_id,
         annotation_type=AnnotationType.OBJECT_DETECTION,
     )
+    annotation_id = annotation.sample_id
 
     track_id = object_track_resolver.create_many(
         session=db_session,
@@ -37,14 +38,14 @@ def test_add_annotation_to_object_track(db_session: Session) -> None:
 
     result = object_track_resolver.add_annotation_to_object_track(
         session=db_session,
-        annotation_id=annotation.sample_id,
+        annotation_id=annotation_id,
         object_track_id=track_id,
     )
 
     assert result.object_track_id == track_id
 
     # Verify persisted in database.
-    fetched = annotation_resolver.get_by_id(session=db_session, annotation_id=annotation.sample_id)
+    fetched = annotation_resolver.get_by_id(session=db_session, annotation_id=annotation_id)
     assert fetched is not None
     assert fetched.object_track_id == track_id
     assert fetched.object_track is not None

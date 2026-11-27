@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Generic, TypeVar, Union
+from typing import Any, Generic, TypeVar
 
 from sqlalchemy.orm import Mapped
 
@@ -114,8 +114,8 @@ class NullableOrdinalField(Field, Generic[T]):  # noqa: PLW1641
         return OrdinalFieldExpression(field=self, operator="!=", value=other)
 
 
-NumericalField = OrdinalField[Union[float, int]]
-NullableNumericalField = NullableOrdinalField[Union[float, int]]
+NumericalField = OrdinalField[float | int]
+NullableNumericalField = NullableOrdinalField[float | int]
 DatetimeField = OrdinalField[datetime]
 
 

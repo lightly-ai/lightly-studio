@@ -43,10 +43,11 @@
 
     if (
         !untrack(() => annotation.object_detection_details) &&
-        !untrack(() => annotation.segmentation_details)
+        !untrack(() => annotation.segmentation_details) &&
+        !untrack(() => annotation.polygon_details)
     ) {
         throw new Error(
-            'Unsupported annotation: Only annotations with object_detection_details or segmentation_details are supported. Please check the annotation data.'
+            'Unsupported annotation: Only annotations with object_detection_details, segmentation_details or polygon_details are supported. Please check the annotation data.'
         );
     }
 
@@ -166,6 +167,7 @@
         {/if}
         <div
             class="annotation-box"
+            data-testid="annotation-box"
             class:invisible={$isHidden || $isAnnotationClassHidden}
             style={`
             left: ${(containerWidth - annotationWidth * scale) / 2}px;
@@ -185,9 +187,9 @@
                 >
                     <span class="truncate text-sm">{labelName}</span>
                     {#if annotation.object_track_number != null}
-                        <span class="shrink-0 font-mono text-xs opacity-80"
-                            >#{annotation.object_track_number}</span
-                        >
+                        <span class="shrink-0 font-mono text-xs opacity-80">
+                            #{annotation.object_track_number}
+                        </span>
                     {/if}
                 </div>
             {/if}

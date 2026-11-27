@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -12,32 +12,12 @@ AnnotationsClassName = str
 AnnotationClassToTarget = dict[AnnotationsClassName, float]
 
 # Values of a boolean key can be named either as booleans or as their lowercase names.
-MetadataValueName = Union[str, bool]
+MetadataValueName = str | bool
 MetadataValueToTarget = dict[MetadataValueName, float]
 
 
-class SamplingConfig(BaseModel):
-    """Configuration for the sampling process."""
-
-    collection_id: UUID
-    n_samples_to_select: int
-    sampling_result_tag_name: str
-    preselected_tag_name: str | None = None
-    strategies: Sequence[SamplingStrategy]
-    selected_sequence_length: int | None = Field(
-        default=None,
-        ge=2,
-        description=(
-            "Number of frames per selected sequence. None selects individual samples. "
-            "When set, n_samples_to_select still counts frames and must be a multiple "
-            "of this value. Only VIDEO_FRAME collections and diversity strategies "
-            "support sequences."
-        ),
-    )
-
-
-class SamplingStrategy(BaseModel):
-    """Base class for sampling strategies."""
+class _SamplingStrategyBase(BaseModel):
+    """Shared fields of the sampling strategies."""
 
     strength: float = Field(
         default=1.0,
@@ -49,7 +29,7 @@ class SamplingStrategy(BaseModel):
     )
 
 
-class EmbeddingDiversityStrategy(SamplingStrategy):
+class EmbeddingDiversityStrategy(_SamplingStrategyBase):
     """Sampling strategy based on embedding diversity.
 
     Selects samples that cover the embedding space as broadly as possible. Use it to get the
@@ -58,11 +38,11 @@ class EmbeddingDiversityStrategy(SamplingStrategy):
     distribution of the data.
     """
 
-    strategy_name: Literal["diversity"] = "diversity"
+    strategy_name: Literal["diversity"] = Field(default="diversity", frozen=True)
     embedding_model_name: str | None = None
 
 
-class EmbeddingDeduplicationStrategy(SamplingStrategy):
+class EmbeddingDeduplicationStrategy(_SamplingStrategyBase):
     """Sampling strategy that removes near-duplicates based on embedding distance.
 
     Selects samples that are spread out in embedding space and stops selecting
@@ -70,12 +50,12 @@ class EmbeddingDeduplicationStrategy(SamplingStrategy):
     ``stopping_condition_minimum_distance`` to the already selected samples.
     """
 
-    strategy_name: Literal["deduplication"] = "deduplication"
+    strategy_name: Literal["deduplication"] = Field(default="deduplication", frozen=True)
     embedding_model_name: str | None = None
     stopping_condition_minimum_distance: float = Field(ge=0)
 
 
-class EmbeddingSimilarityStrategy(SamplingStrategy):
+class EmbeddingSimilarityStrategy(_SamplingStrategyBase):
     """Sampling strategy based on embedding similarity to a tagged query set.
 
     Prefers samples that look like the samples of the query tag. Use it to find more
@@ -83,12 +63,12 @@ class EmbeddingSimilarityStrategy(SamplingStrategy):
     run.
     """
 
-    strategy_name: Literal["similarity"] = "similarity"
+    strategy_name: Literal["similarity"] = Field(default="similarity", frozen=True)
     query_tag_name: str
     embedding_model_name: str | None = None
 
 
-class MetadataWeightingStrategy(SamplingStrategy):
+class MetadataWeightingStrategy(_SamplingStrategyBase):
     """Sampling strategy based on metadata weighting.
 
     Prefers samples with a high value of a numeric metadata key. With a negative strength,
@@ -96,11 +76,11 @@ class MetadataWeightingStrategy(SamplingStrategy):
     strength prefers typical samples, a negative strength prefers outliers.
     """
 
-    strategy_name: Literal["weights"] = "weights"
+    strategy_name: Literal["weights"] = Field(default="weights", frozen=True)
     metadata_key: str
 
 
-class AnnotationClassBalancingStrategy(SamplingStrategy):
+class AnnotationClassBalancingStrategy(_SamplingStrategyBase):
     """Sampling strategy based on class balancing.
 
     Selects samples so that the annotation classes in the selection come near a target
@@ -109,12 +89,12 @@ class AnnotationClassBalancingStrategy(SamplingStrategy):
     them explicitly. Use it when some annotation classes are rare.
     """
 
-    strategy_name: Literal["balance"] = "balance"
+    strategy_name: Literal["balance"] = Field(default="balance", frozen=True)
     target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"]
     annotation_source_id: UUID | None = None
 
 
-class MetadataBalancingStrategy(SamplingStrategy):
+class MetadataBalancingStrategy(_SamplingStrategyBase):
     """Sampling strategy that balances the selection over one categorical metadata key.
 
     Balances a single ``string`` or ``boolean`` key over at most 100 values. Combine one
@@ -128,12 +108,12 @@ class MetadataBalancingStrategy(SamplingStrategy):
     to 1.0.
     """
 
-    strategy_name: Literal["metadata_balance"] = "metadata_balance"
+    strategy_name: Literal["metadata_balance"] = Field(default="metadata_balance", frozen=True)
     metadata_key: str
     target_distribution: MetadataValueToTarget | Literal["uniform"] | Literal["input"]
 
 
-class SubpartDiversityStrategy(SamplingStrategy):
+class SubpartDiversityStrategy(_SamplingStrategyBase):
     """Sampling strategy based on diversity of annotation subparts (crops).
 
     Selects samples whose annotated objects cover the embedding space broadly, not their
@@ -141,20 +121,38 @@ class SubpartDiversityStrategy(SamplingStrategy):
     crops of the annotations must have embeddings.
     """
 
-    strategy_name: Literal["subpart_diversity"] = "subpart_diversity"
+    strategy_name: Literal["subpart_diversity"] = Field(default="subpart_diversity", frozen=True)
     embedding_model_name: str | None = None
     annotation_source_id: UUID | None = None
 
 
 Strategy = Annotated[
-    Union[
-        AnnotationClassBalancingStrategy,
-        EmbeddingDeduplicationStrategy,
-        EmbeddingDiversityStrategy,
-        EmbeddingSimilarityStrategy,
-        MetadataBalancingStrategy,
-        MetadataWeightingStrategy,
-        SubpartDiversityStrategy,
-    ],
+    AnnotationClassBalancingStrategy
+    | EmbeddingDeduplicationStrategy
+    | EmbeddingDiversityStrategy
+    | EmbeddingSimilarityStrategy
+    | MetadataBalancingStrategy
+    | MetadataWeightingStrategy
+    | SubpartDiversityStrategy,
     Field(discriminator="strategy_name"),
 ]
+
+
+class SamplingConfig(BaseModel):
+    """Configuration for the sampling process."""
+
+    collection_id: UUID
+    n_samples_to_select: int
+    sampling_result_tag_name: str
+    preselected_tag_name: str | None = None
+    strategies: Sequence[Strategy]
+    selected_sequence_length: int | None = Field(
+        default=None,
+        ge=2,
+        description=(
+            "Number of frames per selected sequence. None selects individual samples. "
+            "When set, n_samples_to_select still counts frames and must be a multiple "
+            "of this value. Only VIDEO_FRAME collections and diversity strategies "
+            "support sequences."
+        ),
+    )

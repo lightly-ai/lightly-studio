@@ -2,19 +2,28 @@ from __future__ import annotations
 
 import json
 import re
+import ssl
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+import fsspec
 import pytest
+from fsspec.spec import AbstractFileSystem
 from labelformat.types import ParseError
 from PIL import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset
+from lightly_studio.analytics import tracking
+from lightly_studio.core.annotation.polygon import PolygonAnnotation
+from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
+from lightly_studio.core.annotation_file_task import AnnotationFileTask
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.image import add_images
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
@@ -67,7 +76,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
         )
         assert dataset.name == "test_dataset"
         samples = list(dataset)
@@ -99,6 +108,44 @@ class TestDataset:
         assert bbox.y == 150.0
         assert annotation.annotation_label_name == "dog"
 
+    def test_add_samples_from_coco__tracks_ingest(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        mock_track = mocker.patch.object(tracking, "track")
+        example_path = tmp_path / "dataset_examples"
+        example_path.mkdir()
+        annotations_path = example_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(example_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(annotations_json=annotations_path, images_path=images_path)
+
+        mock_track.assert_called_once_with(
+            event="samples_ingested",
+            properties={"source": "example", "sample_type": "image", "format": "coco"},
+        )
+
+    def test_add_samples_from_coco__failed_ingest_not_tracked(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        mock_track = mocker.patch.object(tracking, "track")
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(FileNotFoundError):
+            dataset.add_samples_from_coco(
+                annotations_json=tmp_path / "missing.json", images_path=images_path
+            )
+
+        mock_track.assert_not_called()
+
     def test_add_samples_from_coco__valid_bbox(
         self,
         patch_collection: None,  # noqa: ARG002
@@ -112,7 +159,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
         )
         assert len(list(dataset)) == 2
 
@@ -129,9 +176,76 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
         )
         assert len(list(dataset)) == 2
+
+    def test_add_samples_from_coco__instance_segmentation_polygon_and_rle(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(
+            json.dumps(
+                _coco_dict_polygon_and_rle(
+                    polygon_segmentation=[[1, 1, 5, 1, 5, 5], [6, 6, 9, 6, 9, 9]]
+                )
+            )
+        )
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
+        )
+
+        assert _polygons_and_mask_counts(dataset=dataset) == (
+            [[[(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)], [(6.0, 6.0), (9.0, 6.0), (9.0, 9.0)]]],
+            1,
+        )
+
+    def test_add_samples_from_coco__deprecated_annotation_type(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(
+            json.dumps(_coco_dict_polygon_and_rle(polygon_segmentation=[[1, 1, 5, 1, 5, 5]]))
+        )
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.warns(DeprecationWarning, match="annotation_type is deprecated") as record:
+            dataset.add_samples_from_coco(
+                annotations_json=annotations_path,
+                images_path=images_path,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
+            )
+
+        assert record[0].filename == __file__
+        assert len(_polygons_and_mask_counts(dataset=dataset)[0]) == 1
+
+    def test_add_samples_from_coco__both_parameters(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        annotations_path = tmp_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ValueError, match="not both"):
+            dataset.add_samples_from_coco(
+                annotations_json=annotations_path,
+                images_path=images_path,
+                annotation_type=AnnotationType.SEGMENTATION_MASK,
+                annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
+            )
 
     def test_add_samples_from_coco__limit(
         self,
@@ -180,11 +294,14 @@ class TestDataset:
         images_path = _create_valid_samples(tmp_path)
 
         dataset = ImageDataset.create(name="test_dataset")
-        with pytest.raises(ValueError, match="Invalid annotation type: None"):
+        with (
+            pytest.warns(DeprecationWarning, match="annotation_type is deprecated"),
+            pytest.raises(ValueError, match=r"Invalid annotation type: .*CLASSIFICATION"),
+        ):
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=None,  # type: ignore[arg-type]
+                annotation_type=AnnotationType.CLASSIFICATION,
             )
 
     def test_add_samples_from_coco__broken_structure(
@@ -207,7 +324,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             )
 
     def test_add_samples_from_coco__broken_categories(
@@ -229,7 +346,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             )
 
     def test_add_samples_from_coco__broken_image(
@@ -249,7 +366,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             )
 
     def test_add_samples_from_coco__bbox_on_broken_seg(
@@ -270,7 +387,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
         )
         assert len(list(dataset)) == 2
 
@@ -291,7 +408,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             )
 
     def test_add_samples_from_coco__insseg_on_broken_seg(
@@ -315,7 +432,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.SEGMENTATION_MASK,
+                annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
             )
 
     def test_add_samples_from_coco__insseg_on_broken_bbox(
@@ -334,7 +451,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
         )
         assert len(list(dataset)) == 2
 
@@ -352,7 +469,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             )
 
     # TODO(Jonas 9/25): This case should be revisited in the future --> should warn and assert to 1
@@ -372,7 +489,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
         )
         # The missing image2.jpg is recorded as missing and skipped; only image1.jpg is added.
         assert len(list(dataset)) == 1
@@ -393,7 +510,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             )
         assert len(list(dataset)) == 0
 
@@ -412,7 +529,47 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
+            )
+
+    def test_add_samples_from_coco__annotations_json_parent_is_file(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        (tmp_path / "file").write_text("")
+        annotations_path = tmp_path / "file" / "annotations.json"
+        images_path = tmp_path / "images"
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(
+            FileNotFoundError, match=f"COCO annotations json file not found: '{annotations_path}'"
+        ):
+            dataset.add_samples_from_coco(
+                annotations_json=annotations_path,
+                images_path=images_path,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
+            )
+
+    def test_add_samples_from_coco__annotations_json_access_error(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+    ) -> None:
+        # The base `isfile` returns False for every error, as in s3fs. A TLS error
+        # must not become a "file not found" error.
+        fs = AbstractFileSystem()
+        mocker.patch.object(
+            fs, "info", side_effect=ssl.SSLCertVerificationError("CERTIFICATE_VERIFY_FAILED")
+        )
+        mocker.patch.object(fsspec.core, "url_to_fs", return_value=(fs, "bucket/annotations.json"))
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ssl.SSLCertVerificationError, match="CERTIFICATE_VERIFY_FAILED"):
+            dataset.add_samples_from_coco(
+                annotations_json="s3://bucket/annotations.json",
+                images_path="s3://bucket/images",
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             )
 
     def test_add_samples_from_coco__annotations_json_wrong_suffix(
@@ -431,7 +588,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             )
 
     def test_add_samples_from_coco__dont_embed(
@@ -448,7 +605,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             embed=False,
         )
 
@@ -469,7 +626,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             split="train",
         )
 
@@ -491,7 +648,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
         )
 
         samples = list(dataset)
@@ -539,7 +696,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             tag_depth=2,
             split="train",
             embed=False,
@@ -569,7 +726,7 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
-                annotation_type=AnnotationType.OBJECT_DETECTION,
+                annotation_task=AnnotationFileTask.OBJECT_DETECTION,
                 tag_depth=tag_depth,
             )
 
@@ -592,7 +749,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=tmp_path / "annotations.json",
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             embed=False,
         )
 
@@ -622,7 +779,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             embed=False,
             annotation_source="ground_truth",
         )
@@ -644,7 +801,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path=images_path,
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             embed=False,
         )
 
@@ -668,7 +825,7 @@ class TestDataset:
         dataset.add_samples_from_coco(
             annotations_json=annotations_path,
             images_path="images",
-            annotation_type=AnnotationType.OBJECT_DETECTION,
+            annotation_task=AnnotationFileTask.OBJECT_DETECTION,
             embed=False,
         )
 
@@ -676,6 +833,41 @@ class TestDataset:
         assert len(samples) == 2
         assert Path(samples[0].file_path_abs).is_absolute()
         assert Path(samples[1].file_path_abs).is_absolute()
+
+
+def _coco_dict_polygon_and_rle(polygon_segmentation: Sequence[Sequence[float]]) -> dict[str, Any]:
+    """Return a COCO dict with one polygon annotation and one RLE annotation."""
+    return {
+        "images": [{"id": 1, "file_name": "image1.jpg", "width": 10, "height": 10}],
+        "annotations": [
+            {
+                "id": 1,
+                "image_id": 1,
+                "category_id": 1,
+                "bbox": [1, 1, 8, 8],
+                "area": 20,
+                "iscrowd": 0,
+                "segmentation": polygon_segmentation,
+            },
+            {
+                "id": 2,
+                "image_id": 1,
+                "category_id": 1,
+                "bbox": [0, 0, 10, 2],
+                "area": 10,
+                "iscrowd": 0,
+                "segmentation": {"counts": [20, 10, 70], "size": [10, 10]},
+            },
+        ],
+        "categories": [{"id": 1, "name": "cat"}],
+    }
+
+
+def _polygons_and_mask_counts(dataset: ImageDataset) -> tuple[list[Polygons], int]:
+    annotations = [a for sample in dataset for a in sample.annotations]
+    polygons = [a.polygons for a in annotations if isinstance(a, PolygonAnnotation)]
+    mask_count = sum(isinstance(a, SegmentationMaskAnnotation) for a in annotations)
+    return polygons, mask_count
 
 
 def _create_sample_images(image_paths: list[Path]) -> None:

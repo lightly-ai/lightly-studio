@@ -4,20 +4,28 @@ import { useSelectionFilter } from './useSelectionFilter';
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({ useImageFilters: vi.fn() }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({ useVideoFilters: vi.fn() }));
+vi.mock('$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters', () => ({
+    useMcapSequenceFilters: vi.fn()
+}));
 
 const { useImageFilters } = await import('$lib/hooks/useImageFilters/useImageFilters');
 const { useVideoFilters } = await import('$lib/hooks/useVideoFilters/useVideoFilters');
+const { useMcapSequenceFilters } =
+    await import('$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters');
 
 describe('useSelectionFilter', () => {
     let imageFilter: ReturnType<typeof writable>;
     let videoFilter: ReturnType<typeof writable>;
+    let mcapSequenceFilter: ReturnType<typeof writable>;
 
     beforeEach(() => {
         vi.clearAllMocks();
         imageFilter = writable(null);
         videoFilter = writable(null);
+        mcapSequenceFilter = writable(null);
         vi.mocked(useImageFilters).mockReturnValue({ imageFilter } as never);
         vi.mocked(useVideoFilters).mockReturnValue({ videoFilter } as never);
+        vi.mocked(useMcapSequenceFilters).mockReturnValue({ mcapSequenceFilter } as never);
     });
 
     it('returns image filter with filter_type "image" for image collections', () => {
@@ -50,6 +58,32 @@ describe('useSelectionFilter', () => {
     it('returns null when videoFilter is null for video collections', () => {
         videoFilter.set(null);
         const { buildSelectionFilter } = useSelectionFilter(() => true);
+
+        expect(buildSelectionFilter()).toBeNull();
+    });
+
+    it('returns the sequence filter for sequence collections', () => {
+        mcapSequenceFilter.set({
+            filter_type: 'mcap_sequence',
+            sample_filter: { tag_ids: ['t-3'] }
+        });
+        const { buildSelectionFilter } = useSelectionFilter(
+            () => false,
+            () => true
+        );
+
+        expect(buildSelectionFilter()).toEqual({
+            filter_type: 'mcap_sequence',
+            sample_filter: { tag_ids: ['t-3'] }
+        });
+    });
+
+    it('returns null when the sequence filter is null for sequence collections', () => {
+        mcapSequenceFilter.set(null);
+        const { buildSelectionFilter } = useSelectionFilter(
+            () => false,
+            () => true
+        );
 
         expect(buildSelectionFilter()).toBeNull();
     });

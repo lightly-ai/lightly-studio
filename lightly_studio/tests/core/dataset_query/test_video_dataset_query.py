@@ -4,10 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from lightly_studio.core.dataset_query import AND, OrderByField
+from lightly_studio.core.dataset_query import AND, NOT, OrderByField
+from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.core.video.video_dataset import VideoDataset
-from tests.resolvers.video.helpers import create_video_file
+from tests.resolvers.video.helpers import VideoStub, create_video, create_video_file
 
 
 class TestVideoDatasetQuery:
@@ -58,6 +59,61 @@ class TestVideoDatasetQuery:
         assert next(it).file_name == "test_video_0.mp4"
         with pytest.raises(StopIteration):
             next(it)
+
+    @pytest.mark.parametrize(
+        ("expression", "expected_names"),
+        [
+            (VideoSampleField.metadata["camera"] == "front", {"a.mp4"}),
+            (VideoSampleField.metadata["camera"] != "front", {"b.mp4"}),
+            (VideoSampleField.metadata["reviewed"] == True, {"a.mp4"}),  # noqa: E712
+            (VideoSampleField.metadata["odometry.speed"] > 10, {"b.mp4"}),
+            (VideoSampleField.metadata["odometry.acc[1]"] < 15, {"a.mp4"}),
+            (
+                AND(VideoSampleField.metadata["reviewed"] == True, VideoSampleField.fps > 25),  # noqa: E712
+                {"a.mp4"},
+            ),
+            (NOT(VideoSampleField.metadata["camera"] == "front"), {"b.mp4", "c.mp4"}),
+        ],
+    )
+    def test_match_query__metadata(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        expression: MatchExpression,
+        expected_names: set[str],
+    ) -> None:
+        dataset = VideoDataset.create(name="test_dataset")
+        videos = [
+            create_video(
+                session=dataset.session,
+                collection_id=dataset.collection_id,
+                video=VideoStub(path=f"/data/{name}", fps=fps),
+            )
+            for name, fps in [("a.mp4", 30), ("b.mp4", 20), ("c.mp4", 30)]
+        ]
+        dataset.update_metadata(
+            sample_metadata=[
+                (
+                    videos[0].sample_id,
+                    {
+                        "camera": "front",
+                        "reviewed": True,
+                        "odometry": {"speed": 5, "acc": [100, 10]},
+                    },
+                ),
+                (
+                    videos[1].sample_id,
+                    {
+                        "camera": "rear",
+                        "reviewed": False,
+                        "odometry": {"speed": 20, "acc": [100, 20]},
+                    },
+                ),
+            ]
+        )
+
+        samples = dataset.match(expression).to_list()
+
+        assert {sample.file_name for sample in samples} == expected_names
 
     def test_ordering(
         self,

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
+import { fromStore, writable, type Writable } from 'svelte/store';
 import * as appState from '$app/state';
 import { tick } from 'svelte';
 import '@testing-library/jest-dom';
@@ -10,9 +10,14 @@ import type { PanelType } from '$lib/hooks/useGlobalStorage';
 import {
     useImageAnnotationCounts,
     useImageAnnotationCountsBySampleTags,
+    useMcapSequenceAnnotationCounts,
+    useMcapSequenceFilters,
     useMetadataDistributionsBySampleTags
 } from '$lib/hooks';
 import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+import { EMPTY_PLOT_SELECTION } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
+import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import type { LayoutLoadResult } from './+layout';
 import LayoutWorkspaceTestWrapper from './LayoutWorkspaceTestWrapper.test.svelte';
@@ -23,7 +28,7 @@ vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     readAnnotationEmbedding: vi.fn(),
     // The layout reads the feature flags to show the agent chat tab.
-    getFeatures: vi.fn(async () => ({ data: [] }))
+    getFeatures: vi.fn().mockResolvedValue({ data: [] })
 }));
 vi.mock('$lib/workers/maskRendererPool', () => ({
     shutdownMaskRendererPool: vi.fn()
@@ -31,11 +36,13 @@ vi.mock('$lib/workers/maskRendererPool', () => ({
 vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations', () => ({
     clearAnnotationPlotSelection: vi.fn()
 }));
-vi.mock('$lib/utils/buildImageFilter', () => ({
-    buildImageFilter: vi.fn(() => ({}))
+vi.mock('./imageAnnotationCountsFilter', () => ({
+    buildImageAnnotationCountsFilter: vi.fn(() => ({}))
+}));
+vi.mock('./videoAnnotationCountsFilter', () => ({
+    buildVideoAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/utils/buildAnnotationCountsFilters', () => ({
-    buildVideoAnnotationCountsFilter: vi.fn(() => ({})),
     buildVideoFrameAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/components/GridItem', () => ({
@@ -48,13 +55,15 @@ vi.mock('paneforge', async () => {
 });
 vi.mock('$lib/components', async () => {
     const { default: Stub } = await import('./LayoutStub.test.svelte');
+    // The footer text is asserted in the tests, so it renders for real.
+    const { default: Footer } = await import('$lib/components/Footer/Footer.svelte');
     return {
         Button: Stub,
         CombinedMetadataDimensionsFilters: Stub,
         DatasetGridHeader: Stub,
-        Footer: Stub,
+        Footer,
         LabelsMenu: Stub,
-        MetadataFilterChips: Stub,
+        Onboarding: Stub,
         SelectionPill: Stub,
         ShowFiltersButton: Stub,
         TagsMenu: Stub,
@@ -86,6 +95,9 @@ vi.mock(
     '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte',
     async () => ({ default: (await import('./LayoutStub.test.svelte')).default })
 );
+vi.mock('$lib/components/ClearAllFiltersButton', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
+}));
 vi.mock('$lib/components/ConfusionCellFilterItem', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
@@ -109,6 +121,8 @@ vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', () => ({
         annotationFilterRows: [],
         toggleAnnotationFilterSelection: vi.fn(),
         setAnnotationCounts: vi.fn(),
+        setUnannotatedSampleCount: vi.fn(),
+        includeUnannotatedSamples: writable(false),
         pruneInvalidSelections: vi.fn()
     }))
 }));
@@ -141,10 +155,20 @@ vi.mock('$lib/hooks/useVideosBounds/useVideosBounds.js', () => ({
     useVideoBounds: vi.fn(() => ({ videoBoundsValues: writable({}) }))
 }));
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
-    useImageFilters: vi.fn(() => ({ imageFilter: writable(null) }))
+    useImageFilters: vi.fn(() => ({
+        imageFilter: writable(null),
+        filterParams: writable(null),
+        imageQueryExpression: writable(null),
+        updateQueryExpr: vi.fn()
+    }))
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
-    useVideoFilters: vi.fn(() => ({ videoFilter: writable(null), filterParams: writable(null) })),
+    useVideoFilters: vi.fn(() => ({
+        videoFilter: writable(null),
+        filterParams: writable(null),
+        videoQueryExpression: writable(null),
+        updateQueryExpr: vi.fn()
+    })),
     buildVideoFilter: vi.fn(() => null)
 }));
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
@@ -159,15 +183,18 @@ vi.mock('$lib/hooks', async () => ({
     ...(await import('$lib/hooks/useVideoFilters/useVideoFilters')),
     ...(await import('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter')),
     ...(await import('$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js')),
+    ...(await import('$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters')),
     useSelectionSummary: vi.fn(() => ({
         selectedCount: writable(0),
         clearSelection: vi.fn()
     })),
     useImageAnnotationCounts: vi.fn(() => ({ data: undefined })),
+    useMcapSequenceAnnotationCounts: vi.fn(() => ({ data: undefined })),
     useImageAnnotationCountsQueryKey: ['imageAnnotationCounts'],
     useNumericMetadataDistribution: vi.fn(() => ({
         data: { score: { binEdges: [0, 1], counts: [1] } }
     })),
+    useImageFieldDistribution: vi.fn(() => ({ data: undefined, isFetching: false })),
     useCategoricalMetadataDistribution: vi.fn(() => ({
         data: undefined,
         isFetching: false,
@@ -175,8 +202,12 @@ vi.mock('$lib/hooks', async () => ({
         refetch: vi.fn()
     })),
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
+    useFeatureFlags: vi.fn(() => ({ featureFlags: writable([]), ready: Promise.resolve() })),
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
+    setAnnotationClasses: vi.fn(),
+    useUnannotatedSampleCount: vi.fn(() => ({ data: undefined })),
+    useUnannotatedSamplesFilter: vi.fn(() => ({ scopeToCollection: vi.fn() })),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({
         data: undefined,
         isFetching: false,
@@ -186,7 +217,26 @@ vi.mock('$lib/hooks', async () => ({
     useTags: vi.fn(() => ({
         tags: writable([{ tag_id: 'tag-a', name: 'Reviewed' }]),
         tagsSelected: writable(new Set())
-    }))
+    })),
+    useOnboarding: vi.fn(() => ({
+        state: writable('unseen'),
+        invite: vi.fn(() => false),
+        start: vi.fn(),
+        openingSample: vi.fn(),
+        dismiss: vi.fn(),
+        complete: vi.fn(),
+        replay: vi.fn(),
+        requestReplay: vi.fn(),
+        replayRequested: writable(0),
+        registerOpenFirstSampleHandler: vi.fn(() => vi.fn()),
+        dispatchOpenFirstSample: vi.fn(),
+        registerOpeningSampleHandler: vi.fn(() => vi.fn()),
+        dispatchOpeningSample: vi.fn()
+    })),
+    TOUR_VERSION: 1
+}));
+vi.mock('$lib/components/Onboarding/Onboarding.svelte', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
 }));
 vi.mock('$lib/hooks/useSelectAll/useSelectAll', () => ({
     useSelectAll: vi.fn(() => ({ handleSelectAll: vi.fn() }))
@@ -211,6 +261,7 @@ import * as useHasEmbeddingsModule from '$lib/hooks/useHasEmbeddings/useHasEmbed
 
 let mockActivePanel: ReturnType<typeof writable<PanelType>>;
 let mockFilterPanelCollapsed: ReturnType<typeof writable<boolean>>;
+let mockFilteredCaptionCount: ReturnType<typeof writable<number>>;
 
 function setPageRoute(routeId: string | null): void {
     vi.spyOn(appState, 'page', 'get').mockReturnValue({
@@ -228,6 +279,7 @@ beforeEach(() => {
 
     mockActivePanel = writable<PanelType>('none');
     mockFilterPanelCollapsed = writable(false);
+    mockFilteredCaptionCount = writable(0);
 
     vi.mocked(useGlobalStorageModule.useGlobalStorage).mockReturnValue({
         activePanel: mockActivePanel,
@@ -235,6 +287,7 @@ beforeEach(() => {
         filterPanelCollapsed: mockFilterPanelCollapsed,
         toggleFilterPanelCollapsed: vi.fn(),
         filteredSampleCount: writable(0),
+        filteredCaptionCount: mockFilteredCaptionCount,
         filteredAnnotationCount: writable(0),
         textEmbedding: writable(undefined),
         collections: writable({}),
@@ -305,6 +358,31 @@ describe('video distribution panel', () => {
     });
 });
 
+describe('distribution plot selection', () => {
+    // Opening a sample unmounts the panel like closing it does, so a reopen covers both.
+    it.each([APP_ROUTES.images, APP_ROUTES.videos])(
+        'keeps the picked plot, not a loading fallback, when the panel opens again on %s',
+        async (route) => {
+            setPageRoute(route);
+            mockActivePanel.set('distribution');
+            render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+
+            (await screen.findByTestId('distribution-pick-metadata-city')).click();
+            await tick();
+            // While its groups load, the panel reports a fallback group.
+            screen.getByTestId('distribution-select-metadata-undefined').click();
+            await tick();
+            mockActivePanel.set('none');
+            await tick();
+            mockActivePanel.set('distribution');
+
+            expect(await screen.findByTestId('distribution-selected')).toHaveTextContent(
+                'metadata/city'
+            );
+        }
+    );
+});
+
 describe('annotation label pruning', () => {
     it('waits for the counts refetch before pruning selected labels', async () => {
         vi.mocked(useImageAnnotationCounts).mockReturnValue({
@@ -320,6 +398,37 @@ describe('annotation label pruning', () => {
             vi.mocked(useAnnotationsFilter).mock.results[0].value;
         expect(setAnnotationCounts).toHaveBeenCalled();
         expect(pruneInvalidSelections).not.toHaveBeenCalled();
+    });
+});
+
+describe('mcap-sequences annotation counts', () => {
+    it('feeds the sequence counts to the label filter', async () => {
+        const sequenceCounts = [{ label_name: 'car', total_count: 2, current_count: 1 }];
+        vi.mocked(useMcapSequenceAnnotationCounts).mockReturnValue({
+            data: sequenceCounts,
+            isFetching: false
+        } as unknown as ReturnType<typeof useMcapSequenceAnnotationCounts>);
+        setPageRoute(APP_ROUTES.mcapSequences);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        const { setAnnotationCounts } = vi.mocked(useAnnotationsFilter).mock.results[0].value;
+        expect(setAnnotationCounts).toHaveBeenCalledWith(sequenceCounts);
+    });
+
+    it('waits for the sequence filter of the shown collection', async () => {
+        // The grid page sets the filter collection after the layout reads the new route.
+        useMcapSequenceFilters().setCollectionId('previous-collection-id');
+        setPageRoute(APP_ROUTES.mcapSequences);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        const [[getParams]] = vi.mocked(useMcapSequenceAnnotationCounts).mock.calls;
+        expect(getParams().enabled).toBe(false);
+        useMcapSequenceFilters().setCollectionId('test-collection-id');
+        expect(getParams().enabled).toBe(true);
     });
 });
 
@@ -345,6 +454,24 @@ const defaultProps = {
 // Collection-grid workspace rendering
 
 describe('+layout.svelte collection-grid workspace', () => {
+    it('shows the caption count in the footer on the captions route', async () => {
+        // The captions collection has one sample per caption, so its sample count is the caption total.
+        setPageRoute(APP_ROUTES.captions);
+        mockFilteredCaptionCount.set(3);
+        const captionsProps = {
+            data: {
+                ...defaultProps.data,
+                collection: { ...defaultProps.data.collection, total_sample_count: 3 }
+            }
+        };
+
+        render(LayoutWorkspaceTestWrapper, { props: captionsProps });
+        expect(await screen.findByText('Showing 3 captions')).toBeInTheDocument();
+
+        mockFilteredCaptionCount.set(1);
+        expect(await screen.findByText('Showing 1 of 3 captions')).toBeInTheDocument();
+    });
+
     it('renders filter panel on images route', async () => {
         setPageRoute(APP_ROUTES.images);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
@@ -385,12 +512,12 @@ describe('+layout.svelte collection-grid workspace', () => {
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
-    it('does not render the filter panel on point-clouds route', async () => {
-        setPageRoute(APP_ROUTES.pointClouds);
+    it('renders the filter panel on mcap-sequences route', async () => {
+        setPageRoute(APP_ROUTES.mcapSequences);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
     it('renders child route content on images route', async () => {
@@ -566,14 +693,14 @@ describe('right panel – main content stability', () => {
         expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
     });
 
-    it('queryEditor panel is not shown on videos route even when requested', async () => {
+    it('opens the query editor panel on the videos route', async () => {
         setPageRoute(APP_ROUTES.videos);
         mockActivePanel.set('queryEditor');
 
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('pane-group-layout')).toBeInTheDocument();
     });
 });
 
@@ -628,5 +755,90 @@ describe('SidePanelTabs availability', () => {
         await tick();
 
         expect(screen.getByTestId('side-panel-tabs')).toBeInTheDocument();
+    });
+});
+
+describe('leaving a collection', () => {
+    // fromStore makes the mocked page reactive, so a new collection ID reruns the layout effects.
+    function openCollection(collectionId: Writable<string>): void {
+        const shownCollectionId = fromStore(collectionId);
+        vi.spyOn(appState, 'page', 'get').mockReturnValue({
+            route: { id: APP_ROUTES.images },
+            get params() {
+                return { dataset_id: 'test-dataset-id', collection_id: shownCollectionId.current };
+            }
+        } as unknown as typeof appState.page);
+    }
+
+    interface FilteredCollectionIds {
+        image: string;
+        video: string;
+    }
+
+    function mockPlotFilters(filteredCollectionIds: FilteredCollectionIds) {
+        const updateImagePlotSelection = vi.fn();
+        const updateVideoPlotSelection = vi.fn();
+        vi.mocked(useImageFilters).mockReturnValueOnce({
+            ...useImageFilters(),
+            filterParams: writable({ collection_id: filteredCollectionIds.image }),
+            updatePlotSelection: updateImagePlotSelection
+        } as unknown as ReturnType<typeof useImageFilters>);
+        vi.mocked(useVideoFilters).mockReturnValueOnce({
+            ...useVideoFilters(),
+            filterParams: writable({ collection_id: filteredCollectionIds.video }),
+            updatePlotSelection: updateVideoPlotSelection
+        });
+        return { updateImagePlotSelection, updateVideoPlotSelection };
+    }
+
+    it('clears the image and video plot selections of the collection it leaves', async () => {
+        const collectionId = writable('c1');
+        openCollection(collectionId);
+        const { updateImagePlotSelection, updateVideoPlotSelection } = mockPlotFilters({
+            image: 'c1',
+            video: 'c1'
+        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        collectionId.set('c2');
+        await tick();
+
+        expect(updateImagePlotSelection).toHaveBeenCalledWith(EMPTY_PLOT_SELECTION);
+        expect(updateVideoPlotSelection).toHaveBeenCalledWith(EMPTY_PLOT_SELECTION);
+    });
+
+    it('clears only the filter that holds the collection it leaves', async () => {
+        const collectionId = writable('c1');
+        openCollection(collectionId);
+        const { updateImagePlotSelection, updateVideoPlotSelection } = mockPlotFilters({
+            image: 'c1',
+            video: 'v1'
+        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        collectionId.set('c2');
+        await tick();
+
+        expect(updateImagePlotSelection).toHaveBeenCalledWith(EMPTY_PLOT_SELECTION);
+        expect(updateVideoPlotSelection).not.toHaveBeenCalled();
+    });
+
+    it('keeps the plot selections of the collection it enters', async () => {
+        const collectionId = writable('c1');
+        openCollection(collectionId);
+        const { updateImagePlotSelection, updateVideoPlotSelection } = mockPlotFilters({
+            image: 'c2',
+            video: 'c2'
+        });
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        collectionId.set('c2');
+        await tick();
+
+        expect(updateImagePlotSelection).not.toHaveBeenCalled();
+        expect(updateVideoPlotSelection).not.toHaveBeenCalled();
     });
 });

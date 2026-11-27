@@ -1,6 +1,7 @@
 import type { GridViewSampleRenderingType, SettingView } from '$lib/api/lightly_studio_local';
 import { derived, get, writable } from 'svelte/store';
 import { getSettings, setSettings } from '$lib/api/lightly_studio_local';
+import { getErrorMessage } from '$lib/api/ApiError';
 
 type UpdateSettingsResult = { success: boolean; error?: string };
 
@@ -9,6 +10,7 @@ const DEFAULT_SETTINGS: SettingView = {
     setting_id: '00000000-0000-0000-0000-000000000000',
     grid_view_sample_rendering: 'contain',
     grid_view_thumbnail_quality: 'raw',
+    image_interpolation: true,
     key_hide_annotations: 'v',
     key_go_back: 'Escape',
     key_toggle_edit_mode: 'e',
@@ -22,8 +24,11 @@ const DEFAULT_SETTINGS: SettingView = {
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
     key_toolbar_segmentation_mask: 'm',
+    key_toolbar_slic: 'a',
     key_toolbar_brush: 'r',
-    key_toolbar_eraser: 'x'
+    key_toolbar_eraser: 'x',
+    key_previous_camera: '[',
+    key_next_camera: ']'
 };
 
 // Create stores for settings state
@@ -106,7 +111,7 @@ const saveSettings = async (
         });
 
         if (response.error) {
-            const errorMsg = JSON.stringify(response.error);
+            const errorMsg = getErrorMessage(response.error, 'Failed to save settings');
             console.error('Settings API error:', errorMsg);
             errorStore.set(errorMsg);
             return { success: false, error: errorMsg };

@@ -8,7 +8,6 @@ export { default as AnnotationItem } from '$lib/components/AnnotationsGrid/Annot
 export { default as Card } from '$lib/components/Card/Card.svelte';
 export { default as CardContent } from '$lib/components/CardContent/CardContent.svelte';
 export { default as CombinedMetadataDimensionsFilters } from '$lib/components/CombinedMetadataDimensionsFilters/CombinedMetadataDimensionsFilters.svelte';
-export { default as DimensionFilters } from '$lib/components/DimensionFilters/index.svelte';
 export { default as ExportSamples } from '$lib/components/ExportSamples/ExportSamples.svelte';
 export { default as Checkbox } from '$lib/components/Form/Checkbox/Checkbox.svelte';
 export { default as Header } from '$lib/components/Header/Header.svelte';
@@ -17,6 +16,8 @@ export { default as LabelsMenu } from '$lib/components/LabelsMenu/LabelsMenu.sve
 export { LazyTrigger } from '$lib/components/LazyTrigger/';
 export { default as Logo } from '$lib/components/Logo/index.svelte';
 export { default as SampleAnnotation } from '$lib/components/SampleAnnotation/SampleAnnotation.svelte';
+export { default as SelectClassDialog } from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
+export { TrackSelect } from '$lib/components/TrackSelect';
 export { default as SampleAnnotationBox } from '$lib/components/SampleAnnotation/SampleAnnotationBox/SampleAnnotationBox.svelte';
 export { default as SampleAnnotationLabel } from '$lib/components/SampleAnnotation/SampleAnnotationLabel/SampleAnnotationLabel.svelte';
 export { default as SampleAnnotationSegmentationRLE } from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/SampleAnnotationSegmentationRLE.svelte';
@@ -25,7 +26,6 @@ export { default as SampleAnnotations } from '$lib/components/SampleAnnotations/
 export { default as ImageDetails } from '$lib/components/SampleDetails/ImageDetails.svelte';
 export { default as SampleDetailsSidePanel } from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanel.svelte';
 export { default as SampleDetailsAnnotationSourceGroup } from '$lib/components/SampleDetails/SampleDetailsAnnotationSourceGroup/SampleDetailsAnnotationSourceGroup.svelte';
-export { default as AnnotationSourcePill } from '$lib/components/AnnotationSourcePill/AnnotationSourcePill.svelte';
 export { default as SampleImage } from '$lib/components/SampleImage/index.svelte';
 export { default as Images } from '$lib/components/Images/Images.svelte';
 export { default as SelectableBox } from '$lib/components/SelectableBox/SelectableBox.svelte';
@@ -56,13 +56,14 @@ export { GridContainer } from '$lib/components/GridContainer';
 export { default as VideoFrameItem } from '$lib/components/VideoFrameItem/VideoFrameItem.svelte';
 export { default as SegmentTags } from '$lib/components/SegmentTags/SegmentTags.svelte';
 export { default as MetadataSegment } from '$lib/components/MetadataSegment/MetadataSegment.svelte';
-export { default as MetadataFilterChips } from '$lib/components/MetadataFilterChips/MetadataFilterChips.svelte';
 export { default as VideoDetailsNavigation } from '$lib/components/VideoDetailsNavigation/VideoDetailsNavigation.svelte';
 export { default as VideoFrameDetails } from '$lib/components/VideoFrameDetails/VideoFrameDetails.svelte';
 export { default as GroupsComponentsMenu } from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
 export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.svelte';
+export { default as Onboarding } from '$lib/components/Onboarding/Onboarding.svelte';
 export { default as SelectionPill } from '$lib/components/SelectionPill/SelectionPill.svelte';
 export { default as ShowFiltersButton } from '$lib/components/ShowFiltersButton/ShowFiltersButton.svelte';
+export { default as SidePanelToggleButton } from '$lib/components/SidePanelToggleButton/SidePanelToggleButton.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
 export { default as CollectionSearch } from '$lib/components/CollectionSearch/CollectionSearch.svelte';
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
@@ -74,3 +75,4 @@ export { default as SamplingCombinationDialog } from '$lib/components/Sampling/S
 export { default as FormField } from '$lib/components/FormField/FormField.svelte';
 export { default as AnnotationSourceSelect } from '$lib/components/AnnotationSourceSelect/AnnotationSourceSelect.svelte';
 export { MultiSelectList } from '$lib/components/MultiSelectList';
+export { MultiSelectPopover } from '$lib/components/MultiSelectPopover';

@@ -11,6 +11,7 @@ from lightly_studio_serve.embedder import (
     VideoBytesEmbedder,
     VideoPathEmbedder,
 )
+from lightly_studio_serve.labeling import LabelingModel, ModelTask, PredictedAnnotation
 from lightly_studio_serve.server import create_app, serve
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
 
@@ -24,6 +25,9 @@ __all__ = [
     "ImageCropPathEmbedder",
     "ImagePILEmbedder",
     "ImagePathEmbedder",
+    "LabelingModel",
+    "ModelTask",
+    "PredictedAnnotation",
     "TextEmbedder",
     "VideoBytesEmbedder",
     "VideoPathEmbedder",

@@ -6,29 +6,24 @@ SceneEntity.timestamp to sample_sequence_link.timestamp_ns.
 
 from __future__ import annotations
 
+import itertools
 import logging
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlmodel import Session, col, func, select
-
 from lightly_studio.core.mcap import scene_update
-from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.sequence import McapSequence, McapSequenceEntry
+from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
-from lightly_studio.models.annotation.object_track import ObjectTrackCreate, ObjectTrackTable
-from lightly_studio.models.annotation_label import AnnotationLabelCreate
-from lightly_studio.resolvers import (
-    annotation_label_resolver,
-    annotation_resolver,
-    object_track_resolver,
-)
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.transport import active_transport
 
 if TYPE_CHECKING:
     from lightly_studio.core.mcap.mcap_dataset import McapDataset
@@ -48,12 +43,31 @@ def read_scene_updates(annotation_mcap_uri: str, topic: str) -> list[tuple[int, 
 
     Returns:
         `(log_time_ns, labels)` pairs, in file order.
+
+    Raises:
+        TopicNotFoundError: If the topic is not in the file. The message lists the
+            SceneUpdate topics and the other topics the file has.
     """
     with McapFileReader(annotation_mcap_uri) as reader:
+        _require_topic(reader=reader, topic=topic)
         return [
             (log_time_ns, scene_update.from_decoded_message(decoded_message))
             for log_time_ns, decoded_message in reader.iter_decoded_messages(topic)
         ]
+
+
+def _require_topic(reader: McapFileReader, topic: str) -> None:
+    """Check that the topic is in the file, and name the topics that are."""
+    topics = reader.get_topics()
+    if any(topic_info.name == topic for topic_info in topics):
+        return
+    scene_topics = sorted(t.name for t in topics if t.kind is TopicKind.SCENE_UPDATE)
+    other_topics = sorted(t.name for t in topics if t.kind is not TopicKind.SCENE_UPDATE)
+    raise TopicNotFoundError(
+        f"Topic '{topic}' is not in annotation MCAP '{reader.path}'. "
+        f"SceneUpdate topics in the file: {', '.join(scene_topics) or 'none'}. "
+        f"Other topics: {', '.join(other_topics) or 'none'}."
+    )
 
 
 def ticks_by_timestamp(entries: list[McapSequenceEntry]) -> dict[int, UUID]:
@@ -113,38 +127,121 @@ def log_match_summary(
         matched.empty_count,
         ticks_without_entities,
     )
+    if matched.matched_count == 0 and matched.unmatched_count == 0:
+        logger.warning(
+            "Annotation MCAP '%s' has no cuboids or frame tags in its %d messages (%d empty).",
+            annotation_mcap_uri,
+            len(messages),
+            matched.empty_count,
+        )
     if matched.unmatched_count > 0 and matched.unmatched_count >= matched.matched_count:
         _log_clock_mismatch(
             annotation_mcap_uri=annotation_mcap_uri, matched=matched, ticks=ticks, messages=messages
         )
 
 
-def write_sequence_labels(
+def write_sequence_labels(  # noqa: PLR0913
     dataset: McapDataset,
     sequence: McapSequence,
     annotation_mcap_uri: str,
     messages: list[tuple[int, SceneUpdateLabels]],
     annotation_source: str = DEFAULT_ANNOTATION_SOURCE,
+    overwrite: bool = False,
 ) -> None:
-    """Match annotation MCAP messages to ticks and persist cuboids and object tracks."""
-    session = dataset.group_dataset.session
-    ticks = ticks_by_timestamp(entries=sequence.get_samples())
+    """Match annotation MCAP messages to ticks and persist cuboids, object tracks and tags.
+
+    Frame tags are added as sample tags to the tick groups in the group collection.
+
+    Args:
+        dataset: The dataset that holds the sequence.
+        sequence: The sequence to store the labels on.
+        annotation_mcap_uri: The path or URI of the annotation MCAP, used in log messages.
+        messages: `(log_time_ns, labels)` pairs from the annotation MCAP.
+        annotation_source: Name of the annotation source that stores the cuboids.
+        overwrite: Delete the annotations of `annotation_source` on the sequence before
+            the new cuboids are stored. Object tracks without annotations after the delete
+            are also deleted. Frame tags are kept.
+
+    Raises:
+        ValueError: If `overwrite` is set and no label matches a tick of the sequence.
+            The existing annotations are kept.
+    """
+    entries = sequence.get_samples()
+    ticks = ticks_by_timestamp(entries=entries)
     matched = match_labels(messages=messages, ticks=ticks)
     log_match_summary(
         annotation_mcap_uri=annotation_mcap_uri, matched=matched, ticks=ticks, messages=messages
     )
-    track_ids = _allocate_tracks(session=session, dataset_id=dataset.dataset_id, matched=matched)
+    if overwrite and matched.matched_count == 0:
+        raise ValueError(
+            f"No label of annotation MCAP '{annotation_mcap_uri}' matches a tick of the "
+            f"sequence. The annotations of annotation source '{annotation_source}' are kept."
+        )
+    untracked_ids = _assign_untracked_track_ids(matched=matched)
+    parent_by_source = _parent_by_source_track(matched=matched)
+    if overwrite:
+        # The delete comes before the track allocation, so new tracks reuse freed numbers.
+        _delete_sequence_annotations(
+            group_collection_id=dataset.group_dataset.collection_id,
+            annotation_source=annotation_source,
+            group_ids=[entry.sample_id for entry in entries],
+        )
+    track_ids = _allocate_tracks(
+        dataset_id=dataset.dataset_id,
+        parent_by_source=parent_by_source,
+        untracked_ids=untracked_ids,
+    )
     annotations = _annotation_creates(
-        session=session, dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
+        dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
     )
     if annotations:
-        annotation_resolver.create_many(
-            session=session,
+        active_transport.get_transport().annotations.create(
             parent_collection_id=dataset.group_dataset.collection_id,
             annotations=annotations,
             collection_name=annotation_source,
+            covered_sample_ids=[],
         )
-    session.commit()
+    _add_frame_tags(
+        collection_id=dataset.group_dataset.collection_id,
+        tags_by_group=matched.tags_by_group,
+    )
+
+
+def _delete_sequence_annotations(
+    group_collection_id: UUID,
+    annotation_source: str,
+    group_ids: Sequence[UUID],
+) -> None:
+    """Delete the annotations of an annotation source on the groups of a sequence.
+
+    Also deletes the object tracks of the deleted annotations that have no annotations left.
+    """
+    transport = active_transport.get_transport()
+    annotation_collection = transport.collections.get_by_name(
+        name=annotation_source, parent_collection_id=group_collection_id
+    )
+    if annotation_collection is None:
+        return
+    annotations = transport.annotations.get_by_sample_ids_and_collection(
+        sample_ids=group_ids, annotation_collection_id=annotation_collection.collection_id
+    )
+    object_track_ids = {
+        annotation.object_track_id
+        for annotation in annotations
+        if annotation.object_track_id is not None
+    }
+    transport.annotations.delete(
+        annotation_ids=[annotation.sample_id for annotation in annotations]
+    )
+    deleted_track_count = transport.annotations.delete_empty_object_tracks(
+        object_track_ids=list(object_track_ids)
+    )
+    logger.info(
+        "Deleted %d annotations and %d object tracks of annotation source '%s' to overwrite them.",
+        len(annotations),
+        deleted_track_count,
+        annotation_source,
+    )
 
 
 def _match_one_message(
@@ -211,16 +308,41 @@ def _entity_timestamps(messages: Sequence[tuple[int, SceneUpdateLabels]]) -> lis
     return timestamps
 
 
-def _allocate_tracks(session: Session, dataset_id: UUID, matched: MatchResult) -> dict[int, UUID]:
+def _assign_untracked_track_ids(matched: MatchResult) -> set[int]:
+    """Give each untracked cuboid its own track id that no other cuboid uses.
+
+    The new ids are greater than all track ids and parent track ids of the matched cuboids.
+
+    Returns:
+        The new track ids.
+    """
+    cuboids = [
+        cuboid for group_cuboids in matched.cuboids_by_group.values() for cuboid in group_cuboids
+    ]
+    used_ids = {cuboid.track_id for cuboid in cuboids if cuboid.track_id is not None} | {
+        cuboid.parent_track_id for cuboid in cuboids if cuboid.parent_track_id is not None
+    }
+    first_new_id = max(used_ids, default=0) + 1
+    new_ids = itertools.count(start=first_new_id)
+    for group_id, group_cuboids in matched.cuboids_by_group.items():
+        matched.cuboids_by_group[group_id] = [
+            replace(cuboid, track_id=next(new_ids)) if cuboid.track_id is None else cuboid
+            for cuboid in group_cuboids
+        ]
+    end_id = next(new_ids)
+    return set(range(first_new_id, end_id))
+
+
+def _allocate_tracks(
+    dataset_id: UUID,
+    parent_by_source: Mapping[int, int | None],
+    untracked_ids: set[int],
+) -> dict[int, UUID]:
     """Create a dataset-unique track for each source_track_id and link it to its parent track.
 
-    A parent track id without cuboids of its own also gets a track. Parent tracks must be
-    root tracks. Roots are created before children, so the parent foreign key resolves.
-
-    Raises:
-        ValueError: If a track has more than one parent, or a parent track has a parent.
+    Roots are created before children, so the parent foreign key resolves. The tracks of
+    `untracked_ids` get no source_track_id, because the source has no track for them.
     """
-    parent_by_source = _parent_by_source_track(matched=matched)
     if not parent_by_source:
         return {}
 
@@ -230,24 +352,22 @@ def _allocate_tracks(session: Session, dataset_id: UUID, matched: MatchResult) -
         for source_id, parent_id in parent_by_source.items()
         if parent_id is not None
     ]
-    root_ids = set(roots)
-    if any(parent_id not in root_ids for _, parent_id in children):
-        raise ValueError("A parent track must not have a parent track itself.")
-
-    next_number = _next_track_number(session=session, dataset_id=dataset_id)
+    numbers = active_transport.get_transport().annotations.get_free_object_track_numbers(
+        dataset_id=dataset_id, count=len(parent_by_source)
+    )
     track_ids = _create_source_tracks(
-        session=session,
         dataset_id=dataset_id,
-        next_number=next_number,
+        numbers=numbers[: len(roots)],
         links=[(source_id, None) for source_id in roots],
+        untracked_ids=untracked_ids,
     )
     if children:
         track_ids.update(
             _create_source_tracks(
-                session=session,
                 dataset_id=dataset_id,
-                next_number=next_number + len(roots),
+                numbers=numbers[len(roots) :],
                 links=[(source_id, track_ids[parent_id]) for source_id, parent_id in children],
+                untracked_ids=untracked_ids,
             )
         )
     return track_ids
@@ -256,38 +376,53 @@ def _allocate_tracks(session: Session, dataset_id: UUID, matched: MatchResult) -
 def _parent_by_source_track(matched: MatchResult) -> dict[int, int | None]:
     """Map each source_track_id, including parent-only ids, to its parent source_track_id.
 
+    Parent tracks must be root tracks.
+
     Raises:
-        ValueError: If cuboids of one track have different parent track ids.
+        ValueError: If a track has more than one parent, or a parent track has a parent.
     """
     parent_by_source: dict[int, int | None] = {}
     for cuboids in matched.cuboids_by_group.values():
         for cuboid in cuboids:
-            parent_id = parent_by_source.setdefault(cuboid.track_id, cuboid.parent_track_id)
+            track_id = _require_track_id(cuboid=cuboid)
+            parent_id = parent_by_source.setdefault(track_id, cuboid.parent_track_id)
             if parent_id != cuboid.parent_track_id:
-                raise ValueError(f"Track {cuboid.track_id} has more than one parent track id.")
+                raise ValueError(f"Track {track_id} has more than one parent track id.")
     for parent_id in list(parent_by_source.values()):
         if parent_id is not None:
             parent_by_source.setdefault(parent_id, None)
+    if any(parent_by_source[p] is not None for p in parent_by_source.values() if p is not None):
+        raise ValueError("A parent track must not have a parent track itself.")
     return parent_by_source
 
 
+def _require_track_id(cuboid: CuboidLabel) -> int:
+    """Return the track id of a cuboid that `_assign_untracked_track_ids` has processed."""
+    if cuboid.track_id is None:
+        raise ValueError("Cuboid has no track id. Assign the untracked track ids first.")
+    return cuboid.track_id
+
+
 def _create_source_tracks(
-    session: Session,
     dataset_id: UUID,
-    next_number: int,
+    numbers: Sequence[int],
     links: Sequence[tuple[int, UUID | None]],
+    untracked_ids: set[int],
 ) -> dict[int, UUID]:
-    """Insert tracks and map each source_track_id to its object_track_id."""
-    created_ids = object_track_resolver.create_many(
-        session=session,
+    """Insert tracks and map each source_track_id to its object_track_id.
+
+    The tracks get the object_track_numbers in `numbers`, in the order of `links`. The
+    tracks of `untracked_ids` are stored without a source_track_id.
+    """
+    created_ids = active_transport.get_transport().annotations.create_object_tracks(
         tracks=[
             ObjectTrackCreate(
-                object_track_number=next_number + index,
+                object_track_number=number,
                 dataset_id=dataset_id,
-                source_track_id=source_id,
+                source_track_id=None if source_id in untracked_ids else source_id,
                 parent_object_track_id=parent_object_track_id,
             )
-            for index, (source_id, parent_object_track_id) in enumerate(links)
+            for number, (source_id, parent_object_track_id) in zip(numbers, links)
         ],
     )
     return {
@@ -295,37 +430,37 @@ def _create_source_tracks(
     }
 
 
-def _next_track_number(session: Session, dataset_id: UUID) -> int:
-    """Return the next dataset-unique object_track_number."""
-    maximum = session.exec(
-        select(func.max(ObjectTrackTable.object_track_number)).where(
-            col(ObjectTrackTable.dataset_id) == dataset_id
-        )
-    ).one()
-    return 1 if maximum is None else maximum + 1
-
-
 def _annotation_creates(
-    session: Session,
     dataset_id: UUID,
     matched: MatchResult,
     track_ids: dict[int, UUID],
 ) -> list[AnnotationCreate]:
     """Build AnnotationCreate rows for matched cuboids."""
     label_ids = _label_ids_for_cuboids(
-        session=session, dataset_id=dataset_id, cuboids_by_group=matched.cuboids_by_group
+        dataset_id=dataset_id, cuboids_by_group=matched.cuboids_by_group
     )
     return [
         AnnotationCreate(
             annotation_label_id=label_ids[cuboid.class_name],
             annotation_type=AnnotationType.CUBOID_3D,
             parent_sample_id=group_id,
-            object_track_id=track_ids[cuboid.track_id],
+            object_track_id=track_ids[_require_track_id(cuboid=cuboid)],
             cuboid_3d=_cuboid_create(cuboid=cuboid),
         )
         for group_id, cuboids in matched.cuboids_by_group.items()
         for cuboid in cuboids
     ]
+
+
+def _add_frame_tags(collection_id: UUID, tags_by_group: Mapping[UUID, FrameTags]) -> None:
+    """Get or create a sample tag for each frame tag name and add its groups to it."""
+    group_ids_by_tag_name: dict[str, list[UUID]] = defaultdict(list)
+    for group_id, frame_tags in tags_by_group.items():
+        for tag_name in frame_tags.tags:
+            group_ids_by_tag_name[tag_name].append(group_id)
+    tags = active_transport.get_transport().tags
+    for tag_name, group_ids in group_ids_by_tag_name.items():
+        tags.add_to_samples(collection_id=collection_id, tag_name=tag_name, sample_ids=group_ids)
 
 
 def _cuboid_create(cuboid: CuboidLabel) -> Cuboid3DCreate:
@@ -347,27 +482,13 @@ def _cuboid_create(cuboid: CuboidLabel) -> Cuboid3DCreate:
 
 
 def _label_ids_for_cuboids(
-    session: Session, dataset_id: UUID, cuboids_by_group: dict[UUID, list[CuboidLabel]]
+    dataset_id: UUID, cuboids_by_group: dict[UUID, list[CuboidLabel]]
 ) -> dict[str, UUID]:
     """Get or create annotation classes for the cuboid class names."""
     class_names = {cuboid.class_name for cuboids in cuboids_by_group.values() for cuboid in cuboids}
-    return {
-        class_name: _get_or_create_label_id(
-            session=session, dataset_id=dataset_id, class_name=class_name
-        )
-        for class_name in class_names
-    }
-
-
-def _get_or_create_label_id(session: Session, dataset_id: UUID, class_name: str) -> UUID:
-    """Return the annotation label ID for a class, creating it if needed."""
-    label = annotation_label_resolver.get_by_label_name(
-        session=session, dataset_id=dataset_id, label_name=class_name
+    if not class_names:
+        return {}
+    labels = active_transport.get_transport().annotations.get_or_create_labels(
+        dataset_id=dataset_id, label_names=list(class_names)
     )
-    if label is not None:
-        return label.annotation_label_id
-    created = annotation_label_resolver.create(
-        session=session,
-        label=AnnotationLabelCreate(dataset_id=dataset_id, annotation_label_name=class_name),
-    )
-    return created.annotation_label_id
+    return {label.annotation_label_name: label.annotation_label_id for label in labels}

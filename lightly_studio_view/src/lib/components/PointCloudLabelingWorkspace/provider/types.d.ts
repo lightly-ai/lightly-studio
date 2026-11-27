@@ -24,6 +24,16 @@ export interface PointCloudWorkspaceContext {
     readonly referenceFrameId: string;
     /** Whether the active tick is shown in the sensor frames, because it has no transform. */
     readonly isShowingSensorFrames: boolean;
+    /** Sequence sample with its tags, the same ones as in the sequences grid. */
+    readonly sequenceSample:
+        | {
+              readonly sampleId: string;
+              readonly collectionId: string;
+              readonly tags: { tag_id?: string; name: string }[];
+          }
+        | undefined;
+    /** Re-fetches the sequence sample, e.g. after a tag is added or removed. */
+    refetchSequenceSample: () => void;
     /** Shows the point clouds in another of `referenceFrames`. Ignores an unknown frame. */
     selectReferenceFrame: (frameId: string) => void;
     /** Details for the active tick, used to resolve channel payloads. */

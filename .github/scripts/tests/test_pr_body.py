@@ -17,6 +17,11 @@ def test_render_pr_body__review_checklist():
     assert body.count("- [ ] ") == 5
 
 
+def test_render_pr_body__mentions_the_changelog_skill():
+    body = pr_body.render_pr_body(section_body=SECTION, version="1.0.6", package=STUDIO)
+    assert "`prepare-release-changelog` skill" in body
+
+
 def test_render_pr_body__says_merging_publishes_nothing():
     body = pr_body.render_pr_body(section_body=SECTION, version="1.0.6", package=STUDIO)
     assert "opens a **draft** GitHub release" in body

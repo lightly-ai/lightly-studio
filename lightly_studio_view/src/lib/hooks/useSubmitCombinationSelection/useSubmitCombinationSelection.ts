@@ -7,8 +7,7 @@ import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { usePostHog } from '$lib/hooks';
 import { getMetadataComputations } from './getMetadataComputations';
 import { toApiStrategy } from './strategyApiMapping';
-
-type SelectionError = { error: string };
+import { getErrorMessage } from '$lib/api/ApiError';
 
 interface UseSubmitCombinationSelectionParams {
     tags: Readable<TagView[]>;
@@ -101,9 +100,7 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             });
 
             if (response.error) {
-                const errorMessage =
-                    (response.error as SelectionError).error ?? 'Failed to create selection';
-                return reportFailure(errorMessage);
+                return reportFailure(getErrorMessage(response.error, 'Failed to create selection'));
             }
 
             trackEvent('sampling_triggered', {

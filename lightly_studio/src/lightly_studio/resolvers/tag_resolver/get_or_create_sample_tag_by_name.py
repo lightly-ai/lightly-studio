@@ -31,5 +31,5 @@ def get_or_create_sample_tag_by_name(
     if existing_tag:
         return existing_tag
 
-    new_tag = TagCreate(name=tag_name, collection_id=collection_id, kind="sample")
+    new_tag = TagCreate(name=tag_name, collection_id=collection_id)
     return tag_resolver.create(session=session, tag=new_tag)

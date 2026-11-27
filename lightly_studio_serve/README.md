@@ -142,5 +142,5 @@ To search in a space that the dataset already holds, point the dataset at the se
 ls.register_remote_embedder(dataset=dataset, url="http://127.0.0.1:8080", api_key="your-secret-key")
 ```
 
-See the [LightlyStudio embeddings guide](https://docs.lightly.ai/studio/core_concepts/embeddings/#serving-an-embedder-from-a-remote-server)
+See the [LightlyStudio embeddings guide](https://docs.lightly.ai/studio/workflows/embeddings/#serving-an-embedder-from-a-remote-server)
 for the full flow, its limits and a runnable example.

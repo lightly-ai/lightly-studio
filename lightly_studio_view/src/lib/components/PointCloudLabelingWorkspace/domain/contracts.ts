@@ -133,11 +133,17 @@ export interface CuboidAnnotation {
     readonly annotationSourceId: string;
     /** Track identity, or null for a single-frame annotation. */
     readonly trackId: string | null;
+    /** Human-facing number assigned to the annotation's track, when available. */
+    readonly trackNumber: number | null;
+    /** Human-facing number of the parent track for nested annotations (e.g. truck cabin inside a truck), or null. */
+    readonly parentTrackNumber: number | null;
+    /** Class name of the parent track, resolved from the parent track's annotations. Null when there is no parent track. */
+    readonly parentTrackClassName: string | null;
     /** Authored keyframe identity, or null for an untracked/interpolated annotation. */
     readonly keyframeId: string | null;
     /** Cuboid centre in the canonical coordinate frame. */
     readonly center: Vector3;
-    /** Positive full extents along the cuboid's local x, y, z axes, in meters. */
+    /** Positive full extents along the cuboid's local x, y, z axes (length, width, height), in meters. */
     readonly size: Vector3;
     /** Cuboid orientation as a unit xyzw quaternion. */
     readonly rotation: Quaternion;
@@ -182,14 +188,7 @@ export interface AnnotationTrack {
 }
 
 /** Tools available to the interaction state machine. */
-export type WorkspaceTool =
-    | 'select'
-    | 'create-cuboid'
-    | 'translate'
-    | 'rotate'
-    | 'resize'
-    | 'pan'
-    | 'orbit';
+export type WorkspaceTool = 'select' | 'create-cuboid';
 /** Main scene and orthographic camera modes. */
 export type CameraMode = 'perspective' | 'top' | 'side' | 'front';
 /** Handles that can be hovered or manipulated on a cuboid. */

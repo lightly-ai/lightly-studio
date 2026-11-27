@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { SendHorizontal } from '@lucide/svelte';
+    import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
     import { Button } from '$lib/components';
 
     interface Props {

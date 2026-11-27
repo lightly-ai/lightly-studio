@@ -2,6 +2,7 @@
     import { useImageOrderBy } from '$lib/hooks/useImageOrderBy/useImageOrderBy';
     import { useGlobalStorage, usePostHog } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
+    import { getEvaluationMetricLabel } from '$lib/utils/evaluationMetricDisplay';
     import OrderByControl from './OrderByControl.svelte';
 
     interface Props {
@@ -37,7 +38,11 @@
     const sortItems = $derived<SelectItem[]>(
         $allSortFields.map((field, i) => ({
             value: String(i),
-            label: field.label,
+            label: field.source === 'evaluation_metric' ? field.evaluation_run_name : field.label,
+            group:
+                field.source === 'evaluation_metric'
+                    ? (getEvaluationMetricLabel(field.metric_name) ?? field.metric_name)
+                    : undefined,
             testId:
                 field.source === 'evaluation_metric'
                     ? `sort-field-${field.evaluation_run_name}-${field.metric_name}`
@@ -54,6 +59,9 @@
         const field = $allSortFields[Number(value)];
         if (field) handleFieldClick(field);
     };
+    const isEvaluationSort = $derived(
+        selectValue !== '' && $allSortFields[Number(selectValue)]?.source === 'evaluation_metric'
+    );
 </script>
 
 <OrderByControl
@@ -61,6 +69,7 @@
     selectedValue={selectValue}
     triggerLabel={$selectedLabel ?? undefined}
     direction={$selectedDirection}
+    {isEvaluationSort}
     disabled={isSimilaritySearchActive}
     allowDeselect
     onValueChange={handleValueChange}

@@ -22,7 +22,6 @@ from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     MetadataBalancingStrategy,
     SamplingConfig,
-    SamplingStrategy,
     Strategy,
 )
 from lightly_studio.sampling.sampling_via_db import sampling_via_database
@@ -160,7 +159,7 @@ def _to_computation(context: AgentContext, args: ComputeMetadataArgs) -> Metadat
 
 
 def _get_achieved_distributions(
-    context: AgentContext, sample_ids: Sequence[UUID], strategies: Sequence[SamplingStrategy]
+    context: AgentContext, sample_ids: Sequence[UUID], strategies: Sequence[Strategy]
 ) -> dict[str, dict[str, Any]]:
     """Put the target of each balancing strategy next to the distribution of the selection.
 
@@ -198,9 +197,9 @@ def _get_achieved_distributions(
     return achieved
 
 
-def _describe_strategy(strategy: SamplingStrategy) -> str:
+def _describe_strategy(strategy: Strategy) -> str:
     """Describe a strategy in short, for example ``weights(typicality) x2``."""
-    name: str = getattr(strategy, "strategy_name", type(strategy).__name__)
+    name = strategy.strategy_name
     target = getattr(strategy, "metadata_key", None) or getattr(strategy, "query_tag_name", None)
     target_text = f"({target})" if target else ""
     return f"{name}{target_text} x{strategy.strength:g}"

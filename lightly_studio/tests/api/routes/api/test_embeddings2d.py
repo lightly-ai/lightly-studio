@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
@@ -13,16 +14,27 @@ from pyarrow import ipc
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.api.routes.api import embeddings2d
 from lightly_studio.embed.mobileclip_embedder import EMBEDDING_DIMENSION
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
+from lightly_studio.models.recording import RecordingFormat
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
+    embedding_plot_resolver,
     image_resolver,
+    mcap_group_sequence_resolver,
+    recording_resolver,
     sample_resolver,
     tag_resolver,
+    twodim_embedding_resolver,
     video_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
@@ -32,6 +44,110 @@ from tests.helpers_resolvers import (
     fill_db_with_samples_and_embeddings,
 )
 from tests.resolvers.video.helpers import VideoStub, create_videos
+
+
+@pytest.mark.parametrize(
+    "plot",
+    [
+        (0, None),
+        (2, None),
+        (0, {"type": "tag", "tag_ids": []}),
+        (2, {"type": "tag", "tag_ids": []}),
+    ],
+)
+@pytest.mark.parametrize(
+    "case",
+    [
+        (SampleType.IMAGE, {}),
+        (SampleType.IMAGE, {"sample_filter": {}}),
+        (SampleType.VIDEO, {"filter_type": "video", "sample_filter": {}}),
+        (SampleType.ANNOTATION, {"filter_type": "annotations"}),
+        (SampleType.SEQUENCE, {"filter_type": "mcap_sequence", "sample_filter": {}}),
+    ],
+)
+def test_get_embeddings2d__saved_unfiltered(
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+    case: tuple[SampleType, dict[str, Any]],
+    plot: tuple[int, dict[str, Any] | None],
+) -> None:
+    """Return saved plots without querying IDs for an empty filter."""
+    count, color_by = plot
+    sample_type, filters = case
+    collection = create_collection(session=db_session, sample_type=sample_type)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, set_as_default=True
+    )
+    samples = [SampleTable(collection_id=collection.collection_id) for _ in range(count)]
+    db_session.add_all(samples)
+    db_session.commit()
+    ids = [sample.sample_id for sample in samples]
+    db_session.add(
+        EmbeddingPlotTable(
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+            is_dirty=False,
+            data=embedding_plot_resolver.encode(x=[0.5] * count, y=[-0.5] * count, sample_ids=ids),
+        )
+    )
+    db_session.commit()
+    mocker.patch.object(
+        embeddings2d, "_get_matching_sample_ids", side_effect=AssertionError("Sample lookup")
+    )
+    if color_by is None:
+        mocker.patch.object(
+            twodim_embedding_resolver,
+            "get_twodim_embeddings",
+            side_effect=AssertionError("UUID conversion"),
+        )
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/embeddings2d/default",
+        json={"filters": filters, "color_by": color_by},
+    )
+    assert response.status_code == 200
+    table = ipc.open_stream(response.content).read_all()
+    assert table.to_pydict() == {
+        "x": [0.5] * count,
+        "y": [-0.5] * count,
+        "sample_id": [str(sample_id) for sample_id in ids],
+        "fulfils_filter": [1] * count,
+        "color_categories": [[]] * count,
+    }
+    assert table.column_names == ["x", "y", "fulfils_filter", "color_categories", "sample_id"]
+    assert table.schema.metadata == {b"color_legend": b"{}"}
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        ({"sample_filter": {"has_captions": False}}, [1, 1]),
+        ({"sample_filter": {"region_sample_ids": []}}, [0, 0]),
+        ({"sample_filter": {"annotations_filter": {}}}, [0, 0]),
+        ({"width": {"min": 0}}, [1, 1]),
+    ],
+)
+@pytest.mark.parametrize("color_by", [None, {"type": "tag", "tag_ids": []}])
+def test_get_embeddings2d__active_filter(
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+    case: tuple[dict[str, Any], list[int]],
+    color_by: dict[str, Any] | None,
+) -> None:
+    """False, zero and an empty region must still go through filtering."""
+    filters, expected = case
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=2, embedding_model_names=["model"], embedding_dimension=3
+    )
+    lookup = mocker.spy(embeddings2d, "_get_matching_sample_ids")
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={"filters": filters, "color_by": color_by},
+    )
+    assert response.status_code == 200
+    lookup.assert_called_once()
+    assert ipc.open_stream(response.content).read_all()["fulfils_filter"].to_pylist() == expected
 
 
 def test_get_embeddings2d__2d(
@@ -115,7 +231,7 @@ def test_get_embeddings2d__2d__with_tag_filter(
 
     tag = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="tagged", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="tagged"),
     )
     for sample in tagged_samples:
         tag_resolver.add_tag_to_sample(session=db_session, tag_id=tag.tag_id, sample=sample.sample)
@@ -201,7 +317,7 @@ def test_get_embeddings2d__with_video_filter(
 
     tag = tag_resolver.create(
         session=db_session,
-        tag=TagCreate(collection_id=collection_id, name="tagged", kind="sample"),
+        tag=TagCreate(collection_id=collection_id, name="tagged"),
     )
     tagged_video = videos[0]
     sample_table = sample_resolver.get_by_id(session=db_session, sample_id=tagged_video.sample_id)
@@ -243,6 +359,63 @@ def test_get_embeddings2d__with_video_filter(
 
     # Verify the resolver was called with the correct filters
     assert spy_video_resolver.call_args.kwargs["filters"] == video_filter
+
+
+def test_get_embeddings2d__with_mcap_sequence_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    collection_id = collection.collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="model_a",
+        embedding_dimension=EMBEDDING_DIMENSION,
+        set_as_default=True,
+    )
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    sequence_ids = []
+    for value in (0, 1):
+        sequence_id = mcap_group_sequence_resolver.create(
+            session=db_session, collection_id=collection_id, recording_id=recording_id
+        )
+        create_sample_embedding(
+            session=db_session,
+            sample_id=sequence_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=[value] * EMBEDDING_DIMENSION,
+        )
+        sequence_ids.append(sequence_id)
+    tag = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="tagged"),
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[sequence_ids[0]]
+    )
+    sequence_filter = McapSequenceFilter(sample_filter=SampleFilter(tag_ids=[tag.tag_id]))
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={"filters": sequence_filter.model_dump(mode="json")},
+    )
+
+    assert response.status_code == 200
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
+    # Both sequences are in the plot, and only the tagged sequence passes the filter.
+    assert set(sample_ids_payload) == {str(sequence_id) for sequence_id in sequence_ids}
+    filtered_ids = {
+        sample_id for sample_id, passes in zip(sample_ids_payload, fulfils_filter) if passes
+    }
+    assert filtered_ids == {str(sequence_ids[0])}
 
 
 def test_get_embeddings2d__rejects_mismatched_filter_type(

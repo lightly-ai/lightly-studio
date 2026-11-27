@@ -7,13 +7,17 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlmodel import Session
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.resolvers import image_resolver, video_resolver
-from lightly_studio.resolvers.grid_filter import CollectionFilter
+from lightly_studio.resolvers import image_resolver, mcap_group_sequence_resolver, video_resolver
+from lightly_studio.resolvers.grid_filter import SamplingFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.sampling.sampling_config import (
     SamplingConfig,
@@ -32,7 +36,7 @@ class SamplingRequest(BaseModel):
     sampling_result_tag_name: str = Field(min_length=1, description="Name for the result tag")
     strategies: list[Strategy]
     metadata_computations: list[sampling_metadata.MetadataComputation] = Field(default_factory=list)
-    filter: CollectionFilter | None = None
+    filter: SamplingFilter | None = None
     preselected_tag_id: UUID | None = Field(
         default=None,
         description=(
@@ -71,43 +75,9 @@ def create_sampling(
     Raises:
         HTTPException: 400 if sampling fails due to invalid parameters or other errors.
     """
-    if collection.sample_type not in (SampleType.IMAGE, SampleType.VIDEO):
-        raise HTTPException(
-            status_code=400,
-            detail="Sampling is only supported for image and video collections.",
-        )
-    # Get all samples in collection as input for sampling.
-    if collection.sample_type == SampleType.IMAGE:
-        if request.filter is None:
-            image_filter = None
-        elif isinstance(request.filter, ImageFilter):
-            image_filter = request.filter
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid filter type for image collection.",
-            )
-        all_samples_result = image_resolver.get_sample_ids(
-            session=session,
-            collection_id=collection.collection_id,
-            filters=image_filter,
-        )
-    else:
-        if request.filter is None:
-            video_filter = None
-        elif isinstance(request.filter, VideoFilter):
-            video_filter = request.filter
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid filter type for video collection.",
-            )
-        all_samples_result = video_resolver.get_sample_ids(
-            session=session,
-            collection_id=collection.collection_id,
-            filters=video_filter,
-        )
-    input_sample_ids = list(all_samples_result)
+    input_sample_ids = list(
+        _get_input_sample_ids(session=session, collection=collection, filters=request.filter)
+    )
     preselected_tag_name = sampling_service.validate_preselection(
         session=session,
         collection_id=collection.collection_id,
@@ -128,3 +98,38 @@ def create_sampling(
         session=session, collection=collection, computations=request.metadata_computations
     )
     sampling_via_database(session=session, config=config, input_sample_ids=input_sample_ids)
+
+
+def _get_input_sample_ids(
+    session: Session, collection: CollectionTable, filters: SamplingFilter | None
+) -> set[UUID]:
+    """Get the sample IDs of the collection that match the filter, as input for sampling.
+
+    Raises:
+        HTTPException: 400 if the collection does not support sampling, or the filter is
+            for another sample type than the collection.
+    """
+    sample_type = collection.sample_type
+    if sample_type == SampleType.IMAGE and (filters is None or isinstance(filters, ImageFilter)):
+        return image_resolver.get_sample_ids(
+            session=session, collection_id=collection.collection_id, filters=filters
+        )
+    if sample_type == SampleType.VIDEO and (filters is None or isinstance(filters, VideoFilter)):
+        return video_resolver.get_sample_ids(
+            session=session, collection_id=collection.collection_id, filters=filters
+        )
+    if sample_type == SampleType.SEQUENCE and (
+        filters is None or isinstance(filters, McapSequenceFilter)
+    ):
+        return mcap_group_sequence_resolver.get_sample_ids(
+            session=session, collection_id=collection.collection_id, filters=filters
+        )
+    if sample_type not in (SampleType.IMAGE, SampleType.VIDEO, SampleType.SEQUENCE):
+        raise HTTPException(
+            status_code=400,
+            detail="Sampling is only supported for image, video and sequence collections.",
+        )
+    raise HTTPException(
+        status_code=400,
+        detail=f"Invalid filter type for {sample_type.value} collection.",
+    )

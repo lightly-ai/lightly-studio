@@ -4,6 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsClassificationSegment from './SampleDetailsClassificationSegment.svelte';
+import { AnnotationClassNotAvailableError } from '$lib/hooks/useCreateLabel/useCreateLabel';
+import SampleDetailsSidePanelAnnotation from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
+
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
 
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
@@ -17,17 +23,26 @@ const mocks = vi.hoisted(() => ({
     refetchRootCollection: vi.fn(),
     addReversibleAction: vi.fn(),
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
-    enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void }
+    enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
+    userRole: 'labeler' as string | undefined
 }));
 
 vi.mock('$app/state', () => ({
-    page: { params: { dataset_id: 'dataset-1' } }
+    page: { params: { dataset_id: 'dataset-1' }, data: { globalStorage: mocks } }
+}));
+
+vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
+    useAnnotation: () => ({ annotation: {}, refetch: vi.fn() })
+}));
+
+vi.mock('$lib/hooks/useAuth/useAuth', () => ({
+    default: () => ({ user: mocks.userRole ? { role: mocks.userRole } : undefined })
 }));
 
 // The classification segment imports useAnnotationCollections through the `$lib/hooks`
 // barrel; mocking the underlying module replaces the barrel re-export too.
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
-    useAnnotationCollections: vi.fn(() => ({ data: mocks.collections }))
+    useAnnotationCollections: vi.fn(() => ({ data: mocks.collections, isSuccess: true }))
 }));
 
 // Drives the grid-filter seeded collapse: sources missing from the selection start collapsed.
@@ -91,7 +106,8 @@ vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
     useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: mocks.deleteAnnotation }))
 }));
 
-vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', () => ({
+vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useCreateLabel/useCreateLabel')>()),
     useCreateLabel: vi.fn(() => ({ createLabel: mocks.createLabel }))
 }));
 
@@ -111,6 +127,7 @@ vi.mock('$lib/hooks/useCustomLabelColors', async () => {
     const { writable } = await import('svelte/store');
     return {
         useCustomLabelColors: () => ({
+            customColorsStore: writable({}),
             customLabelColorsStore: writable({}),
             getCustomColor: () => undefined,
             setCustomColor: vi.fn(),
@@ -162,6 +179,7 @@ describe('SampleDetailsClassificationSegment', () => {
         mocks.addReversibleAction.mockReset();
         mocks.isEditingMode.set(false);
         mocks.enforceColoringByClassStore.set(false);
+        mocks.userRole = 'labeler';
         // The component logs the caught error alongside the toast on every failure path.
         vi.spyOn(console, 'error').mockImplementation(() => {});
     });
@@ -199,6 +217,56 @@ describe('SampleDetailsClassificationSegment', () => {
     };
 
     const deleteButton = () => screen.getByRole('button', { name: 'Delete classification' });
+
+    it.each([false, true])('copies with an existing source: %s', async (existing) => {
+        mocks.isEditingMode.set(true);
+        mocks.annotationLabels = [catLabel];
+        mocks.collections = [groundTruthSource];
+        if (existing) mocks.collections.push({ collection_id: 'human', name: 'Human' });
+        mocks.createAnnotation.mockRejectedValueOnce(new Error('offline'));
+        const onClick = vi.fn();
+        const { container } = render(SampleDetailsSidePanelAnnotation, {
+            annotation: createClassification('c1', groundTruthSource.collection_id, 'cat'),
+            isSelected: false,
+            onClick,
+            onUpdate: vi.fn(),
+            onToggleShowAnnotation: vi.fn(),
+            onDeleteAnnotation: vi.fn()
+        });
+        expect(container.querySelector('button button')).toBeNull();
+        screen.getByRole('button', { name: 'Select cat annotation' }).focus();
+        await userEvent.keyboard('{Enter} ');
+        expect(onClick).toHaveBeenCalledTimes(2);
+        onClick.mockClear();
+        await userEvent.click(screen.getByLabelText('Duplicate to another annotation source'));
+        expect(onClick).not.toHaveBeenCalled();
+        const input = screen.getByRole('combobox', { name: 'Annotation source' });
+        // A blank name and the annotation's own source offer nothing to pick.
+        await userEvent.type(input, ' ');
+        expect(screen.queryByRole('option', { name: /Create:/ })).not.toBeInTheDocument();
+        await userEvent.type(input, `${groundTruthSource.name}{Enter}`);
+        expect(screen.queryByRole('option', { name: /Create:/ })).not.toBeInTheDocument();
+        expect(mocks.createAnnotation).not.toHaveBeenCalled();
+        await userEvent.clear(input);
+        await userEvent.type(input, existing ? 'Human' : ' Human ');
+        await userEvent.click(
+            screen.getByRole('option', { name: existing ? 'Human' : 'Create: Human' })
+        );
+        expect(input).toHaveValue(existing ? 'Human' : ' Human ');
+        expect(toast.error).toHaveBeenCalled();
+        await userEvent.keyboard('{Enter}');
+        await waitFor(() =>
+            expect(
+                screen.queryByRole('combobox', { name: 'Annotation source' })
+            ).not.toBeInTheDocument()
+        );
+        expect(mocks.createAnnotation).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                annotation_collection_name: 'Human',
+                annotation_label_id: 'label-cat'
+            })
+        );
+    });
 
     it('renders a flat list without source groups for a single source', () => {
         mocks.collections = [groundTruthSource];
@@ -302,17 +370,50 @@ describe('SampleDetailsClassificationSegment', () => {
         expect(screen.getByText('zebra')).toBeInTheDocument();
     });
 
-    it('shows confidence value when present', () => {
-        mocks.collections = [groundTruthSource];
-        const annotations = [
-            createClassification('c1', groundTruthSource.collection_id, 'bird', 0.95)
-        ];
+    it.each([0, 0.95])(
+        'keeps classification confidence %s when switching modes',
+        async (confidence) => {
+            mocks.collections = [groundTruthSource];
+            mocks.annotationLabels = [catLabel];
+            const annotations = [
+                createClassification('c1', groundTruthSource.collection_id, 'cat', confidence)
+            ];
+            render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
 
-        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+            mocks.isEditingMode.set(true);
+            expect(await screen.findByRole('combobox')).toHaveTextContent('cat');
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+        }
+    );
 
-        expect(screen.getByText('bird')).toBeInTheDocument();
-        expect(screen.getByText('Confidence: 0.95')).toBeInTheDocument();
-    });
+    it.each([0, 0.95])(
+        'keeps spatial annotation confidence %s when switching modes',
+        async (confidence) => {
+            mocks.annotationLabels = [catLabel];
+            render(SampleDetailsSidePanelAnnotation, {
+                annotation: {
+                    ...createClassification(
+                        'a1',
+                        groundTruthSource.collection_id,
+                        'cat',
+                        confidence
+                    ),
+                    annotation_type: 'object_detection'
+                },
+                isSelected: false,
+                onClick: vi.fn(),
+                onUpdate: vi.fn(),
+                onToggleShowAnnotation: vi.fn(),
+                onDeleteAnnotation: vi.fn()
+            });
+
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+            mocks.isEditingMode.set(true);
+            expect(await screen.findByRole('combobox')).toHaveTextContent('cat');
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+        }
+    );
 
     it('does not show confidence line when confidence is null', () => {
         mocks.collections = [groundTruthSource];
@@ -326,12 +427,9 @@ describe('SampleDetailsClassificationSegment', () => {
         expect(screen.queryByText(/Confidence:/)).not.toBeInTheDocument();
     });
 
-    it('shows source group color markers when multiple sources are visible and enforce coloring is disabled', () => {
+    it('keeps source colors when one source starts hidden', () => {
         mocks.collections = [groundTruthSource, predictionsSource];
-        mocks.selectedCollectionIds = [
-            groundTruthSource.collection_id,
-            predictionsSource.collection_id
-        ];
+        mocks.selectedCollectionIds = [groundTruthSource.collection_id];
         mocks.enforceColoringByClassStore.set(false);
         const annotations = [
             createClassification('c1', groundTruthSource.collection_id, 'cat'),
@@ -458,6 +556,7 @@ describe('SampleDetailsClassificationSegment', () => {
         });
 
         it('creates the class first when the typed name is new', async () => {
+            mocks.userRole = 'editor';
             mocks.createLabel.mockResolvedValue({
                 annotation_label_id: 'label-otter',
                 annotation_label_name: 'otter'
@@ -474,6 +573,22 @@ describe('SampleDetailsClassificationSegment', () => {
             );
             expect(mocks.createAnnotation).toHaveBeenCalledWith(
                 expect.objectContaining({ annotation_label_id: 'label-otter' })
+            );
+        });
+
+        it('shows the class error when the class cannot be created', async () => {
+            mocks.userRole = 'editor';
+            mocks.createLabel.mockRejectedValue(new AnnotationClassNotAvailableError('zebra'));
+            const user = await openDraftRow();
+
+            await user.type(screen.getByTestId('select-list-input'), 'zebra{Enter}');
+
+            await waitFor(() => expect(toast.error).toHaveBeenCalled());
+            expect(mocks.createLabel).toHaveBeenCalled();
+            expect(mocks.createAnnotation).not.toHaveBeenCalled();
+            expect(toast.error).toHaveBeenCalledTimes(1);
+            expect(toast.error).toHaveBeenCalledWith(
+                'Class "zebra" is no longer available. Choose another class.'
             );
         });
 
@@ -527,6 +642,26 @@ describe('SampleDetailsClassificationSegment', () => {
             await user.click(screen.getByRole('option', { name: 'dog' }));
 
             await waitFor(() => expect(toast.error).toHaveBeenCalled());
+        });
+    });
+
+    describe('empty state copy', () => {
+        it('shows edit guidance for users who can edit when there are no classifications', () => {
+            mocks.userRole = 'labeler';
+            render(SampleDetailsClassificationSegment, { props: defaultProps });
+
+            expect(screen.getByTestId('empty-state-message')).toHaveTextContent(
+                'No classifications. Click Edit annotations to add one.'
+            );
+        });
+
+        it('shows plain "No classifications." without edit guidance for viewer role', () => {
+            mocks.userRole = 'viewer';
+            render(SampleDetailsClassificationSegment, { props: defaultProps });
+
+            expect(screen.getByTestId('empty-state-message')).toHaveTextContent(
+                'No classifications.'
+            );
         });
     });
 });

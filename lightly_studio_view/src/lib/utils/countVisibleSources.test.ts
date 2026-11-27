@@ -21,7 +21,7 @@ describe('countVisibleSources', () => {
     ];
 
     it('counts the distinct sources when nothing is hidden', () => {
-        expect(countVisibleSources(annotations, new Set())).toBe(2);
+        expect(countVisibleSources(annotations)).toBe(2);
     });
 
     it('does not count a source whose annotations are all hidden', () => {
@@ -37,6 +37,6 @@ describe('countVisibleSources', () => {
     });
 
     it('returns 0 when there are no annotations', () => {
-        expect(countVisibleSources([], new Set())).toBe(0);
+        expect(countVisibleSources([])).toBe(0);
     });
 });

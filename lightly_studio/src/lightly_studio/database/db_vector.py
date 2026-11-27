@@ -7,7 +7,7 @@ Python float in a list), which bounds memory when loading many of them.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,7 +20,6 @@ from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator, TypeEngine
 from sqlmodel import Session
-from typing_extensions import TypeAlias
 
 # A single embedding vector. Always 1-D float32 numpy; a batch is a Sequence[Embedding].
 Embedding: TypeAlias = NDArray[np.float32]
@@ -173,6 +172,89 @@ def _compile_vector_element_postgresql(
     """PostgreSQL compilation: (col::real[])[index]."""
     col, index = list(element.clauses)
     return f"({compiler.process(col, **kw)}::real[])[{compiler.process(index, **kw)}]"
+
+
+class inner_product(GenericFunction[float]):  # noqa: N801
+    """Inner (dot) product of two vectors that compiles to dialect-specific SQL.
+
+    - DuckDB: ``list_inner_product(a, b)`` without casts
+    - PostgreSQL: pgvector's ``inner_product(a::vector, b::vector)``
+    """
+
+    type = Float()
+    inherit_cache = True
+
+
+@compiles(inner_product)
+def _compile_inner_product_unsupported(
+    element: inner_product, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """Raise for unsupported dialects."""
+    raise NotImplementedError(
+        f"Unsupported dialect: {compiler.dialect.name}."
+        " Only 'postgresql' and 'duckdb' are supported."
+    )
+
+
+@compiles(inner_product, "duckdb")
+def _compile_inner_product_duckdb(element: inner_product, compiler: SQLCompiler, **kw: Any) -> str:
+    """DuckDB compilation: list_inner_product without cast."""
+    left, right = list(element.clauses)
+    return f"list_inner_product({compiler.process(left, **kw)}, {compiler.process(right, **kw)})"
+
+
+@compiles(inner_product, "postgresql")
+def _compile_inner_product_postgresql(
+    element: inner_product, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """PostgreSQL compilation: pgvector's inner_product with ::vector casts."""
+    left, right = list(element.clauses)
+    left_sql = compiler.process(left, **kw)
+    right_sql = compiler.process(right, **kw)
+    return f"inner_product({left_sql}::vector, {right_sql}::vector)"
+
+
+class loaded_vector(GenericFunction[Embedding]):  # noqa: N801
+    """A vector column that the database loads once for each row.
+
+    PostgreSQL stores vectors over about 2 KB out of line (TOAST). Each use of such a column
+    in an expression loads the vector again. Select this function in a subquery with
+    ``OFFSET 0`` and use the subquery column, so that each vector loads only once.
+
+    Compiles to dialect-specific SQL:
+    - DuckDB: ``col`` (DuckDB has no TOAST)
+    - PostgreSQL: ``subvector(col, 1, dimension)``, an in-memory copy of the vector
+    """
+
+    type = VectorType()
+    inherit_cache = True
+
+
+@compiles(loaded_vector)
+def _compile_loaded_vector_unsupported(
+    element: loaded_vector, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """Raise for unsupported dialects."""
+    raise NotImplementedError(
+        f"Unsupported dialect: {compiler.dialect.name}."
+        " Only 'postgresql' and 'duckdb' are supported."
+    )
+
+
+@compiles(loaded_vector, "duckdb")
+def _compile_loaded_vector_duckdb(element: loaded_vector, compiler: SQLCompiler, **kw: Any) -> str:
+    """DuckDB compilation: col."""
+    col, _dimension = list(element.clauses)
+    return compiler.process(col, **kw)
+
+
+@compiles(loaded_vector, "postgresql")
+def _compile_loaded_vector_postgresql(
+    element: loaded_vector, compiler: SQLCompiler, **kw: Any
+) -> str:
+    """PostgreSQL compilation: subvector(col, 1, dimension)."""
+    col, dimension = list(element.clauses)
+    return f"subvector({compiler.process(col, **kw)}, 1, {compiler.process(dimension, **kw)})"
 
 
 def get_pgvector_connection(session: Session) -> Any:

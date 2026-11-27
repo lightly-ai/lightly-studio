@@ -45,7 +45,7 @@ def test_resolve_default_embedder__stores_remote_endpoint(
     result = default_embedder.resolve_default_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        embedder_type=ImagePathEmbedder,
     )
 
     assert result is not None
@@ -71,7 +71,7 @@ def test_resolve_default_embedder__stores_no_server(
     result = default_embedder.resolve_default_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        embedder_type=ImagePathEmbedder,
     )
 
     assert result is not None
@@ -105,7 +105,7 @@ def test_resolve_default_embedder__local_embedder_keeps_stored_server(
     default_embedder.resolve_default_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        embedder_type=ImagePathEmbedder,
     )
 
     stored = embedding_model_resolver.get_by_id(
@@ -144,7 +144,7 @@ def test_resolve_default_embedder__keeps_stored_server(
     default_embedder.resolve_default_embedder(
         session=db_session,
         collection_id=collection.collection_id,
-        get_embedder_fn=EmbedderRegistry.get_image_path_embedder,
+        embedder_type=ImagePathEmbedder,
     )
 
     stored = embedding_model_resolver.get_by_id(

@@ -1,9 +1,10 @@
 """This module defines the base annotation model."""
 
 from abc import ABC
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -21,6 +22,11 @@ from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationView,
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
+from lightly_studio.models.annotation.polygon import (
+    PolygonAnnotationTable,
+    PolygonAnnotationView,
+    Polygons,
+)
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
     SegmentationAnnotationView,
@@ -50,12 +56,14 @@ class AnnotationType(str, Enum):
     SEGMENTATION_MASK = "segmentation_mask"
     OBJECT_DETECTION = "object_detection"
     CUBOID_3D = "cuboid_3d"
+    POLYGON = "polygon"
 
 
 # Annotation types that have a bounding box and can be cropped for embedding.
 CROPPABLE_ANNOTATION_TYPES = [
     AnnotationType.OBJECT_DETECTION,
     AnnotationType.SEGMENTATION_MASK,
+    AnnotationType.POLYGON,
 ]
 
 
@@ -83,10 +91,10 @@ class AnnotationBaseTable(SQLModel, table=True):
         foreign_key="annotation_label.annotation_label_id", index=True
     )
 
-    confidence: Optional[float] = None
+    confidence: float | None = None
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id", index=True)
 
-    object_track_id: Optional[UUID] = Field(
+    object_track_id: UUID | None = Field(
         default=None, foreign_key="object_track.object_track_id", index=True
     )
 
@@ -125,6 +133,12 @@ class AnnotationBaseTable(SQLModel, table=True):
         sa_relationship_kwargs={"lazy": "select"},
     )
 
+    # Details about polygons.
+    polygon_details: Mapped[Optional["PolygonAnnotationTable"]] = Relationship(
+        back_populates="annotation_base",
+        sa_relationship_kwargs={"lazy": "select"},
+    )
+
     # Optional temporal bounds for this annotation's sample.
     temporal_span_details: Mapped[Optional["TemporalSpanTable"]] = Relationship(
         sa_relationship_kwargs={
@@ -152,27 +166,30 @@ class AnnotationCreate(ABC, SQLModel):
     # Required properties for all annotations.
     annotation_label_id: UUID
     annotation_type: AnnotationType
-    confidence: Optional[float] = None
+    confidence: float | None = None
     parent_sample_id: UUID
 
     # Optional tracking association.
-    object_track_id: Optional[UUID] = None
+    object_track_id: UUID | None = None
 
     # Optional properties for object detection.
-    x: Optional[int] = None
-    y: Optional[int] = None
-    width: Optional[int] = None
-    height: Optional[int] = None
+    x: int | None = None
+    y: int | None = None
+    width: int | None = None
+    height: int | None = None
 
     # Optional properties for segmentation.
-    segmentation_mask: Optional[list[int]] = None
+    segmentation_mask: list[int] | None = None
+
+    # Optional properties for polygons.
+    polygons: Polygons | None = None
 
     # Optional properties for temporal annotations.
-    start_time_s: Optional[float] = None
-    end_time_s: Optional[float] = None
+    start_time_s: float | None = None
+    end_time_s: float | None = None
 
     # Optional properties for cuboid_3d.
-    cuboid_3d: Optional[Cuboid3DCreate] = None
+    cuboid_3d: Cuboid3DCreate | None = None
 
 
 class AnnotationView(BaseModel):
@@ -196,16 +213,20 @@ class AnnotationView(BaseModel):
     annotation_collection_id: UUID
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
-    confidence: Optional[float] = None
-    order_value: Optional[float] = None
+    confidence: float | None = None
+    order_value: float | None = None
     created_at: datetime
 
-    object_detection_details: Optional[ObjectDetectionAnnotationView] = None
-    cuboid_3d_details: Optional[Cuboid3DAnnotationView] = None
-    segmentation_details: Optional[SegmentationAnnotationView] = None
-    temporal_span_details: Optional[TemporalSpanView] = None
-    object_track_id: Optional[UUID] = None
-    object_track_number: Optional[int] = None
+    object_detection_details: ObjectDetectionAnnotationView | None = None
+    cuboid_3d_details: Cuboid3DAnnotationView | None = None
+    segmentation_details: SegmentationAnnotationView | None = None
+    polygon_details: PolygonAnnotationView | None = None
+    temporal_span_details: TemporalSpanView | None = None
+    object_track_id: UUID | None = None
+    object_track_number: int | None = None
+    parent_object_track_number: int | None = None
+    parent_object_track_class_name: str | None = None
+    """Only populated for tick-details responses. ``None`` elsewhere."""
 
     tags: list[AnnotationViewTag] = []
 
@@ -213,7 +234,8 @@ class AnnotationView(BaseModel):
     def from_annotation_table(
         cls,
         annotation: "AnnotationBaseTable",
-        order_value: Optional[float] = None,
+        order_value: float | None = None,
+        parent_track_class_names: Mapping[UUID, str] | None = None,
     ) -> "AnnotationView":
         """Convert an AnnotationBaseTable to an AnnotationView.
 
@@ -222,7 +244,16 @@ class AnnotationView(BaseModel):
             order_value: Primary sort value for the current grid sort, when provided by the
                 resolver. Mutually exclusive with the payload view's ``similarity_score``
                 for the grid overlay.
+            parent_track_class_names: Pre-fetched mapping from parent object track ID to
+                class name. When omitted, the parent class name is not populated.
         """
+        parent_track_id = (
+            annotation.object_track.parent_object_track_id if annotation.object_track else None
+        )
+        parent_track_class_name = None
+        if parent_track_class_names is not None and parent_track_id is not None:
+            parent_track_class_name = parent_track_class_names.get(parent_track_id)
+
         return cls(
             parent_sample_id=annotation.parent_sample_id,
             sample_id=annotation.sample_id,
@@ -235,6 +266,10 @@ class AnnotationView(BaseModel):
             object_track_number=annotation.object_track.object_track_number
             if annotation.object_track
             else None,
+            parent_object_track_number=annotation.object_track.parent_object_track.object_track_number
+            if annotation.object_track and annotation.object_track.parent_object_track
+            else None,
+            parent_object_track_class_name=parent_track_class_name,
             temporal_span_details=TemporalSpanView(
                 start_time_s=annotation.temporal_span_details.start_time_s,
                 end_time_s=annotation.temporal_span_details.end_time_s,
@@ -244,6 +279,8 @@ class AnnotationView(BaseModel):
             annotation_label=cls.AnnotationLabel(
                 annotation_label_name=annotation.annotation_label.annotation_label_name
             ),
+            # TODO(Michal, 11/2026): Read only the details of the annotation type. Each read of an
+            # unloaded details relationship runs one lazy SELECT.
             object_detection_details=ObjectDetectionAnnotationView(
                 x=annotation.object_detection_details.x,
                 y=annotation.object_detection_details.y,
@@ -277,6 +314,9 @@ class AnnotationView(BaseModel):
             )
             if annotation.segmentation_details
             else None,
+            polygon_details=PolygonAnnotationView.model_validate(annotation.polygon_details)
+            if annotation.polygon_details
+            else None,
             tags=[
                 cls.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in annotation.sample.tags
             ],
@@ -290,7 +330,7 @@ class AnnotationViewsWithCount(BaseModel):
 
     annotations: list[AnnotationView] = PydanticField(..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
+    next_cursor: int | None = PydanticField(..., alias="nextCursor")
 
 
 class SampleAnnotationView(BaseModel):
@@ -337,9 +377,9 @@ class AnnotationWithPayloadView(BaseModel):
 
     parent_sample_type: SampleType
     annotation: AnnotationView
-    parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
+    parent_sample_data: ImageAnnotationView | VideoFrameAnnotationView
     # Set when results are ordered by embedding similarity search.
-    similarity_score: Optional[float] = None
+    similarity_score: float | None = None
 
 
 class AnnotationWithPayloadAndCountView(BaseModel):
@@ -349,7 +389,7 @@ class AnnotationWithPayloadAndCountView(BaseModel):
 
     annotations: list[AnnotationWithPayloadView] = PydanticField(..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+    next_cursor: int | None = PydanticField(None, alias="nextCursor")
 
 
 class SampleAnnotationDetailsView(BaseModel):
@@ -429,4 +469,4 @@ class AnnotationDetailsWithPayloadView(BaseModel):
 
     parent_sample_type: SampleType
     annotation: AnnotationView
-    parent_sample_data: Union[ImageAnnotationDetailsView, VideoFrameAnnotationDetailsView]
+    parent_sample_data: ImageAnnotationDetailsView | VideoFrameAnnotationDetailsView

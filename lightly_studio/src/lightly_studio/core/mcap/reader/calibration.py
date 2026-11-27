@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from typing import Any
 
 from mcap.exceptions import DecoderNotFoundError
@@ -22,48 +22,7 @@ DYNAMIC_TRANSFORM_TOPIC = "/tf"
 
 # Dynamic transforms captured in this window before and after the requested time are
 # used. The window holds a message of every transform published at 10 Hz or faster.
-_DYNAMIC_TRANSFORM_WINDOW_NS = 100_000_000
-
-
-def dynamic_edges_until(
-    mcap_reader: McapReader,
-    path: str,
-    topic: str,
-    frame_ids: Sequence[str],
-) -> list[tuple[str, str]]:
-    """Returns dynamic edges read from the start of a topic until frames are seen.
-
-    Reading stops once every frame id has appeared as a parent or a child. The pose
-    and the stamp are not read. An edge with a blank frame name is skipped. If the
-    topic ends first, the edges seen so far are returned.
-
-    Args:
-        mcap_reader: The seeking reader of the open file.
-        path: The path or URI of the MCAP file, used in error messages.
-        topic: The topic the dynamic transforms are published on.
-        frame_ids: The coordinate frames to find.
-
-    Returns:
-        The parent and child frame id of each edge seen, in order, once each.
-
-    Raises:
-        McapAccessError: If a message on the topic cannot be decoded.
-    """
-    needed = set(frame_ids)
-    edges: dict[tuple[str, str], None] = {}
-    seen: set[str] = set()
-    try:
-        for _, _, _, decoded_message in mcap_reader.iter_decoded_messages(topics=[topic]):
-            _collect_frame_edges(
-                decoded_message=decoded_message, path=path, topic=topic, edges=edges, seen=seen
-            )
-            if needed <= seen:
-                break
-    except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
-        raise McapAccessError(
-            f"Cannot decode the messages of topic '{topic}' in '{path}': {exc}"
-        ) from exc
-    return list(edges)
+DYNAMIC_TRANSFORM_WINDOW_NS = 100_000_000
 
 
 def read_intrinsic(messages: Iterable[tuple[int, Any]], topic: str) -> CameraIntrinsics:
@@ -141,7 +100,7 @@ def dynamic_transforms_near(
 ) -> list[StaticTransform]:
     """Returns, per child frame, the transform captured closest to a time.
 
-    Only the transforms captured within `_DYNAMIC_TRANSFORM_WINDOW_NS` of the time are
+    Only the transforms captured within `DYNAMIC_TRANSFORM_WINDOW_NS` of the time are
     used. Returns none if the topic is not in the file.
 
     Args:
@@ -160,26 +119,32 @@ def dynamic_transforms_near(
     """
     if not topic_in_file:
         return []
+    edges = _read_dynamic_edges(
+        mcap_reader=mcap_reader,
+        path=path,
+        topic=topic,
+        start_ns=max(timestamp_ns - DYNAMIC_TRANSFORM_WINDOW_NS, 0),
+        end_ns=timestamp_ns + DYNAMIC_TRANSFORM_WINDOW_NS + 1,
+    )
+    return closest_dynamic_transforms(edges=edges, timestamp_ns=timestamp_ns)
+
+
+def closest_dynamic_transforms(
+    edges: Iterable[StaticTransform], timestamp_ns: int
+) -> list[StaticTransform]:
+    """Returns the edge closest to `timestamp_ns` for each child frame.
+
+    An edge captured more than `DYNAMIC_TRANSFORM_WINDOW_NS` from `timestamp_ns` is
+    left out.
+    """
     closest_by_child: dict[str, StaticTransform] = {}
-    try:
-        for _, _, message, decoded_message in mcap_reader.iter_decoded_messages(
-            topics=[topic],
-            start_time=max(timestamp_ns - _DYNAMIC_TRANSFORM_WINDOW_NS, 0),
-            end_time=timestamp_ns + _DYNAMIC_TRANSFORM_WINDOW_NS + 1,
-        ):
-            for transform in transforms.from_decoded_message(
-                decoded_message, log_time_ns=message.log_time
-            ):
-                offset_ns = abs(transform.timestamp_ns - timestamp_ns)
-                if offset_ns > _DYNAMIC_TRANSFORM_WINDOW_NS:
-                    continue
-                closest = closest_by_child.get(transform.child_frame_id)
-                if closest is None or offset_ns < abs(closest.timestamp_ns - timestamp_ns):
-                    closest_by_child[transform.child_frame_id] = transform
-    except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
-        raise McapAccessError(
-            f"Cannot decode the messages of topic '{topic}' in '{path}': {exc}"
-        ) from exc
+    for transform in edges:
+        offset_ns = abs(transform.timestamp_ns - timestamp_ns)
+        if offset_ns > DYNAMIC_TRANSFORM_WINDOW_NS:
+            continue
+        closest = closest_by_child.get(transform.child_frame_id)
+        if closest is None or offset_ns < abs(closest.timestamp_ns - timestamp_ns):
+            closest_by_child[transform.child_frame_id] = transform
     return list(closest_by_child.values())
 
 
@@ -205,29 +170,24 @@ def transforms_of_message(
         return []
 
 
-def _collect_frame_edges(
-    decoded_message: Any,
-    path: str,
-    topic: str,
-    edges: dict[tuple[str, str], None],
-    seen: set[str],
-) -> None:
-    """Adds the frame names of one message, or skips a message that has none.
+def _read_dynamic_edges(
+    mcap_reader: McapReader, path: str, topic: str, start_ns: int, end_ns: int
+) -> list[StaticTransform]:
+    """Returns the dynamic edges whose log time is in `[start_ns, end_ns)`.
 
-    An edge with a blank parent or child frame name is skipped.
+    Raises:
+        McapAccessError: If a message on the topic cannot be decoded.
     """
+    edges: list[StaticTransform] = []
     try:
-        message_edges = transforms.frame_edges(decoded_message)
-    except McapAccessError:
-        logger.warning(
-            "Cannot read the frame names of a message of topic '%s' in '%s'. It is skipped.",
-            topic,
-            path,
-        )
-        return
-    for parent_frame_id, child_frame_id in message_edges:
-        if not parent_frame_id.strip() or not child_frame_id.strip():
-            continue
-        edges.setdefault((parent_frame_id, child_frame_id), None)
-        seen.add(parent_frame_id)
-        seen.add(child_frame_id)
+        for _, _, message, decoded_message in mcap_reader.iter_decoded_messages(
+            topics=[topic], start_time=start_ns, end_time=end_ns
+        ):
+            edges.extend(
+                transforms.from_decoded_message(decoded_message, log_time_ns=message.log_time)
+            )
+    except (DecoderNotFoundError, UnicodeDecodeError, ValueError) as exc:
+        raise McapAccessError(
+            f"Cannot decode the messages of topic '{topic}' in '{path}': {exc}"
+        ) from exc
+    return edges

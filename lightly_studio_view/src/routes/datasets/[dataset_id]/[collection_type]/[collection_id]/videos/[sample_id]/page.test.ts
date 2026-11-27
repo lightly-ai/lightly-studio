@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { render } from '@testing-library/svelte';
 import Page from './+page.svelte';
 import { writable } from 'svelte/store';
@@ -92,8 +92,8 @@ describe('Video Detail Page', () => {
         sampleSize: writable({ width: 256, height: 256 })
     };
 
-    let useVideoMock: ReturnType<typeof vi.fn>;
-    let useCollectionWithChildrenMock: ReturnType<typeof vi.fn>;
+    let useVideoMock: Mock<(...args: never[]) => unknown>;
+    let useCollectionWithChildrenMock: Mock<(...args: never[]) => unknown>;
 
     beforeEach(async () => {
         vi.clearAllMocks();

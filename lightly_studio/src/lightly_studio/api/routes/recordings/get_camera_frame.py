@@ -1,4 +1,4 @@
-"""Route to serve a single camera frame from a recording, by channel and keyframe timestamp."""
+"""Route to serve a single camera frame from a recording, by channel and log time."""
 
 from __future__ import annotations
 
@@ -27,8 +27,17 @@ class CameraFrameQuery(BaseModel):
     keyframe_timestamp_ns: int = Query(
         ge=0,
         description=(
-            "The log time of the keyframe to fetch, in nanoseconds. "
+            "The log time of the keyframe to start decoding at, in nanoseconds. "
             "Comes from the indexed locator's `keyframe_log_time_ns`."
+        ),
+    )
+    log_time_ns: int | None = Query(
+        default=None,
+        ge=0,
+        description=(
+            "The log time of the frame to return, in nanoseconds. "
+            "Comes from the indexed locator's `log_time_ns`. "
+            "Defaults to `keyframe_timestamp_ns`, which returns the keyframe."
         ),
     )
     w: int | None = Query(default=None, gt=0, description="Output width in pixels.")
@@ -49,7 +58,7 @@ def get_camera_frame(
     recording_id: Annotated[UUID, Path(title="Recording ID")],
     frame_query: Annotated[CameraFrameQuery, Depends(CameraFrameQuery)],
 ) -> Response:
-    """Serves a camera keyframe from a recording, as a raw image.
+    """Serves a camera frame from a recording, as a raw image.
 
     Returns the frame's encoded bytes directly, with the matching `Content-Type` (e.g.
     `image/jpeg`), so this route's own URL can be used as an `<img src="">` without any
@@ -60,15 +69,16 @@ def get_camera_frame(
         session: The database session.
         dataset_id: The dataset the recording is expected to belong to.
         recording_id: The recording to read the frame from.
-        frame_query: The channel and keyframe timestamp to fetch.
+        frame_query: The channel, the keyframe timestamp, and the frame log time to fetch.
 
     Returns:
         The encoded image, as the raw response body.
 
     Raises:
-        HTTPException: 404 if the recording does not exist, does not belong to
-            `dataset_id`, the channel is not in the recording's file, or no frame
-            exists at `keyframe_timestamp_ns`.
+        HTTPException: 400 if `log_time_ns` is before `keyframe_timestamp_ns`, or the
+            frame cannot be decoded. 404 if the recording does not exist, does not
+            belong to `dataset_id`, the channel is not in the recording's file, or no
+            frame exists at `keyframe_timestamp_ns` or at `log_time_ns`.
     """
     try:
         frame = get_camera_frame_service(
@@ -77,20 +87,21 @@ def get_camera_frame(
             recording_id=recording_id,
             channel_id=frame_query.channel_id,
             keyframe_timestamp_ns=frame_query.keyframe_timestamp_ns,
+            log_time_ns=frame_query.log_time_ns,
             width=frame_query.w,
             height=frame_query.h,
             quality=frame_query.q,
         )
     except ChannelNotFoundError as exc:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail=str(exc)) from exc
-    except McapAccessError as exc:
+    except (McapAccessError, ValueError) as exc:
         raise HTTPException(status_code=HTTP_STATUS_BAD_REQUEST, detail=str(exc)) from exc
     if frame is None:
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
             detail=(
                 f"No frame at keyframe timestamp {frame_query.keyframe_timestamp_ns} "
-                f"on channel {frame_query.channel_id} of "
+                f"and log time {frame_query.log_time_ns} on channel {frame_query.channel_id} of "
                 f"recording {recording_id} in dataset {dataset_id}."
             ),
         )
@@ -103,7 +114,7 @@ def get_camera_frame(
         content=frame.data,
         media_type=frame.media_type,
         headers={
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": "public, max-age=604800",
             "Content-Length": str(len(frame.data)),
             "ETag": etag,
             "X-Frame-Log-Time-Ns": str(frame.log_time_ns),

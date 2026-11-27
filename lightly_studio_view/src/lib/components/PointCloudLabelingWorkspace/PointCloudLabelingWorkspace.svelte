@@ -1,232 +1,47 @@
 <script lang="ts">
-    import { Pane, PaneGroup, PaneResizer } from 'paneforge';
-    import WorkspaceHeader from './WorkspaceHeader/WorkspaceHeader.svelte';
-    import WorkspaceFilterBar from './WorkspaceFilterBar/WorkspaceFilterBar.svelte';
-    import ToolRail from './ToolRail/ToolRail.svelte';
-    import SceneViewport from './SceneViewport/SceneViewport.svelte';
-    import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
-    import PointCloudRightSidePanel from './PointCloudRightSidePanel';
-    import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
-    import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
-    import type { WorkspaceCrumb } from './types';
-    import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
-    import { usePointCloudTickNavigation } from './usePointCloudTickNavigation.svelte';
+    import { Toaster } from 'svelte-sonner';
+    import type { WorkspaceOptions } from './workspaceOptions';
+    import { createWorkspaceController } from './createWorkspaceController.svelte';
+    import { providePointCloudWorkspaceLayoutContext } from './pointCloudWorkspaceLayoutContext.svelte';
+    import { providePortalTarget } from '$lib/contexts/PortalTarget';
+    import { cn } from '$lib/utils';
+    import WorkspaceChrome from './WorkspaceChrome/WorkspaceChrome.svelte';
+    import WorkspaceFullscreenBar from './WorkspaceFullscreenBar/WorkspaceFullscreenBar.svelte';
+    import WorkspacePanels from './WorkspacePanels/WorkspacePanels.svelte';
+    import WorkspaceClassDialog from './WorkspaceClassDialog/WorkspaceClassDialog.svelte';
 
-    /**
-     * Feature-gated, lazy-loaded shell for browser-side point-cloud labeling (LIG-10659).
-     *
-     * Layout, top to bottom: source breadcrumb, fast-filter strip, then a working column whose 3D
-     * viewport takes the full width and most of the height, with the camera/projection strip
-     * beneath it and the frame timeline at the bottom. Annotations stay in a resizable right pane,
-     * and the tool rail floats over the viewport rather than taking a column of its own.
-     *
-     * Loads the selected LiDAR payloads for the active tick and renders them in the 3D scene.
-     */
-    interface Props {
-        /** Dataset the labeled point-cloud sequence belongs to. */
-        datasetId: string;
-        /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
-        sequenceId: string;
-        /** 1-based tick to open on (from the route hash); defaults to the first frame. */
-        tickNumber?: number;
-        /** Reports the active tick as a 1-based number for route synchronization. */
-        onTickChange?: (tickNumber: number) => void;
-        /** Dataset -> collection -> sample path of the point cloud being labeled. */
-        sourcePath?: readonly WorkspaceCrumb[];
-        /** Optional status override for tests and stories. */
-        status?: 'unsupported' | 'empty' | 'error';
-        onRetry?: () => void;
-    }
-
-    let {
-        datasetId,
-        sequenceId,
-        tickNumber = 1,
-        onTickChange = () => undefined,
-        sourcePath = [],
-        status,
-        onRetry
-    }: Props = $props();
-
-    let selectedLidarChannels = $state<number[] | null>(null);
-    let selectedCameraChannels = $state<number[]>([]);
-
-    const workspace = createPointCloudWorkspaceContext(() => ({
-        datasetId,
-        sequenceId,
-        selectedLidarChannels: selectedLidarChannels ?? undefined,
-        // The hash tick is 1-based; the transport tracks 0-based seq numbers.
-        initialTick: tickNumber - 1,
-        statusOverride: status
-    }));
-    const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } =
-        usePointCloudTickNavigation({
-            workspace,
-            getTickNumber: () => tickNumber,
-            getOnTickChange: () => onTickChange
-        });
-    let selectedCuboidId = $state<string | null>(null);
-
-    let containerEl = $state<HTMLDivElement | undefined>(undefined);
-    let isFullscreen = $state(false);
-
-    const lidarChannels = $derived(workspace.lidarChannels);
-    const cameraChannels = $derived(workspace.cameraChannels);
-
-    const toggleChannel = (selected: number[], channelId: number): number[] =>
-        selected.includes(channelId)
-            ? selected.filter((id) => id !== channelId)
-            : [...selected, channelId];
-
-    const handleFullscreenChange = () => {
-        isFullscreen = document.fullscreenElement === containerEl;
-    };
-
-    const toggleFullscreen = async () => {
-        if (!containerEl) return;
-        if (document.fullscreenElement) {
-            await document.exitFullscreen();
-        } else {
-            await containerEl.requestFullscreen();
-        }
-    };
-
-    $effect(() => {
-        if (!datasetId || !sequenceId) return;
-        selectedLidarChannels = null;
-    });
-
-    $effect(() => {
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    });
+    let options: WorkspaceOptions = $props();
+    const controller = createWorkspaceController(() => options);
+    providePointCloudWorkspaceLayoutContext(controller.getLayout, controller);
+    providePortalTarget(() => controller.fullscreen.portalTarget);
+    const isFullscreen = $derived(controller.fullscreen.isFullscreen);
 </script>
 
+<svelte:window onkeydown={controller.playback.handleWindowKeydown} />
+<!-- In fullscreen, the workspace takes the page background and card layout of the app. -->
 <div
-    bind:this={containerEl}
-    class="flex h-full min-h-0 w-full min-w-0 flex-col"
+    bind:this={controller.fullscreen.containerEl}
+    class={cn(
+        'flex h-full min-h-0 w-full min-w-0 flex-col',
+        isFullscreen && 'bg-background text-foreground dark:bg-black'
+    )}
     data-testid="point-cloud-labeling-workspace"
 >
-    <WorkspaceHeader
-        {sequenceId}
-        {sourcePath}
-        {isFullscreen}
-        onToggleFullscreen={toggleFullscreen}
-    />
-    <WorkspaceFilterBar
-        referenceFrames={workspace.referenceFrames}
-        referenceFrameId={workspace.referenceFrameId}
-        onSelectReferenceFrame={workspace.selectReferenceFrame}
-        isShowingSensorFrames={workspace.isShowingSensorFrames}
-        {lidarChannels}
-        {cameraChannels}
-        selectedLidarChannels={selectedLidarChannels ??
-            lidarChannels.map((channel) => channel.channel_id)}
-        {selectedCameraChannels}
-        onToggleLidarChannel={(channelId) =>
-            (selectedLidarChannels = toggleChannel(
-                selectedLidarChannels ?? lidarChannels.map((channel) => channel.channel_id),
-                channelId
-            ))}
-        onToggleCameraChannel={(channelId) =>
-            (selectedCameraChannels = toggleChannel(selectedCameraChannels, channelId))}
-    />
-    <div class="flex min-h-0 flex-1">
-        {#if workspace.status === 'unsupported' || workspace.status === 'error'}
-            <WorkspaceStatusPanel status={workspace.status} onRetry={onRetry ?? workspace.retry} />
-        {:else}
-            <PaneGroup direction="horizontal" class="min-h-0 flex-1">
-                <Pane defaultSize={78} minSize={50} class="flex min-h-0 flex-col">
-                    <PaneGroup direction="vertical" class="min-h-0 flex-1">
-                        <!-- The point cloud dominates: full width of the working column. -->
-                        <Pane defaultSize={62} minSize={30} class="relative min-h-0">
-                            <ToolRail />
-                            {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
-                                <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
-                            {:else if workspace.status === 'empty'}
-                                <WorkspaceStatusPanel status="empty" />
-                            {:else if workspace.cloudPointFrame.data}
-                                <SceneViewport
-                                    batch={workspace.cloudPointFrame.data.batch}
-                                    colorMode={workspace.cloudPointFrame.data.batch.colors
-                                        ? 'rgb'
-                                        : 'intensity'}
-                                    pointCloudBounds={workspace.cloudPointFrame.data.bounds ??
-                                        undefined}
-                                />
-                            {:else if workspace.status === 'loading' || workspace.tickDetails.isLoading || workspace.cloudPointFrame.isLoading}
-                                <WorkspaceStatusPanel status="loading" />
-                            {:else}
-                                <WorkspaceStatusPanel status="empty" />
-                            {/if}
-                        </Pane>
-                        <PaneResizer
-                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
-                        >
-                            <div
-                                class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
-                            >
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                            </div>
-                        </PaneResizer>
-                        <!-- Cameras and orthographic projections sit directly under the cloud. -->
-                        <Pane defaultSize={22} minSize={12} maxSize={45} class="min-h-0">
-                            <CameraProjectionStrip
-                                {datasetId}
-                                {sequenceId}
-                                seqNumber={workspace.currentTick}
-                                displayFrameId={workspace.referenceFrameId}
-                            />
-                        </Pane>
-                        <PaneResizer
-                            class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
-                        >
-                            <div
-                                class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
-                            >
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                                <span class="size-1 rounded-full bg-muted-foreground"></span>
-                            </div>
-                        </PaneResizer>
-                        <Pane defaultSize={16} minSize={10} maxSize={40} class="min-h-0">
-                            <FrameTimeline
-                                ticks={workspace.ticks}
-                                currentTick={workspace.currentTick}
-                                isPlaying={workspace.isPlaying}
-                                playbackIntervalMs={workspace.playbackIntervalMs}
-                                lidarChannelNames={lidarChannels.map(
-                                    (channel) => channel.group_component_name
-                                )}
-                                cameraChannelNames={cameraChannels.map(
-                                    (channel) => channel.group_component_name
-                                )}
-                                onPreviousFrame={goToPreviousFrame}
-                                onNextFrame={goToNextFrame}
-                                onPlayToggle={togglePlayback}
-                                onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
-                                onSelectTick={goToFrame}
-                            />
-                        </Pane>
-                    </PaneGroup>
-                </Pane>
-                <PaneResizer
-                    class="group relative flex w-2 cursor-col-resize items-center justify-center bg-card transition-colors hover:bg-card"
-                >
-                    <div
-                        class="flex flex-col gap-0.5 opacity-40 transition-opacity group-hover:opacity-100"
-                    >
-                        <span class="size-1 rounded-full bg-muted-foreground"></span>
-                        <span class="size-1 rounded-full bg-muted-foreground"></span>
-                        <span class="size-1 rounded-full bg-muted-foreground"></span>
-                    </div>
-                </PaneResizer>
-                <Pane defaultSize={22} minSize={16} maxSize={40}>
-                    <PointCloudRightSidePanel bind:selectedCuboidId />
-                </Pane>
-            </PaneGroup>
-        {/if}
+    {#if isFullscreen}
+        <WorkspaceFullscreenBar />
+    {/if}
+    <div
+        class={cn(
+            'flex min-h-0 min-w-0 flex-1 flex-col',
+            isFullscreen && 'mx-4 mb-4 rounded-[1vw] bg-card px-4 py-2'
+        )}
+    >
+        <WorkspaceChrome />
+        <WorkspacePanels />
     </div>
+    <WorkspaceClassDialog />
+    <!-- The app toaster is outside the fullscreen element, so the browser does not show it. -->
+    {#if isFullscreen}
+        <Toaster richColors />
+    {/if}
 </div>

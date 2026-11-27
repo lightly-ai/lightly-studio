@@ -10,6 +10,22 @@ describe('ObjectDetectionConfigFields', () => {
         expect(screen.getByTestId('iou-threshold-value')).toHaveTextContent('0.50');
     });
 
+    it('explains overlap matching with concise guidance', () => {
+        render(ObjectDetectionConfigFields);
+        expect(screen.getByText('← Less overlap')).toBeInTheDocument();
+        expect(screen.getByText('More overlap →')).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                'How much a prediction must overlap the ground truth to count as a match.'
+            )
+        ).toBeInTheDocument();
+        expect(screen.getByText('Minimum overlap (IoU)')).toBeInTheDocument();
+        expect(screen.getByRole('switch', { name: 'Require the same class' })).toBeChecked();
+        expect(screen.getByRole('switch')).toHaveAccessibleDescription(
+            'A predicted car must match a car.'
+        );
+    });
+
     it('exposes the IoU slider bounds and step', () => {
         render(ObjectDetectionConfigFields, { props: { iouThreshold: 0.45 } });
 

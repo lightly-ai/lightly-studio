@@ -9,6 +9,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
 from PIL import Image
 from pytest_mock import MockerFixture
 
@@ -82,7 +83,7 @@ def test_start_gui__with_samples(
     mock_server_instance = mock_server.return_value
 
     # This should not raise an error
-    start_gui()
+    start_gui(open_browser=False)
 
     # Verify that the server was created with None defaults (env fallback is in Server)
     mock_server.assert_called_once_with(host=None, port=None)
@@ -103,17 +104,39 @@ def test_start_gui__with_explicit_host_port(
 
     mock_server = mocker.patch.object(start_gui_module, "Server")
 
-    start_gui(host="0.0.0.0", port=9999)
+    start_gui(host="0.0.0.0", port=9999, open_browser=False)
 
     mock_server.assert_called_once_with(host="0.0.0.0", port=9999)
 
 
-def test_start_gui__opens_browser_when_ready(
+def test_start_gui__returns_on_keyboard_interrupt(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
 ) -> None:
-    """Test that start_gui opens the browser once the server is ready, when requested."""
+    """Test that start_gui returns normally when uvicorn raises SIGINT after shutdown."""
+    image_path = tmp_path / "sample.jpg"
+    Image.new("RGB", (10, 10)).save(image_path)
+
+    dataset = ImageDataset.create("test_dataset")
+    dataset.add_images_from_path(path=tmp_path)
+
+    mock_server = mocker.patch.object(start_gui_module, "Server")
+    mock_uvicorn_server = mock_server.return_value.create_uvicorn_server.return_value
+    mock_uvicorn_server.run.side_effect = KeyboardInterrupt
+
+    server = start_gui(open_browser=False)
+
+    mock_uvicorn_server.run.assert_called_once_with()
+    assert server is mock_server.return_value
+
+
+def test_start_gui__opens_browser_by_default(
+    mocker: MockerFixture,
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    """Test that the browser opens when start_gui is called without arguments."""
     image_path = tmp_path / "sample.jpg"
     Image.new("RGB", (10, 10)).save(image_path)
 
@@ -128,7 +151,7 @@ def test_start_gui__opens_browser_when_ready(
     mock_open = mocker.patch.object(webbrowser, "open")
 
     threading.Timer(interval=0.3, function=stop_event.set).start()
-    start_gui(open_browser=True)
+    start_gui_module.start_gui()
 
     mock_open.assert_called_once_with("http://127.0.0.1:8001")
 
@@ -160,12 +183,12 @@ def test_start_gui__stops_polling_when_startup_aborts(
     mock_open.assert_not_called()
 
 
-def test_start_gui__does_not_open_browser_by_default(
+def test_start_gui__does_not_open_browser_when_disabled(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
 ) -> None:
-    """Test that start_gui does not open the browser unless open_browser is True."""
+    """Test that start_gui does not open the browser when open_browser is False."""
     image_path = tmp_path / "sample.jpg"
     Image.new("RGB", (10, 10)).save(image_path)
 
@@ -179,7 +202,7 @@ def test_start_gui__does_not_open_browser_by_default(
     mock_open = mocker.patch.object(webbrowser, "open")
 
     threading.Timer(interval=0.3, function=stop_event.set).start()
-    start_gui()
+    start_gui(open_browser=False)
 
     mock_open.assert_not_called()
 
@@ -189,7 +212,7 @@ def test_start_gui__no_datasets(
 ) -> None:
     """Test that start_gui raises an error when no datasets exist."""
     with pytest.raises(ValueError, match="No datasets found"):
-        start_gui()
+        start_gui(open_browser=False)
 
 
 def test_start_gui__empty_datasets(
@@ -207,7 +230,18 @@ def test_start_gui__empty_datasets(
     )
 
     with pytest.raises(ValueError, match="No images have been indexed"):
-        start_gui()
+        start_gui(open_browser=False)
+
+
+@pytest.mark.usefixtures("patch_collection")
+def test_serve_app(mocker: MockerFixture) -> None:
+    """Test that serve_app serves the given app and starts without samples."""
+    custom_app = FastAPI()
+    mock_server = mocker.patch.object(start_gui_module, "Server")
+
+    start_gui_module.serve_app(app=custom_app, open_browser=False)
+
+    mock_server.assert_called_once_with(host=None, port=None, app=custom_app)
 
 
 def test_start_gui_background(

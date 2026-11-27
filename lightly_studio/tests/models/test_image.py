@@ -139,7 +139,6 @@ class TestImageView:
         assert len(image_view.tags) == 1
         assert image_view.tags[0].tag_id == tag.tag_id
         assert image_view.tags[0].name == "outdoor"
-        assert image_view.tags[0].kind == "sample"
 
     def test_from_image_table__with_all_relationships(self, db_session: Session) -> None:
         """Test conversion with all relationships populated."""

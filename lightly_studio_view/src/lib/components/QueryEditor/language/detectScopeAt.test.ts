@@ -41,4 +41,34 @@ describe('detectScopeAt', () => {
         const offset = text.lastIndexOf('width') + 2;
         expect(detectScopeAt(text, offset)).toBe('image');
     });
+    it.each([
+        { text: '# classification(\nwidth', scope: 'image' },
+        { text: 'frame(', scope: 'image' },
+        { text: 'video: object_detection(frame(', scope: 'object_detection' },
+        { text: 'video: (frame(', scope: 'frame' },
+        { text: 'video: frame(NOT (classification(source = "model") OR ', scope: 'frame' },
+        { text: 'video: frame(object_detection(', scope: 'object_detection' },
+        { text: 'event(', scope: 'image' },
+        { text: 'video: frame(event(', scope: 'frame' },
+        { text: 'video: (event((start_time_s', scope: 'event' },
+        { text: '# note\nvideo: fps', scope: 'video' },
+        { text: 'classification(# )\nclass_name', scope: 'classification' },
+        { text: 'file_name = "#classification(" AND width', scope: 'image' }
+    ])('resolves $text to $scope scope', ({ text, scope }) => {
+        expect(detectScopeAt(text, text.length)).toBe(scope);
+    });
 });
+
+it('tracks evaluation scope through nested parentheses and returns to sample scope', () => {
+    const text = 'sample_evaluation(name = "run(1)" AND ("tp" > 0 OR "fn" > 0)) AND width > 1';
+    expect(detectScopeAt(text, text.indexOf('fn'))).toBe('sample_evaluation');
+    expect(detectScopeAt(text, text.indexOf('width'))).toBe('image');
+});
+
+it.each(['"score)', "'score)", '"classification(', '"score\\")'])(
+    'ignores scope tokens in unfinished metric %s',
+    (metric) => {
+        const text = `sample_evaluation(name = "run1" AND ${metric}`;
+        expect(detectScopeAt(text, text.length)).toBe('sample_evaluation');
+    }
+);

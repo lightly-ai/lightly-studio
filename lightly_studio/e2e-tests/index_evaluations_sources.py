@@ -28,6 +28,7 @@ from lightly_studio.core.annotation.annotation_create import (
 )
 from lightly_studio.database import db_manager
 from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.transport import active_transport
 
 env = Env()
 env.read_env()
@@ -76,6 +77,10 @@ def main() -> None:
     dataset.add_images_from_path(path=IMAGES_PATH)
     samples = list(dataset)
     rng = random.Random(RANDOM_SEED)
+    labels = active_transport.get_transport().annotations.get_or_create_labels(
+        dataset_id=dataset.dataset_id, label_names=CLASS_NAMES
+    )
+    label_ids = {label.annotation_label_name: label.annotation_label_id for label in labels}
 
     # --- Object-detection sources: a box per image; the prediction box is
     #     shifted so GT and prediction partially overlap. ---
@@ -89,9 +94,7 @@ def main() -> None:
             CreateObjectDetection(
                 class_name=class_name, x=gt_x, y=gt_y, width=gt_w, height=gt_h
             ).to_annotation_create(
-                session=dataset.session,
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=sample.sample_id,
+                annotation_label_id=label_ids[class_name], parent_sample_id=sample.sample_id
             )
         )
         object_detection_pred.append(
@@ -103,9 +106,7 @@ def main() -> None:
                 height=pred_h,
                 confidence=rng.uniform(0.5, 1.0),
             ).to_annotation_create(
-                session=dataset.session,
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=sample.sample_id,
+                annotation_label_id=label_ids[class_name], parent_sample_id=sample.sample_id
             )
         )
 
@@ -126,21 +127,19 @@ def main() -> None:
     classification_gt = []
     classification_pred = []
     for sample in samples:
+        gt_class_name = rng.choice(CLASS_NAMES)
+        pred_class_name = rng.choice(CLASS_NAMES)
         classification_gt.append(
-            CreateClassification(class_name=rng.choice(CLASS_NAMES)).to_annotation_create(
-                session=dataset.session,
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=sample.sample_id,
+            CreateClassification(class_name=gt_class_name).to_annotation_create(
+                annotation_label_id=label_ids[gt_class_name], parent_sample_id=sample.sample_id
             )
         )
         classification_pred.append(
             CreateClassification(
-                class_name=rng.choice(CLASS_NAMES),
+                class_name=pred_class_name,
                 confidence=rng.uniform(0.5, 1.0),
             ).to_annotation_create(
-                session=dataset.session,
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=sample.sample_id,
+                annotation_label_id=label_ids[pred_class_name], parent_sample_id=sample.sample_id
             )
         )
 
@@ -170,9 +169,7 @@ def main() -> None:
                 class_name=class_name,
                 binary_mask=gt_mask,
             ).to_annotation_create(
-                session=dataset.session,
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=sample.sample_id,
+                annotation_label_id=label_ids[class_name], parent_sample_id=sample.sample_id
             )
         )
         segmentation_pred.append(
@@ -181,9 +178,7 @@ def main() -> None:
                 binary_mask=pred_mask,
                 confidence=rng.uniform(0.5, 1.0),
             ).to_annotation_create(
-                session=dataset.session,
-                dataset_id=dataset.dataset_id,
-                parent_sample_id=sample.sample_id,
+                annotation_label_id=label_ids[class_name], parent_sample_id=sample.sample_id
             )
         )
 
@@ -204,7 +199,7 @@ def main() -> None:
         f"Created dataset '{DATASET_NAME}' with {len(samples)} images and gt/pred sources for "
         "object detection, classification, and semantic segmentation."
     )
-    ls.start_gui()
+    ls.start_gui(open_browser=False)
 
 
 if __name__ == "__main__":

@@ -14,10 +14,6 @@ until you do.
 
 from __future__ import annotations
 
-import logging
-import shutil
-import tempfile
-from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import or_
@@ -25,12 +21,14 @@ from sqlmodel import Session, col, delete, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_manager
+from lightly_studio.export import export_artifact
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
@@ -40,8 +38,11 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.dynamic_transform import DynamicTransformTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.export_job import ExportJobTable
@@ -75,8 +76,6 @@ from lightly_studio.resolvers.dataset_resolver import table_coverage_utils
 # runs entirely server-side with bounded memory regardless of dataset size.
 _DELETE_EXECUTION_OPTIONS = {"synchronize_session": False}
 
-logger = logging.getLogger(__name__)
-
 
 def delete_dataset(
     session: Session,
@@ -107,10 +106,12 @@ def delete_dataset(
     # 1. Tables that reference annotation_base.
     _delete_object_detection_annotations(session=session, dataset_id=dataset_id)
     _delete_segmentation_annotations(session=session, dataset_id=dataset_id)
+    _delete_polygon_annotations(session=session, dataset_id=dataset_id)
     _delete_cuboid_3d_annotations(session=session, dataset_id=dataset_id)
     _delete_temporal_spans(session=session, dataset_id=dataset_id)
     _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
     _delete_evaluation_annotation_metrics(session=session, dataset_id=dataset_id)
+    _delete_evaluation_class_metrics(session=session, dataset_id=dataset_id)
 
     # 2. annotation_base and the sample link tables.
     _delete_annotation_base(session=session, dataset_id=dataset_id)
@@ -132,9 +133,10 @@ def delete_dataset(
     _delete_groups(session=session, dataset_id=dataset_id)
     # Must precede recordings and mcap_group_component_definitions, both deleted in step 5
     # (sensor_calibration FKs to recording_id and to mcap_group_component_definition.collection_id;
-    # static_transform FKs to recording_id only).
+    # static_transform and dynamic_transform FK to recording_id only).
     _delete_sensor_calibrations(session=session, dataset_id=dataset_id)
     _delete_static_transforms(session=session, dataset_id=dataset_id)
+    _delete_dynamic_transforms(session=session, dataset_id=dataset_id)
     # Must precede sequences (McapGroupSequenceTable.sample_id -> SequenceTable) and
     # recordings, deleted in step 5 (McapGroupSequenceTable.recording_id -> RecordingTable).
     _delete_mcap_group_sequences(session=session, dataset_id=dataset_id)
@@ -218,12 +220,17 @@ def _delete_sample_sequence_links(session: Session, dataset_id: UUID) -> None:
 
 
 def _delete_sample_embeddings(session: Session, dataset_id: UUID) -> None:
-    """Delete sample embeddings for the dataset's samples."""
+    """Delete sample embeddings and saved plots for the dataset."""
     session.exec(
         delete(SampleEmbeddingTable).where(
             col(SampleEmbeddingTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+    session.exec(
+        delete(EmbeddingPlotTable)
+        .where(col(EmbeddingPlotTable.collection_id).in_(_collection_ids_subquery(dataset_id)))
+        .execution_options(**_DELETE_EXECUTION_OPTIONS)
     )
 
 
@@ -252,6 +259,16 @@ def _delete_segmentation_annotations(session: Session, dataset_id: UUID) -> None
     session.exec(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_polygon_annotations(session: Session, dataset_id: UUID) -> None:
+    """Delete polygon annotation details for the dataset's samples."""
+    session.exec(
+        delete(PolygonAnnotationTable).where(
+            col(PolygonAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
@@ -361,6 +378,16 @@ def _delete_static_transforms(session: Session, dataset_id: UUID) -> None:
     session.exec(
         delete(StaticTransformTable).where(
             col(StaticTransformTable.recording_id).in_(_recording_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_dynamic_transforms(session: Session, dataset_id: UUID) -> None:
+    """Delete dynamic transform rows for the dataset's recordings."""
+    session.exec(
+        delete(DynamicTransformTable).where(
+            col(DynamicTransformTable.recording_id).in_(_recording_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
@@ -518,6 +545,25 @@ def _delete_evaluation_annotation_metrics(session: Session, dataset_id: UUID) ->
     )
 
 
+def _delete_evaluation_class_metrics(session: Session, dataset_id: UUID) -> None:
+    """Delete evaluation class metrics for the given dataset."""
+    run_ids_subquery = (
+        select(EvaluationRunTable.id)
+        .join(
+            CollectionTable,
+            col(EvaluationRunTable.gt_annotation_collection_id)
+            == col(CollectionTable.collection_id),
+        )
+        .where(col(CollectionTable.dataset_id) == dataset_id)
+    )
+    session.exec(
+        delete(EvaluationClassMetricTable).where(
+            col(EvaluationClassMetricTable.evaluation_run_id).in_(run_ids_subquery)
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
 def _delete_evaluation_runs(session: Session, dataset_id: UUID) -> None:
     """Delete evaluation runs for the given dataset."""
     session.exec(
@@ -538,42 +584,13 @@ def _delete_export_jobs(session: Session, dataset_id: UUID) -> None:
         )
     ).all()
     for export_path in export_paths:
-        _remove_export_artifact(export_path)
+        export_artifact.remove_export_artifact(export_path=export_path)
     session.exec(
         delete(ExportJobTable).where(
             col(ExportJobTable.collection_id).in_(_collection_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
-
-
-def _remove_export_artifact(export_path: str) -> None:
-    """Best-effort removal of an export job's on-disk artifact.
-
-    Every ``export_path`` is generated under the system temp directory (see
-    ``lightly_studio.api.routes.api.export``); paths outside of it are left untouched rather than
-    removed, since they cannot be confirmed to be export-owned.
-
-    Args:
-        export_path: Absolute path to the export job's file or directory.
-    """
-    resolved_path = Path(export_path).resolve()
-    temp_dir = Path(tempfile.gettempdir()).resolve()
-    try:
-        relative_path = resolved_path.relative_to(temp_dir)
-    except ValueError:
-        logger.warning("Skipping export artifact outside the temp directory: %s", export_path)
-        return
-    if relative_path == Path():
-        # Equality is not raised by `relative_to`; reject the temp directory root itself.
-        logger.warning(
-            "Skipping export artifact that is the temp directory itself: %s", export_path
-        )
-        return
-    if resolved_path.is_dir():
-        shutil.rmtree(resolved_path, ignore_errors=True)
-    else:
-        resolved_path.unlink(missing_ok=True)
 
 
 def _delete_collections(session: Session, dataset_id: UUID) -> None:

@@ -31,6 +31,18 @@ describe('McapSequenceGridItem', () => {
         expect(getByTestId('mcap-sequence-frame-count').textContent?.trim()).toBe('+4');
     });
 
+    it('shows the similarity score only during a search', () => {
+        const { queryByText } = render(McapSequenceGridItem, { props: defaultProps });
+
+        expect(queryByText('0.87')).not.toBeInTheDocument();
+
+        const { getByText } = render(McapSequenceGridItem, {
+            props: { ...defaultProps, similarityScore: 0.8712 }
+        });
+
+        expect(getByText('0.87')).toBeInTheDocument();
+    });
+
     it('renders an img with the camera-frame URL when sequenceFrame is provided', () => {
         const sequenceFrame = {
             dataset_id: 'ds-recording',

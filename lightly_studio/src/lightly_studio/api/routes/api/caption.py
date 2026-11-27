@@ -98,7 +98,8 @@ def create_caption(
             ),
         ],
     )
-    assert len(sample_ids) == 1, "Expected exactly one caption to be created."
+    if len(sample_ids) != 1:
+        raise RuntimeError("Expected exactly one caption to be created.")
 
     # Fetch and return the created caption
     return caption_resolver.get_by_ids(session=session, sample_ids=sample_ids)[0]

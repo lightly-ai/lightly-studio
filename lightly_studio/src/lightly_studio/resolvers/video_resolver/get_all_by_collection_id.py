@@ -365,6 +365,8 @@ def _get_load_options() -> list[LoaderOption]:
                 joinedload(AnnotationBaseTable.annotation_label),
                 joinedload(AnnotationBaseTable.object_detection_details),
                 joinedload(AnnotationBaseTable.segmentation_details),
+                joinedload(AnnotationBaseTable.polygon_details),
+                joinedload(AnnotationBaseTable.cuboid_3d_details),
                 selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
             ),
         ),
@@ -377,6 +379,7 @@ def _get_load_options() -> list[LoaderOption]:
             # to join object_detection_details or segmentation_details here.
             selectinload(SampleTable.annotations).options(
                 joinedload(AnnotationBaseTable.annotation_label),
+                joinedload(AnnotationBaseTable.cuboid_3d_details),
                 selectinload(AnnotationBaseTable.sample).options(selectinload(SampleTable.tags)),
             ),
         ),

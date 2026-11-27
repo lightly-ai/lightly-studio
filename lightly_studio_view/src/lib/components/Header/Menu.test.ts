@@ -92,3 +92,11 @@ describe('Split dataset menu', () => {
         }
     );
 });
+
+describe('Export menu', () => {
+    it('is shown for sequence (MCAP) collections', async () => {
+        render(Menu, { collection: { ...collection, sample_type: 'sequence' } });
+        await openMenu();
+        expect(screen.getByTestId('menu-export')).toBeInTheDocument();
+    });
+});

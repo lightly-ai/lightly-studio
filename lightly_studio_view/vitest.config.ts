@@ -14,6 +14,8 @@ export default defineConfig({
         globals: true,
         environment: 'jsdom',
         setupFiles: ['src/setupTests.ts'],
+        // Worker threads start faster than the default child processes.
+        pool: 'threads',
         // The point-cloud workspace test dynamically imports a Three.js-heavy module
         // (~1s alone); under a loaded machine the default 5s timeout starves it and
         // drags lighter userEvent tests past the limit too. Widen it to stay stable.

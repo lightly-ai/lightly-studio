@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,12 +12,14 @@ from uuid import UUID
 import numpy as np
 from sqlmodel import Session
 
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
     AnnotationType,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
@@ -28,13 +30,14 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
 )
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.mcap import McapCreate, McapTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
 )
-from lightly_studio.models.tag import TagCreate, TagKind, TagTable
+from lightly_studio.models.tag import TagCreate, TagTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -42,9 +45,11 @@ from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     collection_resolver,
     embedding_model_resolver,
+    embedding_plot_resolver,
     group_resolver,
     image_resolver,
     mcap_resolver,
+    metadata_resolver,
     sample_embedding_resolver,
     tag_resolver,
 )
@@ -126,7 +131,6 @@ def create_tag(
     session: Session,
     collection_id: UUID,
     tag_name: str = "example_tag",
-    kind: TagKind = "sample",
 ) -> TagTable:
     """Helper function to create a tag."""
     return tag_resolver.create(
@@ -134,7 +138,6 @@ def create_tag(
         tag=TagCreate(
             collection_id=collection_id,
             name=tag_name,
-            kind=kind,
             description="example description",
         ),
     )
@@ -163,6 +166,28 @@ def create_image(
     image = image_resolver.get_by_id(session=session, sample_id=sample_ids[0])
     assert image is not None
     return image
+
+
+def create_image_with_metadata(  # noqa: PLR0913
+    session: Session,
+    collection_id: UUID,
+    metadata: Mapping[str, Any],
+    file_path_abs: str = "/path/to/sample1.png",
+    width: int = 1920,
+    height: int = 1080,
+) -> ImageSample:
+    """Create an image sample and set its metadata."""
+    image = create_image(
+        session=session,
+        collection_id=collection_id,
+        file_path_abs=file_path_abs,
+        width=width,
+        height=height,
+    )
+    metadata_resolver.bulk_update_metadata(
+        session=session, sample_metadata=[(image.sample_id, metadata)]
+    )
+    return ImageSample(inner=image)
 
 
 def create_mcap(  # noqa: PLR0913
@@ -272,6 +297,7 @@ def create_annotation(  # noqa: PLR0913
     annotation_data: dict[str, Any] | None = None,
     annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
     annotation_collection_name: str | None = None,
+    polygons: Polygons | None = None,
 ) -> AnnotationBaseTable:
     """Helper function to create an annotation."""
     annotation_data_default = {
@@ -292,6 +318,7 @@ def create_annotation(  # noqa: PLR0913
                 parent_sample_id=sample_id,
                 annotation_label_id=annotation_label_id,
                 annotation_type=annotation_type,
+                polygons=polygons,
                 **(annotation_data),
             )
         ],
@@ -317,6 +344,7 @@ class AnnotationDetails:
         width: Width of the annotation.
         height: Height of the annotation.
         segmentation_mask: Segmentation mask for segmentation annotations.
+        polygons: Polygon parts for polygon annotations.
         object_track_id: Optional object track id.
         start_time_s: Optional temporal span start time in seconds.
         end_time_s: Optional temporal span end time in seconds.
@@ -331,6 +359,7 @@ class AnnotationDetails:
     width: int = 20
     height: int = 20
     segmentation_mask: list[int] | None = None
+    polygons: Polygons | None = None
     object_track_id: UUID | None = None
     start_time_s: float | None = None
     end_time_s: float | None = None
@@ -360,6 +389,7 @@ def create_annotations(
             annotation_type=annotation.annotation_type,
             object_track_id=annotation.object_track_id,
             segmentation_mask=annotation.segmentation_mask,
+            polygons=annotation.polygons,
             confidence=annotation.confidence,
             x=annotation.x,
             y=annotation.y,
@@ -377,6 +407,28 @@ def create_annotations(
         collection_name=collection_name,
     )
     return list(annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids))
+
+
+def create_source_annotations(
+    session: Session, image: ImageTable, source_name: str, count: int
+) -> list[AnnotationBaseTable]:
+    """Create count boxes on the image in the named annotation source.
+
+    The boxes get a new annotation class with the name of the source.
+    """
+    collection_id = image.sample.collection_id
+    label = create_annotation_label(
+        session=session, root_collection_id=collection_id, label_name=source_name
+    )
+    details = AnnotationDetails(
+        sample_id=image.sample_id, annotation_label_id=label.annotation_label_id
+    )
+    return create_annotations(
+        session=session,
+        collection_id=collection_id,
+        annotations=[details] * count,
+        collection_name=source_name,
+    )
 
 
 def create_embedding_model(
@@ -577,3 +629,24 @@ def fill_db_with_video_samples_and_embeddings(
                 embedding=[i] * embedding_dimension,
             )
     return collection.collection_id
+
+
+def create_saved_plot(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    coordinates: dict[UUID, tuple[float, float]],
+) -> list[UUID]:
+    """Save fixed plot coordinates and return their aligned sample IDs."""
+    sample_ids = list(coordinates)
+    x, y = zip(*coordinates.values())
+    session.merge(
+        EmbeddingPlotTable(
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            is_dirty=False,
+            data=embedding_plot_resolver.encode(x=x, y=y, sample_ids=sample_ids),
+        )
+    )
+    session.commit()
+    return sample_ids

@@ -48,8 +48,15 @@ it('loads boundaries, clears them on size changes, and reports failures', async 
     expect(load).toHaveBeenLastCalledWith({ imageUrl: 'a', level: 'fine' });
     expect(view.getByRole('status')).toHaveTextContent('computing');
     expect(view.queryByRole('img')).not.toBeInTheDocument();
-    pending.reject(new Error('load failed'));
+    const error = new Error('load failed');
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    pending.reject(error);
     await waitFor(() => expect(view.getByRole('status')).toHaveTextContent('error'));
+    expect(log).toHaveBeenCalledWith('AI-assisted labeling computation failed', {
+        level: 'fine',
+        error
+    });
+    log.mockRestore();
 });
 
 it.each(['resolve', 'reject'] as const)(

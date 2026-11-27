@@ -1,0 +1,73 @@
+import { expect, test } from '../utils';
+import type { Page } from '@playwright/test';
+
+async function reachImageStep(page: Page) {
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    await expect(page.getByText('Browse your collection', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    // Tag assign step — skip if visible
+    if (await page.getByText('Tag your images', { exact: true }).isVisible()) {
+        await page.getByRole('button', { name: 'Next', exact: true }).click();
+    }
+    // Menu step — skip if visible
+    if (await page.getByText('Run actions on your data', { exact: true }).isVisible()) {
+        await page.getByRole('button', { name: 'Next', exact: true }).click();
+    }
+    // Edit annotations step — skip if visible
+    if (
+        await page
+            .locator('#driver-popover-title')
+            .getByText('Edit annotations', { exact: true })
+            .isVisible()
+    ) {
+        await page.getByRole('button', { name: 'Next', exact: true }).click();
+    }
+    // Embedding step — skip if visible
+    if (await page.getByText('Explore the embedding space', { exact: true }).isVisible()) {
+        await page.getByRole('button', { name: 'Next', exact: true }).click();
+    }
+    await expect(page.getByText('Open an image', { exact: true })).toBeVisible();
+}
+
+test('image tour follows a double-click into sample details', async ({ page }) => {
+    // No navigation click: the tour invitation's backdrop can cover the menu.
+    await page.goto('/');
+    await expect(page.getByTestId('sample-grid-item').first()).toBeVisible();
+
+    await expect(page.getByRole('complementary', { name: 'Image tour invitation' })).toBeVisible();
+    await reachImageStep(page);
+
+    await page.locator('[data-index="0"]').click();
+    await expect(page.getByText('Open an image', { exact: true })).toBeVisible();
+    await page.locator('[data-index="0"]').dblclick();
+
+    await expect(page.getByText('Inspect and annotate', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByText('Inspect and annotate', { exact: true })).not.toBeVisible();
+});
+
+test('tour can open a sample with its accessible action and replay from the grid', async ({
+    page
+}) => {
+    await page.goto('/');
+    await expect(page.getByRole('complementary', { name: 'Image tour invitation' })).toBeVisible();
+    await reachImageStep(page);
+    await page.getByRole('button', { name: 'Open sample' }).click();
+    await expect(page.getByText('Inspect and annotate', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Done' }).click();
+
+    await page.goBack();
+    await page.getByTestId('menu-trigger').click();
+    await page.getByTestId('menu-show-tour').click();
+    await expect(page.getByText('Browse your collection', { exact: true })).toBeVisible();
+});
+
+test('dismissed invitation stays dismissed after reload', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('complementary', { name: 'Image tour invitation' })).toBeVisible();
+    await page.getByRole('button', { name: 'Dismiss' }).click();
+    await page.reload();
+    await expect(
+        page.getByRole('complementary', { name: 'Image tour invitation' })
+    ).not.toBeVisible();
+});

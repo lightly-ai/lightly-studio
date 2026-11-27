@@ -1,9 +1,10 @@
 <script lang="ts">
     import { Dialog as DialogPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
-    import { X } from '@lucide/svelte';
+    import X from '@lucide/svelte/icons/x';
     import type { Snippet } from 'svelte';
     import * as Dialog from './index.js';
     import { cn } from '$lib/utils/shadcn.js';
+    import { usePortalTarget } from '$lib/contexts/PortalTarget';
 
     let {
         ref = $bindable(null),
@@ -15,9 +16,11 @@
         portalProps?: DialogPrimitive.PortalProps;
         children: Snippet;
     } = $props();
+
+    const getPortalTarget = usePortalTarget();
 </script>
 
-<Dialog.Portal {...portalProps}>
+<Dialog.Portal to={getPortalTarget()} {...portalProps}>
     <Dialog.Overlay />
     <DialogPrimitive.Content
         bind:ref

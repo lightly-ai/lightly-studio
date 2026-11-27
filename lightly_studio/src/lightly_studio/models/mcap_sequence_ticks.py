@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.mcap import McapTable
+from lightly_studio.models.tag import TagView
 
 
 class TickView(BaseModel):
@@ -28,6 +29,37 @@ class TickListView(BaseModel):
     ticks: list[TickView]
 
 
+class TickTagView(BaseModel):
+    """A tag on the ticks of a sequence, with the positions of the tagged ticks."""
+
+    tag_id: UUID = Field(description="The ID of the tag.")
+    name: str = Field(description="The name of the tag.")
+    seq_numbers: list[int] = Field(
+        description="Zero-based positions of the tagged ticks, in ascending order."
+    )
+
+
+class TickTagListView(BaseModel):
+    """The tags on the ticks of an MCAP sequence, ordered by tag name."""
+
+    tags: list[TickTagView]
+
+
+class CameraProjectionView(BaseModel):
+    """Calibration and pose needed to project scene points into a camera image."""
+
+    width: int = Field(gt=0, description="Calibrated image width in pixels.")
+    height: int = Field(gt=0, description="Calibrated image height in pixels.")
+    camera_matrix: list[float] = Field(
+        min_length=9, max_length=9, description="Row-major 3x3 camera matrix."
+    )
+    scene_to_camera: list[float] = Field(
+        min_length=16,
+        max_length=16,
+        description="Row-major 4x4 transform from the scene frame to the camera frame.",
+    )
+
+
 class TickChannelView(BaseModel):
     """MCAP seek locator for one component of a tick."""
 
@@ -42,6 +74,11 @@ class TickChannelView(BaseModel):
         description=(
             "Log time of the keyframe to seek to before decoding. `None` for non-video channels."
         ),
+    )
+    projection: CameraProjectionView | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Projection metadata for the active scene frame, when available.",
     )
 
     @classmethod
@@ -58,8 +95,10 @@ class TickChannelView(BaseModel):
 
 
 class TickDetailView(BaseModel):
-    """One tick with its per-component MCAP locators and annotations."""
+    """One tick with its per-component MCAP locators, annotations and tags."""
 
+    sample_id: UUID = Field(description="The group sample ID of the tick.")
+    collection_id: UUID = Field(description="The group collection that holds the tick.")
     recording_id: UUID = Field(description="The recording this tick belongs to.")
     seq_number: int = Field(description="Zero-based position of the tick in the sequence.")
     timestamp_ns: int | None = Field(
@@ -74,3 +113,4 @@ class TickDetailView(BaseModel):
     annotations: list[AnnotationView] = Field(
         description="Annotations attached to the tick, e.g. 3D cuboids."
     )
+    tags: list[TagView] = Field(description="Sample tags of the tick group.")

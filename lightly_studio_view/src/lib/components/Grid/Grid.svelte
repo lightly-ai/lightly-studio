@@ -9,6 +9,8 @@
     // Compensates for the scrollbar width so the right edge aligns with the
     // card's p-4 outer padding on the left side.
     const SCROLLBAR_WIDTH_COMPENSATION = 4;
+    // User input that ends a pending scroll restore.
+    const USER_SCROLL_EVENTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
 
     let viewport: HTMLElement | null = null;
     let clientWidth = $state(0);
@@ -109,10 +111,7 @@
         // Mark the current initialScrollPosition as already applied so the
         // restore effect does not immediately scroll back after the reset.
         previousInitialScrollPosition = initialScrollPosition ?? undefined;
-        if (pendingRestoreRaf !== undefined) {
-            cancelAnimationFrame(pendingRestoreRaf);
-            pendingRestoreRaf = undefined;
-        }
+        cancelPendingRestore();
         grid?.scrollToPosition(0);
     });
 
@@ -130,13 +129,52 @@
             return;
         }
 
-        previousInitialScrollPosition = initialScrollPosition;
-
+        // The first measured height can be stale, so the browser can clamp the
+        // scroll position. Keep the restore pending until the target is reached;
+        // the effect retries on the next size change.
+        const target = initialScrollPosition;
+        cancelPendingRestore();
         pendingRestoreRaf = requestAnimationFrame(() => {
             pendingRestoreRaf = undefined;
-            grid?.scrollToPosition(initialScrollPosition);
+            grid?.scrollToPosition(target);
+            if (Math.abs(getScrollTop() - target) <= 1) {
+                previousInitialScrollPosition = target;
+            }
         });
     });
+
+    $effect(() => {
+        if (!viewport) {
+            return;
+        }
+
+        const target = viewport;
+        for (const eventName of USER_SCROLL_EVENTS) {
+            target.addEventListener(eventName, stopRestore, { passive: true });
+        }
+
+        return () => {
+            for (const eventName of USER_SCROLL_EVENTS) {
+                target.removeEventListener(eventName, stopRestore);
+            }
+        };
+    });
+
+    function stopRestore() {
+        previousInitialScrollPosition = initialScrollPosition;
+        cancelPendingRestore();
+    }
+
+    function cancelPendingRestore() {
+        if (pendingRestoreRaf !== undefined) {
+            cancelAnimationFrame(pendingRestoreRaf);
+            pendingRestoreRaf = undefined;
+        }
+    }
+
+    function getScrollTop(): number {
+        return viewport?.querySelector(`.${GRID_SCROLL_CLASS}`)?.scrollTop ?? 0;
+    }
 </script>
 
 <div bind:this={viewport} bind:clientHeight {...viewportProps} class={viewportClassName}>

@@ -37,6 +37,7 @@ from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
@@ -46,10 +47,12 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.dataset import DatasetTable
+from lightly_studio.models.dynamic_transform import DynamicTransformTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.evaluation_annotation_metric import (
     EvaluationAnnotationMetricTable,
 )
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.models.group import GroupTable, SampleGroupLinkTable
@@ -148,6 +151,7 @@ def deep_copy(
     _copy_annotations(session=session, now=now)
     _copy_annotation_details(session=session, detail_table=ObjectDetectionAnnotationTable)
     _copy_annotation_details(session=session, detail_table=SegmentationAnnotationTable)
+    _copy_annotation_details(session=session, detail_table=PolygonAnnotationTable)
     _copy_annotation_details(session=session, detail_table=Cuboid3DAnnotationTable)
     _copy_annotation_details(session=session, detail_table=TemporalSpanTable)
 
@@ -155,6 +159,7 @@ def deep_copy(
     _copy_metadata(session=session, now=now)
     _copy_evaluation_sample_metrics(session=session)
     _copy_evaluation_annotation_metrics(session=session)
+    _copy_evaluation_class_metrics(session=session)
 
     _copy_sample_tag_links(session=session)
     _copy_sample_group_links(session=session)
@@ -165,6 +170,7 @@ def deep_copy(
     _copy_mcap_group_component_definitions(session=session)
     _copy_sensor_calibrations(session=session)
     _copy_static_transforms(session=session)
+    _copy_dynamic_transforms(session=session)
 
     # Commit so the ON COMMIT DROP map tables are released and a subsequent deep_copy in
     # the same session can recreate them.
@@ -798,6 +804,27 @@ def _copy_evaluation_sample_metrics(session: Session) -> None:
     )
 
 
+def _copy_evaluation_class_metrics(session: Session) -> None:
+    """Copy evaluation class metrics, remapping evaluation_run_id and annotation_label_id."""
+    src = _table(EvaluationClassMetricTable).alias("src")
+    map_run = _map(_MAP_EVALUATION_RUN)
+    map_label = _map(_MAP_ANNOTATION_LABEL)
+    from_clause = src.join(map_run, map_run.c.old_id == src.c["evaluation_run_id"]).join(
+        map_label, map_label.c.old_id == src.c["annotation_label_id"]
+    )
+    _copy_table(
+        session=session,
+        target=EvaluationClassMetricTable,
+        source=src,
+        from_clause=from_clause,
+        overrides={
+            "id": func.gen_random_uuid(),
+            "evaluation_run_id": map_run.c.new_id,
+            "annotation_label_id": map_label.c.new_id,
+        },
+    )
+
+
 def _copy_evaluation_annotation_metrics(session: Session) -> None:
     """Copy evaluation annotation metrics, remapping run/sample and nullable annotation FKs."""
     src = _table(EvaluationAnnotationMetricTable).alias("src")
@@ -1008,6 +1035,24 @@ def _copy_static_transforms(session: Session) -> None:
     _copy_table(
         session=session,
         target=StaticTransformTable,
+        source=src,
+        from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_dynamic_transforms(session: Session) -> None:
+    """Copy dynamic transforms, remapping recording_id and generating a new PK."""
+    src = _table(DynamicTransformTable).alias("src")
+    map_recording = _map(_MAP_RECORDING)
+    from_clause = src.join(map_recording, map_recording.c.old_id == src.c["recording_id"])
+    overrides = {
+        "dynamic_transform_id": func.gen_random_uuid(),
+        "recording_id": map_recording.c.new_id,
+    }
+    _copy_table(
+        session=session,
+        target=DynamicTransformTable,
         source=src,
         from_clause=from_clause,
         overrides=overrides,

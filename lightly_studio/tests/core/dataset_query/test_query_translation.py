@@ -8,6 +8,7 @@ import pytest
 
 from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.core.dataset_query.metadata_expression import MetadataComparisonExpression
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.query_expr import (
     AndExpr,
@@ -17,15 +18,43 @@ from lightly_studio.models.query_expr import (
     EqualityFloatExpr,
     FieldRef,
     IntegerExpr,
+    MetadataComparisonExpr,
     NotExpr,
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    QueryExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
+    VideoEventMatchExpr,
 )
+
+
+@pytest.mark.parametrize("operator", list(OrdinalComparisonOperator))
+@pytest.mark.parametrize("value", [1, 0.8])
+def test_to_match_expression__metadata_numbers(
+    operator: OrdinalComparisonOperator, value: int | float
+) -> None:
+    expr = MetadataComparisonExpr(path="odometry.acc[1]", operator=operator, value=value)
+    translated = query_translation.to_match_expression(expr=expr)
+    assert isinstance(translated, MetadataComparisonExpression)
+    assert translated.path == "odometry.acc[1]"
+    assert translated.comparison == operator.value
+    assert translated.value == value
+
+
+def test_to_match_expression__event_without_video_scope() -> None:
+    expr = VideoEventMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="event", name="class_name"),
+            operator=EqualityComparisonOperator.EQ,
+            value="run",
+        )
+    )
+    with pytest.raises(QueryExprError):
+        query_translation.to_match_expression(expr=expr)
 
 
 def test_to_match_expression__string_eq() -> None:
@@ -130,7 +159,7 @@ def test_to_match_expression__ordinal_float_lt() -> None:
         value=30.0,
     )
     sql = _to_sql(query_translation.to_match_expression(expr))
-    assert "video.fps < 30.0" in sql
+    assert "video.fps < cast(30.0 as float)" in sql
 
 
 def test_to_match_expression__ordinal_float_unknown_field() -> None:
@@ -150,7 +179,7 @@ def test_to_match_expression__equality_float_eq() -> None:
         value=10.5,
     )
     sql = _to_sql(query_translation.to_match_expression(expr))
-    assert "video.duration_s = 10.5" in sql
+    assert "video.duration_s = cast(10.5 as float)" in sql
 
 
 def test_to_match_expression__equality_float_neq() -> None:
@@ -192,6 +221,21 @@ def test_to_match_expression__tags_unknown_field() -> None:
         query_translation.to_match_expression(expr)
 
 
+@pytest.mark.parametrize(
+    "annotation_type", ["classification", "object_detection", "segmentation_mask"]
+)
+@pytest.mark.parametrize("criteria", [{}, {"subexpr": None}], ids=["omitted", "null"])
+def test_to_match_expression__any_annotation_of_type(
+    annotation_type: str, criteria: dict[str, None]
+) -> None:
+    query = QueryExpr.model_validate(
+        {"match_expr": {"type": f"{annotation_type}_match_expr", **criteria}}
+    )
+    sql = _to_sql(query_translation.to_match_expression(expr=query.match_expr))
+    assert "exists" in sql
+    assert f"annotation_type = '{annotation_type}'" in sql
+
+
 def test_to_match_expression__classification_match() -> None:
     subexpr = StringExpr(
         field=FieldRef(table="classification", name="class_name"),
@@ -226,7 +270,7 @@ def test_to_match_expression__classification_confidence() -> None:
         )
     )
     sql = _to_sql(query_translation.to_match_expression(expr))
-    assert "annotation_base.confidence >= 0.7" in sql
+    assert "annotation_base.confidence >= cast(0.7 as float)" in sql
 
 
 def test_to_match_expression__object_detection_match() -> None:
@@ -263,7 +307,7 @@ def test_to_match_expression__object_detection_confidence() -> None:
         )
     )
     sql = _to_sql(query_translation.to_match_expression(expr))
-    assert "annotation_base.confidence > 0.9" in sql
+    assert "annotation_base.confidence > cast(0.9 as float)" in sql
 
 
 def test_to_match_expression__segmentation_mask_match() -> None:
@@ -300,7 +344,7 @@ def test_to_match_expression__segmentation_mask_confidence() -> None:
         )
     )
     sql = _to_sql(query_translation.to_match_expression(expr))
-    assert "annotation_base.confidence <= 0.5" in sql
+    assert "annotation_base.confidence <= cast(0.5 as float)" in sql
 
 
 def test_to_match_expression__and() -> None:

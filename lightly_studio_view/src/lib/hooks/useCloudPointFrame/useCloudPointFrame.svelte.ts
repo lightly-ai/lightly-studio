@@ -1,79 +1,61 @@
-import { createQuery, type CreateQueryResult } from '@tanstack/svelte-query';
-import { fetchCloudPointFrame } from './fetchCloudPointFrame';
-import { mergeCloudPointFrames } from './mergeCloudPointFrames';
+import { createQuery, useQueryClient, type CreateQueryResult } from '@tanstack/svelte-query';
+import { getTickDataOptions } from '$lib/hooks/useTickData/getTickDataOptions';
+import type { TickData } from '$lib/hooks/useTickData/fetchTickData';
+import { createAccumulatedFrameSelector } from './createAccumulatedFrameSelector';
 import type { CloudPointFrame, CloudPointFrameParams } from './types';
 
 interface UseCloudPointFrameReturn {
+    /** Query result for the merged point-cloud frame. */
     query: CreateQueryResult<CloudPointFrame, Error>;
 }
 
 /**
- * Fetches and merges cloud point frames across the requested channels.
+ * Merges the point clouds of the selected lidar channels from the shared tick-data query,
+ * so changing the selection does not refetch. A point cloud that cannot be expressed in
+ * `displayFrameId` stays in its sensor frame, which the `frameId` of its channel shows.
  *
- * Each channel is fetched in parallel and the results are combined into a single
- * frame. If the frame cannot be loaded in `displayFrameId`, it is loaded in the sensor
- * frames instead, which the `frameId` of each merged channel shows. Accepts a getter (thunk) so the query stays reactive to parameter changes.
- *
- * @param getParams - Reactive getter for the dataset, recording, and channels to load.
- * @returns The TanStack Query result exposing the merged cloud point frame.
+ * When `accumulationTickNumbers` contains more than one tick, frames from all ticks are
+ * fetched in parallel and merged into a single batch for display.
  */
 export const useCloudPointFrame = (
     getParams: () => CloudPointFrameParams
 ): UseCloudPointFrameReturn => {
+    const client = useQueryClient();
+    const selectFrame = createAccumulatedFrameSelector();
     const query = createQuery(() => {
-        const { datasetId, recordingId, channels, displayFrameId } = getParams();
+        const {
+            datasetId,
+            sequenceId,
+            seqNumber,
+            displayFrameId,
+            selectedChannelIds,
+            accumulationTickNumbers
+        } = getParams();
+        const tickNumbers = [...new Set(accumulationTickNumbers ?? [seqNumber])];
+        const tickQueries = tickNumbers.map((tick) =>
+            getTickDataOptions({ datasetId, sequenceId, seqNumber: tick, displayFrameId })
+        );
         return {
-            queryKey: ['cloud-point-frame', datasetId, recordingId, channels, displayFrameId ?? ''],
-            // Skip fetching until a dataset, recording, and at least one channel are known.
-            enabled: Boolean(datasetId && recordingId && channels.length),
-            // Preserve the mounted scene and its camera while the next tick is loading.
-            placeholderData: (previous: CloudPointFrame | undefined) => previous,
-            queryFn: async ({ signal }): Promise<CloudPointFrame> => {
-                try {
-                    return await fetchMergedFrame({
-                        datasetId,
-                        recordingId,
-                        channels,
-                        displayFrameId,
-                        signal
-                    });
-                } catch (error) {
-                    // A tick without a transform to the target frame, e.g. a gap in `/tf`,
-                    // still renders. Every channel falls back so the frames never mix.
-                    if (!displayFrameId || signal?.aborted) throw error;
-                    return fetchMergedFrame({ datasetId, recordingId, channels, signal });
-                }
-            }
+            queryKey: [
+                'cloud-point-frame',
+                datasetId,
+                sequenceId,
+                tickNumbers,
+                displayFrameId ?? '',
+                selectedChannelIds ?? []
+            ],
+            queryFn: () =>
+                Promise.all(tickQueries.map((options) => client.ensureQueryData(options))),
+            select: (data: TickData[]) => selectFrame(data, selectedChannelIds),
+            // The selected frame's batch exposes lazy getters that pack all accumulated segments on
+            // first read. Structural sharing would read them during comparison, packing every window
+            // eagerly; the selector already returns a stable frame when channels and ticks match.
+            structuralSharing: false,
+            // Skip fetching until the tick is known and at least one lidar is selected.
+            enabled: Boolean(datasetId && sequenceId && (selectedChannelIds?.length ?? 1)),
+            // Preserve the mounted scene and its camera while the next window is loading.
+            placeholderData: (previous: TickData[] | undefined) => previous
         };
     });
     return { query };
 };
-
-interface FetchMergedFrameParams extends CloudPointFrameParams {
-    signal?: AbortSignal;
-}
-
-/** Fetches every channel concurrently and merges them; `signal` cancels in-flight requests. */
-async function fetchMergedFrame({
-    datasetId,
-    recordingId,
-    channels,
-    displayFrameId,
-    signal
-}: FetchMergedFrameParams): Promise<CloudPointFrame> {
-    const [firstChannel, ...otherChannels] = channels;
-    if (!firstChannel) throw new Error('No point cloud channels to load.');
-    const frames = await Promise.all([
-        fetchCloudPointFrame({
-            datasetId,
-            recordingId,
-            channel: firstChannel,
-            displayFrameId,
-            signal
-        }),
-        ...otherChannels.map((channel) =>
-            fetchCloudPointFrame({ datasetId, recordingId, channel, displayFrameId, signal })
-        )
-    ]);
-    return mergeCloudPointFrames(frames);
-}

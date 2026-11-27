@@ -4,17 +4,24 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
+from pathlib import Path
 
 import fsspec
+import httpx
 import pytest
 import requests
 from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
 from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture, MockType
 
-from lightly_studio import enterprise
+from lightly_studio import ca_bundle, enterprise
 from lightly_studio.analytics import tracking
 from lightly_studio.database import db_manager
+from lightly_studio.dataset import env
+from lightly_studio.transport import active_transport
+from lightly_studio.transport.remote.http_transport import HttpTransport
+from tests import helpers_tls
 
 
 @pytest.fixture(autouse=True)
@@ -50,6 +57,30 @@ def test_connect__success(mocker: MockerFixture, patch_db_connect: MockType) -> 
     patch_db_connect.assert_called_once_with(
         db_url="postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
     )
+
+
+@pytest.mark.parametrize(
+    ("credentials", "bearer"), [({"api_key": "ls_key"}, "ls_key"), ({"token": "jwt"}, "jwt")]
+)
+def test_connect__http_client(
+    mocker: MockerFixture, patch_db_connect: MockType, credentials: dict[str, str], bearer: str
+) -> None:
+    mocker.patch.object(env, "LIGHTLY_STUDIO_HTTP_CLIENT", True)
+    mocker.patch.object(active_transport._active, "transport", None)
+    mocker.patch.object(db_manager._client_mode, "remote", False)
+    mock_client = mocker.patch.object(httpx, "Client")
+    mock_post = mocker.patch.object(requests, "post")
+    mock_get = mocker.patch.object(requests, "get")
+
+    enterprise.connect(api_url="http://10.0.0.5:8100/", **credentials)
+
+    assert isinstance(active_transport.get_transport(), HttpTransport)
+    mock_client.assert_called_once_with(
+        base_url="http://10.0.0.5:8100", headers={"Authorization": f"Bearer {bearer}"}
+    )
+    mock_post.assert_not_called()
+    mock_get.assert_not_called()
+    patch_db_connect.assert_not_called()
 
 
 def test_connect__success_api_key(mocker: MockerFixture, patch_db_connect: MockType) -> None:
@@ -301,6 +332,31 @@ def test_connect__sets_aws_env_vars(
 
     assert os.environ["AWS_ACCESS_KEY_ID"] == access_key_id
     assert os.environ["AWS_SECRET_ACCESS_KEY"] == secret_access_key
+
+
+def test_connect__writes_ca_bundle(
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    patch_db_connect: MockType,  # noqa: ARG001
+) -> None:
+    mocker.patch.object(ca_bundle, "_written_files", [])
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    ca_pem = helpers_tls.create_ca(common_name="Test Root CA").certificate_pem()
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+        "cloud_credentials": {"AWS_ACCESS_KEY_ID": "key", "AWS_CA_BUNDLE_PEM": ca_pem},
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    assert "AWS_CA_BUNDLE_PEM" not in os.environ
+    assert Path(os.environ["AWS_CA_BUNDLE"]).read_text().endswith(ca_pem)
+    ca_bundle.delete_ca_bundles(keep=None)
 
 
 def test_connect__applies_gcs_runtime_config(

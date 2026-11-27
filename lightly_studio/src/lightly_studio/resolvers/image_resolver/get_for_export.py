@@ -10,7 +10,6 @@ from sqlalchemy.orm import contains_eager, joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, select
 
-from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -22,7 +21,7 @@ class ImageExportPreload(Enum):
     """Relationships to eagerly load when exporting images.
 
     Pass a frozenset of these values to ``get_for_export`` to avoid N+1 queries
-    when accessing the corresponding properties on the returned ``ImageSample``s.
+    when accessing the corresponding relationships of the returned images.
     """
 
     ANNOTATIONS = "annotations"
@@ -34,8 +33,8 @@ def get_for_export(
     collection_id: UUID,
     collection_filter: ImageFilter | None,
     preload: frozenset[ImageExportPreload] = frozenset(),
-) -> Generator[ImageSample, None, None]:
-    """Return all images in a collection as a lazy generator of ImageSamples.
+) -> Generator[ImageTable, None, None]:
+    """Return all images in a collection as a lazy generator.
 
     If ``collection_filter`` is provided, only images matching the filter are
     returned. Embedding-region filters are resolved to concrete sample IDs
@@ -50,7 +49,7 @@ def get_for_export(
             ``frozenset({ImageExportPreload.CAPTIONS})``.
 
     Returns:
-        Generator of ImageSamples for the matching images.
+        Generator of the matching images.
     """
     sample_options: list[LoaderOption] = []
     if ImageExportPreload.ANNOTATIONS in preload:
@@ -59,6 +58,7 @@ def get_for_export(
                 joinedload(AnnotationBaseTable.annotation_label),
                 joinedload(AnnotationBaseTable.object_detection_details),
                 joinedload(AnnotationBaseTable.segmentation_details),
+                joinedload(AnnotationBaseTable.polygon_details),
             )
         )
     if ImageExportPreload.CAPTIONS in preload:
@@ -91,4 +91,4 @@ def get_for_export(
         query = query.where(
             col(SampleTable.sample_id).in_(collection_filter.build_sample_ids_query(collection_id))
         )
-    return (ImageSample(row) for row in session.exec(query))
+    return (row for row in session.exec(query))

@@ -44,3 +44,22 @@ def test_build_tag_color_maps(
 
     assert colors == expected_colors
     assert legend == expected_legend
+
+
+def test_build_tag_color_maps__collection_scope(db_session: Session) -> None:
+    """A foreign tag must not add categories absent from this collection's samples."""
+    collection = create_collection(session=db_session)
+    other = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    foreign_image = create_image(session=db_session, collection_id=other.collection_id)
+    tag = create_tag(session=db_session, collection_id=other.collection_id, tag_name="foreign")
+    db_session.add(SampleTagLinkTable(sample_id=foreign_image.sample_id, tag_id=tag.tag_id))
+    db_session.commit()
+
+    assert tags.build_tag_color_maps(
+        session=db_session,
+        tag_ids=[tag.tag_id],
+        sample_ids=[image.sample_id],
+        matching_sample_ids=None,
+        collection_id=collection.collection_id,
+    ) == ([[]], {})

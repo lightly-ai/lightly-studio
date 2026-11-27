@@ -70,6 +70,7 @@ describe('BrushTool component', () => {
             }
         };
         mockAnnotationLabelContext.annotationId = null;
+        mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.lastCreatedAnnotationId = null;
         mockAnnotationLabelContext.isChangingBrushSize = false;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
@@ -203,7 +204,7 @@ describe('BrushTool component', () => {
         mockAnnotationLabelContext.annotationId = 'annotation-1';
         const { container } = render(BrushTool);
 
-        const finishButton = getByLabelText(container, 'Finish');
+        const finishButton = getByLabelText(container, 'Done');
         expect(finishButton).toBeEnabled();
 
         await fireEvent.click(finishButton);
@@ -212,19 +213,26 @@ describe('BrushTool component', () => {
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
     });
 
-    it('disables the Finish button when no annotation is active', () => {
+    it('disables the Done button when no annotation is active', () => {
         const { container } = render(BrushTool);
 
-        const finishButton = getByLabelText(container, 'Finish');
+        const finishButton = getByLabelText(container, 'Done');
 
         expect(finishButton).toBeDisabled();
     });
 
-    it('hides the Finish button on annotation details view', async () => {
+    it('disables Done while drawing', () => {
+        mockAnnotationLabelContext.annotationId = 'annotation-1';
+        mockAnnotationLabelContext.isDrawing = true;
+        const view = render(BrushTool);
+        expect(view.getByRole('button', { name: 'Done' })).toBeDisabled();
+    });
+
+    it('hides the Done button on annotation details view', async () => {
         mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
         const { container } = render(BrushTool);
 
-        const finishButton = queryByLabelText(container, 'Finish');
+        const finishButton = queryByLabelText(container, 'Done');
 
         expect(finishButton).toBeNull();
     });

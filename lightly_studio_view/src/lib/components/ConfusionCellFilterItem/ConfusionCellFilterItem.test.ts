@@ -41,14 +41,17 @@ describe('ConfusionCellFilterItem', () => {
         expect(screen.queryByTestId('confusion-cell-filter-item-chip')).not.toBeInTheDocument();
     });
 
-    it('renders the chip with the GT and Pred labels for a non-diagonal cell', () => {
+    it('renders separate ground truth and prediction fields for a non-diagonal cell', () => {
         filterParams.set(normalParamsWithCell('cat', 'dog'));
 
         render(ConfusionCellFilterItem);
 
         expect(screen.getByTestId('confusion-cell-filter-item-chip')).toBeInTheDocument();
         expect(screen.getByText('Confusion Matrix')).toBeInTheDocument();
-        expect(screen.getByText('GT: cat → Pred: dog')).toBeInTheDocument();
+        expect(screen.getByText('Ground truth')).toBeInTheDocument();
+        expect(screen.getByText('Prediction')).toBeInTheDocument();
+        expect(screen.getByText('cat')).toBeInTheDocument();
+        expect(screen.getByText('dog')).toBeInTheDocument();
     });
 
     it('renders a diagonal cell without implying confusion', () => {
@@ -57,25 +60,44 @@ describe('ConfusionCellFilterItem', () => {
         render(ConfusionCellFilterItem);
 
         expect(screen.getByTestId('confusion-cell-filter-item-chip')).toBeInTheDocument();
-        expect(screen.getByText('GT: cat → Pred: cat')).toBeInTheDocument();
+        expect(screen.getAllByText('cat')).toHaveLength(2);
     });
 
-    it('labels the false-positive bucket (null gt_label) as "Predicted only: <class>"', () => {
+    it('shows missing ground truth for the false-positive bucket', () => {
         filterParams.set(normalParamsWithCell(null, 'truck'));
 
         render(ConfusionCellFilterItem);
 
         expect(screen.getByTestId('confusion-cell-filter-item-chip')).toBeInTheDocument();
-        expect(screen.getByText('Predicted only: truck')).toBeInTheDocument();
+        expect(screen.getByRole('emphasis')).toHaveTextContent('No ground truth');
+        expect(screen.getByText('truck')).toBeInTheDocument();
     });
 
-    it('labels the false-negative bucket (null pred_label) as "Ground truth only: <class>"', () => {
+    it('shows a missing prediction for the false-negative bucket', () => {
         filterParams.set(normalParamsWithCell('car', null));
 
         render(ConfusionCellFilterItem);
 
         expect(screen.getByTestId('confusion-cell-filter-item-chip')).toBeInTheDocument();
-        expect(screen.getByText('Ground truth only: car')).toBeInTheDocument();
+        expect(screen.getByText('car')).toBeInTheDocument();
+        expect(screen.getByRole('emphasis')).toHaveTextContent('No prediction');
+    });
+
+    it('keeps full class names visible and updates when another cell is selected', async () => {
+        const groundTruth = 'German shepherd with a very long annotation class name';
+        const prediction = 'Belgian_shepherd_with_a_very_long_unbroken_annotation_class_name';
+        filterParams.set(normalParamsWithCell(groundTruth, prediction));
+
+        render(ConfusionCellFilterItem);
+
+        expect(screen.getByText(groundTruth)).toBeVisible();
+        expect(screen.getByText(prediction)).toBeVisible();
+
+        filterParams.set(normalParamsWithCell('cat', 'dog'));
+
+        expect(await screen.findByText('dog')).toBeVisible();
+        expect(screen.getByText('cat')).toBeVisible();
+        expect(screen.queryByText(groundTruth)).not.toBeInTheDocument();
     });
 
     it('clears the confusion cell when the checkbox is toggled off', async () => {
@@ -95,7 +117,7 @@ describe('ConfusionCellFilterItem', () => {
 
         render(ConfusionCellFilterItem);
 
-        const clearButton = screen.getByRole('button', { name: /clear gt: cat → pred: dog/i });
+        const clearButton = screen.getByRole('button', { name: 'Clear confusion matrix filter' });
         clearButton.click();
 
         expect(updateConfusionCell).toHaveBeenCalledWith(null);

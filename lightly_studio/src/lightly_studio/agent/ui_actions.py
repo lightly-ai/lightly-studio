@@ -6,7 +6,7 @@ actions of a turn in their order when the answer arrives.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -34,5 +34,5 @@ class RefreshDataAction(BaseModel):
 
 
 UiAction = Annotated[
-    Union[SelectTagAction, ShowSamplesAction, RefreshDataAction], Field(discriminator="type")
+    SelectTagAction | ShowSamplesAction | RefreshDataAction, Field(discriminator="type")
 ]

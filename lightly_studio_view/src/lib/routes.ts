@@ -2,7 +2,7 @@ import type { LayoutRouteId } from '../routes/$types';
 import { getURL } from './utils';
 
 const COLLECTION_BASE_ROUTE = '/datasets/[dataset_id]/[collection_type]/[collection_id]';
-const POINT_CLOUD_BASE_ROUTE = `${COLLECTION_BASE_ROUTE}/point-clouds`;
+const MCAP_SEQUENCES_BASE_ROUTE = `${COLLECTION_BASE_ROUTE}/mcap-sequences`;
 
 type SampleWithAnnotationParams = {
     datasetId: string;
@@ -48,8 +48,8 @@ export const APP_ROUTES: Record<string, LayoutRouteId> = {
     framesDetails: `${COLLECTION_BASE_ROUTE}/frames/[sample_id]`,
     videoDetails: `${COLLECTION_BASE_ROUTE}/videos/[sample_id]`,
     groups: `${COLLECTION_BASE_ROUTE}/groups`,
-    pointClouds: `${POINT_CLOUD_BASE_ROUTE}`,
-    pointCloudLabeling: `${POINT_CLOUD_BASE_ROUTE}/[sequence_id]`
+    mcapSequences: `${MCAP_SEQUENCES_BASE_ROUTE}`,
+    pointCloudLabeling: `${MCAP_SEQUENCES_BASE_ROUTE}/[sequence_id]`
 };
 
 export const isSampleDetailsRoute = (routeId: string | null): boolean => {
@@ -92,8 +92,8 @@ export const isVideoDetailsRoute = (routeId: string | null): boolean => {
     return routeId ? routeId == APP_ROUTES.videoDetails : false;
 };
 
-export const isPointCloudsRoute = (routeId: string | null): boolean => {
-    return routeId ? routeId == APP_ROUTES.pointClouds : false;
+export const isMcapSequencesRoute = (routeId: string | null): boolean => {
+    return routeId ? routeId == APP_ROUTES.mcapSequences : false;
 };
 
 export const isPointCloudLabelingRoute = (routeId: string | null): boolean => {
@@ -141,8 +141,8 @@ export const routes = {
             `/datasets/${datasetId}/${collectionType}/${collectionId}/videos`,
         frames: (datasetId: string, collectionType: string, collectionId: string) =>
             `/datasets/${datasetId}/${collectionType}/${collectionId}/frames`,
-        pointClouds: (datasetId: string, collectionType: string, collectionId: string) =>
-            `/datasets/${datasetId}/${collectionType}/${collectionId}/point-clouds`,
+        mcapSequences: (datasetId: string, collectionType: string, collectionId: string) =>
+            `/datasets/${datasetId}/${collectionType}/${collectionId}/mcap-sequences`,
         videosDetails: ({
             datasetId,
             collectionType,
@@ -190,7 +190,7 @@ export const routes = {
             const queryParams: Record<string, string> = {};
             if (groupId !== undefined) queryParams['group_id'] = groupId;
             return getURL(
-                `/datasets/${datasetId}/${collectionType}/${collectionId}/point-clouds/${sequenceId}`,
+                `/datasets/${datasetId}/${collectionType}/${collectionId}/mcap-sequences/${sequenceId}`,
                 Object.keys(queryParams).length > 0 ? queryParams : undefined
             );
         },
@@ -235,8 +235,8 @@ export const routeHelpers = {
     toFrames: (datasetId: string, collectionType: string, collectionId: string) => {
         return routes.collection.frames(datasetId, collectionType, collectionId);
     },
-    toPointClouds: (datasetId: string, collectionType: string, collectionId: string) => {
-        return routes.collection.pointClouds(datasetId, collectionType, collectionId);
+    toMcapSequences: (datasetId: string, collectionType: string, collectionId: string) => {
+        return routes.collection.mcapSequences(datasetId, collectionType, collectionId);
     },
     toVideosDetails: (params: VideosDetailsParams) => {
         return routes.collection.videosDetails(params);

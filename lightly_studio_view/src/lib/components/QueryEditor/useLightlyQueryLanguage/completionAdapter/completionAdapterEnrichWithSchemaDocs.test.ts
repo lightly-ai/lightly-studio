@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
 describe('enrichWithSchemaDocs', () => {
+    it.each(['tp', 'fp', 'fn', 'disagreement', 'miou'])(
+        'enriches quoted evaluation keyword %s with field documentation',
+        async (name) => {
+            const { enrichWithSchemaDocs } =
+                await import('./completionAdapterEnrichWithSchemaDocs');
+            const result = enrichWithSchemaDocs(
+                { label: `"${name}"` } as never,
+                'sample_evaluation'
+            );
+            expect(result.detail).toBe(`Sample evaluation.${name}: float`);
+            expect(result.documentation).toBeTruthy();
+        }
+    );
     it('keeps explicit documentation untouched', async () => {
         const { enrichWithSchemaDocs } = await import('./completionAdapterEnrichWithSchemaDocs');
         const item = { label: 'width', documentation: { value: 'custom' } };
@@ -19,7 +32,7 @@ describe('enrichWithSchemaDocs', () => {
         const result = enrichWithSchemaDocs({ label: 'fps' } as never, 'video');
         expect(result.detail).toBe('Video.fps: float');
         expect(result.documentation).toEqual({
-            value: 'Frames per second. Equality only (`=`, `!=`).'
+            value: 'Frames per second.'
         });
     });
 
@@ -29,7 +42,7 @@ describe('enrichWithSchemaDocs', () => {
         const sourceResult = enrichWithSchemaDocs({ label: 'source' } as never, 'classification');
         expect(sourceResult.detail).toBe('Classification.source: string');
         expect(sourceResult.documentation).toEqual({
-            value: 'Annotation source collection name.'
+            value: 'Annotation source.'
         });
 
         const confidenceResult = enrichWithSchemaDocs(

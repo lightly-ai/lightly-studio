@@ -7,6 +7,7 @@ import type {
     AnnotationView,
     ObjectDetectionAnnotationView as ObjectDetectionAnnotationViewType,
     SegmentationAnnotationView as SegmentationAnnotationViewType,
+    PolygonAnnotationView,
     AnnotationLabelTable,
     EmbeddingClassifier,
     UpdateAnnotationsRequest,
@@ -18,7 +19,6 @@ export type Collection = CollectionTable;
 export type ImageSample = ImageView;
 export type TagView = TagViewType;
 export type TagInputBody = TagCreateBody;
-export type TagKind = TagCreateBody['kind'];
 export type SampleIdsBody = SampleIdsBodyType;
 export type Annotation = AnnotationView;
 
@@ -45,6 +45,10 @@ type AnnotationSegmentation = Annotation & {
     object_detection_details: undefined;
 };
 
+type AnnotationPolygon = Annotation & {
+    polygon_details: PolygonAnnotationView;
+};
+
 type ClassificationAnnotation = Annotation & {
     object_detection_details: undefined;
     segmentation_details: undefined;
@@ -61,6 +65,12 @@ export function isSegmentationMaskAnnotation(
     annotation: Annotation | AnnotationSegmentation
 ): annotation is AnnotationSegmentation {
     return annotation.annotation_type === 'segmentation_mask';
+}
+
+export function isPolygonAnnotation(
+    annotation: Annotation | AnnotationPolygon
+): annotation is AnnotationPolygon {
+    return annotation.annotation_type === 'polygon';
 }
 
 export function isClassificationAnnotation(

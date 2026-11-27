@@ -86,11 +86,14 @@ def test_update_annotations__updates_label_for_all_track_annotations(
         annotation for annotation in annotations if annotation.object_track_id == track_b
     ]
     assert len(track_a_annotations) == 2
+    annotation_id = track_a_annotations[0].sample_id
+    sibling_id = track_a_annotations[1].sample_id
+    outside_id = track_b_annotations[0].sample_id
     updated = annotations_service.update_annotations(
         session=db_session,
         annotation_updates=[
             AnnotationUpdate(
-                annotation_id=track_a_annotations[0].sample_id,
+                annotation_id=annotation_id,
                 collection_id=root_collection_id,
                 label_name=label_after.annotation_label_name,
             )
@@ -98,16 +101,14 @@ def test_update_annotations__updates_label_for_all_track_annotations(
     )
 
     assert len(updated) == 1
-    assert updated[0].sample_id == track_a_annotations[0].sample_id
+    assert updated[0].sample_id == annotation_id
     assert updated[0].annotation_label_id == label_after.annotation_label_id
 
-    sibling_after_update = annotation_resolver.get_by_id(
-        db_session, track_a_annotations[1].sample_id
-    )
+    sibling_after_update = annotation_resolver.get_by_id(db_session, sibling_id)
     assert sibling_after_update is not None
     assert sibling_after_update.annotation_label_id == label_after.annotation_label_id
 
-    outside_after = annotation_resolver.get_by_id(db_session, track_b_annotations[0].sample_id)
+    outside_after = annotation_resolver.get_by_id(db_session, outside_id)
     assert outside_after is not None
     assert outside_after.annotation_label_id == label_before.annotation_label_id
 

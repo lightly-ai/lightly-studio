@@ -1,9 +1,10 @@
 """Resolve an embedding-plot region (a polygon of 2D vertices) to the sample ids it encloses.
 
-Given a polygon and a collection, load the cached, deterministic 2D projection of that
-collection's embeddings and return the ids of the samples whose coordinates fall inside the
-polygon. Taking the geometry (a handful of vertices) rather than an explicit id list keeps the
-input constant-size regardless of how many samples the region covers.
+Given a polygon and a collection, compute the deterministic 2D layout of that collection's
+embeddings that the region was drawn on, and return the ids of the samples whose coordinates
+fall inside the polygon. The layout is the cached PaCMAP projection, or the projection onto
+the region's axes if it has them. Taking the geometry (a handful of vertices) rather than an
+explicit id list keeps the input constant-size regardless of how many samples the region covers.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ def get_sample_ids_in_region(
     collection_id: UUID,
     region: EmbeddingRegion,
 ) -> list[UUID]:
-    """Return the sample ids whose cached 2D coordinates fall inside ``region``."""
+    """Return the sample ids whose 2D coordinates fall inside ``region``."""
     # Resolve against the same deterministic default model as embeddings2d.get_2d_embeddings,
     # so the region is tested against the exact projection the user lassoed over.
     # TODO(Kondrat, 07/2026): Select the embedding model via API parameter once supported,
@@ -35,11 +36,20 @@ def get_sample_ids_in_region(
     if embedding_model_id is None:
         return []
 
-    x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
-        session=session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model_id,
-    )
+    if region.axes is None:
+        x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+        )
+    else:
+        x_array, y_array, sample_ids = twodim_embedding_resolver.get_twodim_embeddings_from_axes(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            direction_x=region.axes.x,
+            direction_y=region.axes.y,
+        )
     if len(sample_ids) == 0:
         return []
 

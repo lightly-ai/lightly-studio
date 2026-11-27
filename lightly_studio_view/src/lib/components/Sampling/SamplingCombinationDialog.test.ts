@@ -6,7 +6,6 @@ import SamplingCombinationDialog from './SamplingCombinationDialog.svelte';
 type MockTag = {
     tag_id: string;
     name: string;
-    kind: 'sample';
 };
 
 const pageMock = vi.hoisted(() => ({
@@ -126,7 +125,7 @@ describe('SamplingCombinationDialog', () => {
         metadataInfoStore = readable([]);
         isSubmittingStore = writable(false);
         loadingMessageStore = writable('');
-        tagsStore = writable([{ tag_id: 'tag-1', name: 'Query Tag', kind: 'sample' as const }]);
+        tagsStore = writable([{ tag_id: 'tag-1', name: 'Query Tag' }]);
         annotationLabelsData = [];
         annotationCollectionsData = [];
         categoricalMetadataData = undefined;
@@ -612,6 +611,19 @@ describe('SamplingCombinationDialog', () => {
         await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
 
         expect(await screen.findByTestId('add-strategy-subpart_diversity')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
+    it('disables class balancing in the add strategy menu for sequence collections', async () => {
+        pageMock.data.collection.sample_type = 'sequence';
+        annotationLabelsData = [{ annotation_label_name: 'car' }];
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-class_balancing')).toHaveAttribute(
             'data-disabled'
         );
     });

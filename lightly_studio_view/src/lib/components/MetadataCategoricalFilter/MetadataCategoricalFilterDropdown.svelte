@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { ChevronsUpDown, X } from '@lucide/svelte';
+    import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+    import X from '@lucide/svelte/icons/x';
     import { Button } from '$lib/components';
     import { Button as IconButton } from '$lib/components/ui/button';
     import * as Popover from '$lib/components/ui/popover';
@@ -12,7 +13,7 @@
         loading: boolean;
         updating: boolean;
         onRemove?: () => void;
-        onOpenChange: (open: boolean) => void;
+        onOpenChange?: (open: boolean) => void;
         children: Snippet;
     }
 
@@ -29,9 +30,9 @@
 </script>
 
 <div class="mt-2 flex items-center gap-2" data-testid="metadata-categorical-filter">
-    <span class="w-[100px] shrink-0 truncate text-xs text-muted-foreground" title={fieldLabel}
-        >{fieldLabel}</span
-    >
+    <span class="w-[100px] shrink-0 truncate text-xs text-muted-foreground" title={fieldLabel}>
+        {fieldLabel}
+    </span>
     <Popover.Root {onOpenChange}>
         <Popover.Trigger>
             {#snippet child({ props })}

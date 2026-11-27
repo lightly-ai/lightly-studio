@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Union
+from typing import Any
 
 from lightly_studio.agent.chat_messages import (
     AgentMessage,
@@ -19,7 +19,7 @@ from lightly_studio.agent.chat_messages import (
     ReasoningDelta,
 )
 
-ModelDelta = Union[ReasoningDelta, ContentDelta]
+ModelDelta = ReasoningDelta | ContentDelta
 
 _DATA_PREFIX = "data:"
 _DONE_DATA = "[DONE]"

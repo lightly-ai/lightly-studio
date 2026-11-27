@@ -104,15 +104,15 @@
         <Dialog.Content class="border-border bg-background sm:max-w-[480px]">
             <form onsubmit={handleSubmit} data-testid="trigger-evaluation-form">
                 <Dialog.Header>
-                    <Dialog.Title class="text-foreground">Start evaluation</Dialog.Title>
+                    <Dialog.Title class="text-foreground">New evaluation</Dialog.Title>
                     <Dialog.Description class="text-foreground">
-                        Evaluate predictions against ground truth on this dataset.
+                        Find mistakes by comparing predictions with your reference annotations.
                     </Dialog.Description>
                 </Dialog.Header>
 
                 <div class="grid gap-4 py-4">
                     <div class="grid gap-2">
-                        <Label class="text-foreground">Evaluation type</Label>
+                        <Label class="text-foreground">Task to evaluate</Label>
                         <Select
                             items={taskTypeItems}
                             value={taskType}
@@ -137,7 +137,7 @@
                             data-testid="no-matching-sources-warning"
                         >
                             No annotation sources with matching annotations were found for this
-                            evaluation type.
+                            task.
                         </p>
                     {:else}
                         <div class="grid gap-2">
@@ -172,10 +172,6 @@
                     {#if taskType === 'object_detection'}
                         <ObjectDetectionConfigFields bind:iouThreshold bind:classwise />
                     {/if}
-
-                    <p class="text-xs text-muted-foreground" data-testid="evaluation-duration-note">
-                        Evaluation runs on the full dataset and may take a while to complete.
-                    </p>
                 </div>
 
                 <Dialog.Footer>

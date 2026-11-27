@@ -33,9 +33,7 @@ describe('useUpdateAnnotationsMutation', () => {
 
     it('invalidates annotation-bearing grids and evaluation runs after a successful update', async () => {
         vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
+            mutateAsync: vi.fn().mockResolvedValue(undefined)
         } as unknown as ReturnType<typeof createMutation>);
 
         const { updateAnnotations } = useUpdateAnnotationsMutation({
@@ -52,11 +50,29 @@ describe('useUpdateAnnotationsMutation', () => {
         });
     });
 
+    it('sends the update to the collection that the caller passes', async () => {
+        const mutateAsync = vi.fn().mockResolvedValue(undefined);
+        vi.mocked(createMutation).mockReturnValue({
+            mutateAsync
+        } as unknown as ReturnType<typeof createMutation>);
+
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-current'
+        });
+        await updateAnnotations(
+            [{ annotation_id: 'ann-1', collection_id: 'col-1', label_name: 'dog' }],
+            'col-1'
+        );
+
+        expect(mutateAsync).toHaveBeenCalledWith(
+            expect.objectContaining({ path: { collection_id: 'col-1' } })
+        );
+        expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
+    });
+
     it('fires annotation_label_updated when a single update with label_name succeeds', async () => {
         vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
+            mutateAsync: vi.fn().mockResolvedValue(undefined)
         } as unknown as ReturnType<typeof createMutation>);
 
         const { updateAnnotations } = useUpdateAnnotationsMutation({
@@ -75,9 +91,7 @@ describe('useUpdateAnnotationsMutation', () => {
 
     it('fires annotations_bulk_labeled for multiple updates with label_names', async () => {
         vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
+            mutateAsync: vi.fn().mockResolvedValue(undefined)
         } as unknown as ReturnType<typeof createMutation>);
 
         const { updateAnnotations } = useUpdateAnnotationsMutation({
@@ -97,9 +111,7 @@ describe('useUpdateAnnotationsMutation', () => {
 
     it('fires annotation_label_updated with label_name undefined when a single update has no label_name', async () => {
         vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
+            mutateAsync: vi.fn().mockResolvedValue(undefined)
         } as unknown as ReturnType<typeof createMutation>);
 
         const { updateAnnotations } = useUpdateAnnotationsMutation({

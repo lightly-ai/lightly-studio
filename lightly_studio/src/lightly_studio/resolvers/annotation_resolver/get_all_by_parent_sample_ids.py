@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_array
@@ -13,6 +14,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationType,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -23,6 +25,7 @@ def get_all_by_parent_sample_ids(
     session: Session,
     parent_sample_ids: Sequence[UUID],
     annotation_types: Sequence[AnnotationType] | None = None,
+    load_view_relationships: bool = False,
 ) -> Sequence[AnnotationBaseTable]:
     """Get all annotations belonging to the provided parent sample IDs.
 
@@ -31,6 +34,9 @@ def get_all_by_parent_sample_ids(
         parent_sample_ids: Parent sample IDs to fetch annotations for.
         annotation_types: Optional annotation types to filter by. ``None`` means
             no filtering. An empty sequence returns no results.
+        load_view_relationships: If True, load the relationships that
+            ``AnnotationView.from_annotation_table`` reads in bulk, not one query per
+            annotation.
 
     Returns:
         Annotations belonging to the given parent samples.
@@ -63,9 +69,28 @@ def get_all_by_parent_sample_ids(
             )
         )
         .options(joinedload(AnnotationBaseTable.sample).load_only(SampleTable.collection_id))  # type: ignore[arg-type]
+        .options(
+            joinedload(AnnotationBaseTable.object_track).joinedload(
+                ObjectTrackTable.parent_object_track
+            )
+        )
     )
     if annotation_types is not None:
         annotations_statement = annotations_statement.where(
             col(AnnotationBaseTable.annotation_type).in_(annotation_types)
         )
+    if load_view_relationships:
+        annotations_statement = annotations_statement.options(*_view_relationship_options())
     return session.exec(annotations_statement).all()
+
+
+def _view_relationship_options() -> list[LoaderOption]:
+    """Returns the options that load the relationships of an annotation view in bulk."""
+    return [
+        joinedload(AnnotationBaseTable.sample).selectinload(SampleTable.tags),
+        selectinload(AnnotationBaseTable.annotation_label),
+        selectinload(AnnotationBaseTable.object_detection_details),
+        selectinload(AnnotationBaseTable.cuboid_3d_details),
+        selectinload(AnnotationBaseTable.segmentation_details),
+        selectinload(AnnotationBaseTable.polygon_details),
+    ]

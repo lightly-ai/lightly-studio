@@ -21,6 +21,7 @@ from lightly_studio.models.sort import AdjacentSortExpr, SortFieldSource
 from lightly_studio.resolvers import (
     annotation_resolver,
     image_resolver,
+    mcap_group_sequence_resolver,
     video_frame_resolver,
     video_resolver,
 )
@@ -29,6 +30,9 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.video_frame_resolver import VideoFrameAdjacentFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -40,7 +44,11 @@ class AdjacentRequest(BaseModel):
     collection_id: UUID
     filters: (
         Annotated[
-            ImageFilter | VideoFilter | VideoFrameAdjacentFilter | AnnotationsFilter,
+            ImageFilter
+            | VideoFilter
+            | VideoFrameAdjacentFilter
+            | AnnotationsFilter
+            | McapSequenceFilter,
             Field(discriminator="filter_type"),
         ]
         | None
@@ -195,6 +203,32 @@ def get_adjacent_samples(
                 annotation_sort_by=request.annotation_sort_by,
             ),
         )
+    if request.sample_type == SampleType.SEQUENCE:
+        return _get_adjacent_sequences(session=session, sample_id=sample_id, request=request)
     raise NotImplementedError(
         f"Adjacent samples retrieval is not implemented for sample type: {request.sample_type}"
+    )
+
+
+def _get_adjacent_sequences(
+    session: Session, sample_id: UUID, request: AdjacentRequest
+) -> AdjacentResultView | None:
+    """Get adjacent MCAP sequences with the filters and the text search of the grid.
+
+    Raises:
+        ValueError: If the request has a sort, or a filter that is not a McapSequenceFilter.
+    """
+    if request.sort_by is not None:
+        raise ValueError(f"Sorting is not supported for sample type '{request.sample_type.value}'.")
+    if request.filters is not None and not isinstance(request.filters, McapSequenceFilter):
+        raise ValueError(
+            "Invalid filter provided. Expected McapSequenceFilter"
+            f" for sample type '{request.sample_type.value}'."
+        )
+    return mcap_group_sequence_resolver.get_adjacent_sequences(
+        session=session,
+        sample_id=sample_id,
+        collection_id=request.collection_id,
+        filters=request.filters,
+        text_embedding=request.text_embedding,
     )

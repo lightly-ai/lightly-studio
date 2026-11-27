@@ -1,15 +1,28 @@
 <script lang="ts">
+    import { AnnotationTargetCaption } from '$lib/components/SampleDetails/AnnotationTargetCaption';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
+    import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Button, SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
-    import { cn, formatConfidence, resolveEffectiveColorBySource } from '$lib/utils';
+    import {
+        cn,
+        countVisibleSources,
+        formatConfidence,
+        resolveEffectiveColorBySource,
+        trackClassCreatedInPicker
+    } from '$lib/utils';
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
-    import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
+    import {
+        isAnnotationSourceBlocked,
+        useAnnotationCollections,
+        useAnnotationCollectionsFilter
+    } from '$lib/hooks';
     import {
         computeSeededHiddenIds,
         groupAnnotationsBySource,
@@ -17,16 +30,18 @@
     } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { getCreateLabelErrorMessage, useCreateLabel } from '$lib/hooks';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSettings } from '$lib/hooks';
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { page } from '$app/state';
-    import { Trash2 } from '@lucide/svelte';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import { toast } from 'svelte-sonner';
     type SampleDetailsClassificationSegmentProps = {
         collectionId: string;
@@ -40,8 +55,11 @@
 
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
     const { enforceColoringByClassStore } = useSettings();
+    const { user } = useAuth();
+    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
@@ -72,7 +90,7 @@
     });
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const { isSourceVisible, multipleSourcesVisible } = useAnnotationCollectionsFilter();
+    const { isSourceVisible } = useAnnotationCollectionsFilter();
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
@@ -85,11 +103,10 @@
         computeSeededHiddenIds(classificationAnnotations, $isSourceVisible)
     );
 
-    // Color source group headers by source only when multiple sources are visible and class
-    // coloring is not enforced, mirroring the annotation segment and canvas behavior.
+    // Local visibility changes must not alter source colors or card layout.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: $multipleSourcesVisible,
+            multipleSourcesVisible: countVisibleSources(classificationAnnotations) >= 2,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
@@ -130,19 +147,20 @@
 
     const createClassificationAnnotation = async (labelName: string) => {
         if (!annotationLabels.data) return false;
-
-        let label = annotationLabels.data.find(
-            (labelItem) => labelItem.annotation_label_name === labelName
-        );
-
-        if (!label) {
-            label = await createLabel({
-                dataset_id: datasetId,
-                annotation_label_name: labelName
-            });
-        }
+        if (isAnnotationSourceBlocked(annotationLabelContext)) return false;
 
         try {
+            let label = annotationLabels.data.find(
+                (labelItem) => labelItem.annotation_label_name === labelName
+            );
+
+            if (!label) {
+                label = await createLabel({
+                    dataset_id: datasetId,
+                    annotation_label_name: labelName
+                });
+            }
+
             const newAnnotation = await createAnnotation({
                 parent_sample_id: sampleId,
                 annotation_type: AnnotationType.CLASSIFICATION,
@@ -168,7 +186,12 @@
             toast.success('Classification created successfully');
             return true;
         } catch (error) {
-            toast.error('Failed to create classification. Please try again.');
+            toast.error(
+                getCreateLabelErrorMessage(
+                    error,
+                    'Failed to create classification. Please try again.'
+                )
+            );
             console.error('Error creating classification:', error);
             return false;
         }
@@ -231,7 +254,7 @@
 
 {#snippet classificationRow(annotation: AnnotationView)}
     <div
-        class="flex w-full items-center justify-between gap-2 rounded-sm bg-card px-4 py-3 text-left"
+        class="flex w-full items-center justify-between gap-2 rounded-sm bg-card px-4 py-2 text-left"
         data-annotation-id={annotation.sample_id}
     >
         <span class="flex min-w-0 flex-1 flex-col gap-1">
@@ -248,43 +271,50 @@
                 <span class="flex min-w-0 flex-1 flex-col gap-1">
                     {#if $isEditingMode}
                         <SelectList
+                            onCreate={trackClassCreatedInPicker}
+                            allowCreate={canCreateClass}
                             {items}
                             selectedItem={items.find(
                                 (i) => i.value === getLabelValue(annotation)?.value
                             )}
                             name="classification-label"
-                            placeholder="Select or create a class"
-                            className="w-full min-w-0"
+                            placeholder={canCreateClass
+                                ? 'Select or create a class'
+                                : 'Select a class'}
+                            className="h-8 w-full min-w-0 px-3"
                             contentClassName="w-full min-w-0"
                             onSelect={async (item) => {
                                 await updateClassificationLabel(annotation, item.value);
                             }}
                         >
                             {#snippet notFound({ inputValue })}
-                                <LabelNotFound label={inputValue} />
+                                <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
                             {/snippet}
                         </SelectList>
                     {:else}
-                        <span class="block min-w-0 truncate">
-                            {annotation.annotation_label.annotation_label_name}
+                        <span class="flex h-8 min-w-0 items-center">
+                            <span class="truncate">
+                                {annotation.annotation_label.annotation_label_name}
+                            </span>
                         </span>
-                        {#if annotation.confidence != null}
-                            {@const formattedConfidence = formatConfidence(annotation.confidence)}
-                            <span class="text-xs text-muted-foreground"
-                                >Confidence: {formattedConfidence}</span
-                            >
-                        {/if}
-                        {#if annotation.object_track_number != null}
-                            <span class="shrink-0 font-mono text-xs opacity-80"
-                                >#{annotation.object_track_number}</span
-                            >
-                        {/if}
+                    {/if}
+                    {#if annotation.confidence != null}
+                        {@const formattedConfidence = formatConfidence(annotation.confidence)}
+                        <span class="text-xs text-muted-foreground">
+                            Confidence: {formattedConfidence}
+                        </span>
+                    {/if}
+                    {#if annotation.object_track_number != null}
+                        <span class="shrink-0 font-mono text-xs opacity-80">
+                            #{annotation.object_track_number}
+                        </span>
                     {/if}
                 </span>
             </span>
         </span>
         <div class="flex shrink-0 items-center gap-3">
             {#if $isEditingMode}
+                <CopyAnnotationToSource {collectionId} {annotation} onCopied={refetch} />
                 <Button
                     icon={Trash2}
                     ariaLabel="Delete classification"
@@ -305,7 +335,15 @@
 <Segment title="Classification">
     <div class="flex flex-col gap-3 space-y-4">
         <div class="flex flex-col gap-2">
-            {#if isGrouped}
+            {#if classificationAnnotations.length === 0 && !$isEditingMode}
+                <p class="text-sm text-muted-foreground" data-testid="empty-state-message">
+                    {#if canEdit}
+                        No classifications. Click <strong>Edit annotations</strong> to add one.
+                    {:else}
+                        No classifications.
+                    {/if}
+                </p>
+            {:else if isGrouped}
                 <div class="flex flex-col gap-3">
                     {#each sourceGroups as group (group.id)}
                         <SampleDetailsAnnotationSourceGroup
@@ -336,7 +374,7 @@
                 {#each draftClassifications as draftId (draftId)}
                     <div
                         class={cn(
-                            'flex w-full items-center justify-between gap-2 rounded-sm px-4 py-3 text-left',
+                            'flex w-full items-center justify-between gap-2 rounded-sm px-4 py-2 text-left',
                             'bg-card'
                         )}
                         data-annotation-id={draftId}
@@ -344,10 +382,14 @@
                         <span class="flex min-w-0 flex-1 flex-col gap-1">
                             <span class="min-w-0 text-sm font-medium">
                                 <SelectList
+                                    onCreate={trackClassCreatedInPicker}
+                                    allowCreate={canCreateClass}
                                     {items}
                                     name="classification-label"
-                                    placeholder="Select or create a class"
-                                    className="w-full min-w-0"
+                                    placeholder={canCreateClass
+                                        ? 'Select or create a class'
+                                        : 'Select a class'}
+                                    className="h-8 w-full min-w-0 px-3"
                                     contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {
                                         const created = await createClassificationAnnotation(
@@ -359,7 +401,10 @@
                                     }}
                                 >
                                     {#snippet notFound({ inputValue })}
-                                        <LabelNotFound label={inputValue} />
+                                        <LabelNotFound
+                                            label={inputValue}
+                                            allowCreate={canCreateClass}
+                                        />
                                     {/snippet}
                                 </SelectList>
                             </span>
@@ -384,13 +429,19 @@
                     ariaLabel="Add classification"
                     buttonProps={{
                         type: 'button',
-                        class: 'mb-2 h-8 justify-center rounded-sm bg-card px-2 py-0 text-base font-normal text-diffuse-foreground hover:bg-primary hover:text-primary-foreground',
+                        class: 'mb-2 h-8 w-full justify-center rounded-sm bg-card px-2 py-0 text-base font-normal text-diffuse-foreground hover:bg-primary hover:text-primary-foreground',
                         onclick: addDraftClassification,
                         'data-testid': 'add-classification-button'
                     }}
                 >
                     +
                 </Button>
+                {#if isGrouped}
+                    <AnnotationTargetCaption
+                        targetSource={annotationLabelContext.annotationSource ?? null}
+                        blockedReason={annotationLabelContext.annotationSourceBlockedReason ?? null}
+                    />
+                {/if}
             {/if}
         </div>
     </div>

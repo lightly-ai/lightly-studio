@@ -190,7 +190,7 @@ def test_text_search__server_without_text(
         )
 
     assert text_response.status_code == HTTP_STATUS_CONFLICT
-    assert "cannot embed text" in text_response.json()["error"]
+    assert "has no TextEmbedder" in text_response.json()["error"]
     # The server is in use, so the conflict is not the one of a space with no server
     assert image_response.status_code == HTTP_STATUS_OK
 
@@ -199,15 +199,18 @@ def _embed_query(
     client: TestClient, dataset: ImageDataset, image_paths: dict[str, Path], kind: str
 ) -> Response:
     """Embed the text "red" or the green image file as a search query of ``dataset``."""
+    response: Response
     if kind == "text":
-        return client.get(
+        response = client.get(
             f"/api/text_embedding/for_collection/{dataset.collection_id}",
             params={"query_text": "red"},
         )
-    return client.post(
-        f"/api/image_embedding/from_file/for_collection/{dataset.collection_id}",
-        files={"file": ("query.png", image_paths["green"].read_bytes(), "image/png")},
-    )
+    else:
+        response = client.post(
+            f"/api/image_embedding/from_file/for_collection/{dataset.collection_id}",
+            files={"file": ("query.png", image_paths["green"].read_bytes(), "image/png")},
+        )
+    return response
 
 
 def _ranked_file_names(

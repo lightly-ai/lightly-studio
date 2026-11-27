@@ -226,12 +226,8 @@ class TestSampleFilter:
         )
 
         # Create tags
-        tag1 = create_tag(
-            session=db_session, collection_id=collection_id, tag_name="tag1", kind="sample"
-        )
-        tag2 = create_tag(
-            session=db_session, collection_id=collection_id, tag_name="tag2", kind="sample"
-        )
+        tag1 = create_tag(session=db_session, collection_id=collection_id, tag_name="tag1")
+        tag2 = create_tag(session=db_session, collection_id=collection_id, tag_name="tag2")
 
         # Add samples to tags
         tag_resolver.add_sample_ids_to_tag_id(
@@ -276,12 +272,8 @@ class TestSampleFilter:
         )
 
         # Create tags
-        tag1 = create_tag(
-            session=db_session, collection_id=collection_id, tag_name="tag1", kind="sample"
-        )
-        tag2 = create_tag(
-            session=db_session, collection_id=collection_id, tag_name="tag2", kind="sample"
-        )
+        tag1 = create_tag(session=db_session, collection_id=collection_id, tag_name="tag1")
+        tag2 = create_tag(session=db_session, collection_id=collection_id, tag_name="tag2")
 
         # Add tag1 and tag2 twice to the first sample
         tag_resolver.add_sample_ids_to_tag_id(
@@ -435,12 +427,8 @@ class TestSampleFilter:
 
         # Tag samples
         # Add tag1 to samples 1, 2 and tag2 to samples 0, 1
-        tag1 = create_tag(
-            session=db_session, collection_id=collection_id, tag_name="tag1", kind="sample"
-        )
-        tag2 = create_tag(
-            session=db_session, collection_id=collection_id, tag_name="tag2", kind="sample"
-        )
+        tag1 = create_tag(session=db_session, collection_id=collection_id, tag_name="tag1")
+        tag2 = create_tag(session=db_session, collection_id=collection_id, tag_name="tag2")
         tag_resolver.add_sample_ids_to_tag_id(
             session=db_session,
             tag_id=tag1.tag_id,

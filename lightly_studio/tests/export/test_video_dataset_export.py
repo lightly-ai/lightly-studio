@@ -94,7 +94,7 @@ class TestVideoDatasetExport:
                     None,
                 ],
                 "areas": [1.0, None],
-                "iscrowd": 1,
+                "iscrowd": 0,
                 "height": 2,
                 "width": 3,
                 "length": 2,

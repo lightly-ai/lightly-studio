@@ -9,22 +9,26 @@
     let {
         label,
         icon,
+        iconClass,
         iconAfter,
         iconAfterClass,
         variant,
         buttonProps,
         collapseAt,
         isPending,
+        disabledReason,
         ariaLabel
     }: {
         label?: string;
         icon?: Component<IconProps>;
+        iconClass?: string;
         iconAfter?: Component<IconProps>;
         iconAfterClass?: string;
         variant?: ButtonVariant;
         buttonProps?: ButtonProps;
         collapseAt?: CollapseAt;
         isPending?: boolean;
+        disabledReason?: string;
         ariaLabel?: string;
     } = $props();
 </script>
@@ -32,12 +36,14 @@
 {#if label !== undefined}
     <Button
         {icon}
+        {iconClass}
         {iconAfter}
         {iconAfterClass}
         {variant}
         {buttonProps}
         {collapseAt}
         {isPending}
+        {disabledReason}
         {ariaLabel}
     >
         {label}
@@ -45,12 +51,14 @@
 {:else}
     <Button
         {icon}
+        {iconClass}
         {iconAfter}
         {iconAfterClass}
         {variant}
         {buttonProps}
         {collapseAt}
         {isPending}
+        {disabledReason}
         ariaLabel={ariaLabel ?? 'Icon button'}
     />
 {/if}

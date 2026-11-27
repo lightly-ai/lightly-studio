@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session
 
 from lightly_studio.evaluation import (
+    average_precision,
     classification_metric,
     instance_segmentation_metric,
-    object_detection_metric,
     semantic_segmentation_metric,
     validators,
 )
@@ -27,37 +29,68 @@ from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def recompute_evaluation_run(
     session: Session,
     *,
     run: EvaluationRunTable,
+    config_json: dict[str, Any] | None = None,
 ) -> EvaluationResult:
     """Re-run an evaluation in-place, replacing its metrics.
 
-    Deletes the run's existing ``EvaluationAnnotationMetric`` and
-    ``EvaluationSampleMetric`` rows, re-runs evaluation using the run's stored
-    ``task_type``, ``config_json``, ``gt_annotation_collection_id``, and
-    ``pred_annotation_collection_id``, persists fresh metrics, and resets
+    Deletes the run's existing ``EvaluationAnnotationMetric``,
+    ``EvaluationSampleMetric``, and ``EvaluationClassMetric`` rows, re-runs
+    evaluation using the run's stored ``task_type``, ``config_json``,
+    ``gt_annotation_collection_id``, and ``pred_annotation_collection_id``,
+    persists fresh metrics, and resets
     ``stale_since`` to ``None``. The run ID and ``created_at`` are preserved.
 
     Args:
         session: Database session.
         run: The evaluation run to recompute.
+        config_json: Optional replacement parameters, saved only if the rerun succeeds.
 
     Returns:
         Summary of the recomputed run, including its ID and input counts.
     """
+    try:
+        # Batch writers may commit. This session only flushes their changes into
+        # the outer transaction, allowing rollback after a later batch fails.
+        with Session(bind=session.connection(), join_transaction_mode="rollback_only") as work:
+            # Load current state so an older caller cannot overwrite a newer stale marker.
+            target = work.get(EvaluationRunTable, run.id)
+            if target is None:
+                raise ValueError("Evaluation run no longer exists.")
+            if config_json is not None:
+                target.config_json = config_json
+            result = _recompute_evaluation_run(session=work, run=target)
+        session.commit()
+    except Exception:
+        try:
+            session.rollback()
+        except Exception:
+            logger.exception("Rollback failed after evaluation rerun error")
+        raise
+    return result
+
+
+def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> EvaluationResult:
     observed_stale_since = run.stale_since
     data = _fetch_annotations_for_run(session=session, run=run)
     evaluation_annotation_metric_resolver.delete_by_evaluation_run_id(
         session=session, evaluation_run_id=run.id
     )
     evaluation_sample_metric_resolver.delete_by_evaluation_run_id(
+        session=session, evaluation_run_id=run.id
+    )
+    evaluation_class_metric_resolver.delete_by_evaluation_run_id(
         session=session, evaluation_run_id=run.id
     )
     _persist_metrics(session=session, run=run, data=data)
@@ -71,6 +104,8 @@ def recompute_evaluation_run(
 
 def _fetch_annotations_for_run(session: Session, run: EvaluationRunTable) -> EvaluationData:
     """Fetch coverage and annotations from the run's stored collection IDs."""
+    # TODO(Michal, 11/2026): Validate the annotation types as a new run does. Recompute
+    # skips annotations of other types without an error, for example polygons.
     annotation_type = validators.get_annotation_type_for_task(run.task_type)
     gt_covered = set(
         annotation_collection_coverage_resolver.list_by_collection_id(
@@ -109,11 +144,12 @@ def _persist_metrics(session: Session, run: EvaluationRunTable, data: Evaluation
     """Compute and persist fresh metrics for the run's task type."""
     if run.task_type == EvaluationTaskType.OBJECT_DETECTION:
         config = ObjectDetectionEvaluationConfig.model_validate(run.config_json)
-        object_detection_metric.create_and_persist_object_detection_metrics_per_sample(
+        average_precision.create_and_persist_object_detection_metrics(
             session=session,
             data=data,
             iou_threshold=config.iou_threshold,
             classwise=config.classwise,
+            compute_average_precision=config.compute_average_precision,
         )
     elif run.task_type == EvaluationTaskType.CLASSIFICATION:
         ClassificationEvaluationConfig.model_validate(run.config_json)

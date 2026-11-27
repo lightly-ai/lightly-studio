@@ -33,4 +33,4 @@ dataset.add_annotations_from_coco(
 )
 
 
-ls.start_gui()
+ls.start_gui(open_browser=False)

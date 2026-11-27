@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.embedding_coloring import coloring_helpers
 from lightly_studio.api.routes.api.embedding_coloring.coloring_helpers import DiscreteColorScale
 from lightly_studio.resolvers.metadata_resolver import sample as sample_metadata_resolver
 
@@ -52,11 +52,12 @@ def build_metadata_color_maps(
         metadata_type=metadata_type,
         matching_sample_ids=matching_sample_ids,
     )
-    return coloring_helpers.assign_color_categories(
-        sample_ids=sample_ids,
-        sample_to_values={sid: (value,) for sid, value in sample_to_value.items()},
-        scale=scale,
-    )
+    categories = []
+    for sample_id in sample_ids:
+        value = sample_to_value.get(sample_id)
+        category = scale.value_to_category(value) if value is not None else None
+        categories.append([category] if category is not None else [])
+    return categories, scale.legend
 
 
 def _build_metadata_color_scale(
@@ -77,11 +78,12 @@ def _build_metadata_color_scale(
         format_fn: Callable[[Any], str] = (
             (lambda v: "true" if v else "false") if metadata_type == "boolean" else str
         )
-        ordered_values = coloring_helpers.order_values_by_frequency(
-            sample_to_values={sid: (value,) for sid, value in sample_to_value.items()},
-            matching_sample_ids=matching_sample_ids,
-            format_fn=format_fn,
+        counts = Counter(
+            value
+            for sid, value in sample_to_value.items()
+            if matching_sample_ids is None or sid in matching_sample_ids
         )
+        ordered_values = sorted(counts, key=lambda value: (-counts[value], format_fn(value)))
         return DiscreteColorScale.from_values(values=ordered_values, format_fn=format_fn)
     if metadata_type == "integer":
         return DiscreteColorScale.from_integers(values=(int(v) for v in sample_to_value.values()))

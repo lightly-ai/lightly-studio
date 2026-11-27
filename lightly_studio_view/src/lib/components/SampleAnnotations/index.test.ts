@@ -6,6 +6,7 @@ import SampleAnnotations from './index.svelte';
 import { useSettings } from '$lib/hooks/useSettings';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 import { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
+import { useCustomSourceColors } from '$lib/hooks';
 import * as utils from '$lib/utils';
 
 type UseSettingsReturn = ReturnType<typeof useSettings>;
@@ -40,6 +41,7 @@ vi.mock('$lib/hooks/useSettings', async () => {
         setting_id: '00000000-0000-0000-0000-000000000000',
         grid_view_sample_rendering: 'contain',
         grid_view_thumbnail_quality: 'raw',
+        image_interpolation: true,
         key_hide_annotations: 'v',
         key_go_back: 'Escape',
         key_toggle_edit_mode: 'e',
@@ -54,7 +56,9 @@ vi.mock('$lib/hooks/useSettings', async () => {
         key_toolbar_bounding_box: 'b',
         key_toolbar_segmentation_mask: 'm',
         key_toolbar_brush: 'r',
-        key_toolbar_eraser: 'x'
+        key_toolbar_eraser: 'x',
+        key_previous_camera: '[',
+        key_next_camera: ']'
     });
     const showBoundingBoxesForSegmentationStore =
         writable<ShowBoundingBoxesForSegmentationValue>(true);
@@ -125,6 +129,16 @@ const createSample = (): ComponentProps<typeof SampleAnnotations>['sample'] =>
             }
         ]
     }) as ComponentProps<typeof SampleAnnotations>['sample'];
+
+const parseColorBytes = (color: string): [number, number, number, number] => {
+    const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color);
+    if (hex) return [parseInt(hex[1], 16), parseInt(hex[2], 16), parseInt(hex[3], 16), 255];
+    const [r, g, b, a = 1] = color.match(/[\d.]+/g)!.map(Number);
+    return [r, g, b, Math.round(a * 255)];
+};
+
+// Canvas contexts normalize color strings, so compare the channels only.
+const normalizeColor = (color: string): string => color.replace(/\s+/g, '');
 
 const hasStrokeRectCall = (
     mockContext: Mock2dContext,
@@ -218,6 +232,40 @@ describe('SampleAnnotations', () => {
         });
     });
 
+    it('draws the box of a polygon annotation', async () => {
+        const sample = {
+            width: 100,
+            height: 80,
+            annotations: [
+                {
+                    sample_id: 'polygon-1',
+                    annotation_collection_id: SAMPLE_SOURCE_ID,
+                    annotation_type: 'polygon',
+                    annotation_label: { annotation_label_name: 'car' },
+                    polygon_details: {
+                        x: 5,
+                        y: 6,
+                        width: 7,
+                        height: 8,
+                        polygons: [
+                            [
+                                [5, 6],
+                                [12, 6],
+                                [12, 14]
+                            ]
+                        ]
+                    }
+                }
+            ]
+        } as ComponentProps<typeof SampleAnnotations>['sample'];
+
+        render(SampleAnnotations, { props: { sample } });
+
+        await waitFor(() => {
+            expect(hasStrokeRectCall(mockContext, 5, 6, 7, 8)).toBe(true);
+        });
+    });
+
     it('draws nothing once the user unchecks every annotation source', async () => {
         vi.useFakeTimers();
         setShowBoundingBoxesForSegmentation(true);
@@ -305,7 +353,7 @@ describe('SampleAnnotations', () => {
         });
 
         it('colors by source name when multiple sources are selected and enforce is disabled', async () => {
-            const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+            const colorBySourceSpy = vi.spyOn(utils, 'getColorBySource');
 
             setSelectedCollectionIds(['col-a', 'col-b']);
             setCollectionIdToName({ 'col-a': 'GroundTruth', 'col-b': 'Predictions' });
@@ -314,16 +362,34 @@ describe('SampleAnnotations', () => {
             render(SampleAnnotations, { props: { sample: createTwoSourceSample() } });
 
             await waitFor(() => {
-                const calledNames = colorByLabelSpy.mock.calls.map(([name]) => name);
+                const calledNames = colorBySourceSpy.mock.calls.map(([name]) => name);
                 expect(calledNames).toContain('GroundTruth');
                 expect(calledNames).toContain('Predictions');
             });
 
-            colorByLabelSpy.mockRestore();
+            colorBySourceSpy.mockRestore();
         });
 
         it('colors by class when multiple sources are selected and enforce is enabled', async () => {
-            const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+            const { setCustomColor, clearCustomColors } = useCustomSourceColors();
+            setCustomColor('GroundTruth', '#ff0000', 1);
+            setCustomColor('Predictions', '#ff0000', 1);
+            // The canvas parses colors by painting one pixel, so make the mock paint for real.
+            let lastFillStyle = '';
+            Object.defineProperty(mockContext, 'fillStyle', {
+                get: () => lastFillStyle,
+                set: (value: string) => {
+                    lastFillStyle = value;
+                }
+            });
+            mockContext.getImageData.mockImplementation(() => ({
+                data: new Uint8ClampedArray(parseColorBytes(lastFillStyle))
+            }));
+            const strokeStyles: string[] = [];
+            Object.defineProperty(mockContext, 'strokeStyle', {
+                get: () => strokeStyles.at(-1) ?? '',
+                set: (value: string) => strokeStyles.push(value)
+            });
 
             setSelectedCollectionIds(['col-a', 'col-b']);
             setCollectionIdToName({ 'col-a': 'GroundTruth', 'col-b': 'Predictions' });
@@ -331,14 +397,20 @@ describe('SampleAnnotations', () => {
 
             render(SampleAnnotations, { props: { sample: createTwoSourceSample() } });
 
-            await waitFor(() => {
-                const calledNames = colorByLabelSpy.mock.calls.map(([name]) => name);
-                expect(calledNames).toContain('car');
-                expect(calledNames).not.toContain('GroundTruth');
-                expect(calledNames).not.toContain('Predictions');
-            });
-
-            colorByLabelSpy.mockRestore();
+            try {
+                await waitFor(() => {
+                    expect(mockContext.strokeRect).toHaveBeenCalled();
+                });
+                // Both boxes are class "car", so they use the class color, not the source color.
+                const classColor = utils.getColorByLabel('car', 1).color;
+                expect(strokeStyles.length).toBeGreaterThan(0);
+                expect(new Set(strokeStyles.map(normalizeColor))).toEqual(
+                    new Set([normalizeColor(classColor)])
+                );
+                expect(strokeStyles.map(normalizeColor)).not.toContain('rgba(255,0,0,1)');
+            } finally {
+                clearCustomColors();
+            }
         });
     });
 });

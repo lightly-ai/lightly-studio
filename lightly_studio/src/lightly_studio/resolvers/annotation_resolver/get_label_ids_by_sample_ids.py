@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import or_
+from sqlalchemy import ARRAY, Uuid, any_, bindparam, or_
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_array
@@ -27,6 +27,8 @@ def get_label_ids_by_sample_ids(
         return {}
 
     requested_sample_ids = set(sample_ids)
+    # Bind the plotted IDs once for both own-label and parent-label predicates.
+    requested_ids = bindparam("sample_ids", value=list(sample_ids), type_=ARRAY(Uuid()))
     rows = session.exec(
         select(
             AnnotationBaseTable.sample_id,
@@ -41,10 +43,8 @@ def get_label_ids_by_sample_ids(
         )
         .where(
             or_(
-                db_array.in_array(
-                    column=col(AnnotationBaseTable.parent_sample_id), values=sample_ids
-                ),
-                db_array.in_array(column=col(AnnotationBaseTable.sample_id), values=sample_ids),
+                col(AnnotationBaseTable.parent_sample_id) == any_(requested_ids),
+                col(AnnotationBaseTable.sample_id) == any_(requested_ids),
             )
         )
     ).all()

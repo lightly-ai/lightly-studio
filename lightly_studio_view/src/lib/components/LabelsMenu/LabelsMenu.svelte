@@ -1,14 +1,13 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-    import { Label } from '$lib/components/ui/label/index.js';
+    import { FilterList } from '$lib/components/FilterList';
     import type { Annotation } from '$lib/types';
     import { formatInteger, resolveEffectiveColorBySource } from '$lib/utils';
     import { type Readable } from 'svelte/store';
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { useAnnotationClassVisibility } from '$lib/hooks';
+    import { useAnnotationClassVisibility, useUnannotatedSamplesFilter } from '$lib/hooks';
     import LabelVisibilityToggle from './LabelVisibilityToggle/LabelVisibilityToggle.svelte';
 
     interface Props {
@@ -16,6 +15,8 @@
         annotationFilterRows: Readable<Annotation[]>;
         /** Called when the user toggles an annotation class filter checkbox */
         onToggleAnnotationFilter: (label: string) => void;
+        /** Called with the selected class names after "Select all" or "Clear" */
+        onSelectionChange: (labels: string[]) => void;
         /** Whether to show the label visibility toggle */
         showVisibilityToggle?: boolean;
     }
@@ -23,12 +24,35 @@
     let {
         annotationFilterRows,
         onToggleAnnotationFilter,
+        onSelectionChange,
         showVisibilityToggle = false
     }: Props = $props();
 
     const { multipleSourcesVisible, allSourcesHidden } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { hiddenClassNamesStore, toggleClassVisibility } = useAnnotationClassVisibility();
+    const { includeUnannotatedSamples, setIncludeUnannotatedSamples } =
+        useUnannotatedSamplesFilter();
+
+    // Class names are free text, so the item IDs need a namespace to stay apart from the row.
+    const NO_ANNOTATIONS_ITEM_ID = 'no-annotations';
+    const CLASS_ITEM_ID_PREFIX = 'class:';
+    const toClassName = (itemId: string) => itemId.slice(CLASS_ITEM_ID_PREFIX.length);
+
+    const toggleItem = (itemId: string) => {
+        if (itemId === NO_ANNOTATIONS_ITEM_ID) {
+            setIncludeUnannotatedSamples(!$includeUnannotatedSamples);
+            return;
+        }
+        onToggleAnnotationFilter(toClassName(itemId));
+    };
+
+    const changeSelection = (itemIds: string[]) => {
+        setIncludeUnannotatedSamples(itemIds.includes(NO_ANNOTATIONS_ITEM_ID));
+        onSelectionChange(
+            itemIds.filter((itemId) => itemId !== NO_ANNOTATIONS_ITEM_ID).map(toClassName)
+        );
+    };
 
     const showClassColorLegend = $derived(
         !resolveEffectiveColorBySource({
@@ -36,10 +60,25 @@
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
+
+    const classItems = $derived(
+        $annotationFilterRows.map((row) => ({
+            id: row.isNoAnnotationsRow
+                ? NO_ANNOTATIONS_ITEM_ID
+                : `${CLASS_ITEM_ID_PREFIX}${row.label_name}`,
+            label: row.label_name,
+            selected: row.selected,
+            count:
+                row.current_count === undefined
+                    ? undefined
+                    : `${formatInteger(row.current_count)} of ${formatInteger(row.total_count)}`
+        }))
+    );
+    const selectedById = $derived(new Map(classItems.map((item) => [item.id, item.selected])));
 </script>
 
 <Segment title="Annotation Classes">
-    <div class="width-full space-y-2 overflow-hidden">
+    <div class="space-y-2">
         {#if $allSourcesHidden}
             <!-- The rows are empty here because every source is unchecked, not because the
                  dataset has no annotations. Say so, otherwise the message below sends the user
@@ -60,56 +99,40 @@
                 </a>
             </p>
         {:else}
-            {#each $annotationFilterRows as { label_name, current_count, total_count, selected } (label_name)}
-                {@const isHidden = $hiddenClassNamesStore.includes(label_name)}
-                <div class="width-full group flex items-center space-x-2" title={label_name}>
-                    <Checkbox
-                        id={label_name}
-                        checked={selected}
-                        aria-labelledby={`${label_name}-label`}
-                        onCheckedChange={() => onToggleAnnotationFilter(label_name)}
-                    />
-
-                    <Label
-                        id={`${label_name}-label`}
-                        for={label_name}
-                        data-testid="labels-menu-item"
-                        class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                        {#if showClassColorLegend}
-                            <AnnotationColorLegend
-                                labelName={label_name}
-                                className="h-3 w-3"
-                                {selected}
-                                testId="label-color-legend"
-                            />
-                        {/if}
-                        <p
-                            class="flex-1 truncate text-base font-normal"
-                            data-testid="label-menu-label-name"
-                        >
-                            {label_name}
-                        </p>
-                        {#if current_count !== undefined}
-                            <span
-                                class="text-sm text-diffuse-foreground"
-                                data-testid="label-menu-label-count"
-                                >{formatInteger(current_count)} of {formatInteger(
-                                    total_count
-                                )}</span
-                            >
-                        {/if}
-                    </Label>
-
-                    {#if showVisibilityToggle}
+            <FilterList
+                items={classItems}
+                onToggle={toggleItem}
+                onSelectionChange={changeSelection}
+                testId="labels-menu"
+                searchPlaceholder="Search classes…"
+                paged={false}
+            >
+                {#snippet leading(item)}
+                    {#if showClassColorLegend && item.id === NO_ANNOTATIONS_ITEM_ID}
+                        <!-- Takes the width of the color legend, so the names line up. -->
+                        <span class="size-3 shrink-0" aria-hidden="true"></span>
+                    {:else if showClassColorLegend}
+                        <AnnotationColorLegend
+                            labelName={item.label}
+                            className="h-3 w-3"
+                            selected={selectedById.get(item.id) ?? false}
+                            testId="label-color-legend"
+                        />
+                    {/if}
+                {/snippet}
+                {#snippet trailing(item)}
+                    {#if showVisibilityToggle && item.id === NO_ANNOTATIONS_ITEM_ID}
+                        <!-- Takes the width of the visibility toggle, so the counts line up. -->
+                        <span class="size-4 shrink-0" aria-hidden="true"></span>
+                    {:else if showVisibilityToggle}
                         <LabelVisibilityToggle
-                            {isHidden}
-                            labelName={label_name}
+                            isHidden={$hiddenClassNamesStore.includes(item.label)}
+                            labelName={item.label}
                             {toggleClassVisibility}
                         />
                     {/if}
-                </div>
-            {/each}
+                {/snippet}
+            </FilterList>
         {/if}
     </div>
 </Segment>

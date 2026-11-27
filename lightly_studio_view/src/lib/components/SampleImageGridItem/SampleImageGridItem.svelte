@@ -3,6 +3,7 @@
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
     import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
+    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useSettings } from '$lib/hooks/useSettings';
     import { SampleAnnotations, SampleImage } from '..';
     import type { SampleImageObjectFit } from '../SampleImage/types';
@@ -22,6 +23,13 @@
     } = $props();
 
     const { gridViewThumbnailQualityStore } = useSettings();
+    const { imageSortBy } = useImageFilters();
+    // Missing metrics mean the image has no result for this evaluation, not a measured zero.
+    const showMissingValue = $derived(
+        $imageSortBy?.[0]?.source === 'evaluation_metric' &&
+            sample.order_value == null &&
+            sample.similarity_score == null
+    );
 </script>
 
 <SampleImage
@@ -34,11 +42,12 @@
 <SampleClassificationPills
     {sample}
     hasBottomOverlay={Boolean(displayTextOnImage)}
-    hasRightOverlay={hasValueBadge(sample.order_value, sample.similarity_score)}
+    hasRightOverlay={showMissingValue || hasValueBadge(sample.order_value, sample.similarity_score)}
 />
 <SampleAnnotations {sample} {objectFit} outputWidth={tileWidth} outputHeight={tileHeight} />
 
 <SampleValueBadge
+    {showMissingValue}
     orderValue={sample.order_value}
     similarityScore={sample.similarity_score}
     hasBottomOverlay={Boolean(displayTextOnImage)}

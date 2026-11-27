@@ -1,28 +1,28 @@
 <script lang="ts">
     import { useVideos } from '$lib/hooks/useVideos/useVideos.svelte';
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
-    import { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
+    import { buildVideoFilter, useUnannotatedSamplesFilter, useVideoFilters } from '$lib/hooks';
     import { GridContainer } from '$lib/components/GridContainer';
     import { Grid } from '$lib/components/Grid';
     import { GridItem } from '$lib/components/GridItem';
     import type { VideoFilterParams } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { isEqual, omit } from 'lodash-es';
+    import { isEqual } from 'lodash-es';
+    import { mergeExternalFilters, paramsWithoutExternalFilters } from './syncFilterParams';
     import { get } from 'svelte/store';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { onMount } from 'svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
 
-    const collectionId = $derived($page.params.collection_id!);
+    const collectionId = $derived(page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
         useTags({
-            collection_id: collectionId,
-            kind: ['sample']
+            collection_id: collectionId
         })
     );
 
@@ -30,6 +30,7 @@
     const { selectedAnnotationFilterIdsArray: selectedAnnotationsFilterIds } =
         useSelectedAnnotationsFilter();
     const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
+    const { includeUnannotatedSamples } = useUnannotatedSamplesFilter();
 
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection, sampleSize } =
         useGlobalStorage();
@@ -41,6 +42,7 @@
             annotation_frames_label_ids: $selectedAnnotationsFilterIds?.length
                 ? $selectedAnnotationsFilterIds
                 : undefined,
+            include_unannotated_samples: $includeUnannotatedSamples || undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             metadata_values: $metadataValues,
             categorical_metadata_values: $categoricalMetadataValues
@@ -48,71 +50,33 @@
         video_bounds: $videoBoundsValues
     });
 
-    const paramsWithoutSampleIds = (params: VideoFilterParams) => {
-        return {
-            ...params,
-            filters: params.filters ? omit(params.filters, ['sample_ids']) : undefined
-        };
-    };
-
-    const { filterParams, videoSortBy, updateFilterParams } = useVideoFilters();
+    const { filterParams, videoQueryExpression, videoSortBy, updateFilterParams } =
+        useVideoFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local videos parameters
         const baseParams = videosParams as VideoFilterParams;
         const currentParams = $filterParams;
 
-        // Compare parameters excluding sample_ids to detect if other filters have changed
+        // Compare filter controls without the externally-set sample IDs and embedding region.
         if (
             currentParams &&
-            isEqual(paramsWithoutSampleIds(baseParams), paramsWithoutSampleIds(currentParams))
+            isEqual(
+                paramsWithoutExternalFilters(baseParams),
+                paramsWithoutExternalFilters(currentParams)
+            )
         ) {
             return;
         }
 
-        // Start with the base parameters from the component
-        let nextParams = baseParams;
-
-        let currentSampleIds: string[] = [];
-        if (
-            currentParams?.collection_id === baseParams.collection_id &&
-            currentParams.filters?.sample_ids
-        ) {
-            currentSampleIds = currentParams.filters.sample_ids;
-        }
-
-        // Merge the existing sample selection into the new parameters
-        if (currentSampleIds && currentSampleIds.length > 0) {
-            nextParams = {
-                ...nextParams,
-                filters: {
-                    ...(nextParams.filters ?? {}),
-                    sample_ids: currentSampleIds
-                }
-            };
-        }
-
-        // Update the global filter parameters
-        updateFilterParams(nextParams);
+        updateFilterParams(mergeExternalFilters(baseParams, currentParams));
     });
 
     const currentVideoFilter = $derived.by(() => {
-        const currentSampleIds =
-            $filterParams?.collection_id === videosParams.collection_id
-                ? $filterParams.filters?.sample_ids
-                : undefined;
-        const paramsWithSelection: VideoFilterParams =
-            currentSampleIds && currentSampleIds.length > 0
-                ? {
-                      ...videosParams,
-                      filters: {
-                          ...(videosParams.filters ?? {}),
-                          sample_ids: currentSampleIds
-                      }
-                  }
-                : videosParams;
-
-        return buildVideoFilter(paramsWithSelection) ?? {};
+        const paramsWithSelection = mergeExternalFilters(videosParams, $filterParams);
+        const queryExpression =
+            $filterParams?.collection_id === collectionId ? $videoQueryExpression : null;
+        return buildVideoFilter(paramsWithSelection, queryExpression) ?? {};
     });
 
     const { data, query, loadMore, totalCount } = useVideos(() => ({
@@ -163,7 +127,13 @@
 
     // TODO(Mihnea, 09/2026): hash the effective metadata filters, not raw $filterParams.
     // Same fix as Images.svelte's filterHash.
-    const filterHash = $derived(JSON.stringify({ filters: $filterParams, sortBy: $videoSortBy }));
+    const filterHash = $derived(
+        JSON.stringify({
+            filters: $filterParams,
+            query: $videoQueryExpression?.query_expr,
+            sortBy: $videoSortBy
+        })
+    );
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
     onMount(async () => {
         initialize();

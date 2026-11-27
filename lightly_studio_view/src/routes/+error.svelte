@@ -1,4 +1,5 @@
 <script lang="ts">
+    // eslint-disable-next-line no-restricted-imports -- Legacy. Convert to $app/state.
     import { page } from '$app/stores';
     import { client } from '$lib/api/lightly_studio_local/client.gen';
     // Imported from the Button module rather than the `$lib/components` barrel:
@@ -47,8 +48,9 @@
                     <li>
                         Make sure the Lightly Studio API server is running at <code
                             class="rounded bg-muted px-1 py-0.5 font-mono text-sm text-muted-foreground"
-                            >{$apiUrl}</code
                         >
+                            {$apiUrl}
+                        </code>
                     </li>
                     <li>Check that the API is accessible at the configured URL</li>
                     <li>Refresh this page once the API is running</li>

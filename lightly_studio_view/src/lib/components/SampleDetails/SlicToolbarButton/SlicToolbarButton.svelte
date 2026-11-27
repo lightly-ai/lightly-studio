@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Bot } from '@lucide/svelte';
+    import Bot from '@lucide/svelte/icons/bot';
 
     interface Props {
         onclick: () => void;
@@ -13,7 +13,7 @@
     type="button"
     {onclick}
     aria-pressed={isActive}
-    aria-label="AI-Assisted labeling"
+    aria-label="Superpixel brush"
     class={`flex
  items-center justify-center rounded-md p-2 transition-colors
         focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2

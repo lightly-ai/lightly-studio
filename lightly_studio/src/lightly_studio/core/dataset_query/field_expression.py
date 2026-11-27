@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Generic, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar
 
-from sqlalchemy import ColumnElement
-from sqlalchemy.orm import Mapped
+import numpy as np
+from sqlalchemy import ColumnElement, Float, cast
+from sqlalchemy.orm import InstrumentedAttribute, Mapped
 
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T")
+_MAX_FLOAT32 = float(np.finfo(np.float32).max)
 
 """Conditions themselves, in the format <field> <operator> <value>
 
@@ -46,7 +49,7 @@ class OrdinalFieldExpression(MatchExpression, Generic[T]):
         table_property = self.field.get_sqlmodel_field()
         operations: dict[
             OrdinalOperator,
-            Callable[[Mapped[T] | Mapped[T | None], T], ColumnElement[bool]],
+            Callable[[Mapped[T] | Mapped[T | None], T | ColumnElement[float]], ColumnElement[bool]],
         ] = {
             "<": lambda tp, v: tp < v,
             "<=": lambda tp, v: tp <= v,
@@ -55,10 +58,20 @@ class OrdinalFieldExpression(MatchExpression, Generic[T]):
             "==": lambda tp, v: tp == v,
             "!=": lambda tp, v: tp != v,
         }
+        # DuckDB stores FLOAT columns at single precision but binds Python floats as DOUBLE.
+        # Compare at the column's precision so inclusive bounds include the stored value.
+        if (
+            isinstance(self.value, float)
+            and abs(self.value) <= _MAX_FLOAT32
+            and (self.value == 0 or np.float32(self.value) != 0)
+            and isinstance(table_property, InstrumentedAttribute)
+            and isinstance(table_property.type, Float)
+        ):
+            return operations[self.operator](table_property, cast(self.value, table_property.type))
         return operations[self.operator](table_property, self.value)
 
 
-NumericalFieldExpression = OrdinalFieldExpression[Union[float, int]]
+NumericalFieldExpression = OrdinalFieldExpression[float | int]
 DatetimeFieldExpression = OrdinalFieldExpression[datetime]
 
 

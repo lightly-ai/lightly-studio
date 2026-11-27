@@ -10,20 +10,23 @@ type ThumbnailQualityMode = GridViewThumbnailQualityType;
 
 interface SettingsDialogShortcutState {
     hideAnnotations: string;
-    goBack: string;
     toggleEditMode: string;
     keyToolbarSelection: string;
     keyToolbarDrag: string;
     keyToolbarBoundingBox: string;
     keyToolbarSegmentationMask: string;
+    keyToolbarSlic: string;
     keyToolbarBrush: string;
     keyToolbarEraser: string;
+    keyPreviousCamera: string;
+    keyNextCamera: string;
 }
 
 interface SettingsDialogFormState {
     shortcutSettings: SettingsDialogShortcutState;
     gridViewRendering: RenderingMode;
     gridViewThumbnailQuality: ThumbnailQualityMode;
+    imageInterpolation: boolean;
     showAnnotationTextLabels: boolean;
     showSampleFilenames: boolean;
     showBoundingBoxesForSegmentation: boolean;
@@ -39,17 +42,20 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
     return {
         shortcutSettings: {
             hideAnnotations: settings.key_hide_annotations,
-            goBack: settings.key_go_back,
             toggleEditMode: settings.key_toggle_edit_mode,
             keyToolbarSelection: settings.key_toolbar_selection,
             keyToolbarDrag: settings.key_toolbar_drag,
             keyToolbarBoundingBox: settings.key_toolbar_bounding_box,
             keyToolbarSegmentationMask: settings.key_toolbar_segmentation_mask,
+            keyToolbarSlic: settings.key_toolbar_slic ?? 'a',
             keyToolbarBrush: settings.key_toolbar_brush,
-            keyToolbarEraser: settings.key_toolbar_eraser
+            keyToolbarEraser: settings.key_toolbar_eraser,
+            keyPreviousCamera: settings.key_previous_camera,
+            keyNextCamera: settings.key_next_camera
         },
         gridViewRendering: settings.grid_view_sample_rendering,
         gridViewThumbnailQuality: settings.grid_view_thumbnail_quality,
+        imageInterpolation: settings.image_interpolation,
         showAnnotationTextLabels: settings.show_annotation_text_labels,
         showSampleFilenames: settings.show_sample_filenames,
         showBoundingBoxesForSegmentation: settings.show_bounding_boxes_for_segmentation,
@@ -62,10 +68,10 @@ export function createSettingsSavePayload(
 ): Partial<SettingView> {
     return {
         key_hide_annotations: formState.shortcutSettings.hideAnnotations,
-        key_go_back: formState.shortcutSettings.goBack,
         key_toggle_edit_mode: formState.shortcutSettings.toggleEditMode,
         grid_view_sample_rendering: formState.gridViewRendering,
         grid_view_thumbnail_quality: formState.gridViewThumbnailQuality,
+        image_interpolation: formState.imageInterpolation,
         show_annotation_text_labels: formState.showAnnotationTextLabels,
         show_sample_filenames: formState.showSampleFilenames,
         show_bounding_boxes_for_segmentation: formState.showBoundingBoxesForSegmentation,
@@ -74,10 +80,18 @@ export function createSettingsSavePayload(
         key_toolbar_drag: formState.shortcutSettings.keyToolbarDrag,
         key_toolbar_bounding_box: formState.shortcutSettings.keyToolbarBoundingBox,
         key_toolbar_segmentation_mask: formState.shortcutSettings.keyToolbarSegmentationMask,
+        key_toolbar_slic: formState.shortcutSettings.keyToolbarSlic,
         key_toolbar_brush: formState.shortcutSettings.keyToolbarBrush,
-        key_toolbar_eraser: formState.shortcutSettings.keyToolbarEraser
+        key_toolbar_eraser: formState.shortcutSettings.keyToolbarEraser,
+        key_previous_camera: formState.shortcutSettings.keyPreviousCamera,
+        key_next_camera: formState.shortcutSettings.keyNextCamera
     };
 }
+
+// A modifier alone is never a shortcut: AltGr and Shift come before the character they type.
+const MODIFIER_KEYS = new Set(['Alt', 'AltGraph', 'Control', 'Meta', 'Shift']);
+// Space toggles playback in the camera dialog, so it can never switch cameras.
+const CAMERA_SHORTCUTS = new Set<ShortcutSettingKey>(['keyPreviousCamera', 'keyNextCamera']);
 
 export function normalizeShortcutKey(event: ShortcutKeyboardEvent): string {
     if (event.key === ' ') {
@@ -104,23 +118,36 @@ export function normalizeShortcutKey(event: ShortcutKeyboardEvent): string {
 export class SettingsDialogState {
     shortcuts = $state<SettingsDialogShortcutState>({
         hideAnnotations: 'v',
-        goBack: 'Escape',
         toggleEditMode: 'e',
         keyToolbarSelection: 's',
         keyToolbarDrag: 'd',
         keyToolbarBoundingBox: 'b',
         keyToolbarSegmentationMask: 'm',
+        keyToolbarSlic: 'a',
         keyToolbarBrush: 'r',
-        keyToolbarEraser: 'x'
+        keyToolbarEraser: 'x',
+        keyPreviousCamera: '[',
+        keyNextCamera: ']'
     });
     gridViewRendering: RenderingMode = $state('contain');
     gridViewThumbnailQuality: ThumbnailQualityMode = $state('raw');
+    imageInterpolation = $state(true);
     showAnnotationTextLabels = $state(false);
     showSampleFilenames = $state(false);
     showBoundingBoxesForSegmentation = $state(true);
     enforceColoringByClass = $state(false);
     recordingShortcut: ShortcutSettingKey | null = $state(null);
     isSaving = $state(false);
+    // Payload of the last hydrated settings, to detect unsaved changes.
+    savedPayload: Partial<SettingView> = $state(this.getSavePayload());
+
+    /** Whether any form value differs from the hydrated settings. */
+    get hasChanges(): boolean {
+        const payload = this.getSavePayload();
+        return Object.entries(payload).some(
+            ([key, value]) => this.savedPayload[key as keyof SettingView] !== value
+        );
+    }
 
     /** Populate form fields from the latest store values. */
     hydrate(settings: SettingView): void {
@@ -128,10 +155,12 @@ export class SettingsDialogState {
         this.shortcuts = formState.shortcutSettings;
         this.gridViewRendering = formState.gridViewRendering;
         this.gridViewThumbnailQuality = formState.gridViewThumbnailQuality;
+        this.imageInterpolation = formState.imageInterpolation;
         this.showAnnotationTextLabels = formState.showAnnotationTextLabels;
         this.showSampleFilenames = formState.showSampleFilenames;
         this.showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
         this.enforceColoringByClass = formState.enforceColoringByClass;
+        this.savedPayload = createSettingsSavePayload(formState);
     }
 
     startRecording(key: ShortcutSettingKey): void {
@@ -144,7 +173,15 @@ export class SettingsDialogState {
         event.preventDefault();
         event.stopPropagation();
 
-        this.shortcuts[this.recordingShortcut] = normalizeShortcutKey(event);
+        // Keep recording until the key that the modifier changes.
+        if (MODIFIER_KEYS.has(event.key)) return;
+        // Keep recording until a key that can switch cameras.
+        if (event.key === ' ' && CAMERA_SHORTCUTS.has(this.recordingShortcut)) return;
+
+        // Escape cancels recording. Stopping it also keeps the dialog open.
+        if (event.key !== 'Escape') {
+            this.shortcuts[this.recordingShortcut] = normalizeShortcutKey(event);
+        }
         this.recordingShortcut = null;
     }
 
@@ -157,6 +194,7 @@ export class SettingsDialogState {
             shortcutSettings: this.shortcuts,
             gridViewRendering: this.gridViewRendering,
             gridViewThumbnailQuality: this.gridViewThumbnailQuality,
+            imageInterpolation: this.imageInterpolation,
             showAnnotationTextLabels: this.showAnnotationTextLabels,
             showSampleFilenames: this.showSampleFilenames,
             showBoundingBoxesForSegmentation: this.showBoundingBoxesForSegmentation,

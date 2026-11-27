@@ -10,6 +10,8 @@
     import { addCaptionDeleteToUndoStack } from '$lib/services/addCaptionDeleteToUndoStack';
     import { page } from '$app/state';
     import { toast } from 'svelte-sonner';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
     type SampleDetailsCaptionSegmentProps = {
         captions: CaptionView[] | undefined;
@@ -20,6 +22,8 @@
     let { captions, refetch, sampleId }: SampleDetailsCaptionSegmentProps = $props();
 
     const { isEditingMode, addReversibleAction } = useGlobalStorage();
+    const { user } = useAuth();
+    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const { deleteCaption } = useDeleteCaption();
     const { createCaption } = useCreateCaption();
@@ -75,6 +79,15 @@
                     onUpdate={refetch}
                 />
             {/each}
+            {#if !captions?.length && !$isEditingMode}
+                <p class="text-sm text-muted-foreground" data-testid="empty-state-message">
+                    {#if canEdit}
+                        No captions. Click <strong>Edit annotations</strong> to add one.
+                    {:else}
+                        No captions.
+                    {/if}
+                </p>
+            {/if}
             {#if $isEditingMode}
                 <CreateCaptionField onCreate={(text) => onCreateCaption(sampleId, text)} />
             {/if}

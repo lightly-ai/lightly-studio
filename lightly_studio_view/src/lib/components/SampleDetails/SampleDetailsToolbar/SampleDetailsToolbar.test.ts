@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor } from '@testing-library/svelte';
+import { render, fireEvent, waitFor, cleanup } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SampleDetailsToolbar from './SampleDetailsToolbar.svelte';
@@ -9,7 +9,7 @@ const { initializeSlic } = vi.hoisted(() => ({ initializeSlic: vi.fn(async () =>
 vi.mock('@lightly-ai/slic', () => ({ getSlicEngine: initializeSlic }));
 
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush' | 'slic',
+    status: 'cursor' as ToolbarStatus,
     brush: {
         mode: 'brush' as 'brush' | 'eraser'
     },
@@ -26,14 +26,16 @@ const mockAnnotationLabelContext = {
     lastCreatedAnnotationId: null as string | null,
     isDrawing: false,
     isErasing: false,
-    isOnAnnotationDetailsView: false
+    isOnAnnotationDetailsView: false,
+    annotationSourceBlockedReason: null as string | null
 };
 
 const settingsStore = writable({
     key_toolbar_selection: 's',
     key_toolbar_drag: 'd',
     key_toolbar_bounding_box: 'b',
-    key_toolbar_segmentation_mask: 'm'
+    key_toolbar_segmentation_mask: 'm',
+    key_toolbar_slic: 'a'
 });
 
 vi.mock('$lib/hooks/useSettings', () => ({
@@ -42,7 +44,21 @@ vi.mock('$lib/hooks/useSettings', () => ({
     })
 }));
 
-vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
+const assistedLabelingStatus = { disabledReason: null as string | null };
+
+vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
+    useAssistedLabelingStatus: () => assistedLabelingStatus
+}));
+
+const labelingModels = { isAvailable: false };
+
+vi.mock('$lib/hooks/useLabelingModels', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useLabelingModels')>()),
+    useLabelingModels: () => labelingModels
+}));
+
+vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/contexts/SampleDetailsToolbar.svelte')>()),
     useSampleDetailsToolbarContext: () => ({
         context: mockSampleDetailsToolbarContext,
         setBrushMode(mode: BrushMode) {
@@ -82,6 +98,7 @@ describe('SampleDetailsToolbar', () => {
     beforeEach(() => {
         mockSampleDetailsToolbarContext.status = 'cursor';
         mockSampleDetailsToolbarContext.brush.mode = 'brush';
+        labelingModels.isAvailable = false;
 
         mockAnnotationLabelContext.annotationType = null;
         mockAnnotationLabelContext.annotationLabel = null;
@@ -90,6 +107,64 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.isErasing = false;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
+        mockAnnotationLabelContext.annotationSourceBlockedReason = null;
+        assistedLabelingStatus.disabledReason = null;
+    });
+
+    describe('while new annotations are blocked', () => {
+        beforeEach(() => {
+            mockAnnotationLabelContext.annotationSourceBlockedReason = 'Pick a source.';
+        });
+
+        it('disables the create tools and explains why', async () => {
+            labelingModels.isAvailable = true;
+            const { getByLabelText, getByRole } = render(SampleDetailsToolbar);
+
+            for (const label of [
+                'Bounding Box Tool',
+                'Mask brush',
+                'Smart select',
+                'Find all instances',
+                'Auto-label'
+            ]) {
+                expect(getByLabelText(label)).toBeDisabled();
+            }
+            expect(getByLabelText('Selection')).toBeEnabled();
+            expect(getByLabelText('Drag')).toBeEnabled();
+
+            await fireEvent.keyDown(window, { key: 'b' });
+            expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+
+            await fireEvent.pointerEnter(getByLabelText('Bounding Box Tool').parentElement!);
+            expect(getByRole('tooltip')).toHaveTextContent('Pick a source.');
+        });
+
+        it('switches an active create tool to the cursor', () => {
+            mockSampleDetailsToolbarContext.status = 'bounding-box';
+
+            render(SampleDetailsToolbar);
+
+            expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+        });
+
+        it('keeps the brush while a mask is selected, which it may still edit', () => {
+            mockAnnotationLabelContext.annotationId = 'mask-1';
+            mockSampleDetailsToolbarContext.status = 'brush';
+
+            render(SampleDetailsToolbar);
+
+            expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        });
+
+        it('keeps the brush in the annotation details view, which only edits', () => {
+            mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
+            mockSampleDetailsToolbarContext.status = 'brush';
+
+            const { getByLabelText } = render(SampleDetailsToolbar);
+
+            expect(getByLabelText('Mask brush')).toBeEnabled();
+            expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        });
     });
 
     it('starts in cursor mode and resets annotation state on mount', () => {
@@ -104,6 +179,20 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
         expect(mockAnnotationLabelContext.annotationType).toBeNull();
+    });
+
+    it.each([
+        ['bounding-box', AnnotationType.OBJECT_DETECTION],
+        ['brush', AnnotationType.SEGMENTATION_MASK],
+        ['slic', AnnotationType.SEGMENTATION_MASK]
+    ] as const)('sets the annotation type of an active %s tool on mount', (status, type) => {
+        mockSampleDetailsToolbarContext.status = status;
+        mockAnnotationLabelContext.lastCreatedAnnotationId = 'id-2';
+
+        render(SampleDetailsToolbar);
+
+        expect(mockAnnotationLabelContext.annotationType).toBe(type);
+        expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
     });
 
     it('activates bounding box tool and sets annotation type', async () => {
@@ -122,7 +211,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
+        await fireEvent.click(getByLabelText('Mask brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
@@ -130,7 +219,7 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
     });
 
-    it('hides AI-Assisted labeling until WASM initialization succeeds', async () => {
+    it('hides Superpixel brush until WASM initialization succeeds', async () => {
         let ready: (value: object) => void = () => {};
         initializeSlic.mockImplementationOnce(
             () =>
@@ -139,22 +228,26 @@ describe('SampleDetailsToolbar', () => {
                 })
         );
         const view = render(SampleDetailsToolbar);
-        expect(view.queryByLabelText('AI-Assisted labeling')).not.toBeInTheDocument();
+        expect(view.queryByLabelText('Superpixel brush')).not.toBeInTheDocument();
         ready({});
-        expect(await view.findByLabelText('AI-Assisted labeling')).toBeInTheDocument();
+        expect(await view.findByLabelText('Superpixel brush')).toBeInTheDocument();
     });
 
-    it('keeps AI-Assisted labeling hidden when WASM initialization fails', async () => {
-        initializeSlic.mockRejectedValueOnce(new Error('WASM unavailable'));
+    it('keeps Superpixel brush hidden when WASM initialization fails', async () => {
+        const error = new Error('WASM unavailable');
+        const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+        initializeSlic.mockRejectedValueOnce(error);
         const view = render(SampleDetailsToolbar);
         await waitFor(() => expect(initializeSlic).toHaveBeenCalled());
-        expect(view.queryByLabelText('AI-Assisted labeling')).not.toBeInTheDocument();
+        expect(view.queryByLabelText('Superpixel brush')).not.toBeInTheDocument();
+        expect(log).toHaveBeenCalledWith('AI-assisted labeling initialization failed', error);
+        log.mockRestore();
     });
 
     it('activates the SLIC tool and sets segmentation mask type', async () => {
         const { findByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(await findByLabelText('AI-Assisted labeling'));
+        await fireEvent.click(await findByLabelText('Superpixel brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('slic');
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
@@ -167,11 +260,95 @@ describe('SampleDetailsToolbar', () => {
 
         const { findByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(await findByLabelText('AI-Assisted labeling'));
+        await fireEvent.click(await findByLabelText('Superpixel brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('slic');
         expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
+    });
+
+    it('uses the configured AI-assisted shortcut and shows it in the tooltip', async () => {
+        settingsStore.update((settings) => ({ ...settings, key_toolbar_slic: 'q' }));
+        const view = render(SampleDetailsToolbar);
+        const button = await view.findByLabelText('Superpixel brush');
+        await fireEvent.pointerEnter(button.parentElement!);
+        expect(view.getByRole('tooltip')).toHaveTextContent('Press Q to activate');
+        expect(view.getByRole('tooltip')).not.toHaveTextContent('SLIC');
+        await fireEvent.keyDown(window, { key: 'q' });
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        mockAnnotationLabelContext.annotationId = 'ann-1';
+        mockAnnotationLabelContext.isDrawing = true;
+        await fireEvent.keyDown(window, { key: 'q' });
+        expect(mockAnnotationLabelContext.annotationId).toBe('ann-1');
+        mockAnnotationLabelContext.isDrawing = false;
+        await fireEvent.keyDown(window, { key: 'q' });
+        expect(mockAnnotationLabelContext.annotationId).toBeNull();
+        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
+        settingsStore.update((settings) => ({ ...settings, key_toolbar_slic: 'a' }));
+    });
+
+    it('activates the smart select tool', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Smart select'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('smart-select');
+    });
+
+    it('explains how smart select works', async () => {
+        const view = render(SampleDetailsToolbar);
+
+        await fireEvent.pointerEnter(view.getByLabelText('Smart select').parentElement!);
+
+        expect(view.getByRole('tooltip')).toHaveTextContent(
+            'Segments the object that you click or box.'
+        );
+    });
+
+    it('activates the find all instances tool', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Find all instances'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('find-instances');
+    });
+
+    it('explains how find all instances works', async () => {
+        const view = render(SampleDetailsToolbar);
+
+        await fireEvent.pointerEnter(view.getByLabelText('Find all instances').parentElement!);
+
+        expect(view.getByRole('tooltip')).toHaveTextContent(
+            'Finds all objects that match a text prompt.'
+        );
+    });
+
+    it('shows and activates the auto-label tool when models are available', async () => {
+        expect(render(SampleDetailsToolbar).queryByLabelText('Auto-label')).toBeNull();
+        cleanup();
+        labelingModels.isAvailable = true;
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Auto-label'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('label-with-model');
+    });
+
+    it('resets the annotation type of the previous tool in smart select', () => {
+        mockSampleDetailsToolbarContext.status = 'smart-select';
+        mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
+
+        render(SampleDetailsToolbar);
+
+        expect(mockAnnotationLabelContext.annotationType).toBeNull();
+    });
+
+    it('hides the assisted labeling tools while they are unavailable', () => {
+        assistedLabelingStatus.disabledReason = 'Set the FAL_KEY environment variable.';
+        const view = render(SampleDetailsToolbar);
+
+        expect(view.queryByLabelText('Smart select')).not.toBeInTheDocument();
+        expect(view.queryByLabelText('Find all instances')).not.toBeInTheDocument();
     });
 
     it('activates drag tool', async () => {
@@ -240,7 +417,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
+        await fireEvent.click(getByLabelText('Mask brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
@@ -255,7 +432,7 @@ describe('SampleDetailsToolbar', () => {
             }
         });
 
-        expect(queryByLabelText('Segmentation Mask Brush')).not.toBeInTheDocument();
+        expect(queryByLabelText('Mask brush')).not.toBeInTheDocument();
     });
 
     it('keeps eraser mode when switching from drag back to brush', async () => {
@@ -264,7 +441,7 @@ describe('SampleDetailsToolbar', () => {
         mockSampleDetailsToolbarContext.brush.mode = 'eraser';
 
         await fireEvent.click(getByLabelText('Drag'));
-        await fireEvent.click(getByLabelText('Segmentation Mask Brush'));
+        await fireEvent.click(getByLabelText('Mask brush'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('brush');
         expect(mockSampleDetailsToolbarContext.brush.mode).toBe('eraser');

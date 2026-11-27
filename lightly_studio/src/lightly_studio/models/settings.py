@@ -32,6 +32,9 @@ class SettingBase(SQLModel):
     grid_view_thumbnail_quality: GridViewThumbnailQualityType = Field(
         description="Controls thumbnail quality for grid-like preview views",
     )
+    image_interpolation: bool = Field(
+        description="Controls whether images use browser interpolation or nearest-neighbor scaling",
+    )
 
     # Keyboard shortcuts.
     key_hide_annotations: str = Field(
@@ -73,11 +76,20 @@ class SettingBase(SQLModel):
     key_toolbar_segmentation_mask: str = Field(
         description="Key to activate the segmentation mask tool in the toolbar",
     )
+    key_toolbar_slic: str = Field(
+        default="a", description="Key to activate AI-assisted labeling in the toolbar"
+    )
     key_toolbar_brush: str = Field(
         description="Key to activate brush mode in the segmentation tool",
     )
     key_toolbar_eraser: str = Field(
         description="Key to activate eraser mode in the segmentation tool",
+    )
+    key_previous_camera: str = Field(
+        description="Key to show the previous camera in the enlarged camera view",
+    )
+    key_next_camera: str = Field(
+        description="Key to show the next camera in the enlarged camera view",
     )
 
 
@@ -90,6 +102,7 @@ class SettingDefaults(SettingBase):
     grid_view_thumbnail_quality: GridViewThumbnailQualityType = Field(
         default=GridViewThumbnailQualityType.RAW,
     )
+    image_interpolation: bool = Field(default=True)
     key_hide_annotations: str = Field(
         default="v",
     )
@@ -128,6 +141,12 @@ class SettingDefaults(SettingBase):
     )
     key_toolbar_eraser: str = Field(
         default="x",
+    )
+    key_previous_camera: str = Field(
+        default="[",
+    )
+    key_next_camera: str = Field(
+        default="]",
     )
 
 

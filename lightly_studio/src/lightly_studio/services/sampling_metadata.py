@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -29,7 +29,7 @@ class SimilarityComputation(BaseModel):
 
 
 MetadataComputation = Annotated[
-    Union[TypicalityComputation, SimilarityComputation], Field(discriminator="kind")
+    TypicalityComputation | SimilarityComputation, Field(discriminator="kind")
 ]
 
 
@@ -68,8 +68,8 @@ def _compute_metadata(
     """Compute the batch without committing individual metadata updates."""
     for computation in computations:
         if isinstance(computation, SimilarityComputation):
-            if collection.sample_type != SampleType.IMAGE:
-                raise ValueError("Similarity is only available for image collections.")
+            if collection.sample_type not in {SampleType.IMAGE, SampleType.SEQUENCE}:
+                raise ValueError("Similarity is only available for image and sequence collections.")
             tag = tag_resolver.get_by_id(session=session, tag_id=computation.query_tag_id)
             if tag is None or tag.collection_id != collection.collection_id:
                 raise ValueError("Similarity query tag must belong to the sampling collection.")

@@ -1,12 +1,18 @@
 <script lang="ts">
-    import { cn, formatConfidence } from '$lib/utils';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
+    import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
+    import { cn, formatConfidence, trackClassCreatedInPicker } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { Trash2, Eye, EyeOff, Lock, Unlock } from '@lucide/svelte';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
+    import Eye from '@lucide/svelte/icons/eye';
+    import EyeOff from '@lucide/svelte/icons/eye-off';
+    import Lock from '@lucide/svelte/icons/lock';
+    import Unlock from '@lucide/svelte/icons/unlock';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
@@ -16,7 +22,7 @@
     import { useAnnotationCollectionsFilter } from '$lib/hooks';
 
     const {
-        annotation: annotationProp,
+        annotation,
         isSelected = false,
         onClick,
         onUpdate,
@@ -63,7 +69,9 @@
 
     const getAnnotationDimensions = (annotation: AnnotationView) => {
         const annotationWithDimensions =
-            annotation.object_detection_details || annotation.segmentation_details;
+            annotation.object_detection_details ||
+            annotation.segmentation_details ||
+            annotation.polygon_details;
         if (annotationWithDimensions) {
             const { width, height } = annotationWithDimensions;
             return `${Math.round(width)}x${Math.round(height)}px`;
@@ -74,6 +82,7 @@
     const { isEditingMode } = page.data.globalStorage;
     const collectionId = $derived(page.params.collection_id!);
     const result = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
     const items = $derived(getSelectionItems(result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 
@@ -83,23 +92,19 @@
     const { multipleSourcesVisible } = useAnnotationCollectionsFilter();
     const showLabelColorLegend = $derived(!(colorBySource ?? $multipleSourcesVisible));
 
-    const annotationId = $derived(annotationProp.sample_id);
+    const annotationId = $derived(annotation.sample_id);
 
-    const {
-        annotation: annotationResp,
-        updateAnnotation,
-        refetch
-    } = useAnnotation(() => ({
+    // The parent passes the full annotation, so only use the hook to save edits.
+    const { updateAnnotation, refetch } = useAnnotation(() => ({
         collectionId,
         annotationId,
-        onUpdate
+        onUpdate,
+        enabled: false
     }));
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         getCollectionId: () => page.params.collection_id!
     });
-
-    const annotation = $derived(annotationResp.data || annotationProp);
 
     const annotationLabelName = $derived(annotation.annotation_label.annotation_label_name);
 
@@ -111,16 +116,20 @@
 
 <div
     class={cn(
-        'gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
+        'relative flex items-center gap-2 rounded-sm px-4 py-2 text-left align-baseline transition-colors',
         isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
         canHighlight ? 'border border-primary' : ''
     )}
 >
     <button
         type="button"
-        class="flex w-full min-w-0 items-stretch justify-between text-left"
+        class="absolute inset-0 rounded-sm"
+        aria-label={`Select ${annotationLabelName} annotation`}
         data-annotation-id={annotation.sample_id}
         onclick={onClick}
+    ></button>
+    <div
+        class="pointer-events-none relative flex w-full min-w-0 items-stretch justify-between text-left"
     >
         <div class="w-full">
             <div class="flex min-w-0">
@@ -141,7 +150,7 @@
                         <div class="flex min-w-0 flex-1 flex-col justify-center gap-1">
                             {#if $isEditingMode}
                                 <div
-                                    class="min-w-0"
+                                    class="pointer-events-auto min-w-0"
                                     role="button"
                                     tabindex="0"
                                     onkeydown={(e) => {
@@ -151,17 +160,20 @@
                                         }
                                     }}
                                     onclick={(e) => {
-                                        if (!onClickSelectList) return;
                                         e.stopPropagation();
-                                        onClickSelectList();
+                                        (onClickSelectList ?? onClick)();
                                     }}
                                 >
                                     <SelectList
+                                        onCreate={trackClassCreatedInPicker}
+                                        allowCreate={canCreateClass}
                                         {items}
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"
-                                        placeholder="Select or create a class"
-                                        className="w-full min-w-0"
+                                        placeholder={canCreateClass
+                                            ? 'Select or create a class'
+                                            : 'Select a class'}
+                                        className="h-8 w-full min-w-0 px-3"
                                         contentClassName="w-full min-w-0"
                                         onSelect={async (item) => {
                                             addAnnotationLabelChangeToUndoStack({
@@ -188,39 +200,32 @@
                                         }}
                                     >
                                         {#snippet notFound({ inputValue })}
-                                            <LabelNotFound label={inputValue} />
+                                            <LabelNotFound
+                                                label={inputValue}
+                                                allowCreate={canCreateClass}
+                                            />
                                         {/snippet}
                                     </SelectList>
                                 </div>
                             {:else}
-                                <div
-                                    class="flex w-full min-w-0 flex-1 flex-col gap-1 overflow-hidden"
-                                >
+                                <div class="flex h-8 w-full min-w-0 items-center overflow-hidden">
                                     <span class="truncate">{annotationLabelName}</span>
-                                    {#if annotation.confidence != null}
-                                        {@const formattedConfidence = formatConfidence(
-                                            annotation.confidence
-                                        )}
-                                        <span class="text-xs text-muted-foreground"
-                                            >Confidence: {formattedConfidence}</span
-                                        >
-                                    {/if}
                                 </div>
                             {/if}
                         </div>
                     </div>
                 </div>
                 <div
-                    class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-1"
+                    class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-3"
                 >
-                    <div class="flex shrink-0 gap-3">
+                    <div class="pointer-events-auto flex shrink-0 items-center gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
                                 <Tooltip
                                     content="Unlock annotation. Allows new brush strokes to paint over this mask again."
                                 >
                                     <Lock
-                                        class="size-4 text-muted-foreground"
+                                        class="size-4 text-primary"
                                         onclick={(e) => {
                                             e.stopPropagation();
                                             onToggleLock?.(e);
@@ -255,6 +260,11 @@
                         {/if}
 
                         {#if $isEditingMode}
+                            <CopyAnnotationToSource
+                                {collectionId}
+                                {annotation}
+                                onCopied={onUpdate}
+                            />
                             <Tooltip content="Delete annotation">
                                 <Trash2
                                     class="size-4"
@@ -268,6 +278,11 @@
                     </div>
                 </div>
             </div>
+            {#if annotation.confidence != null}
+                <div class="pt-1 text-xs text-muted-foreground">
+                    Confidence: {formatConfidence(annotation.confidence)}
+                </div>
+            {/if}
             {#if annotation.object_track_number != null}
                 <div class="pt-1">
                     <span class="text-xs text-muted-foreground">
@@ -289,5 +304,5 @@
                 </span>
             </div>
         </div>
-    </button>
+    </div>
 </div>

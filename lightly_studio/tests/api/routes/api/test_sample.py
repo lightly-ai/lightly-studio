@@ -14,6 +14,7 @@ from lightly_studio.resolvers import (
 )
 from tests.helpers_resolvers import (
     ImageStub,
+    create_caption,
     create_collection,
     create_image,
     create_images,
@@ -186,3 +187,37 @@ def test_remove_tag_from_sample_calls_remove_tag_from_sample(
 
     # Assert that the tag was removed
     assert len(image.sample.tags) == 0
+
+
+def test_read_samples__total_caption_count(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    # Create one sample with two captions and one sample without captions
+    collection_id = create_collection(session=db_session).collection_id
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="sample1.jpg"), ImageStub(path="sample2.jpg")],
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection_id,
+        parent_sample_id=samples[0].sample_id,
+        text="first caption",
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection_id,
+        parent_sample_id=samples[0].sample_id,
+        text="second caption",
+    )
+
+    # Call the API
+    json_body: dict[str, Any] = {"filters": {"has_captions": True}}
+    response = test_client.post(f"/api/collections/{collection_id}/samples/list", json=json_body)
+    assert response.status_code == HTTP_STATUS_OK
+
+    # Assert the response counts the captions, not the samples
+    assert response.json()["total_count"] == 1
+    assert response.json()["total_caption_count"] == 2

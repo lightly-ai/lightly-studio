@@ -176,6 +176,7 @@ The Videos page shows a grid of video thumbnails. From here, you can perform mul
 
 - Hover with a mouse over a video to see a quick playback preview.
 - Use the left panel to filter the videos by tags, annotations or metadata (width, height, duration).
+- Open the [query editor](search_and_filter.md#query-in-gui) to filter by video fields, find annotations on the same frame, or search for temporal events.
 - Use the search bar to do similarity search by text or another video from the dataset.
 - Use the `Show Embeddings` button to explore the data in embedding space.
 - Use the `Menu` dropdown for further actions like plugins, sampling, classification, export and more.

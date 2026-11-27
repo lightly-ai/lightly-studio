@@ -25,8 +25,10 @@
                     type: 'button',
                     class: 'shrink-0 h-8 px-2 text-xs max-sm:min-h-11',
                     onclick: onRetry
-                }}>Retry</Button
+                }}
             >
+                Retry
+            </Button>
         {/if}
     </div>
 {/if}

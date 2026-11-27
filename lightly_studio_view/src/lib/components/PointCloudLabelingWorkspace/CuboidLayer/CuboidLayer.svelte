@@ -1,51 +1,100 @@
 <script lang="ts">
-    import { T, useThrelte } from '@threlte/core';
+    import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+    import { untrack } from 'svelte';
+    import { useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
-    import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
-    import CuboidGizmo from './CuboidGizmo.svelte';
-    import CuboidVisual from './CuboidVisual.svelte';
-    import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
+    import type * as Domain from '../domain';
+    import type { createCuboidTransformState } from './cuboidTransformState';
+    import { CuboidDraftTarget } from '../CuboidDraft';
+    import type { PointBatch } from '$lib/components/PointCloudViewer';
+    import CuboidItem from './CuboidItem/CuboidItem.svelte';
+    import { provideCuboidLayerContext } from './cuboidLayerContext';
+    import { createCuboidHoverTracker } from './cuboidHoverTracker';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
     import { addCuboidSelectionListeners } from './cuboidSelection';
 
-    interactivity();
-
-    /** Renders cuboid annotations with selection, hover highlights, and manipulation handles. */
     interface Props {
-        /** Cuboids to render in the active point-cloud frame. */
         cuboids: readonly Domain.CuboidAnnotation[];
-        /** Annotation classes used to resolve each cuboid's display color. */
         annotationClasses: readonly Domain.AnnotationClass[];
-        /** Identity of the currently selected cuboid, or null. */
+        transforms: ReturnType<typeof createCuboidTransformState>;
         selectedAnnotationId?: string | null;
-        /** Identity of the currently hovered cuboid, or null. */
         hoveredAnnotationId?: string | null;
-        /** Tool that determines whether cuboids can be selected. */
         activeTool?: Domain.WorkspaceTool;
-        /** Bounds of the point cloud containing the cuboids. */
-        pointCloudBounds: Domain.Bounds3;
-        /** Fires when the user selects or deselects a cuboid. */
+        isEditingMode?: boolean;
+        cameraMode?: Domain.CameraMode;
+        groundPlaneBounds: Domain.Bounds3;
+        pointBatch?: PointBatch;
+        tick?: number;
         onselect?: (annotationId: string | null) => void;
-        /** Fires when the pointer enters or leaves a cuboid. */
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
+        onCreateCuboid?: (box: CuboidBox) => void;
+        onCuboidDraftChange?: (box: CuboidBox | null) => void;
+        onCuboidTransform?: (
+            payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]
+        ) => void;
     }
+
+    interactivity();
 
     let {
         cuboids,
         annotationClasses,
+        transforms,
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
+        isEditingMode = false,
+        cameraMode = 'perspective',
+        groundPlaneBounds,
+        pointBatch,
+        tick,
         onselect,
-        onhover
+        onhover,
+        onCreateCuboid,
+        onCuboidDraftChange,
+        onCuboidTransform
     }: Props = $props();
 
     const { renderer } = useThrelte();
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
-    let cuboidClicked = false;
+    const annotations = $derived(transforms.annotations);
+    const cuboidIdsKey = $derived(
+        JSON.stringify(
+            cuboids
+                .filter(({ id }) => cameraMode === 'perspective' || id === selectedAnnotationId)
+                .map(({ id }) => id)
+        )
+    );
+    const hoverTracker = createCuboidHoverTracker((id, handle) => onhover?.(id, handle));
+    provideCuboidLayerContext(() => ({
+        annotationClasses,
+        transforms,
+        activeTool,
+        isEditingMode,
+        cameraMode,
+        hoverTracker,
+        selectedAnnotationId,
+        hoveredAnnotationId,
+        onselect,
+        onCuboidTransform
+    }));
 
     $effect(() => {
-        const next = createCuboidRenderItems(cuboids);
+        void cuboidIdsKey;
+        hoverTracker.clear();
+        untrack(() => onhover?.(null, null));
+    });
+
+    // Draws the live transform state, limited to the cuboids the viewport shows.
+    const shownIds = $derived(new Set(cuboids.map(({ id }) => id)));
+
+    $effect(() => {
+        const shownAnnotations = $annotations.filter(({ id }) => shownIds.has(id));
+        const visibleAnnotations =
+            cameraMode === 'perspective'
+                ? shownAnnotations
+                : shownAnnotations.filter(({ id }) => id === selectedAnnotationId);
+        const next = createCuboidRenderItems(visibleAnnotations, cameraMode);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
     });
@@ -55,29 +104,24 @@
             canvas: renderer.domElement,
             activeTool,
             onselect,
-            isCuboidClicked: () => cuboidClicked,
-            resetCuboidClicked: () => (cuboidClicked = false)
+            onhover: (id) => hoverTracker.handleSelectionHover(id),
+            isCuboidClicked: () => hoverTracker.isClicked(),
+            resetCuboidClicked: () => hoverTracker.resetClicked()
         });
     });
 </script>
 
+{#if activeTool === 'create-cuboid'}
+    <CuboidDraftTarget
+        bounds={groundPlaneBounds}
+        {cameraMode}
+        batch={pointBatch}
+        {tick}
+        onHighlightChange={(box) => onCuboidDraftChange?.(box)}
+        onCreateCuboid={(p) => onCreateCuboid?.(p)}
+    />
+{/if}
+
 {#each renderCuboids as item (item.annotation.id)}
-    {@const base = resolveCuboidColor(annotationClasses, item.annotation.annotationClassId)}
-    {@const isSelected = selectedAnnotationId === item.annotation.id}
-    {@const isHovered = hoveredAnnotationId === item.annotation.id}
-    {@const color = highlightCuboidColor(base, isSelected, isHovered)}
-    <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
-        <CuboidVisual
-            {item}
-            baseColor={base}
-            edgeColor={color}
-            {activeTool}
-            {onselect}
-            {onhover}
-            onselected={() => (cuboidClicked = true)}
-        />
-        {#if isSelected}
-            <CuboidGizmo />
-        {/if}
-    </T.Group>
+    <CuboidItem {item} />
 {/each}

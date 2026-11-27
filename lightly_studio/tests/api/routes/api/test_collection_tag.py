@@ -15,8 +15,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTagLinkTable
-from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
-from lightly_studio.resolvers import collection_resolver, sample_embedding_resolver, tag_resolver
+from lightly_studio.resolvers import collection_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation,
@@ -27,6 +26,7 @@ from tests.helpers_resolvers import (
     create_images,
     create_sample_embedding,
     create_samples_with_embeddings,
+    create_saved_plot,
     create_tag,
 )
 
@@ -35,7 +35,7 @@ def test_add_samples_by_filter__image_empty_filter_tags_whole_collection(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     images = create_images(
         db_session=db_session,
         collection_id=collection_id,
@@ -57,7 +57,7 @@ def test_add_samples_by_filter__image_subset_filter_tags_only_subset(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     wide = create_image(
         session=db_session, collection_id=collection_id, file_path_abs="wide.png", width=1920
     )
@@ -78,7 +78,7 @@ def test_add_samples_by_filter__idempotent_on_rerun(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     image = create_image(session=db_session, collection_id=collection_id, file_path_abs="s.png")
     body = {"filter": {"filter_type": "image"}}
 
@@ -109,7 +109,7 @@ def test_add_samples_by_filter__annotation_grid(
         collection_id=collection.collection_id,
         sample_type=SampleType.ANNOTATION,
     )
-    tag = create_tag(session=db_session, collection_id=annotation_collection_id, kind="annotation")
+    tag = create_tag(session=db_session, collection_id=annotation_collection_id)
 
     response = test_client.post(
         f"/api/collections/{annotation_collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
@@ -137,7 +137,7 @@ def test_add_samples_by_filter__wrong_collection_returns_404(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
 
     # Tag exists, but not in the collection on the path.
     response = test_client.post(
@@ -154,7 +154,7 @@ def test_add_samples_by_filter__image_filter_with_embedding_region_tags_only_reg
     """Tagging by filter with an embedding region only tags samples inside the region."""
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    tag = create_tag(session=db_session, collection_id=collection_id, kind="sample")
+    tag = create_tag(session=db_session, collection_id=collection_id)
     embedding_model = create_embedding_model(
         session=db_session,
         collection_id=collection_id,
@@ -176,24 +176,17 @@ def test_add_samples_by_filter__image_filter_with_embedding_region_tags_only_reg
     inside_b = images[1]
     outside = images[2]
     # Seed the 2D embedding cache with known coordinates.
-    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
     coordinates_by_sample = {
         inside_a.sample_id: (1.0, 1.0),
         inside_b.sample_id: (5.0, 5.0),
         outside.sample_id: (100.0, 100.0),
     }
-    db_session.add(
-        TwoDimEmbeddingTable(
-            hash=cache_key,
-            x=[coordinates_by_sample[sid][0] for sid in cached_sample_ids],
-            y=[coordinates_by_sample[sid][1] for sid in cached_sample_ids],
-        )
+    create_saved_plot(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        coordinates=coordinates_by_sample,
     )
-    db_session.commit()
 
     response = test_client.post(
         f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
@@ -251,7 +244,7 @@ def test_add_samples_by_filter__annotations_filter_with_embedding_region_tags_on
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
     )
-    tag = create_tag(session=db_session, collection_id=annotation_collection_id, kind="annotation")
+    tag = create_tag(session=db_session, collection_id=annotation_collection_id)
     embedding_model = create_embedding_model(
         session=db_session,
         collection_id=annotation_collection_id,
@@ -277,24 +270,17 @@ def test_add_samples_by_filter__annotations_filter_with_embedding_region_tags_on
         embedding=[2.1, 0.2, 0.3],
     )
     # Seed the 2D embedding cache with known coordinates.
-    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
-        session=db_session,
-        collection_id=annotation_collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
     coordinates_by_sample = {
         inside_a.sample_id: (1.0, 1.0),
         inside_b.sample_id: (5.0, 5.0),
         outside.sample_id: (100.0, 100.0),
     }
-    db_session.add(
-        TwoDimEmbeddingTable(
-            hash=cache_key,
-            x=[coordinates_by_sample[sid][0] for sid in cached_sample_ids],
-            y=[coordinates_by_sample[sid][1] for sid in cached_sample_ids],
-        )
+    create_saved_plot(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        coordinates=coordinates_by_sample,
     )
-    db_session.commit()
 
     response = test_client.post(
         f"/api/collections/{annotation_collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
@@ -404,4 +390,5 @@ def _post_split(
     }
     if grid_filter is not None:
         body["filter"] = grid_filter
-    return test_client.post(f"/api/collections/{collection_id}/tags/split", json=body)
+    response: Response = test_client.post(f"/api/collections/{collection_id}/tags/split", json=body)
+    return response

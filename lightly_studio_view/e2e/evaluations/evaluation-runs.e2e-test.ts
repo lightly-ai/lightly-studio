@@ -26,10 +26,12 @@ test('shows evaluation run details from indexed backend data', async ({ page }) 
     await run.click();
     await confusionMatrixResponse;
 
-    await expect(page.getByTestId('evaluation-run-config')).toContainText('iou_threshold');
-    await expect(page.getByTestId('evaluation-run-config')).toContainText('0.5');
-    await expect(page.getByTestId('evaluation-run-config')).toContainText('classwise');
-    await expect(page.getByTestId('evaluation-run-config')).toContainText('true');
+    await expect(page.getByTestId('evaluation-run-config')).toContainText(
+        'Minimum overlap (IoU) 0.50'
+    );
+    await expect(page.getByTestId('evaluation-run-config')).toContainText(
+        'Class matching Same class only'
+    );
     await expect(page.getByTestId('evaluation-run-gt-annotation-source')).toHaveText(
         'COCO annotations'
     );

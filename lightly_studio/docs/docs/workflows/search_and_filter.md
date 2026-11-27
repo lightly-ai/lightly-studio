@@ -30,7 +30,7 @@ The screen recording below shows the search both by text query "dog" and by past
 
 Search works the same way in the `Annotations` view, where it finds similar objects using
 object-level embeddings. See
-[Object-level embeddings](../core_concepts/embeddings.md#object-level-embeddings) for details.
+[Object-level embeddings](embeddings.md#object-level-embeddings) for details.
 
 ## Filter in GUI
 
@@ -50,22 +50,27 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 
 ## Query in GUI
 
-!!! warning "Query in GUI is currently available for image datasets only."
-
-Your dataset can be filtered by a custom query written in an SQL-like language. Open the
-query editor by clicking the `Add query filter` button in the left sidebar.
+On the Images or Videos page, select the `Query` tab beside the grid to open the query editor.
+After you apply a query, the filter sidebar shows a `Query Filter` control where you can toggle or reopen it.
 
 ![Query filter](https://storage.googleapis.com/lightly-public/studio/docs/search_filter_query_v1.0.0.png){ width="100%" }
 
-The language supports filtering by image fields such as dimensions or file name, tags, annotations,
-as well as logical combinations of these. For a full reference, see the
-[Lightly Query Language](lightly_query_language.md) documentation.
+For both images and videos, you can combine conditions on tags, metadata, and annotations.
+For images, you can also filter by dimensions, file name, or creation date.
+For videos, you can filter by frame rate or duration, find annotations on the same frame, or search for temporal events.
+See the [Lightly Query Language reference](lightly_query_language.md) for the syntax and examples.
+
+The `History` button next to the `Apply` button lists the last 10 queries that you applied
+in the collection. Click a query to apply it again. The history is saved in your browser.
 
 Example queries:
 
 ```mysql
 # Images that are at least 640 pixels wide or 400 pixels tall
 width >= 640 OR height >= 400
+
+# Videos longer than 10 seconds
+duration_s > 10
 
 # Images which do not have the tag "reviewed"
 NOT "reviewed" IN tags
@@ -197,6 +202,93 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     query.match(expr)
     ```
 
+    #### Metadata queries
+
+    Filter samples by comparing a metadata value with a string, boolean, or number.
+    Use `ImageSampleField.metadata["camera"]` for images or
+    `VideoSampleField.metadata["camera"]` for videos, replacing `"camera"` with your metadata key.
+
+    To access nested values, use dots between dictionary keys and brackets for array indices.
+    For example, `"odometry.speed"` selects the `speed` value inside `odometry`, and
+    `"odometry.acc[1]"` selects the second element of its `acc` array. Array indices start at zero;
+    negative indices count from the end, so `"odometry.acc[-1]"` selects the last element.
+
+    ```py
+    from lightly_studio.core.dataset_query import AND, ImageSampleField
+
+    # String and boolean equality or inequality
+    query = dataset.match(ImageSampleField.metadata["camera"] == "front")
+    query = dataset.match(ImageSampleField.metadata["is_processed"] == True)
+    query = dataset.match(ImageSampleField.metadata["camera"] != "rear")
+
+    # Numeric equality and ordering, including nested fields and array elements
+    query = dataset.match(ImageSampleField.metadata["priority"] == 3)
+    query = dataset.match(ImageSampleField.metadata["temperature"] >= 25.3)
+    query = dataset.match(ImageSampleField.metadata["odometry.speed"] > 10)
+    query = dataset.match(ImageSampleField.metadata["odometry.acc[1]"] < 15)
+
+    # Combine metadata filters with other sample filters
+    query = dataset.match(
+        AND(
+            ImageSampleField.metadata["camera"] == "front",
+            ImageSampleField.metadata["temperature"] >= 20,
+            ImageSampleField.metadata["temperature"] < 30,
+            ImageSampleField.tags.contains("reviewed"),
+        )
+    )
+    samples = query.to_list()
+    ```
+
+    Metadata values must have the same type as the value you compare them with.
+    The supported comparisons are:
+
+    | Comparison value | Operators | Matching stored type |
+    | --- | --- | --- |
+    | `str` | `==`, `!=` | String |
+    | `bool` | `==`, `!=` | Boolean |
+    | `int` or `float` | `==`, `!=`, `<`, `<=`, `>`, `>=` | Number (integer or float) |
+
+    Integers and floats are treated as one numeric type: comparing with `3` or `3.0` gives
+    the same results. Values are not converted between types: the string `"3"` and the
+    boolean `True` do not match numeric comparisons.
+
+    You can combine metadata expressions with `AND`, `OR`, and `NOT` as shown in
+    [Boolean operators](#boolean-operators).
+
+    !!! note "Choosing between `!=` and `NOT(...)`"
+
+        Every metadata comparison, including `!=`, excludes samples where the selected value
+        is missing, JSON `null`, an array, an object, or a different type from the comparison value.
+        `NOT(...)` selects all samples that the expression inside it excludes.
+
+        For example, these two filters answer different questions:
+
+        ```py
+        from lightly_studio.core.dataset_query import NOT, ImageSampleField
+
+        # Select samples whose camera is a string other than "front".
+        query = dataset.match(ImageSampleField.metadata["camera"] != "front")
+
+        # Select all samples except those whose camera is the string "front".
+        query = dataset.match(NOT(ImageSampleField.metadata["camera"] == "front"))
+        ```
+
+        | Stored `camera` value | `camera != "front"` | `NOT(camera == "front")` |
+        | --- | --- | --- |
+        | `"front"` | Excluded | Excluded |
+        | `"rear"` | Included | Included |
+        | JSON `null` | Excluded | Included |
+        | Key missing | Excluded | Included |
+
+    !!! note "Unsupported comparison values"
+
+        Comparing with `None`, lists, dictionaries, or datetime objects raises `TypeError`.
+        Ordering comparisons require a number; strings and booleans raise `TypeError`.
+        Comparing with `float("nan")` raises `ValueError`.
+
+    See [Metadata](metadata.md#metadata-in-python) for adding or updating metadata and the
+    [metadata API reference](../api/dataset_query.md#metadataaccessor) for field access.
+
     #### Annotation queries
 
     Annotation queries use `ClassificationQuery(...)`, `ObjectDetectionQuery(...)`, and
@@ -245,6 +337,46 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     # Assign any of the previous expressions to a query:
     query.match(expr)
     ```
+
+    #### Video event queries
+
+    `VideoEventQuery` matches a temporal classification annotation. All criteria match the same event.
+
+    ```python
+    from lightly_studio.core.dataset_query import VideoEventField, VideoEventQuery
+
+    early_events = dataset.query().match(
+        VideoEventQuery(VideoEventField.class_name == "run", VideoEventField.start_time_s < 5)
+    )
+    ```
+
+    This matches a `run` event that starts before five seconds. Fields also include `end_time_s`,
+    `source`, and `confidence`. Event times are in seconds relative to the video start.
+
+    To migrate a temporal event search, replace `ClassificationQuery(ClassificationField.class_name == "run")`
+    with `VideoEventQuery(VideoEventField.class_name == "run")`. Use `ClassificationQuery` for
+    whole-video classifications. To search both, combine the two queries with `OR(...)`.
+
+    #### Video frame queries
+
+    `VideoFrameQuery` matches a video with a frame that satisfies all criteria.
+    It accepts annotation queries, frame fields, and boolean expressions.
+
+    ```python
+    from lightly_studio.core.dataset_query import (
+        AND, NOT, ObjectDetectionField, ObjectDetectionQuery, VideoFrameQuery, VideoFrameSampleField,
+    )
+
+    person = ObjectDetectionQuery(ObjectDetectionField.class_name == "person")
+    car = ObjectDetectionQuery(ObjectDetectionField.class_name == "car")
+    same_frame = dataset.match(VideoFrameQuery(person, car))
+    different_frames_allowed = dataset.match(AND(VideoFrameQuery(person), VideoFrameQuery(car)))
+    early_frame = dataset.match(VideoFrameQuery(person, VideoFrameSampleField.frame_timestamp_s < 5))
+    ```
+
+    `VideoFrameQuery(NOT(person))` requires a frame without a person. `NOT(VideoFrameQuery(person))`
+    requires no frame with a person and includes videos without frames. Nested event and frame
+    queries are rejected.
 
     #### Sample evaluation queries
 

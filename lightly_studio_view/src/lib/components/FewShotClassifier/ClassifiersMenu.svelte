@@ -13,7 +13,12 @@
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useQueryClient } from '@tanstack/svelte-query';
     import { readAnnotationLabelsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-    import { Network as NetworkIcon, Pencil, Download, Upload, Play, Info } from '@lucide/svelte';
+    import NetworkIcon from '@lucide/svelte/icons/network';
+    import Pencil from '@lucide/svelte/icons/pencil';
+    import Download from '@lucide/svelte/icons/download';
+    import Upload from '@lucide/svelte/icons/upload';
+    import Play from '@lucide/svelte/icons/play';
+    import Info from '@lucide/svelte/icons/info';
     import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
 
     // Subscribe to page params

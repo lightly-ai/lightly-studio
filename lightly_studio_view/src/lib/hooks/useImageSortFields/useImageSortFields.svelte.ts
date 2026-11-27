@@ -3,6 +3,7 @@ import type {
     ImageSortFieldExpr,
     EvaluationRunMetricsInfoView
 } from '$lib/api/lightly_studio_local';
+import { getEvaluationMetricLabel } from '$lib/utils/evaluationMetricDisplay';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { useEvaluationSampleMetricsInfo } from '$lib/hooks/useEvaluationSampleMetricsInfo/useEvaluationSampleMetricsInfo';
 
@@ -40,7 +41,8 @@ export const IMAGE_SORT_FIELDS: ColumnSortField[] = [
 ];
 
 export function formatEvaluationMetricLabel(evaluationRunName: string, metricName: string): string {
-    return `${evaluationRunName}.${metricName}`;
+    const label = getEvaluationMetricLabel(metricName);
+    return label ? `${label} · ${evaluationRunName}` : `${evaluationRunName}.${metricName}`;
 }
 
 function mapRunsToEvalFields(runs: EvaluationRunMetricsInfoView[]): EvalSortField[] {

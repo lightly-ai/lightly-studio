@@ -1,14 +1,10 @@
 """Render a released changelog section as the Slack message that announces it.
 
-Backs the "Announce Release" workflow. Sales reads `#studio-issues-and-feedback` rather
-than the GitHub releases page, so the changelog section is posted there - a copy-paste
-somebody did by hand until now, which is why the format drifted between releases and why
-code spans kept getting lost on the way.
+Used by the "Announce Release" workflow, which posts the message to `#releases`.
 
 Slack's mrkdwn is not Markdown: it has no list syntax, no headings, and `&`, `<` and `>`
-are control characters. `_render_entries` is every rule that follows from that, and the
-tests check it against the repository's real changelogs - which is the only way to find
-out what those actually contain.
+are control characters. `_render_entries` applies these rules, and the tests check it
+against the repository's real changelogs.
 """
 
 from __future__ import annotations
@@ -57,7 +53,7 @@ def render_slack_payload(
             always has somewhere to send the reader.
         display_name: The product name the title announces, to tell two packages apart in
             one channel.
-        channel: The channel to post in, e.g. "studio-issues-and-feedback".
+        channel: The channel to post in, e.g. "releases".
 
     Returns:
         The request body for `chat.postMessage`.

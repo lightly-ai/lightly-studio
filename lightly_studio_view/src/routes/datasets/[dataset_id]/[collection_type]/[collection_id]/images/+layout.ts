@@ -16,8 +16,7 @@ export const load: LayoutLoad = async ({
     const { textEmbedding } = useGlobalStorage();
 
     const { tagsSelected } = useTags({
-        collection_id: collection_id as string,
-        kind: ['sample']
+        collection_id: collection_id as string
     });
 
     const { dimensionsValues } = useDimensions();

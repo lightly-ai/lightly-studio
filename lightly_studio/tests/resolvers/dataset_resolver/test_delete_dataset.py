@@ -9,8 +9,10 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
@@ -30,6 +32,7 @@ from lightly_studio.resolvers import (
     collection_resolver,
     dataset_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     export_job_resolver,
@@ -165,6 +168,45 @@ def test_delete_dataset__with_images_and_annotations(db_session: Session) -> Non
         collection_resolver.get_by_id(session=db_session, collection_id=child_collection_id) is None
     )
     assert annotation_label_resolver.get_by_id(session=db_session, label_id=label_id) is None
+
+
+def test_delete_dataset__with_polygon_annotations(db_session: Session) -> None:
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    image = create_image(
+        session=db_session, collection_id=dataset.collection_id, file_path_abs="/a.png"
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=dataset.collection_id, label_name="cat"
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]],
+    )
+    other_dataset = create_collection(session=db_session, collection_name="other")
+    other_image = create_image(
+        session=db_session, collection_id=other_dataset.collection_id, file_path_abs="/b.png"
+    )
+    other_label = create_annotation_label(
+        session=db_session, root_collection_id=other_dataset.collection_id, label_name="dog"
+    )
+    other_annotation = create_annotation(
+        session=db_session,
+        collection_id=other_dataset.collection_id,
+        sample_id=other_image.sample_id,
+        annotation_label_id=other_label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(0.0, 0.0), (3.0, 0.0), (3.0, 3.0)]],
+    )
+    other_annotation_id = other_annotation.sample_id  # Capture before delete
+
+    dataset_resolver.delete_dataset(session=db_session, dataset_id=dataset.dataset_id)
+
+    remaining = db_session.exec(select(PolygonAnnotationTable)).all()
+    assert [row.sample_id for row in remaining] == [other_annotation_id]
 
 
 def test_delete_dataset__with_video_and_frames(db_session: Session) -> None:
@@ -631,7 +673,7 @@ def test_delete_dataset__with_export_job__leaves_artifact_outside_temp_dir(
 ) -> None:
     # Arrange - the fake temp directory does not contain the export artifact below
     mocker.patch(
-        "lightly_studio.resolvers.dataset_resolver.delete_dataset.tempfile.gettempdir",
+        "lightly_studio.export.export_artifact.tempfile.gettempdir",
         return_value=str(tmp_path / "temp"),
     )
     dataset = create_collection(session=db_session, collection_name="to_delete")
@@ -735,6 +777,41 @@ def test_delete_dataset__with_evaluation_sample_metrics(db_session: Session) -> 
     # Assert - evaluation run and its metrics deleted
     assert evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id) is None
     metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session,
+        evaluation_run_id=run_id,
+    )
+    assert metrics == []
+
+
+def test_delete_dataset__with_evaluation_class_metrics(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=dataset.collection_id
+    )
+    run_id = run.id  # Capture before delete
+    label = create_annotation_label(session=db_session, root_collection_id=dataset.collection_id)
+    evaluation_class_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run_id,
+                annotation_label_id=label.annotation_label_id,
+                metric_name="average_precision",
+                value=0.6,
+            )
+        ],
+    )
+
+    # Act
+    dataset_resolver.delete_dataset(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+    )
+
+    # Assert - evaluation run and its class metrics deleted
+    assert evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id) is None
+    metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
         session=db_session,
         evaluation_run_id=run_id,
     )

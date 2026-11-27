@@ -76,13 +76,27 @@ class McapSequenceFrame(BaseModel):
     keyframe_log_time_ns: str
 
 
+class McapSequenceKeyframe(BaseModel):
+    """Locator of one independently decodable camera keyframe of an MCAP sequence.
+
+    Attributes:
+        channel_id: The camera channel ID.
+        log_time_ns: The log time of the keyframe message, in nanoseconds.
+    """
+
+    channel_id: int
+    log_time_ns: int
+
+
 class McapSequenceView(BaseModel):
     """View model for a single MCAP sequence in a list response."""
 
     sample_id: UUID
     recording_id: UUID
+    file_name: str
     sample_count: int
     sequence_frame: McapSequenceFrame | None = None
+    similarity_score: float | None = None
 
 
 class McapSequenceViewsWithCount(BaseModel):

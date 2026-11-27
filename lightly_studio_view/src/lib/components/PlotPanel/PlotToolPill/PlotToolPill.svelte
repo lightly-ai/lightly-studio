@@ -2,8 +2,11 @@
     import { untrack, type Component } from 'svelte';
     import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
-    import { SampleDetailsToolbarTooltip } from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip';
-    import { Hand, Lasso, SquareDashed, type IconProps } from '@lucide/svelte';
+    import { ToolbarTooltip } from '$lib/components/ToolbarTooltip';
+    import type { IconProps } from '@lucide/svelte';
+    import Hand from '@lucide/svelte/icons/hand';
+    import Lasso from '@lucide/svelte/icons/lasso';
+    import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import {
         SELECTION_TOOLS,
         createSelectionToolController,
@@ -15,8 +18,8 @@
     interface Props {
         // The element embedding-atlas renders into. Its hidden toolbar is what the pill drives.
         plotContainer: HTMLElement | null;
-        // Owned by the parent on purpose: every filter change unmounts the plot while the new
-        // embeddings load, and local state would drop the user's tool back to pan each time.
+        // Owned by the parent, which keeps it in the plot view store: local state would drop the
+        // user's tool back to pan each time the plot closes.
         activeTool: ToolMode;
     }
 
@@ -61,7 +64,7 @@
     data-testid="plot-tool-pill"
 >
     {#each SELECTION_TOOLS as tool (tool.mode)}
-        <SampleDetailsToolbarTooltip
+        <ToolbarTooltip
             label={tool.label}
             shortcut={tool.shortcut && formatShortcutKeys(tool.shortcut.keys, isMac)}
             action={tool.shortcut?.action}
@@ -82,6 +85,6 @@
                     )
                 }}
             />
-        </SampleDetailsToolbarTooltip>
+        </ToolbarTooltip>
     {/each}
 </div>

@@ -1,16 +1,26 @@
 <script lang="ts">
     import { AnnotationType } from '$lib/api/lightly_studio_local';
-    import { SampleDetailsToolbarTooltip } from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
-    import { onDestroy, onMount } from 'svelte';
-    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
-    import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
-    import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
-    import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
-    import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
+    import {
+        isAssistedLabelingStatus,
+        useSampleDetailsToolbarContext,
+        type ToolbarStatus
+    } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import { onMount } from 'svelte';
+    import { isOverlayTarget } from '$lib/utils';
     import { useSettings } from '$lib/hooks/useSettings';
-    import SlicToolbarButton from '../SlicToolbarButton/SlicToolbarButton.svelte';
+    import { Toolbar, type ToolbarItem, type ToolbarTrigger } from '$lib/components/ui/toolbar';
+    import MousePointer from '@lucide/svelte/icons/mouse-pointer';
+    import Hand from '@lucide/svelte/icons/hand';
+    import Brush from '@lucide/svelte/icons/brush';
+    import Bot from '@lucide/svelte/icons/bot';
+    import Layers3 from '@lucide/svelte/icons/layers-3';
+    import ScanEye from '@lucide/svelte/icons/scan-eye';
+    import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
+    import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
+    import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
+    import { isAssistedLabelingView, useLabelingModels } from '$lib/hooks';
+    import { page } from '$app/state';
 
     import { getSlicEngine } from '@lightly-ai/slic';
 
@@ -22,71 +32,24 @@
                 if (active) slicAvailable = true;
             },
             // Unsupported or blocked WASM keeps the toolbar entry hidden.
-            () => {}
+            (error) => console.error('AI-assisted labeling initialization failed', error)
         );
         return () => {
             active = false;
         };
     });
 
-    const { showSegmentationTool = true }: { showSegmentationTool?: boolean } = $props();
+    const {
+        showSegmentationTool = true,
+        isPending = false
+    }: {
+        showSegmentationTool?: boolean;
+        isPending?: boolean;
+    } = $props();
 
     const { settingsStore } = useSettings();
+
     let isSpacePressed = false;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-        // Typing in a field or in an overlay must not trigger the shortcuts behind it.
-        if (isTextInputTarget(e.target) || isOverlayTarget(e.target)) {
-            return;
-        }
-
-        if (e.code === 'Space') {
-            isSpacePressed = true;
-            return;
-        }
-
-        if (isSpacePressed) {
-            return;
-        }
-
-        const key = e.key.toLowerCase();
-        if (key === $settingsStore.key_toolbar_selection) {
-            e.preventDefault();
-            onClickCursor();
-        } else if (key === $settingsStore.key_toolbar_bounding_box) {
-            e.preventDefault();
-            activateBoundingBox();
-        } else if (key === $settingsStore.key_toolbar_segmentation_mask) {
-            if (!showSegmentationTool) return;
-            e.preventDefault();
-            activateBrush();
-        } else if (key === $settingsStore.key_toolbar_drag) {
-            e.preventDefault();
-            onClickDrag();
-        }
-    };
-
-    const onKeyUp = (e: KeyboardEvent) => {
-        if (e.code === 'Space') {
-            isSpacePressed = false;
-        }
-    };
-
-    const onWindowBlur = () => {
-        isSpacePressed = false;
-    };
-
-    onMount(() => {
-        window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('keyup', onKeyUp);
-        window.addEventListener('blur', onWindowBlur);
-    });
-
-    onDestroy(() => {
-        window.removeEventListener('keydown', onKeyDown);
-        window.removeEventListener('keyup', onKeyUp);
-        window.removeEventListener('blur', onWindowBlur);
-    });
 
     const {
         context: annotationLabelContext,
@@ -103,36 +66,175 @@
         setStatus
     } = useSampleDetailsToolbarContext();
 
-    $effect(() => {
-        // Reset annotation label and type when switching to cursor tool
-        if (sampleDetailsToolbarContext.status === 'cursor') {
-            if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
-            setAnnotationType(null);
-            setLastCreatedAnnotationId(null);
-            setIsDrawing(false);
-            setIsErasing(false);
+    const assistedLabelingStatus = useAssistedLabelingStatus();
+    const isOnAssistedLabelingView = $derived(
+        isAssistedLabelingView({
+            isOnAnnotationDetailsView: annotationLabelContext.isOnAnnotationDetailsView,
+            routeId: page.route.id
+        })
+    );
+    const labelingModels = useLabelingModels(() => isOnAssistedLabelingView);
+    const showAssistedLabelingTools = $derived(
+        isOnAssistedLabelingView && assistedLabelingStatus.disabledReason === null
+    );
+    const showLabelWithModelTool = $derived(isOnAssistedLabelingView && labelingModels.isAvailable);
 
-            setBrushMode('brush');
-        } else if (
-            sampleDetailsToolbarContext.status === 'bounding-box' ||
-            sampleDetailsToolbarContext.status === 'brush' ||
-            sampleDetailsToolbarContext.status === 'slic'
-        ) {
-            setLastCreatedAnnotationId(null);
-            if (sampleDetailsToolbarContext.status === 'bounding-box') {
-                if (!annotationLabelContext.isOnAnnotationDetailsView) {
-                    setAnnotationType(AnnotationType.OBJECT_DETECTION);
-                }
-                setBrushMode('brush');
-            } else if (sampleDetailsToolbarContext.status === 'brush') {
-                setAnnotationType(AnnotationType.SEGMENTATION_MASK);
-            } else if (sampleDetailsToolbarContext.status === 'slic') {
-                setAnnotationType(AnnotationType.SEGMENTATION_MASK);
-                setBrushMode('brush');
-            }
+    // The tools that create annotations stay off while the target source is unknown, so nothing
+    // is drawn only to be refused. The annotation details view only edits and needs no target.
+    const createToolDisabledReason = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView
+            ? undefined
+            : (annotationLabelContext.annotationSourceBlockedReason ?? undefined)
+    );
+    const CREATE_TOOLS: ToolbarStatus[] = [
+        'bounding-box',
+        'brush',
+        'slic',
+        'smart-select',
+        'find-instances',
+        'label-with-model'
+    ];
+
+    const items = $derived<ToolbarItem[]>([
+        {
+            id: 'cursor',
+            label: 'Selection',
+            icon: MousePointer,
+            shortcut: $settingsStore.key_toolbar_selection,
+            action: 'select'
+        },
+        {
+            id: 'drag',
+            label: 'Drag',
+            icon: Hand,
+            shortcut: $settingsStore.key_toolbar_drag,
+            action: 'pan',
+            hint: 'Hold Space to pan temporarily'
+        },
+        {
+            id: 'bounding-box',
+            label: 'Bounding Box Tool',
+            icon: VectorSquareIcon,
+            shortcut: $settingsStore.key_toolbar_bounding_box,
+            action: 'draw',
+            visible: !annotationLabelContext.isOnAnnotationDetailsView,
+            disabledReason: createToolDisabledReason
+        },
+        {
+            id: 'brush',
+            label: 'Mask brush',
+            icon: Brush,
+            shortcut: $settingsStore.key_toolbar_segmentation_mask,
+            action: 'paint',
+            visible: showSegmentationTool,
+            disabledReason: createToolDisabledReason
+        },
+        {
+            id: 'slic',
+            label: 'Superpixel brush',
+            icon: Bot,
+            shortcut: $settingsStore.key_toolbar_slic ?? 'a',
+            action: 'activate',
+            hint: 'Build a mask by selecting image regions.',
+            visible: showSegmentationTool && slicAvailable,
+            disabledReason: createToolDisabledReason
+        },
+        {
+            id: 'smart-select',
+            label: 'Smart select',
+            icon: WandSparkles,
+            hint: 'Segments the object that you click or box.',
+            visible: showAssistedLabelingTools,
+            disabledReason: createToolDisabledReason
+        },
+        {
+            id: 'find-instances',
+            label: 'Find all instances',
+            icon: Layers3,
+            hint: 'Finds all objects that match a text prompt.',
+            visible: showAssistedLabelingTools,
+            disabledReason: createToolDisabledReason
+        },
+        {
+            id: 'label-with-model',
+            label: 'Auto-label',
+            icon: ScanEye,
+            hint: 'Suggests annotations from your own model.',
+            visible: showLabelWithModelTool,
+            disabledReason: createToolDisabledReason
         }
-        if (sampleDetailsToolbarContext.status === 'drag') {
+    ]);
+
+    function shouldHandleShortcut(e: KeyboardEvent): boolean {
+        if (isOverlayTarget(e.target)) return false;
+
+        if (e.code === 'Space') {
+            isSpacePressed = true;
+            return false;
+        }
+
+        if (isSpacePressed) return false;
+
+        return true;
+    }
+
+    // Reset space tracking on keyup and window blur.
+    onMount(() => {
+        const onKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') isSpacePressed = false;
+        };
+        const onWindowBlur = () => {
+            isSpacePressed = false;
+        };
+        window.addEventListener('keyup', onKeyUp);
+        window.addEventListener('blur', onWindowBlur);
+        return () => {
+            window.removeEventListener('keyup', onKeyUp);
+            window.removeEventListener('blur', onWindowBlur);
+        };
+    });
+
+    const resetDrawing = () => {
+        setAnnotationType(null);
+        setLastCreatedAnnotationId(null);
+        setIsDrawing(false);
+        setIsErasing(false);
+    };
+
+    const applyDrawingTool = (status: 'bounding-box' | 'brush' | 'slic') => {
+        setLastCreatedAnnotationId(null);
+        if (status === 'brush') {
+            setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+            return;
+        }
+        setBrushMode('brush');
+        if (status === 'slic') {
+            setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+        } else if (!annotationLabelContext.isOnAnnotationDetailsView) {
+            setAnnotationType(AnnotationType.OBJECT_DETECTION);
+        }
+    };
+
+    $effect(() => {
+        if (!createToolDisabledReason) return;
+        // A selected mask stays editable while new annotations are blocked, as the brush allows.
+        if (annotationLabelContext.annotationId) return;
+        if (CREATE_TOOLS.includes(sampleDetailsToolbarContext.status)) setStatus('cursor');
+    });
+
+    $effect(() => {
+        const { status } = sampleDetailsToolbarContext;
+        // Reset annotation label and type when switching to cursor tool
+        if (status === 'cursor') {
+            if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
+            resetDrawing();
+            setBrushMode('brush');
+        } else if (status === 'bounding-box' || status === 'brush' || status === 'slic') {
+            applyDrawingTool(status);
+        } else if (status === 'drag') {
             setAnnotationType(null);
+        } else if (isAssistedLabelingStatus(status)) {
+            resetDrawing();
         }
     });
 
@@ -145,16 +247,6 @@
         setLastCreatedAnnotationId(null);
     };
 
-    const onClickBoundingBox = () => activateBoundingBox();
-
-    const onClickCursor = () => {
-        setStatus('cursor');
-    };
-
-    const onClickDrag = () => {
-        setStatus('drag');
-    };
-
     const activateBrush = () => {
         if (!showSegmentationTool) return;
 
@@ -164,10 +256,14 @@
         setLastCreatedAnnotationId(null);
     };
 
-    const onClickBrush = () => activateBrush();
-
-    const onClickSlic = () => {
-        if (!showSegmentationTool) return;
+    const activateSlic = (trigger: ToolbarTrigger) => {
+        if (
+            !showSegmentationTool ||
+            !slicAvailable ||
+            annotationLabelContext.isDrawing ||
+            isPending
+        )
+            return;
 
         const shouldKeepSelectedAnnotation =
             annotationLabelContext.annotationId != null &&
@@ -175,76 +271,44 @@
 
         setStatus('slic');
         setAnnotationType(AnnotationType.SEGMENTATION_MASK);
-        if (!annotationLabelContext.isOnAnnotationDetailsView && !shouldKeepSelectedAnnotation) {
+        if (
+            !annotationLabelContext.isOnAnnotationDetailsView &&
+            (trigger === 'shortcut' || !shouldKeepSelectedAnnotation)
+        ) {
             setAnnotationId(null);
         }
         setLastCreatedAnnotationId(null);
     };
+
+    function onToolChange(tool: string, trigger: ToolbarTrigger) {
+        switch (tool) {
+            case 'cursor':
+                setStatus('cursor');
+                break;
+            case 'drag':
+                setStatus('drag');
+                break;
+            case 'bounding-box':
+                activateBoundingBox();
+                break;
+            case 'brush':
+                activateBrush();
+                break;
+            case 'slic':
+                activateSlic(trigger);
+                break;
+            case 'smart-select':
+            case 'find-instances':
+            case 'label-with-model':
+                setStatus(tool);
+                break;
+        }
+    }
 </script>
 
-<div class="pointer-events-none absolute left-1 top-1 z-20">
-    <div
-        class="
-      pointer-events-auto
-      flex
-      select-none
-      flex-col
-      items-stretch
-      gap-1
-      rounded-lg
-      bg-muted
-      p-1
-      shadow-md
-    "
-    >
-        <SampleDetailsToolbarTooltip
-            label="Select"
-            shortcut={$settingsStore.key_toolbar_selection.toUpperCase()}
-            action="select"
-        >
-            <CursorToolbarButton onclick={onClickCursor} />
-        </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip
-            label="Drag"
-            shortcut={$settingsStore.key_toolbar_drag.toUpperCase()}
-            action="pan"
-            hint="Hold Space to pan temporarily"
-        >
-            <DragToolbarButton onclick={onClickDrag} />
-        </SampleDetailsToolbarTooltip>
-        {#if !annotationLabelContext.isOnAnnotationDetailsView}
-            <SampleDetailsToolbarTooltip
-                label="Bounding Box"
-                shortcut={$settingsStore.key_toolbar_bounding_box.toUpperCase()}
-                action="draw"
-            >
-                <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
-            </SampleDetailsToolbarTooltip>
-        {/if}
-        {#if showSegmentationTool && slicAvailable}
-            <SampleDetailsToolbarTooltip
-                label="AI-Assisted labeling"
-                action="toggle superpixels"
-                hint="Computes SLIC superpixels for click-to-toggle mask edits"
-            >
-                <SlicToolbarButton
-                    onclick={onClickSlic}
-                    isActive={sampleDetailsToolbarContext.status === 'slic'}
-                />
-            </SampleDetailsToolbarTooltip>
-        {/if}
-        {#if showSegmentationTool}
-            <SampleDetailsToolbarTooltip
-                label="Segmentation Mask Brush"
-                shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
-                action="paint"
-            >
-                <BrushToolbarButton
-                    onclick={onClickBrush}
-                    isActive={sampleDetailsToolbarContext.status === 'brush' &&
-                        annotationLabelContext.annotationType === AnnotationType.SEGMENTATION_MASK}
-                />
-            </SampleDetailsToolbarTooltip>
-        {/if}
-    </div>
-</div>
+<Toolbar
+    {items}
+    activeTool={sampleDetailsToolbarContext.status}
+    {onToolChange}
+    {shouldHandleShortcut}
+/>

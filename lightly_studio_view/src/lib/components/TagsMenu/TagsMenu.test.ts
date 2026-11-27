@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
     selectAllAnnotationSnapshotByCollection: {} as Record<string, SelectAllSnapshot | null>,
     loadTags: vi.fn(),
     tagSelectionToggle: vi.fn(),
+    setTagsSelected: vi.fn(),
     clearTagSelected: vi.fn()
 }));
 
@@ -45,6 +46,7 @@ vi.mock('$lib/hooks/useTags/useTags.js', () => ({
         tags: readable(mocks.tags),
         tagsSelected: readable(mocks.tagsSelected),
         tagSelectionToggle: mocks.tagSelectionToggle,
+        setTagsSelected: mocks.setTagsSelected,
         loadTags: mocks.loadTags,
         clearTagSelected: mocks.clearTagSelected
     }))
@@ -76,7 +78,6 @@ vi.mock('$lib/hooks/useAuth/useAuth', () => ({
 const sampleTag: TagView = {
     tag_id: 'tag-1',
     name: 'Vehicle',
-    kind: 'sample',
     created_at: new Date('2024-01-01T00:00:00.000Z'),
     updated_at: new Date('2024-01-01T00:00:00.000Z')
 };
@@ -114,7 +115,6 @@ describe('TagsMenu', () => {
             data: {
                 tag_id: 'created-tag-id',
                 name: 'Created Tag',
-                kind: 'sample',
                 created_at: new Date('2024-01-03T00:00:00.000Z'),
                 updated_at: new Date('2024-01-03T00:00:00.000Z')
             },
@@ -148,6 +148,63 @@ describe('TagsMenu', () => {
         await fireEvent.click(screen.getByRole('button', { name: optionLabel }));
     }
 
+    it('shows the tag search for a single tag', () => {
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        expect(screen.getByPlaceholderText('Search tags…')).toBeVisible();
+        expect(screen.getByTestId('tags-menu-item')).toBeVisible();
+        expect(screen.getByTestId('tags-menu-name')).toHaveTextContent('Vehicle');
+    });
+
+    it('toggles a tag from its row', async () => {
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        await fireEvent.click(screen.getByRole('checkbox', { name: 'Vehicle' }));
+
+        expect(mocks.tagSelectionToggle).toHaveBeenCalledWith('tag-1');
+    });
+
+    it('selects all tags and clears the selection', async () => {
+        mocks.tags = [sampleTag, { ...sampleTag, tag_id: 'tag-2', name: 'Person' }];
+        mocks.tagsSelected = new Set(['tag-1']);
+
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+        expect(mocks.setTagsSelected).toHaveBeenCalledWith(['tag-1', 'tag-2']);
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+        expect(mocks.setTagsSelected).toHaveBeenCalledWith([]);
+    });
+
+    it('shows an empty message without tags', () => {
+        mocks.tags = [];
+
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        expect(screen.getByText('No tags yet')).toBeVisible();
+    });
+
     it('assigns an existing tag to the selected samples', async () => {
         mocks.selectedSampleIdsByCollection = {
             'collection-1': new Set(['sample-1', 'sample-2'])
@@ -176,6 +233,18 @@ describe('TagsMenu', () => {
 
         expect(createTag).not.toHaveBeenCalled();
         expect(mocks.loadTags).toHaveBeenCalled();
+    });
+
+    it('hides the assign input when allowAssign is false', () => {
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'captions',
+                allowAssign: false
+            }
+        });
+
+        expect(screen.queryByPlaceholderText('Assign tag to selection')).not.toBeInTheDocument();
     });
 
     it('tags by filter when the selection is an unmodified select-all', async () => {
@@ -212,7 +281,7 @@ describe('TagsMenu', () => {
     });
 
     it('tags by the annotation filter when the annotation select-all is unmodified', async () => {
-        mocks.tags = [{ ...sampleTag, kind: 'annotation' }];
+        mocks.tags = [sampleTag];
         mocks.selectedSampleAnnotationCropIds = {
             'collection-1': new Set(['annotation-1', 'annotation-2'])
         };
@@ -300,8 +369,7 @@ describe('TagsMenu', () => {
                     collection_id: 'collection-1'
                 },
                 body: {
-                    name: 'New Annotation Tag',
-                    kind: 'annotation'
+                    name: 'New Annotation Tag'
                 }
             });
         });

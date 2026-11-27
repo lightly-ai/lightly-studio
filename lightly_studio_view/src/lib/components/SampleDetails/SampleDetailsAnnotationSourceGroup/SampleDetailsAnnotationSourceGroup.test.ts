@@ -143,6 +143,21 @@ describe('SampleDetailsAnnotationSourceGroup', () => {
         expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
     });
 
+    it('reports manual toggles but not the re-applied state on sample change', async () => {
+        const user = userEvent.setup();
+        const onOpenChange = vi.fn();
+        const { rerender } = render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, onOpenChange }
+        });
+
+        await user.click(screen.getByText('Ground truth'));
+        expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
+
+        await rerender({ ...defaultProps, onOpenChange, sampleId: 'sample-2' });
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
+        expect(onOpenChange).toHaveBeenCalledOnce();
+    });
+
     it('keeps the manual open state when re-rendered for the same sample', async () => {
         const user = userEvent.setup();
         const { rerender } = render(SampleDetailsAnnotationSourceGroup, {

@@ -11,18 +11,20 @@ from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.type_definitions import StaticTransform
 
 
-def transform_to_target_frame(
+def transform_to_target_frame(  # noqa: PLR0913
     reader: McapFileReader,
     source_frame_id: str,
     target_frame_id: str | None,
     timestamp_ns: int,
     static_transforms: Sequence[StaticTransform],
+    dynamic_transforms: Sequence[StaticTransform] | None = None,
 ) -> NDArray[np.float64] | None:
     """Return the transform from a source frame to the target frame at a time.
 
     Returns `None` if the data stays in the source frame, so a recording without
     transforms can still serve data in its own frame. The static edges come from
-    the database. The dynamic edges are read from the recording at `timestamp_ns`.
+    the database. The dynamic edges come from the database when the recording was
+    indexed with them, and from the file otherwise.
 
     Args:
         reader: The reader of the recording.
@@ -30,6 +32,9 @@ def transform_to_target_frame(
         target_frame_id: The frame to map to. `None` keeps the source frame.
         timestamp_ns: The capture time to look up the dynamic transforms at.
         static_transforms: The static edges stored for the recording.
+        dynamic_transforms: The dynamic edges stored near `timestamp_ns`. `None` reads
+            them from the file. An empty sequence means the recording has none in the
+            window.
 
     Returns:
         The 4x4 homogeneous transform that maps points from the source frame to the
@@ -46,4 +51,5 @@ def transform_to_target_frame(
         child_frame_id=source_frame_id,
         timestamp_ns=timestamp_ns,
         static_transforms=static_transforms,
+        dynamic_transforms=dynamic_transforms,
     )

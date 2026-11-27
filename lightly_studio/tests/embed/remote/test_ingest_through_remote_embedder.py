@@ -16,7 +16,7 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from pytest_mock import MockerFixture
 
 import lightly_studio
-from lightly_studio import ImageDataset
+from lightly_studio import ImageDataset, VideoDataset
 from lightly_studio.core.annotation import CreateObjectDetection
 from lightly_studio.embed import embed_samples, embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
@@ -31,6 +31,7 @@ from lightly_studio.resolvers import (
 )
 from tests.embed.remote import color_embedder, threaded_server
 from tests.embed.remote.color_embedder import ColorQueryEmbedder
+from tests.resolvers.video.helpers import create_video_file
 
 _API_KEY = "test-api-key"
 
@@ -143,6 +144,61 @@ def test_embed_annotation_collection__after_restart(
         embedding_model_id=crop_model.embedding_model_id,
     )
     assert embedding_count == 6
+
+
+def test_embed_annotation_collection__new_collection_after_restart(
+    dataset: ImageDataset, server_url: str, mocker: MockerFixture
+) -> None:
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    # No built-in model loads in this test
+    mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=None)
+    annotation_collection_id = _add_box_to_each_image(dataset=dataset)
+
+    embed_samples.embed_annotation_collection(
+        session=dataset.session, annotation_collection_id=annotation_collection_id
+    )
+
+    # The new crop collection takes the model row of the images, which stores the server
+    crop_model = _default_model(dataset=dataset, collection_id=annotation_collection_id)
+    image_model = _default_model(dataset=dataset, collection_id=dataset.collection_id)
+    assert crop_model.embedding_model_id == image_model.embedding_model_id
+    assert crop_model.remote_embedder_url == server_url
+    embedding_count = sample_embedding_resolver.get_embedding_count(
+        session=dataset.session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=crop_model.embedding_model_id,
+    )
+    assert embedding_count == 3
+
+
+def test_add_videos_from_path__embeds_the_frames_on_the_server(
+    server_url: str, tmp_path: Path
+) -> None:
+    create_video_file(output_path=tmp_path / "videos" / "a.mp4", width=16, height=16, num_frames=3)
+    with connection.build_client(url=server_url) as client:
+        lightly_studio.register_default_embedder(
+            embedder=RemoteEmbedder.connect(client=client, api_key=_API_KEY)
+        )
+        dataset = VideoDataset.create(name="videos")
+        dataset.add_videos_from_path(path=tmp_path / "videos")
+
+    frames_collection_id = collection_resolver.get_or_create_child_collection(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_type=SampleType.VIDEO_FRAME,
+    )
+    frame_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=dataset.session, collection_id=frames_collection_id
+    )
+    assert frame_model is not None
+    assert frame_model.name == color_embedder.SPACE_KEY
+    assert frame_model.remote_embedder_url == server_url
+    embedding_count = sample_embedding_resolver.get_embedding_count(
+        session=dataset.session,
+        collection_id=frames_collection_id,
+        embedding_model_id=frame_model.embedding_model_id,
+    )
+    assert embedding_count == 3
 
 
 def test_text_search__after_restart(

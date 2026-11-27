@@ -4,9 +4,11 @@ export type ExportType =
     | 'object_detections_coco'
     | 'object_detections_yolo'
     | 'segmentation'
+    | 'instance_segmentation_yolo'
     | 'captions'
     | 'youtube_vis_segmentation'
-    | 'semantic_segmentations';
+    | 'semantic_segmentations'
+    | 'scene_update_mcap';
 
 interface ExportOption {
     value: ExportType;
@@ -18,7 +20,8 @@ const imageExportOptions: ExportOption[] = [
     { value: 'classifications', label: 'Image Classifications (CSV)' },
     { value: 'object_detections_coco', label: 'Image Object Detections (COCO)' },
     { value: 'object_detections_yolo', label: 'Image Object Detections (YOLO)' },
-    { value: 'segmentation', label: 'Image Segmentation Mask (COCO)' },
+    { value: 'segmentation', label: 'Image Segmentation (COCO)' },
+    { value: 'instance_segmentation_yolo', label: 'Image Segmentation Polygons (YOLO)' },
     { value: 'semantic_segmentations', label: 'Image Segmentation Mask (PASCAL VOC)' },
     { value: 'captions', label: 'Image Captions' }
 ];
@@ -26,6 +29,11 @@ const imageExportOptions: ExportOption[] = [
 const youtubeVisOption: ExportOption = {
     value: 'youtube_vis_segmentation',
     label: 'YouTube-VIS Video Segmentation Masks'
+};
+
+const sceneUpdateOption: ExportOption = {
+    value: 'scene_update_mcap',
+    label: 'Cuboid Annotations (MCAP)'
 };
 
 export function getExportOptions(sampleType: string | undefined): ExportOption[] {
@@ -36,10 +44,12 @@ export function getExportOptions(sampleType: string | undefined): ExportOption[]
         ];
     }
     if (sampleType === 'video_frame') return [youtubeVisOption];
+    if (sampleType === 'sequence') return [sceneUpdateOption];
     return imageExportOptions;
 }
 
 export function getDefaultExportType(sampleType: string | undefined): ExportType {
+    if (sampleType === 'sequence') return 'scene_update_mcap';
     return sampleType === 'video' || sampleType === 'video_frame'
         ? 'youtube_vis_segmentation'
         : 'samples';

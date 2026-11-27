@@ -5,6 +5,7 @@ import { createQuery, useQueryClient, type CreateQueryResult } from '@tanstack/s
 interface UseMcapSequenceTicksParams {
     getDatasetId: () => string;
     getSequenceId: () => string;
+    getEnabled?: () => boolean;
 }
 
 interface UseMcapSequenceTicksResult {
@@ -15,7 +16,8 @@ interface UseMcapSequenceTicksResult {
 /** Loads every indexed tick for an MCAP sequence. */
 export function useMcapSequenceTicks({
     getDatasetId,
-    getSequenceId
+    getSequenceId,
+    getEnabled = () => true
 }: UseMcapSequenceTicksParams): UseMcapSequenceTicksResult {
     const client = useQueryClient();
     const getOptions = () =>
@@ -24,7 +26,7 @@ export function useMcapSequenceTicks({
         });
     const ticks = createQuery(() => ({
         ...getOptions(),
-        enabled: Boolean(getDatasetId() && getSequenceId())
+        enabled: Boolean(getDatasetId() && getSequenceId()) && getEnabled()
     }));
     const refetch = () => void client.invalidateQueries({ queryKey: getOptions().queryKey });
 

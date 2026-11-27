@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computeCuboidVertices, createCuboidWireframeGeometry } from './cuboidGeometry';
+import {
+    computeCuboidVertices,
+    createCuboidRectangleGeometry,
+    createCuboidWireframeGeometry
+} from './cuboidGeometry';
 
 describe('cuboidGeometry', () => {
     it('computes world-space vertices from centre, size, and rotation', () => {
@@ -20,10 +24,9 @@ describe('cuboidGeometry', () => {
 
     it('creates twelve edge line segments from the local cuboid vertices', () => {
         const geometry = createCuboidWireframeGeometry([4, 2, 2]);
-        const position = geometry.getAttribute('position');
+        const instanceStart = geometry.getAttribute('instanceStart');
 
-        expect(position.count).toBe(24);
-        expect(position.array).toEqual(expect.any(Float32Array));
+        expect(instanceStart.count).toBe(12);
         expect(geometry.boundingSphere).not.toBeNull();
 
         geometry.dispose();
@@ -31,17 +34,14 @@ describe('cuboidGeometry', () => {
 
     it('preserves all twelve edges', () => {
         const geometry = createCuboidWireframeGeometry([4, 2, 6]);
-        const position = geometry.getAttribute('position');
+        const instanceStart = geometry.getAttribute('instanceStart');
+        const instanceEnd = geometry.getAttribute('instanceEnd');
         const edges = new Set<string>();
 
         try {
-            for (let index = 0; index < position.count; index += 2) {
-                const start = [position.getX(index), position.getY(index), position.getZ(index)];
-                const end = [
-                    position.getX(index + 1),
-                    position.getY(index + 1),
-                    position.getZ(index + 1)
-                ];
+            for (let i = 0; i < instanceStart.count; i++) {
+                const start = [instanceStart.getX(i), instanceStart.getY(i), instanceStart.getZ(i)];
+                const end = [instanceEnd.getX(i), instanceEnd.getY(i), instanceEnd.getZ(i)];
                 const segment = [start.join(','), end.join(',')].sort().join(':');
                 edges.add(segment);
             }
@@ -49,5 +49,16 @@ describe('cuboidGeometry', () => {
         } finally {
             geometry.dispose();
         }
+    });
+});
+
+describe('createCuboidRectangleGeometry', () => {
+    it('flattens the depth axis into a four-edge rectangle', () => {
+        const geometry = createCuboidRectangleGeometry([4, 2, 6], 0);
+        geometry.computeBoundingBox();
+
+        expect(geometry.attributes.instanceStart.count).toBe(4);
+        expect(geometry.boundingBox?.min.toArray()).toEqual([0, -1, -3]);
+        expect(geometry.boundingBox?.max.toArray()).toEqual([0, 1, 3]);
     });
 });

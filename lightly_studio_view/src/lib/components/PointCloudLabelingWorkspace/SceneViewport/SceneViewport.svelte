@@ -1,97 +1,80 @@
 <script lang="ts">
-    import { Canvas } from '@threlte/core';
-    import { PointCloudScene } from '$lib/components/PointCloudViewer';
-    import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
-    import CuboidLayer from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte';
-    import GroundPlane from '$lib/components/PointCloudLabelingWorkspace/GroundPlane/GroundPlane.svelte';
-    import CuboidTooltipOverlay from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
+    import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+    import { cn } from '$lib/utils';
+    import { resolveSceneViewportProps } from './resolveSceneViewportProps';
+    import type { Snippet } from 'svelte';
+    import type { ColorMode, PointBatch, SceneViewState } from '$lib/components/PointCloudViewer';
     import type {
         AnnotationClass,
+        AnnotationSource,
         Bounds3,
         CuboidAnnotation,
         CuboidHandle,
+        CameraMode,
         WorkspaceTool
-    } from '$lib/components/PointCloudLabelingWorkspace/domain';
-
-    /** Composes the shared Threlte scene from the point cloud and annotation layers. */
+    } from '../domain';
+    import type { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
     interface Props {
-        /** Point positions and intensities consumed by the existing renderer. */
+        header?: Snippet;
+        tools?: Snippet;
         batch?: PointBatch;
-        /** Point color mapping mode. */
+        tick?: number;
         colorMode?: ColorMode;
-        /** Screen-space point size in pixels. */
         pointSize?: number;
-        /** Optional intensity range used by intensity coloring. */
         intensityRange?: [number, number];
-        /** Static cuboid annotations rendered over the point cloud. */
         cuboids?: readonly CuboidAnnotation[];
-        /** Classes used to color cuboid annotations. */
         annotationClasses?: readonly AnnotationClass[];
-        /** Bounds of the displayed point cloud. */
+        annotationSources?: readonly AnnotationSource[];
+        transforms: ReturnType<typeof createCuboidTransformState>;
         pointCloudBounds?: Bounds3;
-        /** Identity of the currently selected cuboid, or null. */
+        fitKey?: string;
         selectedAnnotationId?: string | null;
-        /** Identity of the currently hovered cuboid, or null. */
         hoveredAnnotationId?: string | null;
-        /** Tool that determines whether cuboids can be selected. */
         activeTool?: WorkspaceTool;
-        /** Fires when the user selects or deselects a cuboid. */
+        isEditingMode?: boolean;
+        cameraMode?: CameraMode;
+        isScaleSource?: boolean;
+        showNavigationHelpers?: boolean;
+        showActiveBorder?: boolean;
         onselect?: (annotationId: string | null) => void;
-        /** Fires when the pointer enters or leaves a cuboid. */
         onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
+        onCreateCuboid?: (box: CuboidBox) => void;
+        draftCuboid?: CuboidBox | null;
+        onCuboidDraftChange?: (box: CuboidBox | null) => void;
+        onCuboidTransform?: Parameters<typeof resolveSceneViewportProps>[0]['onCuboidTransform'];
+        onPreviousTick?: () => void;
+        onNextTick?: () => void;
+        viewState?: SceneViewState | null;
+        onViewStateChange?: (viewState: SceneViewState) => void;
     }
-
-    const EMPTY_BATCH: PointBatch = {
-        positions: new Float32Array(0),
-        intensities: new Float32Array(0),
-        count: 0
-    };
-    const EMPTY_BOUNDS: Bounds3 = { min: [0, 0, 0], max: [0, 0, 0] };
-
-    let {
-        batch = EMPTY_BATCH,
-        colorMode = 'none',
-        pointSize = 2,
-        intensityRange,
-        cuboids = [],
-        annotationClasses = [],
-        pointCloudBounds = EMPTY_BOUNDS,
-        selectedAnnotationId = null,
-        hoveredAnnotationId = null,
-        activeTool = 'select',
-        onselect,
-        onhover
-    }: Props = $props();
-
-    let cursorX = $state(0);
-    let cursorY = $state(0);
-
-    function handleMouseMove(event: MouseEvent) {
-        const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
-        cursorX = event.clientX - rect.left;
-        cursorY = event.clientY - rect.top;
-    }
+    import { useSceneViewport } from './useSceneViewport/useSceneViewport.svelte';
+    import { provideSceneViewportContext } from './sceneViewportContext';
+    import SceneViewportCanvas from './SceneViewportCanvas/SceneViewportCanvas.svelte';
+    import SceneViewportOverlay from './SceneViewportOverlay/SceneViewportOverlay.svelte';
+    let { pointSize = $bindable(2), ...inputs }: Props = $props();
+    const viewportProps = $derived(resolveSceneViewportProps({ ...inputs, pointSize }));
+    const interaction = useSceneViewport(() => viewportProps);
+    provideSceneViewportContext({ getProps: () => viewportProps, interaction });
 </script>
 
+<!-- Viewports receive focus for keyboard navigation. -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-    class="relative h-full w-full"
+    class={cn(
+        'relative h-full w-full',
+        viewportProps.activeTool === 'create-cuboid' && 'cursor-crosshair'
+    )}
     role="application"
+    aria-label="Point-cloud scene viewport"
+    aria-current={interaction.isActive ? 'true' : undefined}
     data-testid="workspace-scene-viewport"
-    onmousemove={handleMouseMove}
+    tabindex="0"
+    onpointerenter={interaction.activate}
+    onpointerdown={interaction.activate}
+    onfocusin={interaction.activate}
+    onmousemove={interaction.handleMouseMove}
+    bind:this={interaction.viewport}
 >
-    <Canvas>
-        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} />
-        <GroundPlane {pointCloudBounds} />
-        <CuboidLayer
-            {cuboids}
-            {annotationClasses}
-            {pointCloudBounds}
-            {selectedAnnotationId}
-            {hoveredAnnotationId}
-            {activeTool}
-            {onselect}
-            {onhover}
-        />
-    </Canvas>
-    <CuboidTooltipOverlay {cursorX} {cursorY} {hoveredAnnotationId} {cuboids} {annotationClasses} />
+    <SceneViewportCanvas />
+    <SceneViewportOverlay />
 </div>

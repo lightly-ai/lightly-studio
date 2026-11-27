@@ -1,13 +1,60 @@
-import { beforeAll, describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/svelte';
+import { beforeAll, beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'svelte-sonner';
+import type { Writable } from 'svelte/store';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
-const { cloudQuery, tickDetails, summaryState } = vi.hoisted(() => ({
-    cloudQuery: { data: undefined as unknown, isLoading: false, isError: false, refetch: vi.fn() },
-    tickDetails: { data: undefined, isLoading: false },
-    summaryState: { isLoading: false }
+const {
+    cloudQuery,
+    tickDetails,
+    summaryState,
+    schedulerParams,
+    prefetchState,
+    updateAnnotations,
+    invalidateQueries,
+    classDialog,
+    setIsEditingMode,
+    executeReversibleAction
+} = vi.hoisted(() => ({
+    cloudQuery: {
+        data: undefined as unknown,
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn()
+    },
+    tickDetails: { data: undefined, isLoading: false, refetch: vi.fn() },
+    summaryState: { isLoading: false },
+    schedulerParams: {
+        current: undefined as
+            | {
+                  getRequestId: () => string;
+                  getRanges: () => readonly { startIndex: number; endIndex: number }[];
+              }
+            | undefined
+    },
+    updateAnnotations: vi.fn(),
+    prefetchState: {
+        bufferedRanges: [{ startIndex: 0, endIndex: 1 }],
+        errors: new Map<number, unknown>(),
+        isRetrying: false,
+        retryFailed: vi.fn().mockResolvedValue(undefined),
+        cancel: vi.fn()
+    },
+    invalidateQueries: vi.fn(),
+    classDialog: { isOpen: undefined as Writable<boolean> | undefined },
+    setIsEditingMode: vi.fn(),
+    executeReversibleAction: vi.fn()
+}));
+
+vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
+    useUpdateAnnotationsMutation: () => ({ updateAnnotations })
+}));
+
+vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
+    useQueryClient: () => ({ invalidateQueries })
 }));
 
 vi.mock('./SceneViewport/SceneViewport.svelte', async () => ({
@@ -18,6 +65,116 @@ vi.mock('./SceneViewport/SceneViewport.svelte', async () => ({
 // query; stub it so the chrome renders without a live TanStack query client.
 vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails })
+}));
+
+vi.mock('./useStartSequenceTrack', () => ({
+    useStartSequenceTrack: () => ({ handleStartTrack: vi.fn() })
+}));
+
+vi.mock('./useDeleteSequenceTrack', () => ({
+    useDeleteSequenceTrack: () => ({ handleDeleteTrack: vi.fn() })
+}));
+
+vi.mock('./useExtendSequenceTrack', () => ({
+    useExtendSequenceTrack: () => ({ handleExtendTrack: vi.fn() })
+}));
+
+vi.mock('./FrameTimeline/useSequenceTracks.svelte', () => ({
+    useSequenceTracks: () => ({ query: { data: { tracks: [] } } })
+}));
+
+vi.mock('./FrameTimeline/useSequenceTickTags.svelte', () => ({
+    useSequenceTickTags: () => ({ query: { data: { tags: [] } } })
+}));
+
+vi.mock('$lib/hooks/useTickData/useTickCameraFrames.svelte', () => ({
+    useTickCameraFrames: () => ({ query: { data: undefined } })
+}));
+
+vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
+    useAnnotationCollections: () => ({ data: [] })
+}));
+
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: () => ({ data: [] })
+}));
+
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() })
+}));
+
+vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
+    useCreateAnnotation: () => ({ createAnnotation: vi.fn() })
+}));
+
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => ({
+        addReversibleAction: vi.fn(),
+        lastAnnotationLabel: { subscribe: vi.fn() },
+        updateLastAnnotationLabel: vi.fn()
+    })
+}));
+
+vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte', () => ({
+    useMcapTickPrefetchScheduler: (params: typeof schedulerParams.current) => {
+        schedulerParams.current = params ?? undefined;
+        return prefetchState;
+    }
+}));
+
+vi.mock('./useCreateCuboidAnnotation', async () => {
+    const { writable } = await import('svelte/store');
+    classDialog.isOpen = writable(false);
+    return {
+        useCreateCuboidAnnotation: () => ({
+            handleCreateCuboid: vi.fn(),
+            showSelectClassDialog: classDialog.isOpen,
+            handleClassSelected: vi.fn(),
+            handleClassDialogCancel: vi.fn(),
+            getRememberedLabel: () => undefined,
+            labels: { data: [] },
+            tracks: { data: [] }
+        })
+    };
+});
+
+vi.mock('$lib/hooks/useGlobalStorage', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useGlobalStorage: () => ({
+            isEditingMode: writable(true),
+            lastAnnotationSource: writable({}),
+            updateLastAnnotationSource: vi.fn(),
+            removeLastAnnotationSource: vi.fn(),
+            setIsEditingMode,
+            reversibleActions: writable([
+                { id: 'move-cuboid', description: 'Move cuboid', execute: vi.fn() }
+            ]),
+            executeReversibleAction
+        })
+    };
+});
+
+// The right panel shows the sequence tags once the summary loads; stub the tag hooks so they
+// render without a live TanStack query client.
+vi.mock('$lib/hooks/useTags/useTags', async () => {
+    const { writable } = await import('svelte/store');
+    return { useTags: () => ({ tags: writable([]), loadTags: vi.fn() }) };
+});
+
+vi.mock('$lib/hooks/useAddTagToSample/useAddTagToSample', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useAddTagToSample: () => ({
+            busy: writable(false),
+            addExisting: vi.fn(),
+            createAndAdd: vi.fn()
+        })
+    };
+});
+
+vi.mock('$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample', () => ({
+    useRemoveTagFromSample: () => ({ removeTagFromSample: vi.fn() })
 }));
 
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
@@ -51,7 +208,20 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
                         group_component_index: 0
                     }
                 ],
-                camera_channels: []
+                camera_channels: [
+                    {
+                        channel_id: 2,
+                        group_component_name: 'front',
+                        group_component_index: 0
+                    },
+                    {
+                        channel_id: 3,
+                        group_component_name: 'rear',
+                        group_component_index: 1
+                    }
+                ],
+                collection_id: 'sequence-collection',
+                tags: []
             },
             get isLoading() {
                 return summaryState.isLoading;
@@ -62,18 +232,39 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
     })
 }));
 
-const defaultProps = { datasetId: 'dataset-1', sequenceId: 'sequence-1' };
+const defaultProps = {
+    datasetId: 'dataset-1',
+    annotationSourceCollectionId: 'group-collection-1',
+    sequenceId: 'sequence-1'
+};
 
 describe('PointCloudLabelingWorkspace', () => {
+    beforeEach(() => {
+        // The tests query one viewport stub; the orthographic projections add three more.
+        sessionStorage.setItem('lightlyStudio_pointCloudOrthographicViewsEnabled', 'false');
+    });
     afterEach(() => {
+        sessionStorage.removeItem('lightlyStudio_pointCloudOrthographicViewsEnabled');
+        vi.clearAllMocks();
         vi.useRealTimers();
         cloudQuery.data = undefined;
         cloudQuery.isLoading = false;
         tickDetails.isLoading = false;
         summaryState.isLoading = false;
+        schedulerParams.current = undefined;
+        prefetchState.bufferedRanges = [{ startIndex: 0, endIndex: 1 }];
+        prefetchState.errors.clear();
+        sessionStorage.removeItem('lightlyStudio_pointCloudBufferEntireSequence');
+        sessionStorage.removeItem('lightlyStudio_pointCloudAccumulate');
+        sessionStorage.removeItem('lightlyStudio_pointCloudAccumulationRadius');
+        classDialog.isOpen?.set(false);
+        Reflect.deleteProperty(document, 'fullscreenElement');
     });
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
     });
 
     it('renders the chrome and the empty state by default', () => {
@@ -83,18 +274,108 @@ describe('PointCloudLabelingWorkspace', () => {
 
         expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-header')).toBeInTheDocument();
-        expect(screen.getByTestId('workspace-filter-bar')).toBeInTheDocument();
-        expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-filter-bar')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-tool-rail')).not.toBeInTheDocument();
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
         expect(screen.getByText('Frame 1 / 2')).toBeInTheDocument();
-        expect(screen.getByText('lidar_top')).toBeInTheDocument();
         expect(screen.getByTestId('point-cloud-right-side-panel')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
             'data-status',
             'empty'
         );
         expect(screen.queryByTestId('workspace-scene-viewport')).not.toBeInTheDocument();
+    });
+
+    it('toggles playback with the window Space shortcut', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+        expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
+
+        await fireEvent.keyDown(window, { code: 'Space', key: ' ', repeat: true });
+        expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
+
+        await fireEvent.keyDown(window, { code: 'Space', key: ' ' });
+        expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
+    });
+
+    it('configures and persists accumulation from the 3D scene settings', async () => {
+        const user = userEvent.setup();
+        const view = render(PointCloudLabelingWorkspace, { props: defaultProps });
+        expect(
+            screen.queryByRole('checkbox', { name: 'Accumulate point clouds' })
+        ).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
+        await user.click(screen.getByRole('checkbox', { name: 'Accumulate point clouds' }));
+        const slider = within(screen.getByLabelText('Accumulation radius')).getByRole('slider');
+        await user.click(slider);
+        await user.keyboard('{Home}{ArrowRight}{ArrowRight}');
+        expect(sessionStorage.getItem('lightlyStudio_pointCloudAccumulate')).toBe('true');
+        expect(sessionStorage.getItem('lightlyStudio_pointCloudAccumulationRadius')).toBe('3');
+
+        view.unmount();
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
+        expect(screen.getByRole('checkbox', { name: 'Accumulate point clouds' })).toBeChecked();
+        expect(screen.getByText('±3 ticks')).toBeInTheDocument();
+    });
+
+    it('does not use the Space shortcut from form controls', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.keyDown(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }), {
+            code: 'Space',
+            key: ' '
+        });
+
+        expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
+    });
+
+    it('does not use the Space shortcut from buttons', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.keyDown(screen.getByRole('button', { name: 'Play frames' }), {
+            code: 'Space',
+            key: ' '
+        });
+
+        expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
+    });
+
+    it('uses the Space shortcut inside the expanded camera dialog', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+        const dialog = document.createElement('div');
+        dialog.setAttribute('role', 'dialog');
+        const closeButton = document.createElement('button');
+        dialog.append(closeButton);
+        document.body.append(dialog);
+
+        await fireEvent.keyDown(closeButton, { code: 'Space', key: ' ' });
+
+        expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
+        dialog.remove();
+    });
+
+    it('shows the class picker, toasts, and the edit controls in fullscreen', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+        const workspace = screen.getByTestId('point-cloud-labeling-workspace');
+        expect(screen.queryByTestId('workspace-fullscreen-bar')).not.toBeInTheDocument();
+
+        Object.defineProperty(document, 'fullscreenElement', {
+            configurable: true,
+            get: () => workspace
+        });
+        await fireEvent(document, new Event('fullscreenchange'));
+        classDialog.isOpen?.set(true);
+        toast.error('Saving the cuboid failed');
+
+        expect(await within(workspace).findByRole('dialog')).toBeInTheDocument();
+        expect(await within(workspace).findByText('Saving the cuboid failed')).toBeInTheDocument();
+        await fireEvent.click(within(workspace).getByRole('button', { name: 'Undo' }));
+        expect(executeReversibleAction).toHaveBeenCalledWith('move-cuboid');
+        await fireEvent.click(within(workspace).getByRole('button', { name: 'Finish Editing' }));
+        expect(setIsEditingMode).toHaveBeenCalledWith(false);
     });
 
     it('shows loading when no cloud frame is available', () => {
@@ -104,6 +385,37 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('workspace-status-panel')).toHaveAttribute(
             'data-status',
             'loading'
+        );
+    });
+
+    it('saves a cuboid transform from the viewport and refreshes the workspace', async () => {
+        cloudQuery.data = {
+            batch: { positions: new Float32Array(3), intensities: new Float32Array(1), count: 1 },
+            channels: []
+        };
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Transform cuboid' }));
+        expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
+
+        await waitFor(() => expect(tickDetails.refetch).toHaveBeenCalledOnce());
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: [
+                {
+                    _id: 'getSequenceTracks',
+                    path: { dataset_id: 'dataset-1', sequence_id: 'sequence-1' }
+                }
+            ]
+        });
+        expect(updateAnnotations).toHaveBeenCalledWith(
+            [
+                expect.objectContaining({
+                    annotation_id: 'annotation-1',
+                    collection_id: 'group-collection-1',
+                    cuboid_3d: expect.objectContaining({ px: 2, py: 3, pz: 4 })
+                })
+            ],
+            'group-collection-1'
         );
     });
 
@@ -212,16 +524,37 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(onTickChange).toHaveBeenLastCalledWith(1);
     });
 
+    it('shows when playback is waiting for an unbuffered frame and lets the user pause', async () => {
+        prefetchState.bufferedRanges = [];
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Play frames' }));
+        expect(screen.getByText('Buffering…')).toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Pause frames' }));
+
+        expect(screen.queryByText('Buffering…')).not.toBeInTheDocument();
+    });
+
+    it('offers to retry frames that failed during background buffering', async () => {
+        prefetchState.errors.set(1, new Error('Failed to load'));
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        expect(screen.getByText('1 frame failed to load.')).toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Retry failed frames' }));
+
+        expect(prefetchState.retryFailed).toHaveBeenCalledOnce();
+    });
+
     it('plays through ticks at the selected interval and stops at the end', async () => {
         vi.useFakeTimers();
         render(PointCloudLabelingWorkspace, { props: defaultProps });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Play frames' }));
-        await vi.advanceTimersByTimeAsync(300);
+        await vi.advanceTimersByTimeAsync(100);
         flushSync();
         expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
 
-        await vi.advanceTimersByTimeAsync(300);
+        await vi.advanceTimersByTimeAsync(100);
         flushSync();
         expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
     });
@@ -238,6 +571,43 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
     });
 
+    it('includes earlier accumulation neighbors when buffering after a seek', async () => {
+        sessionStorage.setItem('lightlyStudio_pointCloudAccumulate', 'true');
+        sessionStorage.setItem('lightlyStudio_pointCloudAccumulationRadius', '1');
+        const user = userEvent.setup();
+        render(PointCloudLabelingWorkspace, { props: { ...defaultProps, tickNumber: 2 } });
+        await user.click(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }));
+        expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 0, endIndex: 1 }]);
+    });
+
+    it('starts whole-sequence buffering at the selected tick and wraps to earlier ticks', async () => {
+        const user = userEvent.setup();
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await user.click(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }));
+        await user.click(screen.getByRole('button', { name: 'Play frames' }));
+
+        expect(schedulerParams.current?.getRequestId()).toBe(
+            'dataset-1/sequence-1/playback/sensor/entire/0'
+        );
+        expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 0, endIndex: 1 }]);
+
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.pointerDown(slider);
+        await fireEvent.change(slider, {
+            target: { value: '1' }
+        });
+        await fireEvent.pointerUp(slider);
+
+        expect(schedulerParams.current?.getRequestId()).toBe(
+            'dataset-1/sequence-1/playback/sensor/entire/1'
+        );
+        expect(schedulerParams.current?.getRanges()).toEqual([
+            { startIndex: 1, endIndex: 1 },
+            { startIndex: 0, endIndex: 0 }
+        ]);
+    });
+
     it.each([
         { datasetId: 'dataset-2', sequenceId: 'sequence-1' },
         { datasetId: 'dataset-1', sequenceId: 'sequence-2' }
@@ -248,6 +618,8 @@ describe('PointCloudLabelingWorkspace', () => {
             const props = defaultProps;
             const { rerender } = render(PointCloudLabelingWorkspace, { props });
 
+            // The lidar select sits in the scene settings.
+            await user.click(screen.getByRole('button', { name: 'Scene settings' }));
             await user.click(screen.getByTestId('workspace-lidar-select'));
             await user.click(screen.getByTestId('workspace-lidar-select-1'));
             expect(screen.getByTestId('workspace-lidar-select')).not.toHaveTextContent(':');

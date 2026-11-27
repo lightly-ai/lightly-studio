@@ -6,14 +6,19 @@ compiled schemas.
 
 from __future__ import annotations
 
+import io
 import json
 import struct
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+import av
+import numpy as np
+from av import VideoStream
 from mcap.writer import Writer as RawWriter
 from mcap_ros2.writer import Writer
+from PIL import Image
 
 CAMERA_VIDEO_TOPIC = "/cam/front/compressed_video"
 CAMERA_INFO_TOPIC = "/cam/front/camera_info"
@@ -84,6 +89,15 @@ bool do_rectify
 """
 )
 
+_ROS_COMPRESSED_IMAGE_MSGDEF = (
+    """
+std_msgs/Header header
+string format
+uint8[] data
+"""
+    + _HEADER_MSGDEF
+)
+
 _COMPRESSED_IMAGE_MSGDEF = """
 builtin_interfaces/Time timestamp
 string frame_id
@@ -142,12 +156,14 @@ float64 w
 )
 
 
-def write_mcap(
+def write_mcap(  # noqa: PLR0913
     path: Path,
     lidar_stamp_offset_ns: int = 0,
     video_stamp_offset_ns: int = 0,
     base_link_poses: Sequence[tuple[int, tuple[float, float, float]]] = (),
     tf_stamp_offset_ns: int = 0,
+    video_access_units: Sequence[bytes] | None = None,
+    metadata_records: Sequence[tuple[str, dict[str, str]]] = (),
 ) -> Path:
     """Writes an indexed MCAP file with a camera, a lidar, and static transforms.
 
@@ -162,11 +178,17 @@ def write_mcap(
             frame, without rotation. Empty writes no `/tf` topic.
         tf_stamp_offset_ns: Added to each `/tf` log time to form `header.stamp`.
             Zero keeps the stamp equal to the log time.
+        video_access_units: One decodable H.264 access unit per `VIDEO_LOG_TIMES_NS`
+            entry, e.g. from `h264_access_units`. `None` writes H.265 placeholders
+            that cannot be decoded.
+        metadata_records: `(name, data)` pairs to add as Metadata records, in order.
 
     Returns:
         The path of the written file.
     """
     writer = Writer(output=str(path))
+    for name, data in metadata_records:
+        writer.add_metadata(name=name, data=data)
     video_schema = writer.register_msgdef(
         datatype="foxglove_msgs/msg/CompressedVideo", msgdef_text=_COMPRESSED_VIDEO_MSGDEF
     )
@@ -209,13 +231,16 @@ def write_mcap(
         message=_camera_info_message(),
         log_time=CAMERA_INFO_LOG_TIME_NS,
     )
-    for log_time_ns in VIDEO_LOG_TIMES_NS:
+    for index, log_time_ns in enumerate(VIDEO_LOG_TIMES_NS):
+        message = _compressed_video_message(
+            log_time_ns=log_time_ns, stamp_ns=log_time_ns + video_stamp_offset_ns
+        )
+        if video_access_units is not None:
+            message = {**message, "data": video_access_units[index], "format": "h264"}
         writer.write_message(
             topic=CAMERA_VIDEO_TOPIC,
             schema=video_schema,
-            message=_compressed_video_message(
-                log_time_ns=log_time_ns, stamp_ns=log_time_ns + video_stamp_offset_ns
-            ),
+            message=message,
             log_time=log_time_ns,
         )
     for log_time_ns in LIDAR_LOG_TIMES_NS:
@@ -247,6 +272,69 @@ def write_mcap_with_compressed_image(path: Path) -> Path:
             topic=CAMERA_IMAGE_TOPIC,
             schema=image_schema,
             message=_compressed_image_message(log_time_ns),
+            log_time=log_time_ns,
+        )
+    writer.finish()
+    return path
+
+
+def write_mcap_with_video(path: Path, frames: Sequence[tuple[int, bytes]]) -> Path:
+    """Writes an MCAP with an H.264 video topic, for decoding tests.
+
+    Args:
+        path: The path to write the file to.
+        frames: `(log_time_ns, access_unit)` pairs, in log-time order, e.g. from
+            `h264_access_units`.
+
+    Returns:
+        The path of the written file.
+    """
+    writer = Writer(output=str(path))
+    video_schema = writer.register_msgdef(
+        datatype="foxglove_msgs/msg/CompressedVideo", msgdef_text=_COMPRESSED_VIDEO_MSGDEF
+    )
+    for log_time_ns, access_unit in frames:
+        writer.write_message(
+            topic=CAMERA_VIDEO_TOPIC,
+            schema=video_schema,
+            message={
+                "timestamp": _time(log_time_ns),
+                "frame_id": CAMERA_FRAME_ID,
+                "data": access_unit,
+                "format": "h264",
+            },
+            log_time=log_time_ns,
+        )
+    writer.finish()
+    return path
+
+
+def write_mcap_with_images(path: Path, frames: Sequence[tuple[int, bytes]]) -> Path:
+    """Writes an MCAP with a `sensor_msgs/msg/CompressedImage` camera topic.
+
+    The topic is `CAMERA_IMAGE_TOPIC`. Each `header.stamp` equals the log time.
+
+    Args:
+        path: The path to write the file to.
+        frames: `(log_time_ns, encoded_picture)` pairs, in log-time order, e.g. from
+            `encoded_image`.
+
+    Returns:
+        The path of the written file.
+    """
+    writer = Writer(output=str(path))
+    image_schema = writer.register_msgdef(
+        datatype="sensor_msgs/msg/CompressedImage", msgdef_text=_ROS_COMPRESSED_IMAGE_MSGDEF
+    )
+    for log_time_ns, picture in frames:
+        writer.write_message(
+            topic=CAMERA_IMAGE_TOPIC,
+            schema=image_schema,
+            message={
+                "header": {"stamp": _time(log_time_ns), "frame_id": CAMERA_FRAME_ID},
+                "format": "rgb8; jpeg compressed bgr8",
+                "data": picture,
+            },
             log_time=log_time_ns,
         )
     writer.finish()
@@ -369,6 +457,25 @@ def write_mcap_with_undecodable_camera_info(path: Path) -> Path:
     return path
 
 
+def write_mcap_with_metadata(path: Path, records: Sequence[tuple[str, dict[str, str]]]) -> Path:
+    """Writes an MCAP file with only Metadata records and no messages.
+
+    Args:
+        path: The path to write the file to.
+        records: `(name, data)` pairs to add as Metadata records, in order.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        for name, data in records:
+            writer.add_metadata(name=name, data=data)
+        writer.finish()
+    return path
+
+
 def write_mcap_with_malformed_json_video(path: Path, payload: bytes = b"not valid json") -> Path:
     """Writes an MCAP whose video topic is JSON-encoded with malformed payloads.
 
@@ -437,6 +544,46 @@ def write_json_mcap(
     return path
 
 
+def write_json_mcap_with_two_channels(
+    path: Path,
+    topic: str,
+    log_times_ns: Sequence[int],
+) -> Path:
+    """Writes an indexed MCAP with one topic recorded on two JSON-encoded channels.
+
+    Each channel has one message per log time. The payload of a message is
+    `{"channel": index}`, with index 0 for the first channel and 1 for the second.
+
+    Args:
+        path: The path to write the file to.
+        topic: The topic both channels publish on.
+        log_times_ns: The log times of the messages of each channel.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        schema_id = writer.register_schema(
+            name="test_msgs/msg/Json", encoding="jsonschema", data=b"{}"
+        )
+        channel_ids = [
+            writer.register_channel(topic=topic, message_encoding="json", schema_id=schema_id)
+            for _ in range(2)
+        ]
+        for log_time_ns in log_times_ns:
+            for index, channel_id in enumerate(channel_ids):
+                writer.add_message(
+                    channel_id=channel_id,
+                    log_time=log_time_ns,
+                    publish_time=log_time_ns,
+                    data=json.dumps({"channel": index}).encode(),
+                )
+        writer.finish()
+    return path
+
+
 def compressed_image_payload(log_time_ns: int) -> bytes:
     """Returns a distinguishable fake encoded-image payload for a given log time."""
     return f"{IMAGE_FORMAT}-bytes-{log_time_ns}".encode()
@@ -460,6 +607,65 @@ def h264_keyframe(payload: bytes = b"\x00\x01\x02") -> bytes:
 def h264_delta_frame(payload: bytes = b"\x00\x01\x02") -> bytes:
     """Returns an Annex B H.264 frame holding a non-IDR picture."""
     return b"\x00\x00\x00\x01\x41" + payload
+
+
+def h264_access_units(gray_levels: Sequence[int], width: int = 16, height: int = 16) -> list[bytes]:
+    """Encodes one solid gray frame per gray level as real, decodable H.264.
+
+    The first frame is a keyframe and the others are delta frames. The stream has no
+    B-frames, so the decoder outputs each frame as soon as it gets its access unit.
+
+    Args:
+        gray_levels: The gray level (0-255) of each frame.
+        width: The frame width in pixels.
+        height: The frame height in pixels.
+
+    Returns:
+        One Annex B access unit per frame, in decoding order.
+    """
+    buf = io.BytesIO()
+    access_units: list[bytes] = []
+    with av.open(buf, "w", format="h264") as container:
+        stream = container.add_stream("libx264", rate=25)
+        assert isinstance(stream, VideoStream)
+        stream.width = width
+        stream.height = height
+        stream.pix_fmt = "yuv420p"
+        stream.options = {"tune": "zerolatency", "preset": "ultrafast"}
+        for pts, gray_level in enumerate(gray_levels):
+            pixels = np.full((height, width, 3), gray_level, dtype=np.uint8)
+            frame = av.VideoFrame.from_ndarray(pixels, format="rgb24").reformat(format="yuv420p")
+            frame.pts = pts
+            access_units.extend(bytes(packet) for packet in stream.encode(frame))
+        access_units.extend(bytes(packet) for packet in stream.encode())
+    return access_units
+
+
+def encoded_image(
+    gray_level: int, width: int = 16, height: int = 16, image_format: str = "JPEG"
+) -> bytes:
+    """Encodes one solid gray RGB picture as an image file, e.g. a JPEG or a PNG.
+
+    Args:
+        gray_level: The gray level (0-255) of every pixel.
+        width: The picture width in pixels.
+        height: The picture height in pixels.
+        image_format: The Pillow format name of the file, e.g. `"JPEG"` or `"PNG"`.
+
+    Returns:
+        The encoded file.
+    """
+    output = io.BytesIO()
+    Image.new(mode="RGB", size=(width, height), color=(gray_level,) * 3).save(
+        output, format=image_format
+    )
+    return output.getvalue()
+
+
+def jpeg_mean_gray_level(data: bytes) -> float:
+    """Returns the mean gray level (0-255) of a JPEG image."""
+    image = Image.open(io.BytesIO(data)).convert("L")
+    return float(np.asarray(image).mean())
 
 
 def _compressed_image_message(log_time_ns: int) -> dict[str, Any]:

@@ -45,6 +45,7 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
     # Update grid view sample rendering
     current_settings.grid_view_sample_rendering = settings.grid_view_sample_rendering
     current_settings.grid_view_thumbnail_quality = settings.grid_view_thumbnail_quality
+    current_settings.image_interpolation = settings.image_interpolation
 
     # Update keyboard shortcut mapping
     current_settings.key_hide_annotations = settings.key_hide_annotations
@@ -54,8 +55,11 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
     current_settings.key_toolbar_drag = settings.key_toolbar_drag
     current_settings.key_toolbar_bounding_box = settings.key_toolbar_bounding_box
     current_settings.key_toolbar_segmentation_mask = settings.key_toolbar_segmentation_mask
+    current_settings.key_toolbar_slic = settings.key_toolbar_slic
     current_settings.key_toolbar_brush = settings.key_toolbar_brush
     current_settings.key_toolbar_eraser = settings.key_toolbar_eraser
+    current_settings.key_previous_camera = settings.key_previous_camera
+    current_settings.key_next_camera = settings.key_next_camera
 
     # Update show annotation text labels
     current_settings.show_annotation_text_labels = settings.show_annotation_text_labels

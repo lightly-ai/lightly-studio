@@ -1,101 +1,81 @@
 <script lang="ts">
-    import { T, useThrelte } from '@threlte/core';
-    import { OrbitControls } from '@threlte/extras';
-    import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-    import { untrack } from 'svelte';
-    import * as THREE from 'three';
-    import { fitCameraToBounds } from './pointCloudCamera';
-    import { createPointCloudBuffer } from './pointCloudBuffer';
+    import { T } from '@threlte/core';
+    import type { PerspectiveCamera, OrthographicCamera, Plane } from 'three';
+    import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+    import PointCloudPoints from './PointCloudPoints/PointCloudPoints.svelte';
+    import SceneCamera from './SceneCamera/SceneCamera.svelte';
     import type { ColorMode } from './pointCloudUtils';
+    import type { CuboidGeometry } from './getPointCloudFrameColors';
     import type { PointBatch } from './types';
-
+    import type {
+        CuboidAnnotation,
+        CameraMode,
+        WorkspaceTool
+    } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { SceneViewState } from './sceneViewState';
+    import { useSceneCameraNavigation } from './useSceneCameraNavigation/useSceneCameraNavigation.svelte';
     interface Props {
-        /** Current point cloud batch with positions, intensities, and count. */
         batch: PointBatch;
-        /** How points are colored: by height, intensity, per-point rgb, or neutral gray. */
+        clippingPlanes?: Plane[];
         colorMode?: ColorMode;
-        /** Screen-space point size in pixels. */
         pointSize?: number;
-        /** Min/max clamp for intensity-based coloring. */
         intensityRange?: [number, number];
+        fitKey?: string;
+        activeTool?: WorkspaceTool;
+        cameraMode?: CameraMode;
+        cameraCuboid?: CuboidAnnotation;
+        highlightCuboid?: CuboidGeometry;
+        isScaleSource?: boolean;
+        isActive?: () => boolean;
+        navigationId?: symbol;
+        viewState?: SceneViewState | null;
+        onViewStateChange?: (viewState: SceneViewState) => void;
     }
+    let {
+        batch,
+        clippingPlanes = [],
+        colorMode = 'none',
+        pointSize = 2,
+        intensityRange,
+        fitKey = '',
+        activeTool = 'select',
+        cameraMode = 'perspective',
+        cameraCuboid,
+        highlightCuboid,
+        isScaleSource = false,
+        isActive,
+        navigationId,
+        viewState = null,
+        onViewStateChange
+    }: Props = $props();
 
-    let { batch, colorMode = 'none', pointSize = 2, intensityRange }: Props = $props();
-
-    const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
-    const { invalidate, renderer } = useThrelte();
-    let cameraRef: THREE.PerspectiveCamera | undefined = $state();
-    let controlsRef: ThreeOrbitControls | undefined = $state();
-    const pointCloudBuffer = createPointCloudBuffer();
-    let hasFitted = false;
-
-    $effect(() => {
-        const canvas = renderer.domElement;
-
-        // Suppress browser context menu so right-drag rotate works uninterrupted.
-        const suppress = (e: Event) => e.preventDefault();
-        canvas.addEventListener('contextmenu', suppress);
-
-        return () => {
-            canvas.removeEventListener('contextmenu', suppress);
-            pointCloudBuffer.dispose();
-        };
-    });
-    // Position effect: copy batch into shared buffers, update draw range and bounds.
-    // cameraRef and controlsRef are read in the tracked section so the effect
-    // retries the fit once both refs are bound; hasFitted is only set to true
-    // after the fit is actually performed.
-    $effect(() => {
-        const currentBatch = batch;
-        const camera = cameraRef;
-        const controls = controlsRef;
-        untrack(() => {
-            const bounds = pointCloudBuffer.updatePositions(currentBatch);
-            if (!hasFitted && bounds && camera && controls) {
-                fitCameraToBounds(camera, controls, bounds);
-                hasFitted = true;
-            }
-            invalidate();
-        });
-    });
-    // Color effect: rebuild colors when batch, colorMode, or intensityRange change.
-    $effect(() => {
-        const currentBatch = batch;
-        const mode = colorMode;
-        const range = intensityRange;
-        const currentColors = currentBatch.colors;
-        untrack(() => {
-            pointCloudBuffer.updateColors(currentBatch.count, mode, range, currentColors);
-            invalidate();
-        });
-    });
+    let activeCamera = $state<PerspectiveCamera | OrthographicCamera>();
+    let controlsRef = $state<OrbitControls>();
+    useSceneCameraNavigation(() => ({
+        camera: activeCamera,
+        controls: controlsRef,
+        isActive,
+        navigationId
+    }));
 </script>
 
-<T.Color attach="background" args={[BACKGROUND_COLOR]} />
-
-<T.PerspectiveCamera
-    bind:ref={cameraRef}
-    makeDefault
-    fov={60}
-    near={0.1}
-    far={10000}
-    up={[0, 0, 1]}
->
-    <OrbitControls
-        bind:ref={controlsRef}
-        enableDamping
-        screenSpacePanning={false}
-        mouseButtons={{
-            LEFT: THREE.MOUSE.PAN,
-            MIDDLE: THREE.MOUSE.DOLLY,
-            RIGHT: THREE.MOUSE.ROTATE
-        }}
-        touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
-    />
-</T.PerspectiveCamera>
-
+<T.Color attach="background" args={['hsl(20, 14.3%, 4.1%)']} />
+<SceneCamera {cameraMode} {activeTool} bind:camera={activeCamera} bind:controls={controlsRef} />
 <T.AmbientLight intensity={1} />
-
-<T.Points geometry={pointCloudBuffer.geometry}>
-    <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} />
-</T.Points>
+<PointCloudPoints
+    {batch}
+    {clippingPlanes}
+    {colorMode}
+    {pointSize}
+    {intensityRange}
+    {fitKey}
+    camera={activeCamera}
+    controls={controlsRef}
+    {cameraMode}
+    {cameraCuboid}
+    {highlightCuboid}
+    {isActive}
+    {isScaleSource}
+    {viewState}
+    {onViewStateChange}
+/>

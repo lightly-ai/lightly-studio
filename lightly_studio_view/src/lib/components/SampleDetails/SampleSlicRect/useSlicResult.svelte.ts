@@ -29,8 +29,10 @@ export function useSlicResult(getProps: () => SlicResultProps) {
                 result = loaded;
                 status = 'ready';
             },
-            () => {
-                if (active) status = 'error';
+            (error) => {
+                if (!active) return;
+                console.error('AI-assisted labeling computation failed', { level, error });
+                status = 'error';
             }
         );
         // Ignore late results after navigation, size changes, or unmounting.

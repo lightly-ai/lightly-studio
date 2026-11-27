@@ -1,5 +1,8 @@
 """Resolvers for video database operations."""
 
+from lightly_studio.resolvers.video_resolver.count_unannotated_videos import (
+    count_unannotated_videos,
+)
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
     count_video_frame_annotations_by_video_collection,
 )
@@ -27,6 +30,7 @@ from lightly_studio.resolvers.video_resolver.resolve_embedding_region import (
 
 __all__ = [
     "build_sample_ids_query",
+    "count_unannotated_videos",
     "count_video_frame_annotations_by_video_collection",
     "create_many",
     "delete_with_frames",

@@ -13,8 +13,8 @@ const LEVEL_CONFIG: Record<
     { targetSegments: number; compactness: number; smoothing: 'bilateral' }
 > = {
     coarse: { targetSegments: 80, compactness: 35, smoothing: 'bilateral' },
-    medium: { targetSegments: 240, compactness: 28, smoothing: 'bilateral' },
-    fine: { targetSegments: 480, compactness: 22, smoothing: 'bilateral' }
+    medium: { targetSegments: 320, compactness: 28, smoothing: 'bilateral' },
+    fine: { targetSegments: 640, compactness: 22, smoothing: 'bilateral' }
 };
 
 const stripTrailingSlash = (value = '') => value.replace(/\/+$/, '');
@@ -86,9 +86,11 @@ export const loadSuperpixelsForImage = async ({
 }) => {
     const prepared = await prepareImageForSlic(imageUrl);
     const engine = await getSlicEngine();
-    return {
-        segmentation: engine.computeSuperpixels(prepared.imageData, getSlicComputeOptions(level)),
-        scaleX: prepared.scaleX,
-        scaleY: prepared.scaleY
-    };
+    let segmentation = engine.computeSuperpixels(prepared.imageData, getSlicComputeOptions('fine'));
+    const merge = ({ labels, width, height }: typeof segmentation, targetSegments: number) =>
+        engine.mergeSegments({ labels, width, height, targetSegments });
+    // Each parent is a union of its children, so changing levels cannot leave boundary fragments.
+    if (level !== 'fine') segmentation = merge(segmentation, LEVEL_CONFIG.medium.targetSegments);
+    if (level === 'coarse') segmentation = merge(segmentation, LEVEL_CONFIG.coarse.targetSegments);
+    return { segmentation, scaleX: prepared.scaleX, scaleY: prepared.scaleY };
 };

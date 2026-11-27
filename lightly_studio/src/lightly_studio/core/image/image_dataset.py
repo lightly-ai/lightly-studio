@@ -14,6 +14,7 @@ from labelformat.formats import (
     COCOObjectDetectionInput,
     LightlyObjectDetectionInput,
     PascalVOCSemanticSegmentationInput,
+    YOLOv8InstanceSegmentationInput,
     YOLOv8ObjectDetectionInput,
 )
 from labelformat.model.instance_segmentation import (
@@ -24,23 +25,27 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
+from lightly_studio.analytics import ingest_tracking
+from lightly_studio.analytics.ingest_tracking import IngestFormat
+from lightly_studio.core import annotation_file_task
+from lightly_studio.core.annotation_file_task import AnnotationFileTask
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.dataset import fsspec_lister, remote_storage
+from lightly_studio.dataset import fsspec_lister
 from lightly_studio.embed import embed_samples
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
-    collection_embedding_model_resolver,
     collection_resolver,
     image_resolver,
-    tag_resolver,
 )
+from lightly_studio.services import annotation_source_service
+from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -157,47 +162,18 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 greater than 0.
             AllInputFilesFailedError: If every image in the path is missing or broken.
         """
-        fsspec_lister.validate_limit(limit)
-        if tag_depth < 0:
-            raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
-        # Collect image file paths.
-        if allowed_extensions:
-            allowed_extensions_set = {ext.lower() for ext in allowed_extensions}
-        else:
-            allowed_extensions_set = None
-        # Configure clients before discovery creates and caches a filesystem.
-        remote_storage.configure_connections(paths=[str(path)])
-        image_paths = list(
-            fsspec_lister.iter_files_from_path(
-                path=str(path), allowed_extensions=allowed_extensions_set, limit=limit
-            )
+        source = ingest_tracking.get_source(path=path)
+        active_transport.get_transport().ingestion.add_images_from_path(
+            collection_id=self.collection_id,
+            path=str(path),
+            allowed_extensions=None if allowed_extensions is None else list(allowed_extensions),
+            embed=embed,
+            tag_depth=tag_depth,
+            limit=limit,
         )
-
-        logger.info(f"Found {len(image_paths)} images in {path}.")
-
-        # Process images
-        path_to_sample_id = add_images.load_into_dataset_from_paths(
-            session=self.session,
-            root_collection_id=self.collection_id,
-            image_paths=image_paths,
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.FOLDER
         )
-        created_sample_ids = list(path_to_sample_id.values())
-
-        if created_sample_ids:
-            add_images.tag_samples_by_directory(
-                session=self.session,
-                collection_id=self.collection_id,
-                input_path=path,
-                sample_ids=created_sample_ids,
-                tag_depth=tag_depth,
-            )
-
-        if embed:
-            _generate_embeddings_image(
-                session=self.session,
-                collection_id=self.collection_id,
-                sample_ids=created_sample_ids,
-            )
 
     def add_annotations_from_labelformat(
         self,
@@ -219,7 +195,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed_annotations: If True, generate embeddings for the annotation crops.
         """
         missing = add_annotations.add_annotations_from_labelformat(
-            session=self.session,
             root_collection_id=self.collection_id,
             input_labels=input_labels,
             images_root=images_root,
@@ -233,13 +208,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed=embed_annotations,
         )
 
-    def add_annotations_from_coco(
+    def add_annotations_from_coco(  # noqa: PLR0913
         self,
         annotations_json: PathLike,
         images_root: PathLike,
         annotation_source: str,
-        annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+        annotation_type: AnnotationType | None = None,
         embed_annotations: bool = True,
+        annotation_task: AnnotationFileTask | None = None,
     ) -> None:
         """Attach COCO annotations to images already in the dataset.
 
@@ -247,18 +223,19 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotations_json: Path to the COCO annotations JSON file.
             images_root: Root path used for matching image filenames.
             annotation_source: Name of the annotation source.
-            annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
+            annotation_type: Deprecated. Use `annotation_task` instead.
             embed_annotations: If True, generate embeddings for the annotation crops.
+            annotation_task: What to read from the file. `OBJECT_DETECTION` (default) reads
+                the boxes. `INSTANCE_SEGMENTATION` reads the polygon and mask segmentations.
+
+        Raises:
+            ValueError: If both `annotation_task` and `annotation_type` are set.
         """
-        label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
-        if annotation_type == AnnotationType.OBJECT_DETECTION:
-            label_input = COCOObjectDetectionInput(input_file=annotations_json)
-        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
-            label_input = COCOInstanceSegmentationInput(input_file=annotations_json)
-        else:
-            raise ValueError(f"Invalid annotation type: {annotation_type}")
+        task = annotation_file_task.resolve_annotation_task(
+            annotation_task=annotation_task, annotation_type=annotation_type
+        )
         self.add_annotations_from_labelformat(
-            input_labels=label_input,
+            input_labels=_create_coco_input(annotations_json=annotations_json, task=task),
             images_root=images_root,
             annotation_source=annotation_source,
             embed_annotations=embed_annotations,
@@ -270,6 +247,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         annotation_source: str,
         input_split: str | None = None,
         embed_annotations: bool = True,
+        annotation_task: AnnotationFileTask | None = None,
     ) -> None:
         """Attach YOLO annotations to images already in the dataset.
 
@@ -278,15 +256,19 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source.
             input_split: Specific split (e.g. ``"train"``). ``None`` loads all splits.
             embed_annotations: If True, generate embeddings for the annotation crops.
+            annotation_task: What to read from the label files. `OBJECT_DETECTION` (default)
+                reads boxes. `INSTANCE_SEGMENTATION` reads polygons, one per line.
         """
+        task = annotation_file_task.resolve_annotation_task(
+            annotation_task=annotation_task, annotation_type=None
+        )
         data_yaml = Path(data_yaml).absolute()
         missing: list[str] = []
         for split in add_annotations.resolve_yolo_splits(
             data_yaml=data_yaml, input_split=input_split
         ):
-            label_input = YOLOv8ObjectDetectionInput(input_file=data_yaml, input_split=split)
+            label_input = _create_yolo_input(data_yaml=data_yaml, split=split, task=task)
             missing += add_annotations.add_annotations_from_labelformat(
-                session=self.session,
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
                 images_root=label_input._images_dir(),  # noqa: SLF001
@@ -335,6 +317,35 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed_annotations=False,
         )
 
+    def delete_annotation_source(self, annotation_source: str) -> int:
+        """Delete an annotation source, all its annotations and their captions.
+
+        Delete the evaluation runs that use the annotation source first.
+
+        Args:
+            annotation_source: Name of the annotation source.
+
+        Returns:
+            The number of deleted annotations.
+
+        Raises:
+            ValueError: If the dataset has no annotation source with this name.
+            AnnotationSourceInUseError: If evaluation runs or export jobs use the annotation
+                source, or if it has child collections other than captions.
+        """
+        source = collection_resolver.get_annotation_source_by_name(
+            session=self.session,
+            dataset_collection_id=self.collection_id,
+            name=annotation_source,
+        )
+        if source is None:
+            raise ValueError(f"The dataset has no annotation source '{annotation_source}'.")
+        return annotation_source_service.delete_annotation_source(
+            session=self.session,
+            dataset_collection_id=self.collection_id,
+            annotation_source_id=source.collection_id,
+        )
+
     def add_samples_from_labelformat(  # noqa: PLR0913
         self,
         input_labels: ObjectDetectionInput | InstanceSegmentationInput,
@@ -363,11 +374,12 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             ValueError: If limit is not None and not greater than 0.
         """
+        source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         images_path = Path(images_path).absolute()
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=input_labels,
             images_path=images_path,
@@ -376,7 +388,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -388,6 +399,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_collection_name=annotation_source,
             embed=embed_annotations,
         )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.LABELFORMAT
+        )
 
     def add_samples_from_yolo(  # noqa: PLR0913
         self,
@@ -398,6 +412,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         embed_annotations: bool = True,
         limit: int | None = None,
         tag_depth: int = 0,
+        annotation_task: AnnotationFileTask | None = None,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
 
@@ -417,11 +432,17 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 split's images directory. `tag_depth=0` (default) skips this; `tag_depth=N`
                 creates a tag for each of the first `N` directory levels. These tags are
                 added on top of the split tag.
+            annotation_task: What to read from the label files. `OBJECT_DETECTION` (default)
+                reads boxes. `INSTANCE_SEGMENTATION` reads polygons, one per line.
 
         Raises:
             ValueError: If tag_depth is negative, or if limit is not None and not greater
                 than 0.
         """
+        task = annotation_file_task.resolve_annotation_task(
+            annotation_task=annotation_task, annotation_type=None
+        )
+        source = ingest_tracking.get_source(path=data_yaml)
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
             raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
@@ -443,14 +464,11 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             if remaining is not None and remaining <= 0:
                 break
             # Load the dataset using labelformat.
-            label_input = YOLOv8ObjectDetectionInput(
-                input_file=data_yaml,
-                input_split=split,
-            )
+            label_input = _create_yolo_input(data_yaml=data_yaml, split=split, task=task)
             images_path = label_input._images_dir()  # noqa: SLF001
 
             created_sample_ids = add_images.load_into_dataset_from_labelformat(
-                session=self.session,
+                ingestion=active_transport.get_transport().ingestion,
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
                 images_path=images_path,
@@ -460,17 +478,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
             # Tag samples with split name
             _postprocess_created_images(
-                session=self.session,
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
                 tag=split,
                 embed=False,
             )
             # Tag samples by their directory levels below the split's images directory.
-            add_images.tag_samples_by_directory(
-                session=self.session,
+            active_transport.get_transport().ingestion.add_directory_tags(
                 collection_id=self.collection_id,
-                input_path=images_path,
+                path=str(images_path),
                 sample_ids=created_sample_ids,
                 tag_depth=tag_depth,
             )
@@ -481,7 +497,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         # Generate embeddings for all samples at once
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=all_created_sample_ids,
             tag=None,
@@ -493,26 +508,29 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_collection_name=annotation_source,
             embed=embed_annotations,
         )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.YOLO
+        )
 
     def add_samples_from_coco(  # noqa: PLR0913
         self,
         annotations_json: PathLike,
         images_path: PathLike,
-        annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+        annotation_type: AnnotationType | None = None,
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
         embed_annotations: bool = True,
         limit: int | None = None,
         tag_depth: int = 0,
+        annotation_task: AnnotationFileTask | None = None,
     ) -> None:
-        """Load a dataset in COCO Object Detection format and store in DB.
+        """Load a dataset in COCO format and store in DB.
 
         Args:
             annotations_json: Path to the COCO annotations JSON file.
             images_path: Path to the folder containing the images.
-            annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
-                'InstanceSegmentation').
+            annotation_type: Deprecated. Use `annotation_task` instead.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples. Existing images
@@ -526,34 +544,29 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 `images_path`. `tag_depth=0` (default) skips this; `tag_depth=N` creates a
                 tag for each of the first `N` directory levels (see `add_images_from_path`).
                 These tags are added on top of the `split` tag.
+            annotation_task: What to read from the file. `OBJECT_DETECTION` (default) reads
+                the boxes. `INSTANCE_SEGMENTATION` reads the polygon and mask segmentations.
 
         Raises:
             ValueError: If tag_depth is negative, or if limit is not None and not greater
-                than 0.
+                than 0, or if both `annotation_task` and `annotation_type` are set.
         """
+        task = annotation_file_task.resolve_annotation_task(
+            annotation_task=annotation_task, annotation_type=annotation_type
+        )
+        source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
             raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
         images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
-        if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
+        if not str(annotations_json).endswith(".json") or not _is_file(fs=fs, path=fs_path):
             raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
 
-        label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
-
-        if annotation_type == AnnotationType.OBJECT_DETECTION:
-            label_input = COCOObjectDetectionInput(
-                input_file=annotations_json,
-            )
-        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
-            label_input = COCOInstanceSegmentationInput(
-                input_file=annotations_json,
-            )
-        else:
-            raise ValueError(f"Invalid annotation type: {annotation_type}")
+        label_input = _create_coco_input(annotations_json=annotations_json, task=task)
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
@@ -562,17 +575,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
         )
         # Tag samples by their directory levels below the images directory.
-        add_images.tag_samples_by_directory(
-            session=self.session,
+        active_transport.get_transport().ingestion.add_directory_tags(
             collection_id=self.collection_id,
-            input_path=images_path,
+            path=str(images_path),
             sample_ids=created_sample_ids,
             tag_depth=tag_depth,
         )
@@ -581,6 +592,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             annotation_collection_name=annotation_source,
             embed=embed_annotations,
+        )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.COCO
         )
 
     def add_samples_from_pascal_voc_segmentations(  # noqa: PLR0913
@@ -615,6 +629,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             ValueError: If limit is not None and not greater than 0.
         """
+        source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         images_path = _normalize_input_path(path=images_path)
         masks_path = _normalize_input_path(path=masks_path)
@@ -633,7 +648,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
@@ -643,11 +658,13 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
+        )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.PASCAL_VOC
         )
 
     def add_samples_from_lightly(  # noqa: PLR0913
@@ -678,6 +695,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             ValueError: If limit is not None and not greater than 0.
         """
+        source = ingest_tracking.get_source(path=input_folder)
         fsspec_lister.validate_limit(limit)
         input_folder = Path(input_folder).absolute()
 
@@ -688,7 +706,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_path = input_folder / images_rel_path
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
@@ -697,7 +715,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -708,6 +725,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             annotation_collection_name=annotation_source,
             embed=embed_annotations,
+        )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.LIGHTLY
         )
 
     def add_samples_from_coco_caption(
@@ -732,6 +752,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             ValueError: If limit is not None and not greater than 0.
         """
+        source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         annotations_json = Path(annotations_json).absolute()
         images_path = Path(images_path).absolute()
@@ -741,6 +762,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_coco_captions(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             annotations_json=annotations_json,
             images_path=images_path,
@@ -748,11 +770,13 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
+        )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.COCO_CAPTION
         )
 
     def evaluate(self, query: DatasetQuery | None = None) -> ImageDatasetEvaluate:
@@ -777,7 +801,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
 
 def _postprocess_created_images(
-    session: Session,
     collection_id: UUID,
     sample_ids: list[UUID],
     tag: str | None,
@@ -786,30 +809,19 @@ def _postprocess_created_images(
     """Post-process newly created images by generating embeddings and tagging.
 
     Args:
-        session: Database session for resolver operations.
         collection_id: The ID of the collection to associate with the embedding model.
         sample_ids: List of sample IDs to process.
         embed: If True, generate embeddings for the samples.
         tag: Optional tag name to assign to the samples.
     """
+    transport = active_transport.get_transport()
     if tag is not None and sample_ids:
-        db_tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session,
-            collection_id=collection_id,
-            tag_name=tag,
-        )
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=session,
-            tag_id=db_tag.tag_id,
-            sample_ids=sample_ids,
+        transport.tags.add_to_samples(
+            collection_id=collection_id, tag_name=tag, sample_ids=sample_ids
         )
 
     if embed:
-        _generate_embeddings_image(
-            session=session,
-            collection_id=collection_id,
-            sample_ids=sample_ids,
-        )
+        transport.ingestion.embed_images(collection_id=collection_id, sample_ids=sample_ids)
 
 
 def _normalize_input_path(path: PathLike) -> PathLike:
@@ -818,38 +830,6 @@ def _normalize_input_path(path: PathLike) -> PathLike:
     if isinstance(fs, LocalFileSystem):
         return Path(path).absolute()
     return str(path)
-
-
-def _generate_embeddings_image(
-    session: Session,
-    collection_id: UUID,
-    sample_ids: list[UUID],
-) -> None:
-    """Generate and store embeddings for samples.
-
-    Existing samples that have no embedding of the collection's default model are embedded
-    too, so a rerun completes an embedding that failed before.
-
-    Args:
-        session: Database session for resolver operations.
-        collection_id: The ID of the collection to associate with the embedding model.
-        sample_ids: List of sample IDs to generate embeddings for.
-    """
-    default_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
-        session=session, collection_id=collection_id
-    )
-    if default_model_id is not None:
-        unembedded_sample_ids = image_resolver.get_unembedded_sample_ids(
-            session=session, collection_id=collection_id, embedding_model_id=default_model_id
-        )
-        sample_ids = list(dict.fromkeys([*sample_ids, *unembedded_sample_ids]))
-
-    if not sample_ids:
-        return
-
-    embed_samples.embed_image_samples(
-        session=session, collection_id=collection_id, sample_ids=sample_ids
-    )
 
 
 def _generate_embeddings_annotations(
@@ -886,6 +866,15 @@ def _generate_embeddings_annotations(
     )
 
 
+def _is_file(fs: fsspec.AbstractFileSystem, path: str) -> bool:
+    """Return True if the path is a file, False if it is missing or not a file."""
+    try:
+        return bool(fs.info(path)["type"] == "file")
+    # `NotADirectoryError` is raised when a parent of the local path is a file
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+
+
 def _log_missing_images(annotation_source: str, missing_paths: list[str]) -> None:
     """Emit a single warning summarising images skipped due to no DB match."""
     if not missing_paths:
@@ -898,3 +887,19 @@ def _log_missing_images(annotation_source: str, missing_paths: list[str]) -> Non
         min(5, len(missing_paths)),
         missing_paths[:5],
     )
+
+
+def _create_coco_input(
+    annotations_json: PathLike, task: AnnotationFileTask
+) -> COCOObjectDetectionInput | COCOInstanceSegmentationInput:
+    if task == AnnotationFileTask.INSTANCE_SEGMENTATION:
+        return COCOInstanceSegmentationInput(input_file=annotations_json)
+    return COCOObjectDetectionInput(input_file=annotations_json)
+
+
+def _create_yolo_input(
+    data_yaml: Path, split: str, task: AnnotationFileTask
+) -> YOLOv8ObjectDetectionInput | YOLOv8InstanceSegmentationInput:
+    if task == AnnotationFileTask.INSTANCE_SEGMENTATION:
+        return YOLOv8InstanceSegmentationInput(input_file=data_yaml, input_split=split)
+    return YOLOv8ObjectDetectionInput(input_file=data_yaml, input_split=split)

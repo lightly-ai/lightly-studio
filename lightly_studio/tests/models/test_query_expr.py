@@ -1,5 +1,7 @@
 """A surface-level smoke test for the QueryExpr model for documentation purposes."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 
 import pytest
@@ -9,13 +11,125 @@ from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
     DatetimeExpr,
+    EqualityComparisonOperator,
+    EvaluationMetricComparisonExpr,
+    FieldRef,
+    MetadataComparisonExpr,
     NotExpr,
+    OrdinalComparisonOperator,
+    OrdinalFloatExpr,
     QueryExpr,
     StringExpr,
+    VideoEventMatchExpr,
 )
 
 
+class TestMetadataComparisonExpr:
+    @pytest.mark.parametrize("value", ["front", "1", True, False, 1, -2, 0.8, -5.5])
+    @pytest.mark.parametrize("operator", list(OrdinalComparisonOperator))
+    def test_model_validate(self, value: str | bool | int | float, operator: str) -> None:
+        payload = {
+            "match_expr": {
+                "type": "metadata_comparison_expr",
+                "path": "odometry.acc[1]",
+                "operator": operator,
+                "value": value,
+            }
+        }
+        if isinstance(value, (str, bool)) and operator not in ("==", "!="):
+            with pytest.raises(ValidationError, match="ordering comparisons require a number"):
+                QueryExpr.model_validate(payload)
+            return
+
+        query = QueryExpr.model_validate(payload)
+        assert isinstance(query.match_expr, MetadataComparisonExpr)
+        assert type(query.match_expr.value) is type(value)
+        assert query.model_dump(mode="json") == payload
+        assert QueryExpr.model_validate_json(query.model_dump_json()) == query
+
+    @pytest.mark.parametrize("value", [None, [], {}, float("nan"), float("inf"), -float("inf")])
+    def test_model_validate__invalid_value(self, value: object) -> None:
+        with pytest.raises(ValidationError):
+            MetadataComparisonExpr.model_validate(
+                {"path": "camera", "operator": "==", "value": value}
+            )
+
+    def test_model_validate__invalid_operator(self) -> None:
+        with pytest.raises(ValidationError):
+            MetadataComparisonExpr.model_validate(
+                {"path": "camera", "operator": "IN", "value": "front"}
+            )
+
+    @pytest.mark.parametrize(
+        "expression",
+        [
+            {
+                "type": "and",
+                "children": [
+                    {
+                        "type": "metadata_comparison_expr",
+                        "path": "camera",
+                        "operator": "==",
+                        "value": "front",
+                    }
+                ],
+            },
+            {
+                "type": "or",
+                "children": [
+                    {
+                        "type": "metadata_comparison_expr",
+                        "path": "reviewed",
+                        "operator": "!=",
+                        "value": False,
+                    }
+                ],
+            },
+            {
+                "type": "not",
+                "child": {
+                    "type": "metadata_comparison_expr",
+                    "path": "score",
+                    "operator": ">=",
+                    "value": 0.8,
+                },
+            },
+        ],
+    )
+    def test_model_validate__boolean_composition(self, expression: dict[str, object]) -> None:
+        query = QueryExpr.model_validate({"match_expr": expression})
+        assert query.model_dump(mode="json") == {"match_expr": expression}
+        assert QueryExpr.model_validate_json(query.model_dump_json()) == query
+
+
+class TestEvaluationMetricComparisonExpr:
+    @pytest.mark.parametrize("operator", ["==", "!=", "<", "<=", ">", ">="])
+    @pytest.mark.parametrize("value", [0, -2, 0.5])
+    def test_model_validate(self, operator: str, value: int | float) -> None:
+        metric = EvaluationMetricComparisonExpr.model_validate(
+            {"metric_name": "custom metric", "operator": operator, "value": value}
+        )
+        assert type(metric.value) is type(value)
+        assert (
+            EvaluationMetricComparisonExpr.model_validate_json(metric.model_dump_json()) == metric
+        )
+
+    @pytest.mark.parametrize("value", [True, False, "1", None, [], {}, float("inf"), float("nan")])
+    def test_model_validate__invalid_value(self, value: object) -> None:
+        with pytest.raises(ValidationError):
+            EvaluationMetricComparisonExpr.model_validate(
+                {"metric_name": "iou", "operator": ">", "value": value}
+            )
+
+
 class TestQueryExpr:
+    @pytest.mark.parametrize(
+        "node_type", ["video_event_match_expr", "video_frame_match_expr", "polygon_match_expr"]
+    )
+    def test_model_validate__requires_subexpression(self, node_type: str) -> None:
+        with pytest.raises(ValidationError, match="subexpr"):
+            QueryExpr.model_validate({"match_expr": {"type": node_type}})
+
     def test_model_validate__and_with_image_and_annotation_nodes(self) -> None:
         """Compose an AND of a leaf image filter and a nested annotation match."""
         tree = QueryExpr.model_validate(
@@ -108,3 +222,17 @@ class TestQueryExpr:
                     }
                 }
             )
+
+    @pytest.mark.parametrize(
+        "name", ["class_name", "source", "confidence", "start_time_s", "end_time_s"]
+    )
+    def test_model_validate__video_event_round_trip(self, name: str) -> None:
+        field = FieldRef(table="event", name=name)
+        criterion = (
+            StringExpr(field=field, operator=EqualityComparisonOperator.EQ, value="run")
+            if name in {"class_name", "source"}
+            else OrdinalFloatExpr(field=field, operator=OrdinalComparisonOperator.GTE, value=0.5)
+        )
+        query = QueryExpr(match_expr=VideoEventMatchExpr(subexpr=NotExpr(child=criterion)))
+        restored = QueryExpr.model_validate_json(query.model_dump_json())
+        assert restored == query

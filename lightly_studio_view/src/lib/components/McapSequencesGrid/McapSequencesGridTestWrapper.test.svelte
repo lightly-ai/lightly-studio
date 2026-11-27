@@ -10,7 +10,7 @@
         hasNextPage,
         isFetchingNextPage,
         onLoadMore,
-        onSequenceClick
+        onSequenceOpen
     }: ComponentProps<typeof McapSequencesGrid> = $props();
 </script>
 
@@ -22,5 +22,5 @@
     {hasNextPage}
     {isFetchingNextPage}
     {onLoadMore}
-    {onSequenceClick}
+    {onSequenceOpen}
 />

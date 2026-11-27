@@ -67,6 +67,20 @@ def test_build_point_cloud_columns__normalizes_intensity() -> None:
     assert columns["intensity"].to_pylist() == pytest.approx([0.0, 1.0])
 
 
+def test_build_point_cloud_columns__normalizes_reflectivity_as_intensity() -> None:
+    layout = PointCloudLayout(width=2, height=1, point_step=16, row_step=32, endian="<")
+    data = struct.pack("<ffffffff", 1.0, 2.0, 3.0, 10.0, 4.0, 5.0, 6.0, 20.0)
+    fields = {**_xyz_fields(), "reflectivity": _field("reflectivity", _FLOAT32_DATATYPE, 12)}
+    xyz = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float32)
+    valid = np.array([True, True])
+
+    columns = build_point_cloud_columns.build_point_cloud_columns(
+        data=data, fields=fields, layout=layout, xyz=xyz, valid=valid
+    )
+
+    assert columns["intensity"].to_pylist() == pytest.approx([0.0, 1.0])
+
+
 def test_build_point_cloud_columns__converts_srgb_colors_to_linear() -> None:
     layout = PointCloudLayout(width=1, height=1, point_step=15, row_step=15, endian="<")
     data = struct.pack("<fffBBB", 1.0, 2.0, 3.0, 0, 255, 10)

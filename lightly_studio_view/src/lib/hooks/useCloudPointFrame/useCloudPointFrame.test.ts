@@ -1,135 +1,165 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { CreateQueryResult } from '@tanstack/svelte-query';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, type CreateQueryResult } from '@tanstack/svelte-query';
 import * as tanstackQuery from '@tanstack/svelte-query';
+import { getTickDataOptions } from '$lib/hooks/useTickData/getTickDataOptions';
+import type { TickData } from '$lib/hooks/useTickData/fetchTickData';
 import { useCloudPointFrame } from './useCloudPointFrame.svelte';
-import { fetchCloudPointFrame } from './fetchCloudPointFrame';
-import { mergeCloudPointFrames } from './mergeCloudPointFrames';
-import type { CloudPointFrame } from './types';
+import type { CloudPointFrame, CloudPointFrameParams } from './types';
 
-vi.mock('./fetchCloudPointFrame', () => ({ fetchCloudPointFrame: vi.fn() }));
-vi.mock('./mergeCloudPointFrames', () => ({ mergeCloudPointFrames: vi.fn() }));
+vi.mock('$lib/hooks/useTickData/getTickDataOptions', () => ({
+    getTickDataOptions: vi.fn(() => ({ queryKey: ['tick-data'], queryFn: vi.fn() }))
+}));
 
-interface QueryOptions {
-    queryKey: unknown[];
-    enabled: boolean;
-    placeholderData: (previous: CloudPointFrame | undefined) => CloudPointFrame | undefined;
-    queryFn: (context: { signal?: AbortSignal }) => Promise<CloudPointFrame>;
-}
-
-const defaultParams = () => ({
+const defaultParams = (): CloudPointFrameParams => ({
     datasetId: 'dataset-1',
-    recordingId: 'recording-1',
-    channels: [
-        { channelId: 1, timestampNs: '100' },
-        { channelId: 2, timestampNs: '200' }
-    ]
+    sequenceId: 'sequence-1',
+    seqNumber: 4
 });
 
-function getQueryOptions(
-    getParams: () => ReturnType<typeof defaultParams> & { displayFrameId?: string }
-): QueryOptions {
+function getQueryOptions(getParams: () => CloudPointFrameParams) {
     const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery');
     useCloudPointFrame(getParams);
-    return createQuerySpy.mock.lastCall?.[0]() as unknown as QueryOptions;
+    return createQuerySpy.mock.lastCall?.[0] as () => {
+        queryKey: unknown[];
+        queryFn: () => Promise<TickData[]>;
+        enabled: boolean;
+        select: (data: TickData[]) => CloudPointFrame;
+        placeholderData: (previous: TickData[] | undefined) => TickData[] | undefined;
+    };
+}
+
+function frame(channelId: number, count: number): CloudPointFrame {
+    return {
+        batch: {
+            positions: new Float32Array(count * 3),
+            intensities: new Float32Array(count),
+            count
+        },
+        channelId,
+        timestampNs: '100',
+        frameId: `lidar-${channelId}`,
+        sourcePointCount: count,
+        bounds: null,
+        channels: [{ channelId, timestampNs: '100', frameId: `lidar-${channelId}` }]
+    };
 }
 
 describe('useCloudPointFrame', () => {
+    let client: QueryClient;
     beforeEach(() => {
         vi.restoreAllMocks();
+        client = new QueryClient();
+        vi.spyOn(tanstackQuery, 'useQueryClient').mockReturnValue(client);
+        vi.mocked(getTickDataOptions)
+            .mockReset()
+            .mockImplementation(({ seqNumber }) => ({
+                staleTime: Infinity,
+                queryKey: ['tick-data', seqNumber],
+                queryFn: vi.fn(async () => ({ pointClouds: [], cameraFrames: {} }))
+            }));
         vi.spyOn(tanstackQuery, 'createQuery').mockReturnValue(
             {} as CreateQueryResult<CloudPointFrame, Error>
         );
     });
 
-    it('builds a query key from the dataset, recording, and channels', () => {
-        const options = getQueryOptions(defaultParams);
+    it('reads the shared tick-data query of the tick', () => {
+        const options = getQueryOptions(() => ({
+            ...defaultParams(),
+            displayFrameId: 'base_link',
+            selectedChannelIds: [1]
+        }))();
 
+        expect(getTickDataOptions).toHaveBeenCalledWith({
+            datasetId: 'dataset-1',
+            sequenceId: 'sequence-1',
+            seqNumber: 4,
+            displayFrameId: 'base_link'
+        });
         expect(options.queryKey).toEqual([
             'cloud-point-frame',
             'dataset-1',
-            'recording-1',
-            defaultParams().channels,
-            ''
+            'sequence-1',
+            [4],
+            'base_link',
+            [1]
         ]);
     });
 
-    it('is enabled only when dataset, recording, and channels are all present', () => {
-        expect(getQueryOptions(defaultParams).enabled).toBe(true);
-        expect(getQueryOptions(() => ({ ...defaultParams(), channels: [] })).enabled).toBe(false);
-        expect(getQueryOptions(() => ({ ...defaultParams(), datasetId: '' })).enabled).toBe(false);
-        expect(getQueryOptions(() => ({ ...defaultParams(), recordingId: '' })).enabled).toBe(
+    it('enables fetching only for a known tick with at least one selected lidar', () => {
+        expect(getQueryOptions(defaultParams)().enabled).toBe(true);
+        expect(
+            getQueryOptions(() => ({ ...defaultParams(), selectedChannelIds: [] }))().enabled
+        ).toBe(false);
+        expect(getQueryOptions(() => ({ ...defaultParams(), datasetId: '' }))().enabled).toBe(
+            false
+        );
+        expect(getQueryOptions(() => ({ ...defaultParams(), sequenceId: '' }))().enabled).toBe(
             false
         );
     });
 
-    it('fetches every channel and merges the resulting frames', async () => {
-        const merged = { frameId: 'merged' } as unknown as CloudPointFrame;
-        vi.mocked(fetchCloudPointFrame).mockImplementation(
-            async ({ channel }) => ({ frameId: `frame-${channel.channelId}` }) as CloudPointFrame
-        );
-        vi.mocked(mergeCloudPointFrames).mockReturnValue(merged);
+    it('merges the point clouds of the selected lidar channels', () => {
+        const data: TickData = { pointClouds: [frame(1, 2), frame(2, 3)], cameraFrames: {} };
 
-        const signal = new AbortController().signal;
-        const result = await getQueryOptions(defaultParams).queryFn({ signal });
-
-        expect(fetchCloudPointFrame).toHaveBeenCalledTimes(2);
-        expect(fetchCloudPointFrame).toHaveBeenNthCalledWith(1, {
-            datasetId: 'dataset-1',
-            recordingId: 'recording-1',
-            channel: { channelId: 1, timestampNs: '100' },
-            displayFrameId: undefined,
-            signal
-        });
-        expect(mergeCloudPointFrames).toHaveBeenCalledWith([
-            { frameId: 'frame-1' },
-            { frameId: 'frame-2' }
-        ]);
-        expect(result).toBe(merged);
-    });
-
-    it('fetches every channel in the target frame', async () => {
-        vi.mocked(fetchCloudPointFrame).mockResolvedValue({ frameId: 'map' } as CloudPointFrame);
-
-        await getQueryOptions(() => ({ ...defaultParams(), displayFrameId: 'map' })).queryFn({});
-
-        expect(fetchCloudPointFrame).toHaveBeenCalledTimes(2);
-        expect(
-            vi.mocked(fetchCloudPointFrame).mock.calls.map(([args]) => args.displayFrameId)
-        ).toEqual(['map', 'map']);
-    });
-
-    it('falls back to the sensor frames when the target frame fails', async () => {
-        const merged = { frameId: 'lidar-1,lidar-2' } as unknown as CloudPointFrame;
-        vi.mocked(fetchCloudPointFrame).mockImplementation(async ({ channel, displayFrameId }) => {
-            if (displayFrameId) throw new Error('Could not load point cloud (400).');
-            return { frameId: `lidar-${channel.channelId}` } as CloudPointFrame;
-        });
-        vi.mocked(mergeCloudPointFrames).mockReturnValue(merged);
-
-        const result = await getQueryOptions(() => ({
+        const all = getQueryOptions(defaultParams)().select([data]);
+        const selected = getQueryOptions(() => ({
             ...defaultParams(),
-            displayFrameId: 'map'
-        })).queryFn({});
+            selectedChannelIds: [2]
+        }))().select([data]);
 
-        expect(result).toBe(merged);
-        expect(mergeCloudPointFrames).toHaveBeenCalledWith([
-            { frameId: 'lidar-1' },
-            { frameId: 'lidar-2' }
-        ]);
+        expect(all.batch.count).toBe(5);
+        expect(all.channels.map((channel) => channel.channelId)).toEqual([1, 2]);
+        expect(selected.batch.count).toBe(3);
+        expect(selected.channels.map((channel) => channel.channelId)).toEqual([2]);
     });
 
-    it('does not fall back without a target frame', async () => {
-        vi.mocked(fetchCloudPointFrame).mockRejectedValue(new Error('Could not load (500).'));
-
-        await expect(getQueryOptions(defaultParams).queryFn({})).rejects.toThrow('(500)');
-        expect(fetchCloudPointFrame).toHaveBeenCalledTimes(2);
-    });
-
-    it('keeps the previous point cloud while the next tick loads', () => {
-        const previous = { frameId: 'previous' } as unknown as CloudPointFrame;
-        const options = getQueryOptions(defaultParams);
+    it('keeps the previous tick data while the next tick loads', () => {
+        const previous: TickData[] = [{ pointClouds: [], cameraFrames: {} }];
+        const options = getQueryOptions(defaultParams)();
 
         expect(options.placeholderData(previous)).toBe(previous);
         expect(options.placeholderData(undefined)).toBeUndefined();
+    });
+
+    it('reuses prefetched and overlapping ticks when the window or channel selection changes', async () => {
+        const fetchTick = vi.fn(async () => ({ pointClouds: [], cameraFrames: {} }));
+        vi.mocked(getTickDataOptions).mockImplementation(({ seqNumber }) => ({
+            staleTime: Infinity,
+            queryKey: ['tick-data', seqNumber],
+            queryFn: fetchTick
+        }));
+        client.setQueryData(['tick-data', 3], { pointClouds: [], cameraFrames: {} });
+        const loadWindow = (ticks: number[], selectedChannelIds = [1]) =>
+            getQueryOptions(() => ({
+                ...defaultParams(),
+                accumulationTickNumbers: ticks,
+                selectedChannelIds
+            }))().queryFn();
+
+        await loadWindow([3, 4, 4]);
+        expect(fetchTick).toHaveBeenCalledTimes(1);
+        await loadWindow([4, 5]);
+        expect(fetchTick).toHaveBeenCalledTimes(2);
+        await loadWindow([4, 5], [2]);
+        expect(fetchTick).toHaveBeenCalledTimes(2);
+        client.clear();
+    });
+
+    it('merges a repeated sensor capture only once while preserving other captures and channels', () => {
+        const first = frame(1, 2);
+        const next = { ...frame(1, 3), timestampNs: '200' };
+        const secondChannel = frame(2, 4);
+        const ticks: TickData[] = [
+            { pointClouds: [first], cameraFrames: {} },
+            { pointClouds: [{ ...first }, next, secondChannel], cameraFrames: {} }
+        ];
+        const merged = getQueryOptions(defaultParams)().select(ticks);
+        expect(merged.batch.count).toBe(9);
+        expect(merged.channels).toHaveLength(3);
+        const selected = getQueryOptions(() => ({
+            ...defaultParams(),
+            selectedChannelIds: [1]
+        }))().select(ticks);
+        expect(selected.batch.count).toBe(5);
     });
 });

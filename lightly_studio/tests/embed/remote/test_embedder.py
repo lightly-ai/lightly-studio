@@ -399,8 +399,8 @@ def test_register_and_resolve() -> None:
 
     # Typed as `object`, because the composed class exists only at runtime and mypy reads
     # `remote` as a plain `RemoteEmbedder`.
-    text_embedder: object = registry.get_text_embedder()
-    image_embedder: object = registry.get_image_bytes_embedder()
+    text_embedder: object = registry.get_embedder(embedder_type=TextEmbedder)
+    image_embedder: object = registry.get_embedder(embedder_type=ImageBytesEmbedder)
 
     # `register` adds the image-path capability, so the registry holds a new embedder.
     assert isinstance(text_embedder, RemoteEmbedder)

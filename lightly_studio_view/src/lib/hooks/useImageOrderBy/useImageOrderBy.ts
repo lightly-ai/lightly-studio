@@ -108,7 +108,8 @@ export function useImageOrderBy({
             updateSortBy(null);
             return;
         }
-        const direction = get(selectedDirection);
+        const direction =
+            field.source === 'evaluation_metric' ? SortDirection.DESC : get(selectedDirection);
         const next: ImageSortExpr =
             field.source === 'evaluation_metric'
                 ? {

@@ -23,10 +23,10 @@ test('user can change label within the selected label', async ({
     await samplesPage.doubleClickFirstSample();
     await sampleDetailsPage.clickEditButton();
 
-    expect(await sampleDetailsPage.hasAnnotationWithLabel(newLabel)).not.toBeTruthy();
+    await expect(sampleDetailsPage.getAnnotationBoxByLabel(newLabel)).not.toBeVisible();
     await expect(sampleDetailsPage.getSampleName()).toHaveText(updatedSampleName);
     await sampleDetailsPage.setFirstAnnotationLabel(newLabel);
-    await expect(sampleDetailsPage.hasAnnotationWithLabel(newLabel)).toBeTruthy();
+    await expect(sampleDetailsPage.getAnnotationBoxByLabel(newLabel)).toBeVisible();
 
     // Check what changes are reflected withing the label selection
     await samplesPage.goto();
@@ -39,10 +39,10 @@ test('user can change label within the selected label', async ({
     // Revert changes
     await samplesPage.doubleClickNthSample(1);
     await expect(sampleDetailsPage.getSampleName()).toHaveText(updatedSampleName);
-    await expect(sampleDetailsPage.hasAnnotationWithLabel(newLabel)).toBeTruthy();
+    await expect(sampleDetailsPage.getAnnotationBoxByLabel(newLabel)).toBeVisible();
     await sampleDetailsPage.clickEditButton();
     await sampleDetailsPage.setFirstAnnotationLabel(oldLabel);
-    await expect(sampleDetailsPage.hasAnnotationWithLabel(oldLabel)).toBeTruthy();
+    await expect(sampleDetailsPage.getAnnotationBoxByLabel(oldLabel)).toBeVisible();
 
     // Check what changes are reverted withing the label selection
     await samplesPage.goto();

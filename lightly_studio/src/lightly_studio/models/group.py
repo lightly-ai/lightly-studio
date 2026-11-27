@@ -1,6 +1,6 @@
 """Group table definition."""
 
-from typing import Optional, Union
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -41,8 +41,8 @@ class GroupView(BaseModel):
 
     sample_id: UUID
     sample: SampleView
-    similarity_score: Optional[float] = None
-    group_preview: Union[ImageView, VideoView, None] = None
+    similarity_score: float | None = None
+    group_preview: ImageView | VideoView | None = None
     sample_count: int
 
 
@@ -53,7 +53,7 @@ class GroupViewsWithCount(BaseModel):
 
     samples: list[GroupView] = PydanticField(..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+    next_cursor: int | None = PydanticField(None, alias="nextCursor")
 
 
 class GroupComponentView(BaseModel):
@@ -74,14 +74,14 @@ class GroupComponentView(BaseModel):
     """
 
     collection: ComponentCollectionView
-    details: Union[ImageView, VideoView, McapView, None] = None
+    details: ImageView | VideoView | McapView | None = None
 
     @classmethod
     def from_image_table(
         cls,
         collection: ComponentCollectionView,
         image: "ImageTable",
-        similarity_score: Optional[float] = None,
+        similarity_score: float | None = None,
     ) -> "GroupComponentView":
         """Create a GroupComponentView from an ImageTable.
 
@@ -106,7 +106,7 @@ class GroupComponentView(BaseModel):
         collection: ComponentCollectionView,
         video: "VideoTable",
         frame: Optional["FrameView"] = None,
-        similarity_score: Optional[float] = None,
+        similarity_score: float | None = None,
     ) -> "GroupComponentView":
         """Create a GroupComponentView from a VideoTable.
 

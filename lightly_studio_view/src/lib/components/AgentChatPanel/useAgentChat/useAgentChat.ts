@@ -1,5 +1,5 @@
 import { client } from '$lib/api/lightly_studio_local/client.gen';
-import type { AgentMessageOutput, TurnDoneEvent } from '$lib/api/lightly_studio_local/types.gen';
+import type { AgentMessage, TurnDoneEvent } from '$lib/api/lightly_studio_local/types.gen';
 import { derived, get, readonly, writable } from 'svelte/store';
 import { applyEvent, dropIncompleteStep, EMPTY_LIVE_TURN } from './liveTurn';
 import { readAgentStream } from './readAgentStream';
@@ -15,7 +15,7 @@ interface UseAgentChatParams {
 }
 
 // The transcripts outlive the panel, so closing and opening it keeps the conversation.
-const transcriptsByCollection = writable<Record<string, AgentMessageOutput[]>>({});
+const transcriptsByCollection = writable<Record<string, AgentMessage[]>>({});
 
 export function useAgentChat({
     collectionId,
@@ -36,7 +36,7 @@ export function useAgentChat({
     ]);
     const draft = derived(liveTurn, ($liveTurn) => $liveTurn.draft);
 
-    const setTranscript = (value: AgentMessageOutput[]) => {
+    const setTranscript = (value: AgentMessage[]) => {
         transcriptsByCollection.update((all) => ({ ...all, [collectionId]: value }));
     };
 
@@ -96,7 +96,7 @@ export function useAgentChat({
 
 function postTurn(
     collectionId: string,
-    messages: AgentMessageOutput[],
+    messages: AgentMessage[],
     selectedSampleIds: string[]
 ): Promise<Response> {
     return fetch(`${client.getConfig().baseUrl}/api/collections/${collectionId}/agent/chat`, {

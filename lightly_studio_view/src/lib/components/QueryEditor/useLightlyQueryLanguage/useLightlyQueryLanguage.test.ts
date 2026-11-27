@@ -6,7 +6,8 @@ const mocks = vi.hoisted(() => ({
     registerHoverProvider: vi.fn(),
     createLightlyQueryServices: vi.fn(),
     parse: vi.fn(),
-    parseLightlyQuery: vi.fn()
+    parseLightlyQuery: vi.fn(),
+    findUnknownTagMarkers: vi.fn()
 }));
 
 vi.mock('monaco-editor', () => ({
@@ -22,6 +23,10 @@ vi.mock('../language/lightly-query-module', () => ({
 
 vi.mock('../language/query-expr-translation', () => ({
     parseLightlyQuery: mocks.parseLightlyQuery
+}));
+
+vi.mock('./findUnknownTagMarkers', () => ({
+    findUnknownTagMarkers: mocks.findUnknownTagMarkers
 }));
 
 interface ModelMock {
@@ -92,6 +97,59 @@ describe('useLightlyQueryLanguage', () => {
         expect(markers.map((m: { message: string }) => m.message)).toEqual(['lex', 'parse']);
     });
 
+    it('flags incompatible scope before Apply and clears the error after correction', async () => {
+        const { attach } = await loadHook();
+        const { createLightlyQueryServices } = await vi.importActual<
+            typeof import('../language/lightly-query-module')
+        >('../language/lightly-query-module');
+        const parser = createLightlyQueryServices().LightlyQuery.parser.LangiumParser;
+        mocks.parse.mockImplementation((text: string) => parser.parse(text));
+        const model = makeModel('# comment\nvideo: duration_s > 10');
+        attach(model as never, 'image');
+        expect(mocks.setModelMarkers.mock.calls.at(-1)![2]).toEqual([
+            expect.objectContaining({
+                message: 'Video queries cannot be applied to an image collection.',
+                severity: 8,
+                startLineNumber: 2,
+                startColumn: 1
+            })
+        ]);
+
+        model._value = 'width > 100';
+        model.onDidChangeContent.mock.calls[0][0]();
+        expect(mocks.setModelMarkers.mock.calls.at(-1)![2]).toEqual([]);
+        for (const value of ['duration_s > 10', 'video: duration_s > 10']) {
+            attach(makeModel(value) as never, 'video');
+            expect(mocks.setModelMarkers.mock.calls.at(-1)![2]).toEqual([]);
+        }
+    });
+
+    it.each(['image', 'video'] as const)(
+        'clears blank %s query diagnostics and resumes validation when typing',
+        async (sampleType) => {
+            const { attach } = await loadHook();
+            const { createLightlyQueryServices } = await vi.importActual<
+                typeof import('../language/lightly-query-module')
+            >('../language/lightly-query-module');
+            const parser = createLightlyQueryServices().LightlyQuery.parser.LangiumParser;
+            mocks.parse.mockImplementation((text: string) => parser.parse(text));
+            const model = makeModel('');
+            attach(model as never, sampleType);
+            expect(mocks.setModelMarkers.mock.calls.at(-1)![2]).toEqual([]);
+
+            const listener = model.onDidChangeContent.mock.calls[0][0] as () => void;
+            for (const blank of ['', ' \n\t ', '# width > 100\n# AND height < 500']) {
+                model._value = 'width >';
+                listener();
+                expect(mocks.setModelMarkers.mock.calls.at(-1)![2].length).toBeGreaterThan(0);
+
+                model._value = blank;
+                listener();
+                expect(mocks.setModelMarkers.mock.calls.at(-1)![2]).toEqual([]);
+            }
+        }
+    );
+
     it('re-validates the model whenever its content changes', async () => {
         const { attach } = await loadHook();
         const model = makeModel('first');
@@ -118,6 +176,67 @@ describe('useLightlyQueryLanguage', () => {
         expect(mocks.setModelMarkers).toHaveBeenCalledWith(model, 'lightly-query', []);
     });
 
+    it('skips the tag check until tag names are set', async () => {
+        const { attach } = await loadHook();
+
+        attach(makeModel('"tran" IN tags') as never);
+
+        expect(mocks.findUnknownTagMarkers).not.toHaveBeenCalled();
+    });
+
+    it('re-validates attached models with the tag names when they are set', async () => {
+        const unknownTagMarker = {
+            message: 'Tag "tran" does not exist.',
+            startLineNumber: 1,
+            endLineNumber: 1
+        };
+        mocks.findUnknownTagMarkers.mockReturnValue([unknownTagMarker]);
+        const { attach, setTagNames } = await loadHook();
+        const model = makeModel('"tran" IN tags');
+        attach(model as never);
+
+        setTagNames(['train']);
+
+        expect(mocks.findUnknownTagMarkers).toHaveBeenCalledWith({
+            query: {},
+            tagNames: new Set(['train'])
+        });
+        expect(mocks.setModelMarkers).toHaveBeenLastCalledWith(model, 'lightly-query', [
+            unknownTagMarker
+        ]);
+    });
+
+    it('maps unknown tag warnings of a video query to the visible line', async () => {
+        // The parser sees the hidden `video:` prefix, so the tag is on line 2 of its text.
+        mocks.findUnknownTagMarkers.mockReturnValue([
+            { message: 'Tag "tran" does not exist.', startLineNumber: 2, endLineNumber: 2 }
+        ]);
+        const { attach, setTagNames } = await loadHook();
+        const { createLightlyQueryServices } = await vi.importActual<
+            typeof import('../language/lightly-query-module')
+        >('../language/lightly-query-module');
+        const parser = createLightlyQueryServices().LightlyQuery.parser.LangiumParser;
+        mocks.parse.mockImplementation((text: string) => parser.parse(text));
+        const model = makeModel('"tran" IN tags');
+        attach(model as never, 'video');
+
+        setTagNames(['train']);
+
+        expect(mocks.setModelMarkers).toHaveBeenLastCalledWith(model, 'lightly-query', [
+            expect.objectContaining({ startLineNumber: 1, endLineNumber: 1 })
+        ]);
+    });
+
+    it('does not re-validate a detached model when tag names are set', async () => {
+        const { attach, setTagNames } = await loadHook();
+        attach(makeModel('q') as never)();
+        mocks.setModelMarkers.mockClear();
+
+        setTagNames(['train']);
+
+        expect(mocks.setModelMarkers).not.toHaveBeenCalled();
+    });
+
     it('delegates translateQuery to parseLightlyQuery with the cached parser', async () => {
         const expected: QueryExprTranslationResult = {
             status: 'ok',
@@ -135,7 +254,32 @@ describe('useLightlyQueryLanguage', () => {
         const { translateQuery } = await loadHook();
         const result = translateQuery('width < 400');
 
-        expect(mocks.parseLightlyQuery).toHaveBeenCalledWith({ parse: mocks.parse }, 'width < 400');
+        expect(mocks.parseLightlyQuery).toHaveBeenCalledWith(
+            { parse: mocks.parse },
+            'width < 400',
+            undefined
+        );
         expect(result).toBe(expected);
     });
+});
+
+it('maps video diagnostics to visible lines and keeps model scopes independent', async () => {
+    const { attach } = await loadHook({
+        lexerErrors: [{ message: 'unexpected character', line: 3, column: 14 }],
+        parserErrors: [
+            {
+                message: 'invalid token',
+                token: { startLine: 3, startColumn: 14, endLine: 3, endColumn: 14 }
+            }
+        ]
+    });
+    const video = makeModel('# comment\nduration_s > @');
+    attach(video as never, 'video');
+    const markers = mocks.setModelMarkers.mock.calls.at(-1)![2];
+    expect(markers).toHaveLength(2);
+    for (const marker of markers) {
+        expect(marker).toMatchObject({ startLineNumber: 2, endLineNumber: 2, startColumn: 14 });
+    }
+    const { getModelQuerySource } = await import('./modelQueryScope');
+    expect(getModelQuerySource(makeModel('width > 1') as never).text).toBe('width > 1');
 });

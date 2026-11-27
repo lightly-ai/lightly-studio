@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getErrorMessage } from '$lib/api/ApiError';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
@@ -9,7 +10,7 @@
     import { onDestroy, onMount } from 'svelte';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
-    import { useAnnotationSortBy } from '$lib/hooks';
+    import { useAnnotationSortBy, useBulkRelabelAnnotations } from '$lib/hooks';
     import { afterNavigate, goto } from '$app/navigation';
     import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
@@ -23,6 +24,8 @@
     import { useAnnotationCropPreview } from './useAnnotationCropPreview/useAnnotationCropPreview.svelte';
     import { useAnnotationTileSelection } from './useAnnotationTileSelection/useAnnotationTileSelection';
     import AnnotationTile from './AnnotationTile/AnnotationTile.svelte';
+    import { get } from 'svelte/store';
+    import { toast } from 'svelte-sonner';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -38,8 +41,7 @@
     // Use the collection_id for tags - tags should use the specific collection, not root
     const { tagsSelected } = $derived(
         useTags({
-            collection_id: collection_id,
-            kind: ['annotation']
+            collection_id: collection_id
         })
     );
 
@@ -61,7 +63,7 @@
 
     // The embedding plot lasso selection on the annotations route, kept as geometry and sent
     // to the backend instead of a resolved sample-id list (see LIG-9903).
-    const { annotationPlotRegion } = useAnnotationPlotSelection();
+    const { annotationPlotRegion, annotationPlotPickedSampleIds } = useAnnotationPlotSelection();
     const plotSelectedRegion = $derived($annotationPlotRegion);
 
     // The text embedding search is shared with the images tab and persists across the tab switch.
@@ -101,18 +103,16 @@
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         // Embedding plot lasso selection narrows the grid to annotations inside the region.
         embedding_region: plotSelectedRegion ?? undefined,
+        sample_ids:
+            $annotationPlotPickedSampleIds.length > 0 ? $annotationPlotPickedSampleIds : undefined,
         // Embedding text search reorders the grid by similarity (shared with images tab).
         text_embedding: searchEmbedding?.embedding ?? undefined,
         // Similarity ordering keeps precedence, so the two are never sent together.
         sort_by: searchEmbedding ? undefined : ($sortByFor(collection_id) ?? undefined)
     });
 
-    const {
-        annotations: infiniteAnnotations,
-        updateAnnotations,
-        refresh,
-        isPending
-    } = useAnnotationsInfinite(() => queryParams);
+    const { annotations: infiniteAnnotations, refresh } = useAnnotationsInfinite(() => queryParams);
+    const { relabelAnnotations, isPending } = useBulkRelabelAnnotations();
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         getCollectionId: () => collection_id
@@ -121,6 +121,7 @@
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
             (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
+            $annotationPlotPickedSampleIds.join(',') +
             (searchEmbedding ? `search:${searchEmbedding.queryText}` : '') +
             (queryParams.sort_by ? `sort:${JSON.stringify(queryParams.sort_by)}` : '')
     );
@@ -145,7 +146,8 @@
     const {
         selectedSampleAnnotationCropIds: pickedAnnotationIds,
         toggleSampleAnnotationCropSelection,
-        clearSelectedSampleAnnotationCrops
+        clearSelectedSampleAnnotationCrops,
+        getSelectAllAnnotationSnapshot
     } = useGlobalStorage();
 
     const annotations: AnnotationWithPayloadView[] = $derived(
@@ -183,28 +185,35 @@
         }
     }
 
-    const selectedAnnotations = $derived(
-        annotations
-            .map((annotation) => annotation.annotation)
-            .filter((annotation) => $pickedAnnotationIds[collection_id]?.has(annotation.sample_id))
-    );
+    const selectedCount = $derived($pickedAnnotationIds[collection_id]?.size ?? 0);
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
+        const snapshot = get(getSelectAllAnnotationSnapshot(collection_id));
+        const { data, error } = await relabelAnnotations({
+            collectionId: collection_id,
+            selectedIds: $pickedAnnotationIds[collection_id] ?? new Set<string>(),
+            selectAllSnapshot:
+                snapshot?.filter.filter_type === 'annotations'
+                    ? { filter: snapshot.filter, size: snapshot.size }
+                    : null,
+            labelName: item.value
+        });
+        if (!data) {
+            toast.error('Failed to update annotations: ' + getErrorMessage(error, 'Unknown error'));
+            return;
+        }
+
         addAnnotationLabelChangeToUndoStack({
-            annotations: selectedAnnotations.map((annotation) => annotation),
+            annotations: data.previous_labels.map((previousLabel) => ({
+                sample_id: previousLabel.annotation_id,
+                annotation_label: { annotation_label_name: previousLabel.label_name }
+            })),
             collectionId: collection_id,
             addReversibleAction,
             updateAnnotations: updateAnnotationsRaw,
             refresh
         });
-
-        await updateAnnotations(
-            selectedAnnotations.map((annotation) => ({
-                annotation_id: annotation.sample_id,
-                label_name: item.value,
-                collection_id: collection_id
-            }))
-        );
+        toast.success('Annotations updated successfully');
         clearSelectedSampleAnnotationCrops(collection_id);
     };
 
@@ -285,8 +294,8 @@
     {#if $isEditingMode && !hideSelectedAnnotationsPanel}
         <div class="min-w-[250px] max-w-[30%] flex-1">
             <SelectedAnnotations
-                {selectedAnnotations}
-                disabled={selectedAnnotations.length === 0}
+                {selectedCount}
+                disabled={selectedCount === 0}
                 isLoading={$isPending}
                 onSelect={handleSelectLabel}
                 collectionId={collection_id}

@@ -1,0 +1,60 @@
+"""Registry of the models that label images in the GUI."""
+
+from __future__ import annotations
+
+import logging
+import threading
+
+from lightly_studio_serve.labeling import LabelingModel
+
+from lightly_studio.models.assisted_labeling import MAX_MODEL_ID_LENGTH
+
+logger = logging.getLogger(__name__)
+
+
+class LabelingModelRegistry:
+    """Stores the labeling models of this process by model ID, in registration order.
+
+    A model that replaces a model with the same ID keeps the position of the old model.
+    """
+
+    def __init__(self) -> None:
+        """Create an empty registry."""
+        self._model_id_to_model: dict[str, LabelingModel] = {}
+        self._lock = threading.Lock()
+
+    def register(self, model: LabelingModel) -> None:
+        """Register a model. A model with the same ID is replaced and keeps its position.
+
+        Raises:
+            ValueError: If the model ID is empty or longer than `MAX_MODEL_ID_LENGTH`.
+        """
+        model_id = model.model_id
+        # The GUI sends the ID back in a preview request, which allows only this length
+        if not 0 < len(model_id) <= MAX_MODEL_ID_LENGTH:
+            raise ValueError(
+                f"The labeling model ID must have 1 to {MAX_MODEL_ID_LENGTH} characters, "
+                f"not {len(model_id)}."
+            )
+        with self._lock:
+            if model_id in self._model_id_to_model:
+                logger.warning("Replacing labeling model %r.", model_id)
+            self._model_id_to_model[model_id] = model
+
+    def get(self, model_id: str) -> LabelingModel | None:
+        """Return the model with the ID, or None if no model has it."""
+        with self._lock:
+            return self._model_id_to_model.get(model_id)
+
+    def list_models(self) -> list[LabelingModel]:
+        """Return all models in the order of their first registration."""
+        with self._lock:
+            return list(self._model_id_to_model.values())
+
+
+_registry = LabelingModelRegistry()
+
+
+def get_registry() -> LabelingModelRegistry:
+    """Return the process-wide labeling model registry."""
+    return _registry

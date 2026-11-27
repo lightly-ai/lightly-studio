@@ -8,9 +8,12 @@ import type {
 } from '$lib/api/lightly_studio_local';
 import {
     isBooleanExpression,
+    isBooleanLiteral,
+    isMetadataReference,
     isComparisonExpression,
     isFieldReference,
     isFunctionCall,
+    isSampleEvaluationQuery,
     isImageDateTimeFieldName,
     isImageIntFieldName,
     isImageStringFieldName,
@@ -25,7 +28,6 @@ import {
     isSegmentationMaskFloatFieldName,
     isStringLiteral,
     isTagInExpression,
-    isVideoEqualityFloatFieldName,
     isVideoIntFieldName,
     isVideoOrdinalFloatFieldName,
     isVideoStringFieldName,
@@ -33,6 +35,9 @@ import {
     type Expression,
     type Query
 } from './generated/ast.js';
+import { getQuerySource } from './getQuerySource';
+import { getQueryScopeError } from './getQueryScopeError';
+import { translateSampleEvaluation } from './sampleEvaluationQueryTranslation';
 
 export interface QueryParseError {
     message: string;
@@ -42,9 +47,17 @@ export interface QueryParseError {
 
 export type QueryExprTranslationResult =
     | { status: 'ok'; queryExpr: QueryExpr }
+    | { status: 'empty' }
     | { status: 'error'; errors: QueryParseError[] };
 
-type QueryScope = 'image' | 'video' | 'object_detection' | 'classification' | 'segmentation_mask';
+type QueryScope =
+    | 'video_frame'
+    | 'event'
+    | 'image'
+    | 'video'
+    | 'object_detection'
+    | 'classification'
+    | 'segmentation_mask';
 
 interface TranslationParser {
     parse: (value: string) => {
@@ -56,25 +69,32 @@ interface TranslationParser {
 
 export function parseLightlyQuery(
     parser: TranslationParser,
-    value: string
+    value: string,
+    sampleType?: 'image' | 'video'
 ): QueryExprTranslationResult {
-    const parseResult = parser.parse(value);
+    const { text, lineOffset } = getQuerySource(value, sampleType);
+    const parseResult = parser.parse(text);
     const errors = [...parseResult.lexerErrors, ...parseResult.parserErrors];
     if (errors.length > 0) {
         return {
             status: 'error',
             errors: errors.map((error) => ({
                 message: error.message,
-                line: error.line,
+                line: error.line === undefined ? undefined : Math.max(1, error.line - lineOffset),
                 column: error.column
             }))
         };
     }
 
     try {
+        const scopeError = getQueryScopeError(parseResult.value, sampleType);
+        if (scopeError) throw new Error(scopeError);
+        if (!parseResult.value.expression) return { status: 'empty' };
         return {
             status: 'ok',
-            queryExpr: toQueryExpr(parseResult.value)
+            queryExpr: {
+                match_expr: visit(parseResult.value.expression, getRootScope(parseResult.value))
+            }
         };
     } catch (error) {
         return {
@@ -82,16 +102,6 @@ export function parseLightlyQuery(
             errors: [{ message: toErrorMessage(error) }]
         };
     }
-}
-
-/**
- * Converts a Langium AST into a backend-compatible QueryExpr.
- */
-function toQueryExpr(parseResult: Query): QueryExpr {
-    const table = getRootScope(parseResult);
-    return {
-        match_expr: visit(parseResult.expression, table)
-    };
 }
 
 /**
@@ -130,12 +140,19 @@ function visit(expr: Expression, table: QueryScope): QueryExpr['match_expr'] {
         throw new Error(`Unsupported tag type: ${expr.tag_name}`);
     }
     if (isFunctionCall(expr)) {
+        if (expr.name === 'frame') {
+            return { type: 'video_frame_match_expr', subexpr: visit(expr.args[0], 'video_frame') };
+        }
+        if (expr.name === 'event') {
+            return { type: 'video_event_match_expr', subexpr: visit(expr.args[0], 'event') };
+        }
         const subTable = getFunctionScope(expr.name);
         const type = toAnnotationMatchExprType(subTable);
-        return {
-            type,
-            subexpr: visit(expr.args[0], subTable)
-        };
+        const [condition] = expr.args;
+        return condition ? { type, subexpr: visit(condition, subTable) } : { type };
+    }
+    if (isSampleEvaluationQuery(expr)) {
+        return translateSampleEvaluation(expr);
     }
     throw new Error(`Unsupported expression type: ${expr.$type}`);
 }
@@ -145,6 +162,9 @@ function visitComparisonExpression(
     table: QueryScope
 ): QueryExpr['match_expr'] {
     const left = expr.left;
+    if (isMetadataReference(left)) {
+        return visitMetadataComparison(expr);
+    }
     if (!isFieldReference(left)) {
         throw new Error(`Unsupported expression: ${expr.$type}`);
     }
@@ -201,6 +221,7 @@ function visitComparisonExpression(
                     };
                 }
                 break;
+            case 'event':
             case 'classification':
                 return {
                     type: 'string_expr',
@@ -223,21 +244,17 @@ function visitComparisonExpression(
                     };
                 }
                 break;
+            case 'event':
+            case 'video_frame':
             case 'video':
-                if (isVideoOrdinalFloatFieldName(fieldName)) {
+                if (table !== 'video' || isVideoOrdinalFloatFieldName(fieldName)) {
+                    if (!Number.isFinite(right.value)) {
+                        throw new Error(`${fieldName} requires a finite number`);
+                    }
                     return {
                         type: 'ordinal_float_expr',
                         field: { table, name: fieldName },
                         operator: toOrdinalComparisonOperator(expr.operator),
-                        value: right.value
-                    };
-                }
-                if (isVideoEqualityFloatFieldName(fieldName)) {
-                    return {
-                        type: 'equality_float_expr',
-                        field: { table, name: fieldName },
-                        // TODO: make Langium grammar more strict, so that `toEqualityComparisonOperator` is not needed
-                        operator: toEqualityComparisonOperator(expr.operator),
                         value: right.value
                     };
                 }
@@ -300,6 +317,27 @@ function visitComparisonExpression(
     }
 
     throw new Error(`Unsupported comparison: ${fieldName} ${expr.operator} ${right.$type}`);
+}
+
+function visitMetadataComparison(expr: ComparisonExpression): QueryExpr['match_expr'] {
+    const right = expr.right;
+    if (!isMetadataReference(expr.left)) {
+        throw new Error('Expected a metadata reference');
+    }
+    if (!isNumberLiteral(right) && !isStringLiteral(right) && !isBooleanLiteral(right)) {
+        throw new Error(`Unsupported metadata value: ${right.$type}`);
+    }
+    if (isNumberLiteral(right) && !Number.isFinite(right.value)) {
+        throw new Error('Metadata comparison requires a finite number');
+    }
+    return {
+        type: 'metadata_comparison_expr',
+        path: expr.left.path,
+        operator: isNumberLiteral(right)
+            ? toOrdinalComparisonOperator(expr.operator)
+            : toEqualityComparisonOperator(expr.operator),
+        value: right.value
+    };
 }
 
 function getRootScope(parseResult: Query): Extract<QueryScope, 'image' | 'video'> {

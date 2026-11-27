@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
 
     interface Props {
@@ -16,6 +16,13 @@
     let open = $state(false);
     let isConfirming = $state(false);
     const canConfirm = $derived(canApply && !isConfirming);
+    const triggerDisabledReason = $derived(
+        isApplying
+            ? 'Applying annotation class…'
+            : !canApply
+              ? 'Select at least one sample to apply this annotation class.'
+              : ''
+    );
 
     async function handleConfirm() {
         if (!canConfirm) return;
@@ -35,7 +42,13 @@
 <Dialog.Root bind:open>
     <Dialog.Trigger>
         {#snippet child({ props })}
-            <Button {...props} class="w-full" disabled={!canApply}>Add annotation class</Button>
+            <Button
+                variant="default"
+                disabledReason={triggerDisabledReason}
+                buttonProps={{ ...props, class: 'w-full' }}
+            >
+                Add annotation class
+            </Button>
         {/snippet}
     </Dialog.Trigger>
     <Dialog.Content class="max-w-sm">
@@ -50,10 +63,22 @@
         <Dialog.Footer>
             <Dialog.Close>
                 {#snippet child({ props })}
-                    <Button {...props} variant="outline" disabled={isApplying}>Cancel</Button>
+                    <Button
+                        variant="outline"
+                        disabledReason={isApplying ? 'Applying annotation class…' : ''}
+                        buttonProps={{ ...props }}
+                    >
+                        Cancel
+                    </Button>
                 {/snippet}
             </Dialog.Close>
-            <Button disabled={!canConfirm} onclick={handleConfirm}>Add annotation class</Button>
+            <Button
+                variant="default"
+                disabledReason={!canConfirm ? 'Applying annotation class…' : ''}
+                onclick={handleConfirm}
+            >
+                Add annotation class
+            </Button>
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>

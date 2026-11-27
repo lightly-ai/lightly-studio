@@ -49,7 +49,7 @@ lightly-studio quickstart
 - **Your own videos:** see the [Video Dataset guide](https://docs.lightly.ai/studio/workflows/video_dataset/).
 - **No install:** [open the quickstart in Colab](https://colab.research.google.com/github/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_notebook.ipynb)
 - **A guided walkthrough:** read the [Tutorials](#-tutorials) below. [Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) goes from raw images to a trained model.
-- Runs on **Python 3.9 to 3.14** on Windows, Linux, and macOS. Use Python 3.10 for plugin compatibility, for example [SAM autolabeling](https://docs.lightly.ai/studio/ecosystem/plugins/#example-lightlystudio-sam3-plugin).
+- Runs on **Python 3.11 to 3.15** on Windows, Linux, and macOS.
 
 ## Workflows
 
@@ -187,7 +187,7 @@ Step-by-step guides covering complete workflows — from raw, unlabeled data to 
 
 - [Query, filter, and sort](https://docs.lightly.ai/studio/workflows/search_and_filter/#query-in-python) — build reusable subsets in Python
 - [Lightly Query Language](https://docs.lightly.ai/studio/workflows/lightly_query_language/) — the query syntax for the GUI query editor
-- [Annotations](https://docs.lightly.ai/studio/workflows/annotations/), [Tags](https://docs.lightly.ai/studio/core_concepts/tags/), [Metadata](https://docs.lightly.ai/studio/core_concepts/metadata/), [Captions](https://docs.lightly.ai/studio/workflows/captions/), [Embeddings](https://docs.lightly.ai/studio/core_concepts/embeddings/)
+- [Annotations](https://docs.lightly.ai/studio/workflows/annotations/), [Tags](https://docs.lightly.ai/studio/workflows/tags/), [Metadata](https://docs.lightly.ai/studio/workflows/metadata/), [Captions](https://docs.lightly.ai/studio/workflows/captions/), [Embeddings](https://docs.lightly.ai/studio/workflows/embeddings/)
 - [Sampling](https://docs.lightly.ai/studio/workflows/sampling/) — pick the most typical and diverse samples to cut labeling cost
 - [Model evaluation](https://docs.lightly.ai/studio/workflows/evaluation/) — compare predictions against ground truth
 - [Plugins](https://docs.lightly.ai/studio/ecosystem/plugins/) — auto-label with SAM and other models

@@ -13,7 +13,7 @@ test.describe('Export Segmentation Masks', () => {
 
         // Switch to the correct export type
         await page.getByTestId('export-type-select').click();
-        await page.getByRole('option', { name: 'Image Segmentation Mask (COCO)' }).click();
+        await page.getByRole('option', { name: 'Image Segmentation (COCO)' }).click();
 
         // Click and wait for the download triggered via window.open in a popup
         const [download] = await Promise.all([

@@ -183,7 +183,7 @@ def test_sampling_metadata__video_similarity_rejected(
         },
     )
     assert response.status_code == 400, response.text
-    assert "Similarity is only available for image collections" in response.text
+    assert "Similarity is only available for image and sequence collections." in response.text
 
 
 def test_sampling_metadata__missing_embedding_model(

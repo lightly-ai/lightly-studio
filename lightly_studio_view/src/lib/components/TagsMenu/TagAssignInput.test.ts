@@ -8,14 +8,12 @@ const defaultProps = {
         {
             tag_id: 'tag-1',
             name: 'Vehicle',
-            kind: 'sample' as const,
             created_at: new Date('2024-01-01T00:00:00.000Z'),
             updated_at: new Date('2024-01-01T00:00:00.000Z')
         },
         {
             tag_id: 'tag-2',
             name: 'Person',
-            kind: 'sample' as const,
             created_at: new Date('2024-01-02T00:00:00.000Z'),
             updated_at: new Date('2024-01-02T00:00:00.000Z')
         }

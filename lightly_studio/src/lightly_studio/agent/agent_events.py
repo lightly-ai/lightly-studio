@@ -6,7 +6,7 @@ can show the reasoning, the tool calls and their results while the agent works.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -54,7 +54,7 @@ class TurnErrorEvent(BaseModel):
 
 
 AgentEvent = Annotated[
-    Union[ReasoningDeltaEvent, ContentDeltaEvent, MessageEvent, TurnDoneEvent, TurnErrorEvent],
+    ReasoningDeltaEvent | ContentDeltaEvent | MessageEvent | TurnDoneEvent | TurnErrorEvent,
     Field(discriminator="type"),
 ]
 

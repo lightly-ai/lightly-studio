@@ -1,10 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
-import { useVideoFilters } from './useVideoFilters';
+import { buildVideoFilter, useVideoFilters } from './useVideoFilters';
 import { waitFor } from '@testing-library/svelte';
 import { SortDirection } from '$lib/api/lightly_studio_local';
+import { createMetadataFilters, EMPTY_PLOT_SELECTION } from '$lib/hooks';
 
-vi.mock('../useMetadataFilters/useMetadataFilters', () => ({
+const embeddingRegion = {
+    polygon: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 0, y: 1 }
+    ]
+};
+
+vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     createMetadataFilters: vi.fn(() => [])
 }));
 
@@ -112,9 +121,7 @@ describe('useVideoFilters', () => {
             });
         });
 
-        it('includes metadata_filters in sample_filter when createMetadataFilters returns filters', async () => {
-            const { createMetadataFilters } =
-                await import('../useMetadataFilters/useMetadataFilters');
+        it('includes metadata_filters in sample_filter when createMetadataFilters returns filters', () => {
             vi.mocked(createMetadataFilters).mockReturnValueOnce([
                 { key: 'temp', value: 10, op: '>=' as const }
             ]);
@@ -193,6 +200,155 @@ describe('useVideoFilters', () => {
             const { filterParams } = useVideoFilters();
             expect(get(filterParams)?.filters?.sample_ids).toEqual(['existing']);
         });
+
+        it('combines geometry with explicit sample IDs and preserves it when IDs change', () => {
+            const { videoFilter, updateFilterParams, updateSampleIds } = useVideoFilters();
+            updateFilterParams({
+                collection_id: 'coll-1',
+                filters: { embedding_region: embeddingRegion, sample_ids: ['old-id'] }
+            });
+
+            expect(get(videoFilter)?.sample_filter).toEqual({
+                embedding_region: embeddingRegion,
+                sample_ids: ['old-id']
+            });
+
+            updateSampleIds(['new-id']);
+
+            expect(get(videoFilter)?.sample_filter).toEqual({
+                embedding_region: embeddingRegion,
+                sample_ids: ['new-id']
+            });
+
+            updateSampleIds([]);
+
+            expect(get(videoFilter)?.sample_filter).toEqual({
+                embedding_region: embeddingRegion
+            });
+        });
+    });
+
+    describe('updatePlotSelection', () => {
+        const regionSelection = { embeddingRegion, sampleIds: [] };
+
+        it('stores and clears geometry while preserving all other filters', () => {
+            const { filterParams, videoFilter, updateFilterParams, updatePlotSelection } =
+                useVideoFilters();
+            const params = {
+                collection_id: 'coll-1',
+                video_bounds: {
+                    width: { min: 100, max: 1920 },
+                    height: { min: 100, max: 1080 },
+                    fps: { min: 24, max: 60 },
+                    duration_s: { min: 10, max: 60 }
+                },
+                filters: {
+                    tag_ids: ['tag-1'],
+                    annotation_frames_label_ids: ['label-1'],
+                    metadata_values: { temp: { min: 10, max: 100 } },
+                    categorical_metadata_values: { weather: ['sunny'] }
+                }
+            };
+            updateFilterParams(params);
+            const originalFilter = get(videoFilter);
+
+            updatePlotSelection(regionSelection);
+
+            expect(get(filterParams)).toEqual({
+                ...params,
+                filters: { ...params.filters, embedding_region: embeddingRegion }
+            });
+            expect(get(videoFilter)).toEqual({
+                ...originalFilter,
+                sample_filter: { tag_ids: ['tag-1'], embedding_region: embeddingRegion }
+            });
+
+            updatePlotSelection(EMPTY_PLOT_SELECTION);
+
+            expect(get(filterParams)).toEqual({
+                ...params,
+                filters: { ...params.filters, embedding_region: undefined }
+            });
+            expect(get(videoFilter)).toEqual(originalFilter);
+        });
+
+        it('replaces a region with picked sample IDs', () => {
+            const { videoFilter, updateFilterParams, updatePlotSelection } = useVideoFilters();
+            updateFilterParams({
+                collection_id: 'coll-1',
+                filters: { embedding_region: embeddingRegion }
+            });
+
+            updatePlotSelection({ embeddingRegion: null, sampleIds: ['sample-1'] });
+
+            expect(get(videoFilter)?.sample_filter).toEqual({ sample_ids: ['sample-1'] });
+        });
+
+        it('replaces picked sample IDs with a region', () => {
+            const { videoFilter, updateFilterParams, updatePlotSelection } = useVideoFilters();
+            updateFilterParams({ collection_id: 'coll-1', filters: { sample_ids: ['sample-1'] } });
+
+            updatePlotSelection(regionSelection);
+
+            expect(get(videoFilter)?.sample_filter).toEqual({ embedding_region: embeddingRegion });
+        });
+
+        it('preserves generated metadata filters when geometry is set and cleared', () => {
+            const metadataFilters = [
+                { key: 'temp', value: 10, op: '>=' as const },
+                { key: 'weather', value: ['sunny'], op: 'in' as const }
+            ];
+            vi.mocked(createMetadataFilters)
+                .mockReturnValueOnce(metadataFilters)
+                .mockReturnValueOnce(metadataFilters);
+            const { videoFilter, updateFilterParams, updatePlotSelection } = useVideoFilters();
+            updateFilterParams({
+                collection_id: 'coll-1',
+                filters: {
+                    metadata_values: { temp: { min: 10, max: 100 } },
+                    categorical_metadata_values: { weather: ['sunny'] }
+                }
+            });
+
+            updatePlotSelection(regionSelection);
+
+            expect(get(videoFilter)?.sample_filter).toEqual({
+                metadata_filters: metadataFilters,
+                embedding_region: embeddingRegion
+            });
+
+            updatePlotSelection(EMPTY_PLOT_SELECTION);
+
+            expect(get(videoFilter)?.sample_filter).toEqual({ metadata_filters: metadataFilters });
+        });
+
+        it('builds a geometry-only sample filter and removes it when cleared', () => {
+            const { videoFilter, updateFilterParams, updatePlotSelection } = useVideoFilters();
+            updateFilterParams({ collection_id: 'coll-1' });
+
+            updatePlotSelection(regionSelection);
+
+            expect(get(videoFilter)).toEqual({
+                filter_type: 'video',
+                sample_filter: { embedding_region: embeddingRegion }
+            });
+
+            updatePlotSelection(EMPTY_PLOT_SELECTION);
+
+            expect(get(videoFilter)).toEqual({ filter_type: 'video' });
+        });
+
+        it.each([null, { collection_id: '' }])(
+            'leaves uninitialized filters unchanged (%s)',
+            (params) => {
+                const { filterParams, updateFilterParams, updatePlotSelection } = useVideoFilters();
+                updateFilterParams(params as Parameters<typeof updateFilterParams>[0]);
+
+                updatePlotSelection(regionSelection);
+
+                expect(get(filterParams)).toEqual(params);
+            }
+        );
     });
 
     describe('videoSortBy and updateSortBy', () => {
@@ -227,5 +383,103 @@ describe('useVideoFilters', () => {
 
             expect(get(videoSortBy)).toBeNull();
         });
+    });
+});
+
+describe('buildVideoFilter output', () => {
+    const temperatureMetadataFilter = { key: 'temp', value: 10, op: '>=' as const };
+
+    it('passes include_unannotated_samples to the frame annotation filter', () => {
+        const filter = buildVideoFilter({
+            collection_id: 'coll-1',
+            filters: { annotation_frames_label_ids: ['l'], include_unannotated_samples: true }
+        });
+
+        expect(filter?.frame_annotation_filter).toEqual({
+            filter_type: 'annotations',
+            annotation_label_ids: ['l'],
+            include_unannotated_samples: true
+        });
+    });
+
+    it('pins every field', () => {
+        vi.mocked(createMetadataFilters).mockReturnValueOnce([temperatureMetadataFilter]);
+
+        expect(
+            buildVideoFilter({
+                collection_id: 'coll-1',
+                video_bounds: {
+                    width: { min: 1, max: 9 },
+                    height: { min: 2, max: 8 },
+                    fps: { min: 24, max: 60 },
+                    duration_s: { min: 0.5, max: 120 }
+                },
+                filters: {
+                    tag_ids: ['t'],
+                    sample_ids: ['s'],
+                    embedding_region: embeddingRegion,
+                    metadata_values: { temp: { min: 10, max: 20 } },
+                    annotation_frames_label_ids: ['l']
+                }
+            })
+        ).toEqual({
+            filter_type: 'video',
+            width: { min: 1, max: 9 },
+            height: { min: 2, max: 8 },
+            fps: { min: 24, max: 60 },
+            duration_s: { min: 0.5, max: 120 },
+            frame_annotation_filter: { filter_type: 'annotations', annotation_label_ids: ['l'] },
+            sample_filter: {
+                tag_ids: ['t'],
+                sample_ids: ['s'],
+                embedding_region: embeddingRegion,
+                metadata_filters: [temperatureMetadataFilter]
+            }
+        });
+    });
+
+    it('returns only the filter type when nothing is set', () => {
+        expect(buildVideoFilter({ collection_id: 'coll-1', filters: {} })).toEqual({
+            filter_type: 'video'
+        });
+    });
+
+    it('drops empty lists', () => {
+        expect(
+            buildVideoFilter({
+                collection_id: 'coll-1',
+                filters: { tag_ids: [], sample_ids: [], annotation_frames_label_ids: [] }
+            })
+        ).toEqual({ filter_type: 'video' });
+    });
+
+    it('puts frame labels in frame_annotation_filter', () => {
+        expect(
+            buildVideoFilter({
+                collection_id: 'coll-1',
+                filters: { annotation_frames_label_ids: ['l'], tag_ids: ['t'] }
+            })
+        ).toEqual({
+            filter_type: 'video',
+            frame_annotation_filter: { filter_type: 'annotations', annotation_label_ids: ['l'] },
+            sample_filter: { tag_ids: ['t'] }
+        });
+    });
+
+    it('passes categorical-only metadata', async () => {
+        const actual = await vi.importActual<
+            typeof import('$lib/hooks/useMetadataFilters/useMetadataFilters')
+        >('$lib/hooks/useMetadataFilters/useMetadataFilters');
+        vi.mocked(createMetadataFilters).mockImplementationOnce(actual.createMetadataFilters);
+        const colorFilters = { color: ['red'] };
+
+        const filter = buildVideoFilter({
+            collection_id: 'coll-1',
+            filters: { categorical_metadata_values: colorFilters }
+        });
+
+        expect(filter?.sample_filter?.metadata_filters).toEqual([
+            { key: 'color', op: 'in', value: ['red'] }
+        ]);
     });
 });

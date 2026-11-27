@@ -39,7 +39,6 @@ vi.spyOn(hooks, 'useTags').mockImplementation(() => ({
         {
             tag_id: 'existing-tag',
             name: 'Existing Tag',
-            kind: 'sample',
 
             created_at: new Date(),
             updated_at: new Date()
@@ -47,7 +46,6 @@ vi.spyOn(hooks, 'useTags').mockImplementation(() => ({
         {
             tag_id: 'other-tag',
             name: 'Other Tag',
-            kind: 'sample',
 
             created_at: new Date(),
             updated_at: new Date()
@@ -58,6 +56,7 @@ vi.spyOn(hooks, 'useTags').mockImplementation(() => ({
     clearTagsSelected: vi.fn(),
     clearTagSelected: vi.fn(),
     setTagSelected: vi.fn(),
+    setTagsSelected: vi.fn(),
     tagSelectionToggle: vi.fn(),
     isLoading: writable(false),
     error: writable(null)
@@ -92,6 +91,16 @@ describe('SegmentTags', () => {
         });
 
         expect(container.querySelector('[data-testid="segment-tag-name"]')).not.toBeInTheDocument();
+    });
+
+    it('shows the given title, or "Tags" by default', () => {
+        const props = { tags: [], collectionId: 'collection-1', sampleId: 'sample-1' };
+        const { unmount } = render(SegmentTags, { props });
+        expect(screen.getByText('Tags')).toBeInTheDocument();
+        unmount();
+
+        render(SegmentTags, { props: { ...props, title: 'Sequence tags' } });
+        expect(screen.getByText('Sequence tags')).toBeInTheDocument();
     });
 
     it('renders all tags with their names', () => {
@@ -281,7 +290,6 @@ describe('SegmentTags', () => {
         expect(addExistingMock).toHaveBeenCalledWith({
             tag_id: 'existing-tag',
             name: 'Existing Tag',
-            kind: 'sample',
 
             created_at: expect.any(Date),
             updated_at: expect.any(Date)

@@ -119,7 +119,7 @@ jobs:
       - name: Set Up Uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
+          version: "0.13.6"
 
       # Only the wheel that bundles the built frontend needs Node.
       - name: Set Up Node.js
@@ -131,10 +131,12 @@ jobs:
       # `--locked` rather than the Makefile's plain `uv sync`, which re-resolves
       # a lock that is stale against the tagged pyproject.toml. `make build`
       # then runs export-schema under that environment, so a stale lock would
-      # change the schema inside the published wheel with no signal.
+      # change the schema inside the published wheel with no signal. Default
+      # groups only: the build needs no other group, and each package selects
+      # its own defaults (`cpu` torch for lightly-studio).
       - name: Install Dependencies
         working-directory: ${{ steps.package.outputs.directory }}
-        run: uv sync --locked --all-groups --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Build the Distributions
         working-directory: ${{ steps.package.outputs.directory }}
@@ -228,7 +230,7 @@ jobs:
       # than falling back to looking for a token. `skip-existing` lets a run
       # that uploaded but failed to un-draft be re-dispatched.
       - name: Publish to the Index
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@v1.14.3
         with:
           repository-url: >-
             ${{ inputs.target == 'pypi' && 'https://upload.pypi.org/legacy/'

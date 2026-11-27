@@ -2,6 +2,7 @@
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
     import PointCloudAnnotationDetails from './PointCloudAnnotationDetails.svelte';
+    import WorkspaceStoryProvider from '$lib/components/PointCloudLabelingWorkspace/WorkspaceStoryProvider';
 
     const base = createAnnotationFixture();
     const baseAnnotation = {
@@ -19,10 +20,12 @@
     const { Story } = defineMeta({
         title: 'Components/PointCloudLabelingWorkspace/PointCloudAnnotationDetails',
         component: PointCloudAnnotationDetails,
+        decorators: [() => ({ Component: WorkspaceStoryProvider })],
         tags: ['autodocs'],
         parameters: { layout: 'padded' },
         args: {
-            annotation: baseAnnotation
+            annotation: baseAnnotation,
+            annotationSourceName: 'Ground Truth'
         }
     });
 </script>
@@ -30,8 +33,8 @@
 <Story name="Default" />
 
 <Story
-    name="Without track ID"
+    name="Without track number"
     args={{
-        annotation: { ...baseAnnotation, trackId: null }
+        annotation: { ...baseAnnotation, trackNumber: null }
     }}
 />

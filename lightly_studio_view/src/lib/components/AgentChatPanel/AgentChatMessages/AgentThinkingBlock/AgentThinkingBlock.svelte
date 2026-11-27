@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Brain } from '@lucide/svelte';
+    import Brain from '@lucide/svelte/icons/brain';
     import { cn } from '$lib/utils/shadcn';
 
     interface Props {

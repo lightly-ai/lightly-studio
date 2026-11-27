@@ -22,8 +22,14 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationViewsWithCount,
     AnnotationWithPayloadAndCountView,
 )
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
-from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
+from lightly_studio.models.collection import (
+    AnnotationCollectionView,
+    AnnotationCollectionWithCountView,
+    CollectionTable,
+)
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -31,6 +37,7 @@ from lightly_studio.resolvers import (
     collection_resolver,
     sample_embedding_resolver,
 )
+from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
@@ -50,7 +57,10 @@ from lightly_studio.services.annotations_service.update_annotation import (
 annotations_router = APIRouter(prefix="/collections/{collection_id}", tags=["annotations"])
 annotations_router.include_router(annotations_module.create_annotation_router)
 annotations_router.include_router(annotations_module.bulk_create_classifications_router)
+annotations_router.include_router(annotations_module.bulk_delete_annotations_router)
+annotations_router.include_router(annotations_module.bulk_relabel_annotations_router)
 annotations_router.include_router(annotations_module.annotation_metrics_info_router)
+annotations_router.include_router(annotations_module.annotation_sources_router)
 
 
 @annotations_router.get(
@@ -86,6 +96,55 @@ def read_annotation_collections(
         )
         for c in collections
     ]
+
+
+@annotations_router.get(
+    "/annotation_collections_with_counts",
+    response_model=list[AnnotationCollectionWithCountView],
+)
+def read_annotation_collections_with_counts(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[AnnotationCollectionWithCountView]:
+    """List the annotation collections of the collection's dataset with their annotation counts.
+
+    The list holds every annotation collection of the dataset, also those under other
+    collections than the given one, for example under the video frames of a video dataset.
+    Each entry names its parent collection, which the delete endpoint needs.
+    """
+    sources = collection_resolver.get_annotation_collections_by_dataset_id(
+        session=session, dataset_id=collection.dataset_id
+    )
+    source_ids = [s.collection_id for s in sources]
+    types_by_collection_id = collection_resolver.get_annotation_types_by_collection_ids(
+        session=session, collection_ids=source_ids
+    )
+    counts = collection_resolver.get_annotation_counts_by_collection_ids(
+        session=session, collection_ids=source_ids
+    )
+    views = []
+    for source in sources:
+        parent = source.parent
+        # An annotation collection is always the child of the collection it annotates.
+        if parent is None:
+            raise RuntimeError("Expected `parent` to be set.")
+        definition = parent.group_component_definition
+        views.append(
+            AnnotationCollectionWithCountView(
+                collection_id=source.collection_id,
+                name=source.name,
+                annotation_types=types_by_collection_id.get(source.collection_id, []),
+                annotation_count=counts.get(source.collection_id, 0),
+                parent_collection_id=parent.collection_id,
+                parent_sample_type=parent.sample_type,
+                parent_group_component_name=definition.group_component_name if definition else None,
+            )
+        )
+    return views
 
 
 class ReadAnnotationsWithPayloadRequest(BaseModel):
@@ -240,8 +299,12 @@ class AnnotationUpdateInput(BaseModel):
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
     segmentation_mask: list[int] | None = None
+    polygons: Polygons | None = None
     start_time_s: float | None = None
     end_time_s: float | None = None
+    cuboid_3d: Cuboid3DCreate | None = None
+    object_track_id: UUID | None = None
+    create_new_track: bool = False
 
 
 @annotations_router.put(
@@ -265,8 +328,14 @@ def update_annotations(
                 label_name=annotation_update_input.label_name,
                 bounding_box=annotation_update_input.bounding_box,
                 segmentation_mask=annotation_update_input.segmentation_mask,
+                polygons=annotation_update_input.polygons,
                 start_time_s=annotation_update_input.start_time_s,
                 end_time_s=annotation_update_input.end_time_s,
+                cuboid_3d=annotation_update_input.cuboid_3d,
+                object_track_id=annotation_update_input.object_track_id,
+                create_new_track=annotation_update_input.create_new_track,
+                update_object_track=annotation_update_input.create_new_track
+                or "object_track_id" in annotation_update_input.model_fields_set,
             )
             for annotation_update_input in annotation_update_inputs
         ],
@@ -286,7 +355,12 @@ def get_annotation(
     annotation = annotations_service.get_annotation_by_id(
         session=session, annotation_id=annotation_id
     )
-    return AnnotationView.from_annotation_table(annotation=annotation)
+    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
+        session=session, annotations=[annotation]
+    )
+    return AnnotationView.from_annotation_table(
+        annotation=annotation, parent_track_class_names=parent_track_class_names
+    )
 
 
 @annotations_router.delete("/annotations/{annotation_id}")

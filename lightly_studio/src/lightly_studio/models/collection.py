@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
+from typing import Optional, TypeAlias
 from uuid import UUID, uuid4
 
 from sqlalchemy import UniqueConstraint
@@ -22,11 +22,15 @@ class SampleType(str, Enum):
     SEQUENCE = "sequence"
 
 
+GroupComponentDefinition: TypeAlias = tuple[str, SampleType]
+"""The name and the sample type of one component of a group collection."""
+
+
 class CollectionBase(SQLModel):
     """Base class for the Collection model."""
 
     name: str = Field(index=True)
-    parent_collection_id: Optional[UUID] = Field(
+    parent_collection_id: UUID | None = Field(
         default=None,
         foreign_key="collection.collection_id",
         index=True,
@@ -65,14 +69,19 @@ class CollectionCreate(CollectionBase):
     """Collection class when inserting."""
 
 
-class CollectionView(CollectionBase):
-    """Collection class when retrieving."""
+class CollectionWithoutChildrenView(CollectionBase):
+    """Collection class when retrieving, without the child collections."""
 
     collection_id: UUID
     dataset_id: UUID
     created_at: datetime
     updated_at: datetime
-    group_component_definition: Optional["GroupComponentDefinitionView"] = None
+    group_component_definition: "GroupComponentDefinitionView | None" = None
+
+
+class CollectionView(CollectionWithoutChildrenView):
+    """Collection class when retrieving."""
+
     children: list["CollectionView"] = []
 
 
@@ -121,6 +130,17 @@ class AnnotationCollectionView(SQLModel):
     # AnnotationType here, which would create a circular import with
     # annotation_base. Used by the GUI to filter sources by evaluation task.
     annotation_types: list[str] = Field(default_factory=list)
+
+
+class AnnotationCollectionWithCountView(AnnotationCollectionView):
+    """Annotation collection view with the number of annotations in it and its parent."""
+
+    annotation_count: int
+    parent_collection_id: UUID
+    """The collection whose samples the annotations belong to."""
+    parent_sample_type: SampleType
+    parent_group_component_name: str | None = None
+    """The component name of the parent, if the parent is a group component."""
 
 
 # Import at the bottom to:

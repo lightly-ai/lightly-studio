@@ -23,6 +23,10 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 )
 from lightly_studio.resolvers.filter_with_collection_id import FilterWithCollectionId
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_frame_resolver import VideoFrameAdjacentFilter
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import (
     VideoFrameFilter,
@@ -207,6 +211,42 @@ def test_get_adjacent_samples__delegates_to_video_frame_resolver(
     )
 
 
+def test_get_adjacent_samples__delegates_to_mcap_group_sequence_resolver(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    expected = _make_adjacent_result()
+    mock_get_adjacent_sequences = mocker.patch(
+        "lightly_studio.resolvers.mcap_group_sequence_resolver.get_adjacent_sequences",
+        return_value=expected,
+    )
+
+    sample_id = uuid4()
+    collection_id = uuid4()
+    filters = McapSequenceFilter(sample_filter=SampleFilter(tag_ids=[uuid4()]))
+    request = AdjacentRequest(
+        sample_type=SampleType.SEQUENCE,
+        collection_id=collection_id,
+        filters=filters,
+        text_embedding=[0.1, 0.2],
+    )
+
+    result = get_adjacent_samples(
+        session=db_session,
+        sample_id=sample_id,
+        request=request,
+    )
+
+    assert result == expected
+    mock_get_adjacent_sequences.assert_called_once_with(
+        session=db_session,
+        sample_id=sample_id,
+        collection_id=collection_id,
+        filters=filters,
+        text_embedding=[0.1, 0.2],
+    )
+
+
 def test_get_adjacent_samples__delegates_to_annotation_resolver(
     db_session: Session,
     mocker: MockerFixture,
@@ -384,6 +424,44 @@ def test_get_adjacent_samples__raises_for_annotation_with_wrong_filter_type(
     )
 
     with pytest.raises(ValueError, match=r"Invalid filter provided. Expected AnnotationsFilter"):
+        get_adjacent_samples(
+            session=db_session,
+            sample_id=uuid4(),
+            request=request,
+        )
+
+
+def test_get_adjacent_samples__raises_for_sequence_with_sort_by(db_session: Session) -> None:
+    request = AdjacentRequest(
+        sample_type=SampleType.SEQUENCE,
+        collection_id=uuid4(),
+        sort_by=[
+            VideoSortFieldExpr(
+                source=SortFieldSource.video,
+                field_name="duration_s",
+                direction=SortDirection.desc,
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match=r"Sorting is not supported for sample type 'sequence'"):
+        get_adjacent_samples(
+            session=db_session,
+            sample_id=uuid4(),
+            request=request,
+        )
+
+
+def test_get_adjacent_samples__raises_for_sequence_with_invalid_filter(
+    db_session: Session,
+) -> None:
+    request = AdjacentRequest(
+        sample_type=SampleType.SEQUENCE,
+        collection_id=uuid4(),
+        filters=VideoFilter(),
+    )
+
+    with pytest.raises(ValueError, match=r"Expected McapSequenceFilter for sample type 'sequence'"):
         get_adjacent_samples(
             session=db_session,
             sample_id=uuid4(),

@@ -6,13 +6,11 @@ from sqlmodel import Session
 
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.image import ImageTable
-from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
-from lightly_studio.resolvers import sample_embedding_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
-from tests.helpers_resolvers import ImageStub
+from tests.helpers_resolvers import ImageStub, create_saved_plot
 
 
 def test_resolve_embedding_region__no_image_filter(db_session: Session) -> None:
@@ -126,17 +124,11 @@ def _persist_two_dim_projection(
     images: list[ImageTable],
     coordinates: list[tuple[float, float]],
 ) -> None:
-    cache_key, sample_ids_ordered = sample_embedding_resolver.get_hash_by_collection_id(
+
+    coordinates_by_sample = {image.sample_id: coord for image, coord in zip(images, coordinates)}
+    create_saved_plot(
         session=session,
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
+        coordinates=coordinates_by_sample,
     )
-    coordinates_by_sample = {image.sample_id: coord for image, coord in zip(images, coordinates)}
-    session.add(
-        TwoDimEmbeddingTable(
-            hash=cache_key,
-            x=[coordinates_by_sample[sid][0] for sid in sample_ids_ordered],
-            y=[coordinates_by_sample[sid][1] for sid in sample_ids_ordered],
-        )
-    )
-    session.commit()

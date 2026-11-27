@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from typing import TypeVar
 from uuid import UUID
 
@@ -11,14 +10,14 @@ from lightly_studio_serve.embedder import Embedder
 from sqlmodel import Session
 
 from lightly_studio.embed import embedder_config, embedder_registry
-from lightly_studio.embed.embedder_config import EmbedderConfig
-from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.embedder_registry import NoEmbedderReason
 from lightly_studio.embed.errors import (
     MissingCapabilityError,
     NoDefaultEmbeddingModelError,
     RemoteEmbedderUnavailableError,
 )
 from lightly_studio.embed.remote.endpoint import PersistableEmbedder
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
@@ -34,19 +33,23 @@ _EmbedderT = TypeVar("_EmbedderT", bound=Embedder)
 def resolve_default_embedder(
     session: Session,
     collection_id: UUID,
-    get_embedder_fn: Callable[
-        [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
-    ],
+    embedder_type: type[_EmbedderT],
 ) -> tuple[_EmbedderT, UUID] | None:
     """Resolve the embedder and model id an embed function should use, or None to skip.
 
-    Follows the pattern every ``embed_*`` function shares. ``get_embedder_fn`` picks the
+    Follows the pattern every ``embed_*`` function shares. ``embedder_type`` picks the
     capability the caller needs (image, text, ...) from the registry:
 
     - The collection has a default model in the DB: its embedding space selects the embedder.
-    - The collection has no default in the DB yet: the registry's bootstrap embedder is used and
-      registered as the collection's default. The model stores the server of an embedder that
-      names one, see ``PersistableEmbedder``.
+    - The collection has no default in the DB yet: an embedder that a registration set as the
+      bootstrap of the capability comes first. Else, if the parent collection has a default
+      model, its space is used. Else, the registry's built-in bootstrap embedder is used. The
+      chosen space is registered as the collection's default. The model stores the server of an
+      embedder that names one, see ``PersistableEmbedder``.
+
+    The parent's space is not used in two cases. If no embedder serves it at this time, the
+    collection gets no default, so that a later call can use the parent's space. If its embedder
+    lacks the capability, the bootstrap embedder is used.
 
     Logs a warning and returns None when the registry has no matching embedder, so the
     caller only needs to return on None.
@@ -55,9 +58,8 @@ def resolve_default_embedder(
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used. Expected to
             exist; only validated when a bootstrap model is registered.
-        get_embedder_fn: The typed getter of the needed capability. It takes the registry, the
-            space key (None for the capability's bootstrap space) and the stored
-            configuration of that space (None when there is none).
+        embedder_type: The embedder interface of the needed capability, such as
+            ``ImagePathEmbedder``.
 
     Returns:
         The embedder and the model id to store embeddings under, or None to skip.
@@ -72,14 +74,25 @@ def resolve_default_embedder(
         session=session, collection_id=collection_id
     )
     if default_model is not None:
-        embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
-        if embedder is None:
+        embedder = _embedder_for_model(default_model=default_model, embedder_type=embedder_type)
+        if isinstance(embedder, NoEmbedderReason):
             logger.warning("No embedding model loaded. Skipping embedding generation.")
             return None
         return embedder, default_model.embedding_model_id
 
-    embedder = get_embedder_fn(embedder_registry.get_registry(), None, None)
-    if embedder is None:
+    registry = embedder_registry.get_registry()
+    parent_embedder: _EmbedderT | NoEmbedderReason | None = None
+    if not registry.has_registered_bootstrap(embedder_type=embedder_type):
+        parent_embedder = _parent_space_embedder(
+            session=session, collection_id=collection_id, embedder_type=embedder_type
+        )
+    if parent_embedder is NoEmbedderReason.UNAVAILABLE:
+        return None
+    if parent_embedder is None or isinstance(parent_embedder, NoEmbedderReason):
+        embedder = registry.get_embedder(embedder_type=embedder_type)
+    else:
+        embedder = parent_embedder
+    if isinstance(embedder, NoEmbedderReason):
         logger.warning("No embedding model loaded. Skipping embedding generation.")
         return None
     model_id = _register_default_model(
@@ -91,24 +104,20 @@ def resolve_default_embedder(
 def resolve_query_embedder(
     session: Session,
     collection_id: UUID,
-    get_embedder_fn: Callable[
-        [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
-    ],
-    query_kind: str,
+    embedder_type: type[_EmbedderT],
 ) -> _EmbedderT:
     """Resolve the embedder for an interactive query, without mutating the collection.
 
     Unlike ``resolve_default_embedder``, this never bootstraps a default model and raises
     (rather than skipping) when the collection has no default model, since an interactive
     query must not mutate the collection. The registry still bootstraps the embedder for the
-    default model's space through ``get_embedder_fn``.
+    default model's space.
 
     Args:
         session: Database session for resolver operations.
         collection_id: The collection whose default embedding model is used.
-        get_embedder_fn: The typed getter of the needed capability, as described in
-            ``resolve_default_embedder``.
-        query_kind: What the query embeds, such as "text" or "images". Used in errors.
+        embedder_type: The embedder interface of the needed capability, such as
+            ``TextEmbedder``.
 
     Returns:
         The embedder for the collection's default embedding space.
@@ -126,23 +135,19 @@ def resolve_query_embedder(
     if default_model is None:
         raise NoDefaultEmbeddingModelError("The collection has no default embedding model.")
 
-    embedder = _embedder_for_model(default_model=default_model, get_embedder_fn=get_embedder_fn)
-    if embedder is not None:
+    embedder = _embedder_for_model(default_model=default_model, embedder_type=embedder_type)
+    if not isinstance(embedder, NoEmbedderReason):
         return embedder
-    config = embedder_config.from_embedding_model(embedding_model=default_model)
-    if config.url is not None and embedder_registry.get_registry().is_remote_unavailable(
-        config=config
-    ):
-        raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=config.url)
-    raise MissingCapabilityError(space_key=default_model.name, query_kind=query_kind)
+    url = default_model.remote_embedder_url
+    if embedder is NoEmbedderReason.UNAVAILABLE and url is not None:
+        raise RemoteEmbedderUnavailableError(space_key=default_model.name, url=url)
+    raise MissingCapabilityError(space_key=default_model.name, embedder_type=embedder_type)
 
 
 def _embedder_for_model(
     default_model: EmbeddingModelTable,
-    get_embedder_fn: Callable[
-        [EmbedderRegistry, str | None, EmbedderConfig | None], _EmbedderT | None
-    ],
-) -> _EmbedderT | None:
+    embedder_type: type[_EmbedderT],
+) -> _EmbedderT | NoEmbedderReason:
     """Resolve and dimension-check the embedder of an existing default model.
 
     The model row carries the configuration of its space, so a space that no embedder is
@@ -150,20 +155,22 @@ def _embedder_for_model(
 
     Args:
         default_model: The collection's default embedding model.
-        get_embedder_fn: The typed getter of the needed capability, as described in
-            ``resolve_default_embedder``.
+        embedder_type: The embedder interface of the needed capability, such as
+            ``TextEmbedder``.
 
     Returns:
-        The embedder for the model's space, or None if no source has a matching embedder.
+        The embedder for the model's space, or why no source has a matching embedder.
 
     Raises:
         ValueError: If the embedder's dimension does not match the model's stored dimension
             (a wrongly registered embedder).
     """
     config = embedder_config.from_embedding_model(embedding_model=default_model)
-    embedder = get_embedder_fn(embedder_registry.get_registry(), default_model.name, config)
-    if embedder is None:
-        return None
+    embedder = embedder_registry.get_registry().get_embedder(
+        embedder_type=embedder_type, space_key=default_model.name, config=config
+    )
+    if isinstance(embedder, NoEmbedderReason):
+        return embedder
     spec = embedder.embedding_space_spec()
     if spec.dimension != default_model.embedding_dimension:
         raise ValueError(
@@ -172,6 +179,55 @@ def _embedder_for_model(
             f"'{default_model.name}'. A wrongly registered embedder is likely."
         )
     return embedder
+
+
+def _parent_space_embedder(
+    session: Session,
+    collection_id: UUID,
+    embedder_type: type[_EmbedderT],
+) -> _EmbedderT | NoEmbedderReason | None:
+    """Resolve the embedder of the parent collection's default space.
+
+    Logs a warning when the space has no usable embedder.
+
+    Returns:
+        The embedder of the parent's space, or why no source has a matching embedder. None if
+        the collection does not exist, has no parent, or the parent has no default model.
+    """
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None or collection.parent_collection_id is None:
+        return None
+    parent_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=session, collection_id=collection.parent_collection_id
+    )
+    if parent_model is None:
+        return None
+    embedder = _embedder_for_model(default_model=parent_model, embedder_type=embedder_type)
+    if embedder is NoEmbedderReason.UNAVAILABLE:
+        logger.warning(
+            "No embedder is available for the space %r of the parent collection. Skipping "
+            "embedding generation for the %s %r. A later run uses the parent's "
+            "space when its embedder is available.",
+            parent_model.name,
+            _collection_kind(sample_type=collection.sample_type),
+            collection.name,
+        )
+    elif embedder is NoEmbedderReason.LACKS_CAPABILITY:
+        logger.warning(
+            "The embedder of the parent collection's space %r cannot embed the %s %r. Using "
+            "the default embedder instead.",
+            parent_model.name,
+            _collection_kind(sample_type=collection.sample_type),
+            collection.name,
+        )
+    return embedder
+
+
+def _collection_kind(sample_type: SampleType) -> str:
+    """Get how a message names a collection of the sample type, such as "video frame collection"."""
+    if sample_type == SampleType.ANNOTATION:
+        return "annotation source"
+    return f"{sample_type.value.replace('_', ' ')} collection"
 
 
 def _register_default_model(session: Session, collection_id: UUID, embedder: Embedder) -> UUID:

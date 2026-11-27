@@ -5,7 +5,6 @@ A sequence is a sample that puts other samples in order: every linked sample get
 at. Identity is the sequence sample's ``sample_id``, the same pattern as Group.
 """
 
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import BigInteger, UniqueConstraint
@@ -27,7 +26,7 @@ class SampleSequenceLinkCreate(SQLModel):
 
     sample_id: UUID
     seq_number: int
-    timestamp_ns: Optional[int] = None
+    timestamp_ns: int | None = None
 
 
 class SampleSequenceLinkTable(SQLModel, table=True):
@@ -42,4 +41,4 @@ class SampleSequenceLinkTable(SQLModel, table=True):
     sequence_sample_id: UUID = Field(foreign_key="sequence.sample_id", index=True)
     seq_number: int
     # BigInteger: epoch nanoseconds overflow a 32-bit INTEGER on PostgreSQL.
-    timestamp_ns: Optional[int] = Field(default=None, sa_type=BigInteger)
+    timestamp_ns: int | None = Field(default=None, sa_type=BigInteger)

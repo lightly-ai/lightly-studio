@@ -1,13 +1,12 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { Info } from '@lucide/svelte';
+    import Info from '@lucide/svelte/icons/info';
     import { get } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
     import AddStrategyButton from '$lib/components/Sampling/AddStrategyButton.svelte';
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
     import { Button } from '$lib/components';
-    import { Tooltip } from '$lib/components/ui/tooltip';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
@@ -23,6 +22,9 @@
         page.data.collection?.sample_type === 'video' ||
             page.data.collection?.sample_type === 'video_frame'
     );
+    const isSequenceCollection = $derived(page.data.collection?.sample_type === 'sequence');
+    // Subpart diversity needs annotation crop embeddings, which are only generated for images.
+    const lacksCropEmbeddings = $derived(isVideoCollection || isSequenceCollection);
 
     const { trackEvent } = usePostHog();
     const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
@@ -51,7 +53,6 @@
         noSamples,
         notEnoughSamples,
         sampleCountLabel,
-        isFormValid,
         createButtonTooltip,
         isSubmitting,
         loadingMessage,
@@ -59,6 +60,7 @@
     } = useSamplingCombinationDialog({
         getCollectionId: () => collectionId,
         getIsVideoCollection: () => isVideoCollection,
+        getIsSequenceCollection: () => isSequenceCollection,
         instances,
         onSubmitSuccess: resetStrategies
     });
@@ -129,9 +131,9 @@
                 <Dialog.Header>
                     <Dialog.Title class="text-foreground">Create Sampling</Dialog.Title>
                     <Dialog.Description class="text-foreground">
-                        Sample from the <strong class="font-semibold text-primary"
-                            >{$sampleCountLabel}</strong
-                        > currently matching your filters.
+                        Sample from the <strong class="font-semibold text-primary">
+                            {$sampleCountLabel}
+                        </strong> currently matching your filters.
                     </Dialog.Description>
                 </Dialog.Header>
 
@@ -153,14 +155,16 @@
                                 metadataWeightingDisabledReason={!strategyOptions.hasMetadataFields
                                     ? 'No numeric metadata fields found. Index metadata on your samples to enable this strategy.'
                                     : undefined}
-                                classBalancingDisabledReason={!strategyOptions.hasAnnotationLabels
-                                    ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
-                                    : undefined}
+                                classBalancingDisabledReason={isSequenceCollection
+                                    ? 'Not available for sequence collections.'
+                                    : !strategyOptions.hasAnnotationLabels
+                                      ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
+                                      : undefined}
                                 metadataBalancingDisabledReason={!strategyOptions.hasCategoricalMetadataFields
                                     ? 'No categorical metadata fields found. Index string or boolean metadata on your samples to enable this strategy.'
                                     : undefined}
-                                subpartDiversityDisabledReason={isVideoCollection
-                                    ? 'Not available for video collections. Subpart diversity requires annotation crop embeddings, which are only generated for images.'
+                                subpartDiversityDisabledReason={lacksCropEmbeddings
+                                    ? 'Not available for video and sequence collections. Subpart diversity requires annotation crop embeddings, which are only generated for images.'
                                     : !strategyOptions.hasCroppableAnnotationSources
                                       ? 'No object detection or segmentation annotation sources found. Add object detection or segmentation annotations to enable this strategy.'
                                       : hasSubpartDiversity
@@ -204,9 +208,9 @@
 
                         <div class="grid gap-2">
                             <div class="flex items-center gap-1.5">
-                                <Label for="n-samples" class="text-foreground"
-                                    >Number of Samples</Label
-                                >
+                                <Label for="n-samples" class="text-foreground">
+                                    Number of Samples
+                                </Label>
                                 <FieldTooltip
                                     content="How many samples will be written to the output tag. Cannot exceed the number of samples matching the current filters."
                                 />
@@ -285,26 +289,18 @@
                     >
                         Cancel
                     </Button>
-                    <Tooltip
-                        content={$createButtonTooltip}
-                        position="top"
-                        triggerClass="inline-block"
+                    <Button
+                        variant="default"
+                        isPending={$isSubmitting}
+                        disabledReason={$createButtonTooltip}
+                        buttonProps={{
+                            type: 'submit',
+                            disabled: $notEnoughSamples || $noSamples,
+                            'data-testid': 'sampling-dialog-submit'
+                        }}
                     >
-                        <Button
-                            variant="default"
-                            buttonProps={{
-                                type: 'submit',
-                                disabled:
-                                    !$isFormValid ||
-                                    $isSubmitting ||
-                                    $notEnoughSamples ||
-                                    $noSamples,
-                                'data-testid': 'sampling-dialog-submit'
-                            }}
-                        >
-                            {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
-                        </Button>
-                    </Tooltip>
+                        {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
+                    </Button>
                 </Dialog.Footer>
             </form>
         </Dialog.Content>

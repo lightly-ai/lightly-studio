@@ -1,9 +1,14 @@
-import { getAnnotation, getVideoById, type AnnotationView } from '$lib/api/lightly_studio_local';
-import { getGridFrameURL, getGridImageURL } from '$lib/utils';
+import {
+    getAnnotation,
+    getVideoById,
+    listMcapSequences,
+    type AnnotationView
+} from '$lib/api/lightly_studio_local';
+import { getGridFrameURL, getGridImageURL, getMcapSequenceFrameURL } from '$lib/utils';
 
 const THUMBNAIL_SIZE = 256;
 
-type PlotRoute = 'images' | 'videos' | 'annotations';
+type PlotRoute = 'images' | 'videos' | 'annotations' | 'mcap_sequences';
 
 export interface Thumbnail {
     url: string;
@@ -26,6 +31,28 @@ async function getVideoThumbnail(videoSampleId: string): Promise<Thumbnail | nul
             renderedHeight: THUMBNAIL_SIZE
         })
     };
+}
+
+async function getMcapSequenceThumbnail(
+    sequenceSampleId: string,
+    collectionId: string
+): Promise<Thumbnail | null> {
+    // The list endpoint resolves the camera frame that represents a sequence.
+    const { data } = await listMcapSequences({
+        path: { collection_id: collectionId },
+        query: { cursor: 0, limit: 1 },
+        body: {
+            filter: {
+                filter_type: 'mcap_sequence',
+                sample_filter: { sample_ids: [sequenceSampleId] }
+            }
+        }
+    });
+    const sequenceFrame = data?.data[0]?.sequence_frame;
+    if (!sequenceFrame) {
+        return null;
+    }
+    return { url: getMcapSequenceFrameURL(sequenceFrame, THUMBNAIL_SIZE, THUMBNAIL_SIZE) };
 }
 
 async function getAnnotationThumbnail(
@@ -72,6 +99,9 @@ async function getThumbnail(params: {
     }
     if (route === 'annotations') {
         return getAnnotationThumbnail(sampleId, collectionId, cacheBuster);
+    }
+    if (route === 'mcap_sequences') {
+        return getMcapSequenceThumbnail(sampleId, collectionId);
     }
     return { url: getImageThumbnailURL(sampleId, 'high', cacheBuster) };
 }

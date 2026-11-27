@@ -1,4 +1,4 @@
-import type { AgentMessageOutput } from '$lib/api/lightly_studio_local/types.gen';
+import type { AgentMessage } from '$lib/api/lightly_studio_local/types.gen';
 
 type ToolStatus = 'running' | 'done' | 'error';
 
@@ -19,7 +19,7 @@ const COUNT_KEYS: [string, string][] = [
  * becomes a thinking entry, and its text a step entry. A tool call becomes a running tool
  * entry, which its result completes.
  */
-export function toChatEntries(messages: AgentMessageOutput[]): ChatEntry[] {
+export function toChatEntries(messages: AgentMessage[]): ChatEntry[] {
     const entries: ChatEntry[] = [];
     const toolEntries = new Map<string, Extract<ChatEntry, { kind: 'tool' }>>();
     for (const message of messages) {
@@ -36,7 +36,7 @@ export function toChatEntries(messages: AgentMessageOutput[]): ChatEntry[] {
 }
 
 function assistantEntries(
-    message: AgentMessageOutput,
+    message: AgentMessage,
     toolEntries: Map<string, Extract<ChatEntry, { kind: 'tool' }>>
 ): ChatEntry[] {
     const calls = message.tool_calls ?? [];

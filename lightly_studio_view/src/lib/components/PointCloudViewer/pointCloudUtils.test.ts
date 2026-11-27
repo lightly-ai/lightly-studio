@@ -68,6 +68,34 @@ describe('buildColorBuffer', () => {
         expect(Array.from(colors)).toEqual([0.25, 0.5, 0.75, 0.125, 0.375, 1]);
     });
 
+    it('copies per-point colors in camera-rgb mode', () => {
+        const positions = new Float32Array([0, 0, 0, 1, 1, 1]);
+        const intensities = new Float32Array([10, 20]);
+        const colors = new Float32Array(6);
+        const pointColors = new Float32Array([0.25, 0.5, 0.75, 0.125, 0.375, 1]);
+
+        buildColorBuffer({
+            positions,
+            intensities,
+            count: 2,
+            colorMode: 'camera-rgb',
+            colors,
+            pointColors
+        });
+
+        expect(Array.from(colors)).toEqual([0.25, 0.5, 0.75, 0.125, 0.375, 1]);
+    });
+
+    it('fills with neutral gray in camera-rgb mode when colors are not ready', () => {
+        const positions = new Float32Array([0, 0, 0, 1, 1, 1]);
+        const intensities = new Float32Array([10, 20]);
+        const colors = new Float32Array(6);
+
+        buildColorBuffer({ positions, intensities, count: 2, colorMode: 'camera-rgb', colors });
+
+        expect(Array.from(colors)).toEqual([0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
+    });
+
     it('produces different colors for intensity vs height modes', () => {
         const positions = new Float32Array([0, 0, 0, 1, 2, 6, 2, 4, 3]);
         const intensities = new Float32Array([100, 10, 50]);
@@ -131,6 +159,36 @@ describe('buildColorBuffer', () => {
         expect(different).toBe(true);
     });
 
+    it('combines normalized height and distance values', () => {
+        const positions = new Float32Array([0, 0, 0, 0, 0, 10, 10, 0, 0]);
+        const colors = new Float32Array(9);
+
+        buildColorBuffer({
+            positions,
+            intensities: new Float32Array(3),
+            count: 3,
+            colorMode: 'height-distance',
+            colors
+        });
+
+        expect(Array.from(colors)).toEqual([...turboRgb(0), ...turboRgb(1), ...turboRgb(0.5)]);
+    });
+
+    it('combines normalized height and density values', () => {
+        const positions = new Float32Array([0, 0, 0, 0, 0, 0, 1, 0, 1]);
+        const colors = new Float32Array(9);
+
+        buildColorBuffer({
+            positions,
+            intensities: new Float32Array(3),
+            count: 3,
+            colorMode: 'height-density',
+            colors
+        });
+
+        expect(Array.from(colors)).toEqual([...turboRgb(0.5), ...turboRgb(0.5), ...turboRgb(0.5)]);
+    });
+
     it('fills missing rgb values with neutral gray instead of stale colors', () => {
         const positions = new Float32Array([0, 0, 0, 1, 1, 1]);
         const intensities = new Float32Array([10, 20]);
@@ -188,11 +246,12 @@ describe('computeCameraPlacement', () => {
         expect(placement.target).toEqual([10, 0, 0]);
     });
 
-    it('uses only the provided bounds', () => {
-        const bounds = new Box3(new Vector3(0, 0, 0), new Vector3(10, 10, 10));
+    it('places the orbit target on the floor of the bounds', () => {
+        const bounds = new Box3(new Vector3(0, 0, -1), new Vector3(10, 10, 9));
 
         const placement = computeCameraPlacement(bounds);
 
-        expect(placement.target).toEqual([5, 5, 5]);
+        expect(placement.target).toEqual([5, 5, -1]);
+        expect(placement.position).toEqual([12.5, 12.5, 14]);
     });
 });

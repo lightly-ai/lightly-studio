@@ -21,12 +21,16 @@ def test_get_settings_creates_default_settings(
     assert settings is not None
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
     assert settings.grid_view_thumbnail_quality == GridViewThumbnailQualityType.RAW
+    assert settings.image_interpolation is True
     assert settings.show_annotation_text_labels is False
     assert settings.show_sample_filenames is False
     assert settings.show_bounding_boxes_for_segmentation is True
     assert settings.enforce_coloring_by_class is False
+    assert settings.key_toolbar_slic == "a"
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"
+    assert settings.key_previous_camera == "["
+    assert settings.key_next_camera == "]"
 
 
 def test_set_settings_updates_grid_view_rendering(
@@ -41,6 +45,7 @@ def test_set_settings_updates_grid_view_rendering(
         setting_id=current_settings.setting_id,
         grid_view_sample_rendering=GridViewSampleRenderingType.CONTAIN,
         grid_view_thumbnail_quality=GridViewThumbnailQualityType.HIGH,
+        image_interpolation=False,
         created_at=current_settings.created_at,
         updated_at=current_settings.updated_at,
         key_hide_annotations=current_settings.key_hide_annotations,
@@ -54,8 +59,11 @@ def test_set_settings_updates_grid_view_rendering(
         key_toolbar_drag="s",
         key_toolbar_bounding_box="m",
         key_toolbar_segmentation_mask="b",
+        key_toolbar_slic="f",
         key_toolbar_brush="r",
         key_toolbar_eraser="x",
+        key_previous_camera="[",
+        key_next_camera="]",
     )
 
     updated_settings = settings_resolver.set_settings(session=db_session, settings=input_settings)
@@ -63,6 +71,7 @@ def test_set_settings_updates_grid_view_rendering(
     assert updated_settings is not None
     assert updated_settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
     assert updated_settings.grid_view_thumbnail_quality == GridViewThumbnailQualityType.HIGH
+    assert updated_settings.image_interpolation is False
     assert updated_settings.show_sample_filenames is False
     assert updated_settings.key_hide_annotations == current_settings.key_hide_annotations
     assert updated_settings.key_go_back == current_settings.key_go_back
@@ -75,17 +84,38 @@ def test_set_settings_updates_grid_view_rendering(
     assert updated_settings.key_toolbar_drag == "s"
     assert updated_settings.key_toolbar_bounding_box == "m"
     assert updated_settings.key_toolbar_segmentation_mask == "b"
+    assert updated_settings.key_toolbar_slic == "f"
     assert updated_settings.key_toolbar_brush == "r"
     assert updated_settings.key_toolbar_eraser == "x"
 
     settings = settings_resolver.get_settings(session=db_session)
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
     assert settings.grid_view_thumbnail_quality == GridViewThumbnailQualityType.HIGH
+    assert settings.image_interpolation is False
     assert settings.show_sample_filenames is False
     assert settings.key_hide_annotations == current_settings.key_hide_annotations
     assert settings.key_go_back == current_settings.key_go_back
     assert settings.show_annotation_text_labels == current_settings.show_annotation_text_labels
     assert settings.show_bounding_boxes_for_segmentation is False
     assert settings.enforce_coloring_by_class is True
+    assert settings.key_toolbar_slic == "f"
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"
+
+
+def test_set_settings_updates_camera_shortcuts(
+    db_session: Session,
+) -> None:
+    """Test that set_settings persists the previous and next camera shortcuts."""
+    current_settings = settings_resolver.get_settings(session=db_session)
+
+    settings_resolver.set_settings(
+        session=db_session,
+        settings=current_settings.model_copy(
+            update={"key_previous_camera": "q", "key_next_camera": "r"}
+        ),
+    )
+
+    settings = settings_resolver.get_settings(session=db_session)
+    assert settings.key_previous_camera == "q"
+    assert settings.key_next_camera == "r"

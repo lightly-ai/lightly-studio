@@ -41,7 +41,7 @@ def get_tick_details(
     The tick is identified by `sequence_id` and `seq_number`. The response
     includes `recording_id` and, for each component, the fields
     needed to request a rendered frame from the recording's camera-frame endpoint:
-    `channel_id` and `keyframe_log_time_ns`. It also includes the annotations
+    `channel_id`, `keyframe_log_time_ns`, and `log_time_ns`. It also includes the annotations
     attached to the tick, e.g. 3D cuboids.
 
     Args:

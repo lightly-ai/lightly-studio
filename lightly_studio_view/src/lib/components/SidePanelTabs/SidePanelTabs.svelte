@@ -1,12 +1,16 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
-    import { ChartColumn, ChartNetwork, Gauge, SearchCode, Sparkles } from '@lucide/svelte';
+    import ChartColumn from '@lucide/svelte/icons/chart-column';
+    import ChartNetwork from '@lucide/svelte/icons/chart-network';
+    import Gauge from '@lucide/svelte/icons/gauge';
+    import SearchCode from '@lucide/svelte/icons/search-code';
+    import Sparkles from '@lucide/svelte/icons/sparkles';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useSidePanelTabs } from './useSidePanelTabs';
 
     interface Props {
         collectionId: string;
-        isImages: boolean;
+        supportsQuery: boolean;
         hasMediaWithEmbeddings: boolean;
         supportsEvaluation: boolean;
         supportsDistribution: boolean;
@@ -14,7 +18,7 @@
     }
     const {
         collectionId,
-        isImages,
+        supportsQuery,
         hasMediaWithEmbeddings,
         supportsEvaluation,
         supportsDistribution,
@@ -49,7 +53,7 @@
             </button>
         </Tooltip>
     {/if}
-    {#if isImages}
+    {#if supportsQuery}
         <Tooltip
             content="Write a query expression to filter your dataset"
             position="left"

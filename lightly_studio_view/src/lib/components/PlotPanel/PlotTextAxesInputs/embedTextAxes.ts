@@ -1,0 +1,47 @@
+import { embedText } from '$lib/api/lightly_studio_local';
+import type { ProjectionAxes } from '$lib/api/lightly_studio_local/types.gen';
+import type { toTextAxes } from './textAxesDraft';
+import { getErrorMessage } from '$lib/api/ApiError';
+
+type TextAxes = NonNullable<ReturnType<typeof toTextAxes>>;
+
+// Embeds the four texts with the default embedding model of the collection and returns the
+// axis directions unit(positive) - unit(negative). Throws an Error with the server message.
+export const embedTextAxes = async (
+    collectionId: string,
+    { x, y }: TextAxes
+): Promise<ProjectionAxes> => {
+    // One request at a time: the server has one embedding model, so parallel requests wait
+    // for each other and only add load.
+    const embeddings: number[][] = [];
+    for (const text of [x.negative, x.positive, y.negative, y.positive]) {
+        // With unit vectors p and n, the midpoint (p + n) / 2 projects to (|p|² - |n|²) / 2 = 0
+        // on the axis p - n, so x = 0 is where a sample is as similar to n as to p. With other
+        // norms (for example from MobileCLIP), x = 0 moves away from the midpoint.
+        embeddings.push(normalize(await embed(collectionId, text)));
+    }
+    const [xNegative, xPositive, yNegative, yPositive] = embeddings;
+    return { x: subtract(xPositive, xNegative), y: subtract(yPositive, yNegative) };
+};
+
+const embed = async (collectionId: string, text: string): Promise<number[]> => {
+    const { data, error } = await embedText({
+        path: { collection_id: collectionId },
+        query: { query_text: text, embedding_model_id: null }
+    });
+    if (error || !data) {
+        throw new Error(getErrorMessage(error, `Failed to embed "${text}"`));
+    }
+    return data;
+};
+
+const normalize = (vector: number[]): number[] => {
+    const norm = Math.hypot(...vector);
+    if (norm === 0) {
+        throw new Error('Cannot normalize a zero-norm embedding.');
+    }
+    return vector.map((value) => value / norm);
+};
+
+const subtract = (minuend: number[], subtrahend: number[]): number[] =>
+    minuend.map((value, index) => value - subtrahend[index]);

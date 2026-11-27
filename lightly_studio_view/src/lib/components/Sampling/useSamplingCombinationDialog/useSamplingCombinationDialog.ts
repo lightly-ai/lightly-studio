@@ -9,6 +9,7 @@ import { useSelectionFilter } from './useSelectionFilter';
 interface UseSamplingCombinationDialogParams {
     getCollectionId: () => string;
     getIsVideoCollection: () => boolean;
+    getIsSequenceCollection?: () => boolean;
     instances: Readable<StrategyInstance[]>;
     onSubmitSuccess: () => void;
 }
@@ -20,17 +21,20 @@ function computePercentage(count: number, total: number): number {
 export function useSamplingCombinationDialog({
     getCollectionId,
     getIsVideoCollection,
+    getIsSequenceCollection,
     instances,
     onSubmitSuccess
 }: UseSamplingCombinationDialogParams) {
     const { tags, loadTags, setTagSelected } = useTags({
-        collection_id: getCollectionId(),
-        kind: ['sample']
+        collection_id: getCollectionId()
     });
 
     const { filteredSampleCount } = useGlobalStorage();
     const { closeSamplingDialog, markSubmitted } = useSamplingDialog();
-    const { buildSelectionFilter } = useSelectionFilter(getIsVideoCollection);
+    const { buildSelectionFilter } = useSelectionFilter(
+        getIsVideoCollection,
+        getIsSequenceCollection
+    );
 
     const closeAfterSubmit = () => {
         markSubmitted();

@@ -1,12 +1,13 @@
 <script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
+    import type { ComponentProps } from 'svelte';
     import { Canvas, T } from '@threlte/core';
     import { OrbitControls } from '@threlte/extras';
     import * as THREE from 'three';
     import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
     import { createCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidLayer from './CuboidLayer.svelte';
-    import CuboidTooltipOverlay from './CuboidTooltip/CuboidTooltipOverlay.svelte';
+    import { createCuboidTransformState } from './cuboidTransformState';
 
     const classes = [
         { id: 'vehicle', name: 'Vehicle', color: '#3b82f6' },
@@ -35,9 +36,16 @@
             size: vehicle.size,
             rotation: [0, 0, Math.sin(halfYaw), Math.cos(halfYaw)],
             trackId: null,
+            trackNumber: null,
             keyframeId: null
         });
     });
+
+    function createStoryTransforms(cuboids: ComponentProps<typeof CuboidLayer>['cuboids']) {
+        const transforms = createCuboidTransformState({ onTransform: async () => true });
+        transforms.reconcile(cuboids);
+        return transforms;
+    }
 
     const { Story } = defineMeta({
         title: 'Components/PointCloudLabelingWorkspace/CuboidLayer',
@@ -46,7 +54,7 @@
         parameters: { layout: 'fullscreen' },
         args: {
             annotationClasses: classes,
-            pointCloudBounds: bounds,
+            groundPlaneBounds: bounds,
             selectedAnnotationId: null,
             hoveredAnnotationId: null,
             activeTool: 'select' as const
@@ -55,23 +63,12 @@
 </script>
 
 <script lang="ts">
-    let cursorX = $state(0);
-    let cursorY = $state(0);
     let hoveredAnnotationId = $state<string | null>(null);
-
-    function handleMouseMove(event: MouseEvent) {
-        const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
-        cursorX = event.clientX - rect.left;
-        cursorY = event.clientY - rect.top;
-    }
 </script>
 
 {#snippet scene(args)}
-    <div
-        class="relative h-screen w-screen bg-black"
-        role="application"
-        onmousemove={handleMouseMove}
-    >
+    {@const transforms = createStoryTransforms(args.cuboids ?? [])}
+    <div class="relative h-screen w-screen bg-black">
         <Canvas>
             <T.Color attach="background" args={['#10141c']} />
             <T.PerspectiveCamera position={[18, -22, 16]} makeDefault fov={50} up={[0, 0, 1]}>
@@ -91,19 +88,13 @@
             <T.GridHelper args={[24, 24, '#344054', '#202938']} rotation={[Math.PI / 2, 0, 0]} />
             <CuboidLayer
                 {...args}
+                {transforms}
                 {hoveredAnnotationId}
                 onhover={(id) => {
                     hoveredAnnotationId = id;
                 }}
             />
         </Canvas>
-        <CuboidTooltipOverlay
-            {cursorX}
-            {cursorY}
-            {hoveredAnnotationId}
-            cuboids={args.cuboids ?? []}
-            annotationClasses={args.annotationClasses ?? []}
-        />
     </div>
 {/snippet}
 
@@ -139,9 +130,36 @@
     parameters={{
         docs: {
             description: {
-                story: 'Hover over the cuboid to see the tooltip follow the cursor with annotation metadata.'
+                story: 'Hover over the cuboid to see its hover highlight.'
             }
         }
     }}
     template={scene}
 />
+
+<Story
+    name="Orthographic rotation"
+    args={{
+        cuboids: multipleCuboids,
+        selectedAnnotationId: 'annotation-2',
+        activeTool: 'select',
+        cameraMode: 'top'
+    }}
+>
+    {#snippet template(args)}
+        {@const transforms = createStoryTransforms(args.cuboids ?? [])}
+        <div class="h-screen w-screen bg-black">
+            <Canvas>
+                <T.Color attach="background" args={['#10141c']} />
+                <T.OrthographicCamera makeDefault position={[0, 0, 20]} zoom={60} up={[0, 1, 0]}>
+                    <OrbitControls target={[0, 0, 1]} enableRotate={false} />
+                </T.OrthographicCamera>
+                <T.GridHelper
+                    args={[24, 24, '#344054', '#202938']}
+                    rotation={[Math.PI / 2, 0, 0]}
+                />
+                <CuboidLayer {...args} {transforms} />
+            </Canvas>
+        </div>
+    {/snippet}
+</Story>

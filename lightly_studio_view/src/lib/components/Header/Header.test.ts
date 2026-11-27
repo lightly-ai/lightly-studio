@@ -11,6 +11,44 @@ import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 
 import { useCollectionWithChildren } from '$lib/hooks/useCollection/useCollection';
 import useAuth from '$lib/hooks/useAuth/useAuth';
+import { toast } from 'svelte-sonner';
+
+vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
+
+const { globalStorage } = vi.hoisted(() => ({
+    globalStorage: { current: {} as Record<string, unknown> }
+}));
+
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => globalStorage.current
+}));
+
+vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        readRootCollection: vi.fn()
+    };
+});
+
+vi.mock('$lib/hooks/useCollection/useCollection', () => {
+    return {
+        useCollection: vi.fn(),
+        useCollectionWithChildren: vi.fn()
+    };
+});
+
+vi.mock('$lib/hooks/useHasEmbeddings/useHasEmbeddings', () => ({
+    useHasEmbeddings: vi.fn()
+}));
+
+vi.mock('$lib/hooks/useAuth/useAuth', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        default: vi.fn()
+    };
+});
 
 describe('Header', () => {
     const mockCollection: CollectionView = {
@@ -21,27 +59,25 @@ describe('Header', () => {
         updated_at: new Date('2023-01-02')
     };
 
-    const setup = (
-        props: {
-            isEditingMode: boolean;
-            reversibleActions?: ReversibleAction[];
-            executeReversibleAction?: vi.Mock;
-            collection?: CollectionView;
-            user?: { username: string; email: string; role: string } | null;
-        } = { isEditingMode: false }
-    ) => {
-        const app = appState;
+    interface SetupProps {
+        isEditingMode: boolean;
+        reversibleActions?: ReversibleAction[];
+        executeReversibleAction?: vi.Mock;
+        collection?: CollectionView;
+        user?: { username: string; email: string; role: string } | null;
+    }
+
+    const mockPage = (props: SetupProps) => {
         const setIsEditingModeSpy = vi.fn();
         const executeReversibleActionSpy = props.executeReversibleAction || vi.fn();
-        vi.spyOn(app, 'page', 'get').mockReturnValue({
-            data: {
-                globalStorage: {
-                    isEditingMode: writable(props?.isEditingMode),
-                    setIsEditingMode: setIsEditingModeSpy,
-                    reversibleActions: writable(props.reversibleActions || []),
-                    executeReversibleAction: executeReversibleActionSpy
-                }
-            },
+        globalStorage.current = {
+            isEditingMode: writable(props?.isEditingMode),
+            setIsEditingMode: setIsEditingModeSpy,
+            reversibleActions: writable(props.reversibleActions || []),
+            executeReversibleAction: executeReversibleActionSpy
+        };
+        vi.spyOn(appState, 'page', 'get').mockReturnValue({
+            data: {},
             params: {
                 collection_id: props.collection?.collection_id || 'test-collection'
             },
@@ -51,21 +87,11 @@ describe('Header', () => {
                 pattern: '/datasets/[dataset_id]/[collection_type]/[collection_id]/images'
             }
         } as unknown as Page<Record<string, string>, string | null>);
+        return { setIsEditingModeSpy, executeReversibleActionSpy };
+    };
 
-        vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => {
-            const actual = await importOriginal();
-            return {
-                ...actual,
-                readRootCollection: vi.fn()
-            };
-        });
-
-        vi.mock('$lib/hooks/useCollection/useCollection', () => {
-            return {
-                useCollection: vi.fn(),
-                useCollectionWithChildren: vi.fn()
-            };
-        });
+    const setup = (props: SetupProps = { isEditingMode: false }) => {
+        const { setIsEditingModeSpy, executeReversibleActionSpy } = mockPage(props);
 
         (useCollectionWithChildren as unknown as vi.Mock).mockReturnValue({
             collection: readable({
@@ -79,10 +105,6 @@ describe('Header', () => {
             })
         });
 
-        vi.mock('$lib/hooks/useHasEmbeddings/useHasEmbeddings', () => ({
-            useHasEmbeddings: vi.fn()
-        }));
-
         useHasEmbeddings.mockReturnValue(
             readable({
                 data: true,
@@ -90,14 +112,6 @@ describe('Header', () => {
                 error: null
             })
         );
-
-        vi.mock('$lib/hooks/useAuth/useAuth', async (importOriginal) => {
-            const actual = await importOriginal();
-            return {
-                ...actual,
-                default: vi.fn()
-            };
-        });
 
         (useAuth as unknown as vi.Mock).mockReturnValue({
             user: props.user ?? null,
@@ -280,11 +294,61 @@ describe('Header', () => {
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
 
-            // Click and wait for async operation
-            const clickPromise = fireEvent.click(undoButton);
-            await clickPromise;
+            await fireEvent.click(undoButton);
 
             expect(executeReversibleActionMock).toHaveBeenCalledWith('async-action');
+            await vi.waitFor(() => expect(undoButton).toHaveAttribute('aria-busy', 'false'));
+        });
+
+        it('shows a spinning loader and blocks a second undo while the undo runs', async () => {
+            let finishUndo!: () => void;
+            const executeReversibleActionMock = vi
+                .fn()
+                .mockReturnValue(new Promise<void>((resolve) => (finishUndo = resolve)));
+            const { collection } = setup({
+                isEditingMode: true,
+                reversibleActions: [
+                    {
+                        id: 'slow-action',
+                        description: 'Slow action',
+                        execute: vi.fn(),
+                        timestamp: new Date()
+                    }
+                ],
+                executeReversibleAction: executeReversibleActionMock
+            });
+            render(Header, { props: { collection } });
+            const undoButton = screen.getByTestId('header-reverse-action-button');
+
+            await fireEvent.click(undoButton);
+            await fireEvent.click(undoButton);
+
+            expect(undoButton).toBeDisabled();
+            expect(undoButton).toHaveAttribute('aria-busy', 'true');
+            expect(undoButton.querySelector('.animate-spin')).not.toBeNull();
+            expect(executeReversibleActionMock).toHaveBeenCalledOnce();
+
+            finishUndo();
+            await vi.waitFor(() => expect(undoButton).not.toBeDisabled());
+            expect(undoButton.querySelector('.animate-spin')).toBeNull();
+        });
+
+        it('reports a failed undo and enables the button again', async () => {
+            const executeReversibleActionMock = vi.fn().mockRejectedValue(new Error('failed'));
+            const { collection } = setup({
+                isEditingMode: true,
+                reversibleActions: [
+                    { id: 'action', description: 'Action', execute: vi.fn(), timestamp: new Date() }
+                ],
+                executeReversibleAction: executeReversibleActionMock
+            });
+            render(Header, { props: { collection } });
+            const undoButton = screen.getByTestId('header-reverse-action-button');
+
+            await fireEvent.click(undoButton);
+
+            await vi.waitFor(() => expect(undoButton).not.toBeDisabled());
+            expect(toast.error).toHaveBeenCalledWith('Failed to undo. Please try again.');
         });
 
         it('should not call executeReversibleAction when no actions are available', async () => {

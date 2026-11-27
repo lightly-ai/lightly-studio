@@ -1,24 +1,40 @@
 <script lang="ts">
-    import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
-    import TimelineTransport from './TimelineTransport/TimelineTransport.svelte';
-    import TimelineTracks from './TimelineTracks/TimelineTracks.svelte';
+    import type { ComponentProps } from 'svelte';
+    import type {
+        SequenceTrackView,
+        TickTagView,
+        TickView
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import TimelineContent from './TimelineContent/TimelineContent.svelte';
+    import TimelineTransportControls from './TimelineTransport/TimelineTransportControls.svelte';
+    import TimelineBufferStatus from './TimelineBufferStatus/TimelineBufferStatus.svelte';
+    import { setTimelineViewport, useTimelineViewport } from './TimelineViewport';
 
-    /**
-     * Frame navigation, object tracks and keyframes for the active recording. Placeholder ruler
-     * and lanes until frame loading lands; stepping controls disable at the ends of the sequence.
-     */
+    interface BufferRange {
+        /** Inclusive zero-based index of the first buffered tick. */
+        startIndex: number;
+        /** Inclusive zero-based index of the last buffered tick. */
+        endIndex: number;
+    }
+
+    /** Playback controls and annotation tracks for the active recording. */
     interface Props {
         /** Sequence ticks (seq number + anchor timestamp). */
         ticks: TickView[];
+        tracks?: SequenceTrackView[];
+        selectedAnnotationId?: string | null;
         /** Seq number of the active tick; drives the frame counter and ruler highlight. */
         currentTick: number;
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
         playbackIntervalMs: number;
-        /** Point-cloud channel names rendered as timeline lanes. */
-        lidarChannelNames?: string[];
-        /** Image and video channel names rendered as timeline lanes. */
-        cameraChannelNames?: string[];
+        /** Whether the complete sequence should be prefetched. */
+        bufferEntireSequence: boolean;
+        /** Called when the complete-sequence buffering option changes. */
+        onBufferEntireSequenceChange: (enabled: boolean) => void;
+        /** Inclusive tick-index ranges whose data is ready for playback. */
+        bufferedRanges: readonly BufferRange[];
+        bufferStatus?: ComponentProps<typeof TimelineBufferStatus>['status'];
         /** Step to the previous frame. */
         onPreviousFrame: () => void;
         /** Step to the next frame. */
@@ -27,55 +43,121 @@
         onPlayToggle: () => void;
         onPlaybackIntervalChange: (intervalMs: number) => void;
         onSelectTick: (seqNumber: number) => void;
+        onSelectAnnotation?: (annotationId: string) => void;
+        /** Starts a track from the selected cuboid; set only while that is possible. */
+        onStartTrack?: () => void;
+        /** Arms or cancels adding a new track; set only while editing. */
+        onAddTrack?: () => void;
+        isAddingTrack?: boolean;
+        onDeleteTrack?: (track: SequenceTrackView) => Promise<unknown>;
+        sequenceId?: string;
+        onExtendTrack?: (
+            track: SequenceTrackView,
+            startSeqNumber: number,
+            endSeqNumber: number
+        ) => void;
+        /** Called when the user starts dragging the slider. */
+        onSeekStart?: () => void;
+        /** Called when the user releases the slider. */
+        onSeekEnd?: () => void;
+        /** Open the previous sequence; the control is disabled when absent. */
+        onPreviousSequence?: () => void;
+        /** Open the next sequence; the control is disabled when absent. */
+        onNextSequence?: () => void;
+        /** Whether the object tracks panel shows. */
+        showObjectTracks?: boolean;
+        /** Hides the object tracks panel. */
+        onHideObjectTracks?: () => void;
+        /** Whether the frame tag tracks panel shows. */
+        showFrameTags?: boolean;
+        /** Hides the frame tag tracks panel. */
+        onHideFrameTags?: () => void;
+        frameTags?: TickTagView[];
     }
 
     let {
         ticks,
+        tracks = [],
+        selectedAnnotationId = null,
         currentTick,
         isPlaying,
         playbackIntervalMs,
-        lidarChannelNames = [],
-        cameraChannelNames = [],
+        bufferEntireSequence,
+        onBufferEntireSequenceChange,
+        bufferedRanges,
+        bufferStatus,
         onPreviousFrame,
         onNextFrame,
         onPlayToggle,
         onPlaybackIntervalChange,
-        onSelectTick
+        onSelectTick,
+        onSelectAnnotation = () => {},
+        onStartTrack,
+        onAddTrack,
+        isAddingTrack = false,
+        onExtendTrack,
+        onDeleteTrack,
+        sequenceId,
+        onSeekStart,
+        onSeekEnd,
+        onPreviousSequence,
+        onNextSequence,
+        showObjectTracks,
+        onHideObjectTracks,
+        showFrameTags,
+        onHideFrameTags,
+        frameTags
     }: Props = $props();
 
-    // Ticks can be sparse, so resolve the active seq number to its array position rather than
-    // treating currentTick as an index. -1 when absent, e.g. for an empty sequence.
-    const activeIndex = $derived(ticks.findIndex((tick) => tick.seq_number === currentTick));
-
-    const canGoPrevious = $derived(activeIndex > 0);
-    const canGoNext = $derived(activeIndex >= 0 && activeIndex < ticks.length - 1);
-
-    const frameLabel = $derived(
-        activeIndex >= 0 ? `Frame ${activeIndex + 1} / ${ticks.length}` : 'Frame — / —'
+    const viewport = useTimelineViewport(
+        () => ticks.length,
+        () => ticks.findIndex((tick) => tick.seq_number === currentTick)
     );
-
-    const lanes = $derived(
-        lidarChannelNames.length > 0 || cameraChannelNames.length > 0
-            ? [...lidarChannelNames, ...cameraChannelNames]
-            : ['Track 1', 'Track 2']
-    );
+    setTimelineViewport(viewport);
+    let previousSequenceId: string | undefined;
+    $effect(() => {
+        if (sequenceId === previousSequenceId) return;
+        previousSequenceId = sequenceId;
+        viewport.reset();
+    });
 </script>
 
-<div
-    class="flex h-full min-h-0 flex-col border-t bg-background"
-    data-testid="workspace-frame-timeline"
->
-    <TimelineTransport
-        {frameLabel}
+<div class="flex shrink-0 flex-col border-t bg-background" data-testid="workspace-frame-timeline">
+    <TimelineTransportControls
+        {ticks}
+        {currentTick}
+        {bufferEntireSequence}
+        {onBufferEntireSequenceChange}
         {isPlaying}
         {playbackIntervalMs}
-        hasTicks={ticks.length > 0}
-        {canGoPrevious}
-        {canGoNext}
+        {bufferStatus}
         {onPreviousFrame}
         {onNextFrame}
         {onPlayToggle}
         {onPlaybackIntervalChange}
+        {onPreviousSequence}
+        {onNextSequence}
     />
-    <TimelineTracks {ticks} {currentTick} {lanes} {onSelectTick} />
+    <TimelineContent
+        {ticks}
+        {tracks}
+        {currentTick}
+        {selectedAnnotationId}
+        {bufferedRanges}
+        {onSelectTick}
+        {onSelectAnnotation}
+        {onStartTrack}
+        {onAddTrack}
+        {isAddingTrack}
+        {onExtendTrack}
+        {onDeleteTrack}
+        {sequenceId}
+        {onSeekStart}
+        {onSeekEnd}
+        {showObjectTracks}
+        {onHideObjectTracks}
+        {showFrameTags}
+        {onHideFrameTags}
+        {frameTags}
+    />
 </div>

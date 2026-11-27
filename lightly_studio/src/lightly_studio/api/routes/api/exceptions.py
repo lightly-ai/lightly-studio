@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError
@@ -14,13 +15,25 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_GATEWAY,
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_FORBIDDEN,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_SERVICE_UNAVAILABLE,
+    HTTP_STATUS_UNAUTHORIZED,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
+from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUnavailableError
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
-from lightly_studio.errors import NotFoundError, QueryExprError
+from lightly_studio.errors import (
+    AnnotationSourceInUseError,
+    ExportError,
+    ForbiddenError,
+    NotFoundError,
+    QueryExprError,
+    UnauthenticatedError,
+    UnknownImageSizeError,
+)
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -36,7 +49,7 @@ def _report_error(
     tracking.track_exception(exc)
 
 
-def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
+def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
     """Register exception handlers for the FastAPI app."""
 
     @app.exception_handler(IntegrityError)
@@ -121,7 +134,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
         )
         return JSONResponse(
             status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
-            content={"detail": exc.errors()},
+            content={"detail": jsonable_encoder(exc.errors())},
         )
 
     @app.exception_handler(NotFoundError)
@@ -136,6 +149,47 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
             content={"error": str(_exc) or "Resource not found."},
         )
 
+    @app.exception_handler(AnnotationSourceInUseError)
+    async def _annotation_source_in_use_error_handler(
+        _request: Request, _exc: AnnotationSourceInUseError
+    ) -> JSONResponse:
+        """Handle the delete of an annotation source that other rows use."""
+        _report_error(
+            exc=_exc,
+            status_code=HTTP_STATUS_CONFLICT,
+        )
+        return JSONResponse(
+            status_code=HTTP_STATUS_CONFLICT,
+            content={"error": str(_exc)},
+        )
+
+    # An auth failure is an expected client error, so it is logged but not reported.
+    @app.exception_handler(UnauthenticatedError)
+    async def _unauthenticated_error_handler(
+        request: Request, exc: UnauthenticatedError
+    ) -> JSONResponse:
+        """Handle a request without a valid user identity."""
+        logger.warning(f"Unauthenticated request to {request.url.path}: {exc}")
+        return JSONResponse(
+            status_code=HTTP_STATUS_UNAUTHORIZED,
+            content={"error": "The request has no valid user identity."},
+        )
+
+    @app.exception_handler(ForbiddenError)
+    async def _forbidden_error_handler(_request: Request, _exc: ForbiddenError) -> JSONResponse:
+        """Handle a user who may not do the requested operation."""
+        return JSONResponse(status_code=HTTP_STATUS_FORBIDDEN, content={"error": str(_exc)})
+
+    @app.exception_handler(UnknownImageSizeError)
+    async def _unknown_image_size_error_handler(
+        _request: Request, _exc: UnknownImageSizeError
+    ) -> JSONResponse:
+        """Handle a stored image without a known size."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY)
+        return JSONResponse(
+            status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY, content={"error": str(_exc)}
+        )
+
     @app.exception_handler(QueryExprError)
     async def _query_expr_error_handler(_request: Request, _exc: QueryExprError) -> JSONResponse:
         """Handle query expression errors."""
@@ -147,6 +201,15 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
             status_code=HTTP_STATUS_BAD_REQUEST,
             content={"error": str(_exc) or "Invalid query expression."},
         )
+
+    @app.exception_handler(ExportError)
+    async def _export_error_handler(_request: Request, _exc: ExportError) -> JSONResponse:
+        """Handle an export that cannot be written."""
+        _report_error(
+            exc=_exc,
+            status_code=HTTP_STATUS_BAD_REQUEST,
+        )
+        return JSONResponse(status_code=HTTP_STATUS_BAD_REQUEST, content={"error": str(_exc)})
 
     @app.exception_handler(QueryEmbedderError)
     async def _query_embedder_error_handler(
@@ -170,6 +233,22 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
         return JSONResponse(
             status_code=HTTP_STATUS_BAD_GATEWAY,
             content={"error": "The embedding server did not give embeddings."},
+        )
+
+    @app.exception_handler(ProviderError)
+    async def _provider_error_handler(_request: Request, _exc: ProviderError) -> JSONResponse:
+        """Handle an assisted labeling provider that failed to compute a segmentation."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_BAD_GATEWAY)
+        return JSONResponse(status_code=HTTP_STATUS_BAD_GATEWAY, content={"error": str(_exc)})
+
+    @app.exception_handler(ProviderUnavailableError)
+    async def _provider_unavailable_error_handler(
+        _request: Request, _exc: ProviderUnavailableError
+    ) -> JSONResponse:
+        """Handle an assisted labeling provider that is not usable."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_SERVICE_UNAVAILABLE)
+        return JSONResponse(
+            status_code=HTTP_STATUS_SERVICE_UNAVAILABLE, content={"error": str(_exc)}
         )
 
     @app.exception_handler(Exception)

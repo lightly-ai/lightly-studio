@@ -1,7 +1,8 @@
 <script lang="ts">
     import { untrack } from 'svelte';
     import { get } from 'svelte/store';
-    import { RotateCcw, X } from '@lucide/svelte';
+    import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+    import X from '@lucide/svelte/icons/x';
     import { useQueryClient } from '@tanstack/svelte-query';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';

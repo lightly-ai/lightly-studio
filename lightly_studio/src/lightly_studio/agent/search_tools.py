@@ -103,9 +103,10 @@ def aggregate_query_embedding(embeddings: Sequence[Embedding]) -> list[float]:
         The query vector.
 
     Raises:
-        ValueError: If every embedding is a zero vector.
+        ValueError: If there are no embeddings, or if every embedding is a zero vector.
     """
-    assert embeddings
+    if not embeddings:
+        raise ValueError("There are no embeddings of the query samples.")
     matrix = np.stack(embeddings).astype(np.float64)
     norms = np.linalg.norm(matrix, axis=1)
     nonzero = norms > 0

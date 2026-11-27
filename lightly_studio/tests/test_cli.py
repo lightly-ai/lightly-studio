@@ -5,12 +5,11 @@ import re
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 from click.testing import CliRunner
 from PIL import Image
-from pytest_mock import MockerFixture
+from pytest_mock import MockerFixture, MockType
 
 import lightly_studio
 from lightly_studio import cli
@@ -29,7 +28,7 @@ def cleanup_db_manager() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def mock_track(mocker: MockerFixture) -> MagicMock:
+def mock_track(mocker: MockerFixture) -> MockType:
     """Keep the CLI tests off the network whatever the developer's environment configures."""
     return mocker.patch.object(tracking, "track")
 
@@ -41,14 +40,14 @@ def test_main__version_option() -> None:
     assert re.search(r"lightly-studio, version \d+\.\d+\.\d+", result.output)
 
 
-def test_gui(mocker: MockerFixture, mock_track: MagicMock) -> None:
+def test_gui(mocker: MockerFixture, mock_track: MockType) -> None:
     mock_connect = mocker.patch.object(db_manager, attribute="connect")
     mock_start_gui = mocker.patch.object(lightly_studio, attribute="start_gui")
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["gui"])
     assert result.exit_code == 0
     mock_connect.assert_called_once_with(db_file=None, db_url=None, must_exist=True)
-    mock_start_gui.assert_called_once_with(host=None, port=None)
+    mock_start_gui.assert_called_once_with(host=None, port=None, open_browser=True)
     mock_track.assert_called_once_with(
         event=tracking.APP_LAUNCHED,
         properties={"launch_source": tracking.LaunchSource.GUI.value},
@@ -62,7 +61,7 @@ def test_gui__with_host_port(mocker: MockerFixture) -> None:
     result = runner.invoke(cli=cli.main, args=["gui", "--host", "0.0.0.0", "--port", "9999"])
     assert result.exit_code == 0
     mock_connect.assert_called_once_with(db_file=None, db_url=None, must_exist=True)
-    mock_start_gui.assert_called_once_with(host="0.0.0.0", port=9999)
+    mock_start_gui.assert_called_once_with(host="0.0.0.0", port=9999, open_browser=True)
 
 
 def test_gui__with_db_file(mocker: MockerFixture) -> None:
@@ -72,7 +71,7 @@ def test_gui__with_db_file(mocker: MockerFixture) -> None:
     result = runner.invoke(cli=cli.main, args=["gui", "--db-file", "my_duck.db"])
     assert result.exit_code == 0
     mock_connect.assert_called_once_with(db_file="my_duck.db", db_url=None, must_exist=True)
-    mock_start_gui.assert_called_once_with(host=None, port=None)
+    mock_start_gui.assert_called_once_with(host=None, port=None, open_browser=True)
 
 
 def test_gui__with_db_url(mocker: MockerFixture) -> None:
@@ -84,7 +83,7 @@ def test_gui__with_db_url(mocker: MockerFixture) -> None:
     mock_connect.assert_called_once_with(
         db_file=None, db_url="postgresql://localhost/mydb", must_exist=True
     )
-    mock_start_gui.assert_called_once_with(host=None, port=None)
+    mock_start_gui.assert_called_once_with(host=None, port=None, open_browser=True)
 
 
 def test_gui__with_db_file_and_db_url(mocker: MockerFixture) -> None:
@@ -126,7 +125,7 @@ def test_gui__with_empty_db_file__complains_about_missing_dataset(
     assert "No datasets found" in str(result.exception)
 
 
-def test_quickstart(mocker: MockerFixture, mock_track: MagicMock) -> None:
+def test_quickstart(mocker: MockerFixture, mock_track: MockType) -> None:
     mock_download, mock_connect, mock_create, mock_start_gui = _mock_quickstart_dependencies(mocker)
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart"])
@@ -158,7 +157,7 @@ def test_quickstart__with_port(mocker: MockerFixture) -> None:
     mock_start_gui.assert_called_once_with(port=9999, open_browser=True)
 
 
-def test_quickstart__with_no_browser(mocker: MockerFixture, mock_track: MagicMock) -> None:
+def test_quickstart__with_no_browser(mocker: MockerFixture, mock_track: MockType) -> None:
     _, _, _, mock_start_gui = _mock_quickstart_dependencies(mocker)
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart", "--no-browser"])
@@ -242,7 +241,7 @@ def test_quickstart__second_run_without_force_download_does_not_duplicate_or_cra
 
 
 def test_quickstart_enterprise(
-    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, mock_track: MagicMock
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, mock_track: MockType
 ) -> None:
     monkeypatch.delenv("LIGHTLY_STUDIO_API_KEY", raising=False)
     mock_connect = mocker.patch.object(lightly_studio, attribute="connect")

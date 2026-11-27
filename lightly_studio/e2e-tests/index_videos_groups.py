@@ -25,4 +25,4 @@ for vid_path in Path(DATASET_DIR / "clips_video").glob("*.mp4"):
         }
     )
 
-ls.start_gui()
+ls.start_gui(open_browser=False)

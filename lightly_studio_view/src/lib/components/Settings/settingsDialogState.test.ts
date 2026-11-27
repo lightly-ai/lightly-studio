@@ -13,6 +13,7 @@ const TEST_SETTINGS: SettingView = {
     setting_id: '00000000-0000-0000-0000-000000000000',
     grid_view_sample_rendering: 'contain',
     grid_view_thumbnail_quality: 'raw',
+    image_interpolation: true,
     key_hide_annotations: 'v',
     key_go_back: 'Escape',
     key_toggle_edit_mode: 'e',
@@ -27,7 +28,9 @@ const TEST_SETTINGS: SettingView = {
     key_toolbar_bounding_box: 'b',
     key_toolbar_segmentation_mask: 'm',
     key_toolbar_brush: 'r',
-    key_toolbar_eraser: 'x'
+    key_toolbar_eraser: 'x',
+    key_previous_camera: '[',
+    key_next_camera: ']'
 };
 
 describe('createSettingsDialogFormState', () => {
@@ -35,17 +38,20 @@ describe('createSettingsDialogFormState', () => {
         expect(createSettingsDialogFormState(TEST_SETTINGS)).toEqual({
             shortcutSettings: {
                 hideAnnotations: 'v',
-                goBack: 'Escape',
                 toggleEditMode: 'e',
                 keyToolbarSelection: 's',
                 keyToolbarDrag: 'd',
                 keyToolbarBoundingBox: 'b',
                 keyToolbarSegmentationMask: 'm',
+                keyToolbarSlic: 'a',
                 keyToolbarBrush: 'r',
-                keyToolbarEraser: 'x'
+                keyToolbarEraser: 'x',
+                keyPreviousCamera: '[',
+                keyNextCamera: ']'
             },
             gridViewRendering: 'contain',
             gridViewThumbnailQuality: 'raw',
+            imageInterpolation: true,
             showAnnotationTextLabels: false,
             showSampleFilenames: false,
             showBoundingBoxesForSegmentation: true,
@@ -60,17 +66,20 @@ describe('createSettingsSavePayload', () => {
             createSettingsSavePayload({
                 shortcutSettings: {
                     hideAnnotations: 'h',
-                    goBack: 'Backspace',
                     toggleEditMode: 't',
                     keyToolbarSelection: 'a',
                     keyToolbarDrag: 'g',
                     keyToolbarBoundingBox: 'q',
                     keyToolbarSegmentationMask: 'w',
+                    keyToolbarSlic: 'f',
                     keyToolbarBrush: 'p',
-                    keyToolbarEraser: 'o'
+                    keyToolbarEraser: 'o',
+                    keyPreviousCamera: ',',
+                    keyNextCamera: '.'
                 },
                 gridViewRendering: 'cover',
                 gridViewThumbnailQuality: 'high',
+                imageInterpolation: false,
                 showAnnotationTextLabels: true,
                 showSampleFilenames: true,
                 showBoundingBoxesForSegmentation: false,
@@ -78,10 +87,10 @@ describe('createSettingsSavePayload', () => {
             })
         ).toEqual({
             key_hide_annotations: 'h',
-            key_go_back: 'Backspace',
             key_toggle_edit_mode: 't',
             grid_view_sample_rendering: 'cover',
             grid_view_thumbnail_quality: 'high',
+            image_interpolation: false,
             show_annotation_text_labels: true,
             show_sample_filenames: true,
             show_bounding_boxes_for_segmentation: false,
@@ -90,8 +99,11 @@ describe('createSettingsSavePayload', () => {
             key_toolbar_drag: 'g',
             key_toolbar_bounding_box: 'q',
             key_toolbar_segmentation_mask: 'w',
+            key_toolbar_slic: 'f',
             key_toolbar_brush: 'p',
-            key_toolbar_eraser: 'o'
+            key_toolbar_eraser: 'o',
+            key_previous_camera: ',',
+            key_next_camera: '.'
         });
     });
 });
@@ -120,6 +132,7 @@ describe('SettingsDialogState', () => {
         const customSettings: SettingView = {
             ...TEST_SETTINGS,
             key_hide_annotations: 'h',
+            image_interpolation: false,
             grid_view_sample_rendering: 'cover',
             show_annotation_text_labels: true,
             enforce_coloring_by_class: true
@@ -128,6 +141,7 @@ describe('SettingsDialogState', () => {
         state.hydrate(customSettings);
 
         expect(state.shortcuts.hideAnnotations).toBe('h');
+        expect(state.imageInterpolation).toBe(false);
         expect(state.gridViewRendering).toBe('cover');
         expect(state.showAnnotationTextLabels).toBe(true);
         expect(state.enforceColoringByClass).toBe(true);
@@ -147,16 +161,70 @@ describe('SettingsDialogState', () => {
     it('records a shortcut and updates only the targeted key', () => {
         const state = new SettingsDialogState();
         state.hydrate(TEST_SETTINGS);
-        state.startRecording('goBack');
+        state.startRecording('toggleEditMode');
 
         const event = new KeyboardEvent('keydown', { key: 'q' });
         state.handleKeyDown(event);
 
-        expect(state.shortcuts.goBack).toBe('q');
+        expect(state.shortcuts.toggleEditMode).toBe('q');
         // Other shortcuts remain unchanged
         expect(state.shortcuts.hideAnnotations).toBe('v');
-        expect(state.shortcuts.toggleEditMode).toBe('e');
+        expect(state.shortcuts.keyToolbarSelection).toBe('s');
         expect(state.recordingShortcut).toBeNull();
+    });
+
+    it('cancels recording on Escape', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('hideAnnotations');
+
+        const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+        state.handleKeyDown(event);
+
+        expect(state.shortcuts.hideAnnotations).toBe('v');
+        expect(state.recordingShortcut).toBeNull();
+        expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('records the next camera shortcut and saves it', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyNextCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: '.' }));
+
+        expect(state.shortcuts.keyNextCamera).toBe('.');
+        expect(state.shortcuts.keyPreviousCamera).toBe('[');
+        expect(state.getSavePayload().key_next_camera).toBe('.');
+    });
+
+    it('keeps recording past modifier keys and records the typed character', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyNextCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'AltGraph' }));
+        expect(state.recordingShortcut).toBe('keyNextCamera');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'Shift' }));
+        expect(state.recordingShortcut).toBe('keyNextCamera');
+
+        state.handleKeyDown(
+            new KeyboardEvent('keydown', { key: ']', altKey: true, ctrlKey: true })
+        );
+
+        expect(state.shortcuts.keyNextCamera).toBe(']');
+        expect(state.recordingShortcut).toBeNull();
+    });
+
+    it('does not record Space as a camera shortcut', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyPreviousCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
+
+        expect(state.shortcuts.keyPreviousCamera).toBe('[');
+        expect(state.recordingShortcut).toBe('keyPreviousCamera');
     });
 
     it('ignores keydown when not recording', () => {
@@ -168,7 +236,19 @@ describe('SettingsDialogState', () => {
 
         // Nothing should change
         expect(state.shortcuts.hideAnnotations).toBe('v');
-        expect(state.shortcuts.goBack).toBe('Escape');
+        expect(state.shortcuts.toggleEditMode).toBe('e');
+    });
+
+    it('reports changes against the hydrated settings', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        expect(state.hasChanges).toBe(false);
+
+        state.shortcuts.hideAnnotations = 'z';
+        expect(state.hasChanges).toBe(true);
+
+        state.shortcuts.hideAnnotations = 'v';
+        expect(state.hasChanges).toBe(false);
     });
 
     it('getSavePayload includes both modified and unmodified fields', () => {
@@ -176,6 +256,7 @@ describe('SettingsDialogState', () => {
         state.hydrate(TEST_SETTINGS);
         state.shortcuts.hideAnnotations = 'z';
         state.showSampleFilenames = true;
+        state.imageInterpolation = false;
         state.enforceColoringByClass = true;
 
         const payload = state.getSavePayload();
@@ -184,8 +265,8 @@ describe('SettingsDialogState', () => {
             expect.objectContaining({
                 key_hide_annotations: 'z',
                 show_sample_filenames: true,
+                image_interpolation: false,
                 enforce_coloring_by_class: true,
-                key_go_back: 'Escape',
                 grid_view_sample_rendering: 'contain'
             })
         );

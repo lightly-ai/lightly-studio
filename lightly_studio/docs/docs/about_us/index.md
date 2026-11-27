@@ -5,7 +5,7 @@
 ## Learn More
 
 - [Homepage](https://www.lightly.ai)
-- [LightlyStudio Product Page](https://www.lightly.ai/studio-signup)
+- [LightlyStudio Product Page](https://www.lightly.ai/lightly-studio)
 - [Lightly Solution Documentation](https://docs.lightly.ai/)
 - [Contact Us](https://www.lightly.ai/contact)
 
@@ -21,8 +21,8 @@ Stay updated with the latest developments, tips, and tutorials by following us:
 
 LightlyStudio reports anonymous usage data: an ID generated on first run, how the app was started,
 whether the installation is a released package, a build from source, a CI run or a Lightly machine,
-and the LightlyStudio, Python and OS versions. No image data, file paths or annotations leave your
-machine.
+the LightlyStudio, Python and OS versions, and how you load data. No image data, file paths or
+annotations leave your machine.
 
 Turn it off with:
 

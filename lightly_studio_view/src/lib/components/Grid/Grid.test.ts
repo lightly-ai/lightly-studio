@@ -115,6 +115,35 @@ describe('Grid', () => {
         });
     });
 
+    it('retries the restore when the height changes after a clamped scroll', async () => {
+        const scroll = mockClampedScroll({ scrollHeight: 1000 });
+        const { resize } = trackResizeObservers();
+        render(GridTestWrapper, { props: { initialScrollPosition: 420 } });
+
+        // 600px height allows a maximum scrollTop of 400.
+        await waitFor(() => expect(scroll.top()).toBe(400));
+
+        await act(() => resize(500));
+
+        await waitFor(() => expect(scroll.top()).toBe(420));
+    });
+
+    it('stops the restore when the user scrolls', async () => {
+        const scroll = mockClampedScroll({ scrollHeight: 1000 });
+        const { resize } = trackResizeObservers();
+        const { container } = render(GridTestWrapper, { props: { initialScrollPosition: 420 } });
+        await waitFor(() => expect(scroll.top()).toBe(400));
+
+        container.querySelector('.viewport')?.dispatchEvent(new Event('wheel'));
+        await act(() => resize(500));
+
+        const restoreCalls = vi
+            .mocked(Element.prototype.scrollTo)
+            .mock.calls.filter(([options]) => (options as ScrollToOptions).top === 420);
+        expect(restoreCalls).toHaveLength(1);
+        expect(scroll.top()).toBe(400);
+    });
+
     it('resets scroll when scrollResetKey changes', async () => {
         const { rerender } = render(GridTestWrapper, {
             props: { scrollResetKey: 'initial' }
@@ -129,3 +158,36 @@ describe('Grid', () => {
         });
     });
 });
+
+function mockClampedScroll({ scrollHeight }: { scrollHeight: number }) {
+    let scrollTop = 0;
+    vi.spyOn(Element.prototype, 'scrollTop', 'get').mockImplementation(() => scrollTop);
+    Element.prototype.scrollTo = vi.fn(function (
+        this: Element,
+        options?: ScrollToOptions | number
+    ) {
+        const top = typeof options === 'number' ? 0 : (options?.top ?? 0);
+        scrollTop = Math.min(top, scrollHeight - this.clientHeight);
+    }) as typeof Element.prototype.scrollTo;
+    return { top: () => scrollTop };
+}
+
+function trackResizeObservers() {
+    const observed: Array<[MockResizeObserver, Element]> = [];
+    const observe = MockResizeObserver.prototype.observe;
+    vi.spyOn(MockResizeObserver.prototype, 'observe').mockImplementation(function (
+        this: MockResizeObserver,
+        target: Element
+    ) {
+        observed.push([this, target]);
+        observe.call(this, target);
+    });
+
+    const resize = (clientHeight: number) => {
+        vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(clientHeight);
+        for (const [observer, target] of observed) {
+            observe.call(observer, target);
+        }
+    };
+    return { resize };
+}

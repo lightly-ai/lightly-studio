@@ -14,8 +14,12 @@ from tests.helpers_resolvers import (
 )
 
 
+@pytest.mark.parametrize("requested_kind", ["both", "parents", "annotations"])
+@pytest.mark.parametrize("duplicates", [False, True])
 def test_get_label_ids_by_sample_ids__returns_parent_and_own_labels(
     db_session: Session,
+    requested_kind: str,
+    duplicates: bool,
 ) -> None:
     collection = create_collection(session=db_session)
     image = create_image(
@@ -63,16 +67,23 @@ def test_get_label_ids_by_sample_ids__returns_parent_and_own_labels(
         annotation_label_id=selected_label.annotation_label_id,
     )
 
+    requested = [image.sample_id, selected_annotation.sample_id]
+    if requested_kind == "parents":
+        requested = [image.sample_id]
+    elif requested_kind == "annotations":
+        requested = [selected_annotation.sample_id]
+    labels = [selected_label.annotation_label_id]
+    if duplicates:
+        requested *= 2
+        labels *= 2
+
     result = annotation_resolver.get_label_ids_by_sample_ids(
         session=db_session,
-        sample_ids=[image.sample_id, selected_annotation.sample_id],
-        annotation_label_ids=[selected_label.annotation_label_id],
+        sample_ids=requested,
+        annotation_label_ids=labels,
     )
 
-    assert result == {
-        image.sample_id: {selected_label.annotation_label_id},
-        selected_annotation.sample_id: {selected_label.annotation_label_id},
-    }
+    assert result == {sample_id: {selected_label.annotation_label_id} for sample_id in requested}
 
 
 @pytest.mark.parametrize(

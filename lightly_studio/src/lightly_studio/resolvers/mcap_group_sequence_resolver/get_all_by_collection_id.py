@@ -9,12 +9,9 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database import db_array
-from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import SampleGroupLinkTable
-from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.mcap_group_component_definition import (
-    McapDataType,
     McapGroupComponentDefinitionTable,
 )
 from lightly_studio.models.mcap_group_sequence import (
@@ -26,46 +23,81 @@ from lightly_studio.models.mcap_group_sequence import (
 from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable
+from lightly_studio.resolvers import mcap_group_sequence_resolver, similarity_utils
+from lightly_studio.resolvers.mcap_group_sequence_resolver import sequence_grid_query
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
+from lightly_studio.type_definitions import QueryType
 
 
 def get_all_by_collection_id(
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
+    filters: McapSequenceFilter | None = None,
+    text_embedding: list[float] | None = None,
 ) -> McapSequenceViewsWithCount:
     """Retrieve MCAP sequences for a collection ordered by creation time.
 
     Only sequences that have a corresponding ``McapGroupSequenceTable`` row are
     returned. Results are ordered by ascending ``created_at`` of the underlying sample.
+    When ``text_embedding`` is given and the collection has a default embedding model,
+    only sequences with an embedding are returned, ordered by similarity.
 
     Args:
         session: Database session for executing queries.
         collection_id: The ID of the collection to scope results to.
         pagination: Optional pagination parameters (offset and limit).
+        filters: Optional filters for the sequences.
+        text_embedding: Optional embedding to order the sequences by similarity to.
 
     Returns:
         McapSequenceViewsWithCount containing the page of sequences, the total
         count before pagination, and a cursor for the next page.
     """
-    samples_query = (
-        select(McapGroupSequenceTable)
-        .join(SampleTable, col(McapGroupSequenceTable.sample_id) == col(SampleTable.sample_id))
-        .where(col(SampleTable.collection_id) == collection_id)
-        .order_by(col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc())
+    mcap_group_sequence_resolver.resolve_embedding_region(
+        session=session, collection_id=collection_id, sequence_filter=filters
+    )
+    embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
+        session=session,
+        collection_id=collection_id,
+        text_embedding=text_embedding,
     )
 
-    total_count_query = (
-        select(func.count())
-        .select_from(McapGroupSequenceTable)
-        .join(SampleTable, col(McapGroupSequenceTable.sample_id) == col(SampleTable.sample_id))
-        .where(col(SampleTable.collection_id) == collection_id)
+    total_count_query = sequence_grid_query.scope_query(
+        query=select(func.count()).select_from(McapGroupSequenceTable),
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        filters=filters,
     )
-
-    if pagination is not None:
-        samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
-
     total_count = session.exec(total_count_query).one()
-    sequences = session.exec(samples_query).all()
+
+    sequences: list[McapGroupSequenceTable]
+    similarity_scores: dict[UUID, float] = {}
+    if distance_expr is not None:
+        similarity_query = sequence_grid_query.scope_query(
+            query=select(McapGroupSequenceTable, distance_expr),
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            filters=filters,
+        ).order_by(distance_expr, *sequence_grid_query.default_order())
+        similarity_query = _paginate(query=similarity_query, pagination=pagination)
+        rows = session.exec(similarity_query).all()
+        sequences = [sequence for sequence, _ in rows]
+        similarity_scores = {
+            sequence.sample_id: similarity_utils.distance_to_similarity(distance)
+            for sequence, distance in rows
+        }
+    else:
+        samples_query = sequence_grid_query.scope_query(
+            query=select(McapGroupSequenceTable),
+            collection_id=collection_id,
+            embedding_model_id=None,
+            filters=filters,
+        ).order_by(*sequence_grid_query.default_order())
+        samples_query = _paginate(query=samples_query, pagination=pagination)
+        sequences = list(session.exec(samples_query).all())
 
     sequence_sample_ids = [seq.sample_id for seq in sequences]
 
@@ -86,12 +118,19 @@ def get_all_by_collection_id(
         collection_id=collection_id,
     )
 
+    file_name_by_recording_id = _get_file_names_by_recording_id(
+        session=session,
+        recording_ids=list({seq.recording_id for seq in sequences}),
+    )
+
     views = [
         McapSequenceView(
             sample_id=seq.sample_id,
             recording_id=seq.recording_id,
+            file_name=file_name_by_recording_id[seq.recording_id],
             sample_count=sequence_sample_counts.get(seq.sample_id, 0),
             sequence_frame=sequence_frames.get(seq.sample_id),
+            similarity_score=similarity_scores.get(seq.sample_id),
         )
         for seq in sequences
     ]
@@ -101,6 +140,12 @@ def get_all_by_collection_id(
         total_count=total_count,
         next_cursor=_compute_next_cursor(pagination=pagination, total_count=total_count),
     )
+
+
+def _paginate(query: QueryType, pagination: Paginated | None) -> QueryType:
+    if pagination is None:
+        return query
+    return query.offset(pagination.offset).limit(pagination.limit)
 
 
 def _get_sequence_sample_counts(
@@ -155,7 +200,7 @@ def _get_sequence_frames(
     Returns:
         Dictionary mapping sequence sample_id to its first-keyframe locator.
     """
-    video_frame_collection_id = _get_first_video_frame_collection_id(
+    video_frame_collection_id = mcap_group_sequence_resolver.get_first_video_frame_collection_id(
         session=session,
         sequence_collection_id=collection_id,
     )
@@ -192,48 +237,18 @@ def _get_dataset_ids_by_recording_id(
     return dict(session.exec(query).all())
 
 
-def _get_first_video_frame_collection_id(
+def _get_file_names_by_recording_id(
     session: Session,
-    sequence_collection_id: UUID,
-) -> UUID | None:
-    """Get the collection_id of the lowest-indexed VIDEO_FRAME slot in the collection.
-
-    Resolves the camera slot once per collection by finding the VIDEO_FRAME component
-    with the smallest ``group_component_index`` in the GROUP child of the SEQUENCE
-    collection. Returns ``None`` when no VIDEO_FRAME slot exists.
-
-    Args:
-        session: Database session for executing queries.
-        sequence_collection_id: The SEQUENCE collection to resolve the camera for.
-
-    Returns:
-        The ``collection_id`` of the lowest-indexed VIDEO_FRAME slot, or ``None``.
-    """
-    group_collection_id = session.exec(
-        select(CollectionTable.collection_id)
-        .where(col(CollectionTable.parent_collection_id) == sequence_collection_id)
-        .where(col(CollectionTable.sample_type) == SampleType.GROUP)
-        .limit(1)
-    ).first()
-    if group_collection_id is None:
-        return None
-    return session.exec(
-        select(McapGroupComponentDefinitionTable.collection_id)
-        .join(
-            GroupComponentDefinitionTable,
-            col(GroupComponentDefinitionTable.collection_id)
-            == col(McapGroupComponentDefinitionTable.collection_id),
-        )
-        .join(
-            CollectionTable,
-            col(CollectionTable.collection_id)
-            == col(McapGroupComponentDefinitionTable.collection_id),
-        )
-        .where(col(CollectionTable.parent_collection_id) == group_collection_id)
-        .where(col(McapGroupComponentDefinitionTable.mcap_data_type) == McapDataType.VIDEO_FRAME)
-        .order_by(col(GroupComponentDefinitionTable.group_component_index).asc())
-        .limit(1)
-    ).first()
+    recording_ids: Sequence[UUID],
+) -> dict[UUID, str]:
+    """Get the file name, the last segment of the URI, for each recording ID."""
+    query = select(RecordingTable.recording_id, RecordingTable.uri).where(
+        col(RecordingTable.recording_id).in_(recording_ids)
+    )
+    return {
+        recording_id: uri.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+        for recording_id, uri in session.exec(query).all()
+    }
 
 
 def _get_first_keyframe_per_sequence(

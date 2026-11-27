@@ -32,8 +32,8 @@ managed cloud credentials.
 
 LightlyStudio is free and open source. You can install it and use every open-source feature on your own
 machine at no cost. [LightlyStudio Enterprise](enterprise/index.md) is a separate paid product for teams. It
-adds collaboration, role-based access, and central credential management. Your team can
-[start with it for free](https://app.studio.lightly.ai/auth/signup).
+adds collaboration, role-based access, and central credential management. To get access, book a call on the
+[product page](https://www.lightly.ai/lightly-studio).
 
 ### Is LightlyStudio open source, and what license does it use?
 
@@ -62,7 +62,7 @@ app at `http://localhost:8001`. For a complete example, see the [quickstart](ind
 
 ### Can I try LightlyStudio without installing anything?
 
-Yes. You can [start a free trial](https://app.studio.lightly.ai/auth/signup) of the fully hosted service.
+Yes. For the fully hosted service, book a call on the [product page](https://www.lightly.ai/lightly-studio).
 You can also run LightlyStudio in a hosted notebook such as Google Colab. See
 [Run LightlyStudio from a Notebook](get_started/notebooks.md). For a local install, run
 `lightly-studio quickstart`. This command downloads an example dataset and opens the app.
@@ -70,7 +70,7 @@ You can also run LightlyStudio in a hosted notebook such as Google Colab. See
 ### What operating systems and Python versions are supported?
 
 LightlyStudio runs on Windows, Linux, and macOS. It runs on both x86 and ARM processors. It supports
-Python 3.9 and later. Python 3.10 gives the best compatibility with plugins such as SAM autolabeling.
+Python 3.11 to 3.15.
 
 ### How large a dataset can LightlyStudio handle?
 
@@ -103,7 +103,7 @@ reach the same model accuracy.
 
 ### Can I search my images by text or visual similarity?
 
-Yes. LightlyStudio computes [embeddings](core_concepts/embeddings.md) on ingest. You can run a text
+Yes. LightlyStudio computes [embeddings](workflows/embeddings.md) on ingest. You can run a text
 search, for example "coffee". You can run a visual [similarity search](workflows/search_and_filter.md)
 to find related samples. You can also explore clusters in the embedding plot.
 
@@ -116,7 +116,7 @@ help you find failure patterns in your dataset.
 ### Which embedding models does LightlyStudio use?
 
 By default, LightlyStudio embeds images with MobileCLIP and videos with Perception Encoder. You can
-also [use your own embeddings](core_concepts/embeddings.md#using-your-own-embeddings).
+also [use your own embeddings](workflows/embeddings.md#using-your-own-embeddings).
 
 ## Data and formats
 

@@ -1,0 +1,188 @@
+<script lang="ts">
+    import { Pane, PaneGroup, PaneResizer } from 'paneforge';
+    import { cn } from '$lib/utils';
+    import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
+    import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
+    import PointCloudWorkspaceScene from './PointCloudWorkspaceScene/PointCloudWorkspaceScene.svelte';
+    import {
+        usePointCloudWorkspaceLayoutContext,
+        useWorkspaceControllerContext
+    } from './pointCloudWorkspaceLayoutContext.svelte';
+    import { useTickDetails, useTickCameraFrames } from '$lib/hooks';
+    import { useCameraRgbColors, provideCameraRgbColors } from './useCameraRgbColors';
+    import { useSequenceTracks } from './FrameTimeline/useSequenceTracks.svelte';
+    import { useSequenceTickTags } from './FrameTimeline/useSequenceTickTags.svelte';
+
+    const { cameraPane, objectTracksPanel, tagTracksPanel } = useWorkspaceControllerContext();
+    const getLayout = usePointCloudWorkspaceLayoutContext();
+    const layout = $derived(getLayout());
+    const cameraStripIsRight = $derived(layout.cameraStripDock === 'right');
+    const tracksQuery = useSequenceTracks(() => ({
+        datasetId: layout.datasetId,
+        sequenceId: layout.sequenceId,
+        displayFrameId: layout.workspace.referenceFrameId || undefined
+    }));
+    const tickTagsQuery = useSequenceTickTags(() => ({
+        datasetId: layout.datasetId,
+        sequenceId: layout.sequenceId,
+        enabled: tagTracksPanel.visible
+    }));
+
+    // Only an untracked cuboid of the loaded tick can start a track, and only while editing.
+    const startableCuboidId = $derived.by(() => {
+        if (!layout.isEditingMode) return null;
+        const cuboid = layout.snapshotAnnotations.find(
+            ({ sample_id }) => sample_id === layout.selectedCuboidId
+        );
+        return cuboid?.cuboid_3d_details && !cuboid.object_track_id ? cuboid.sample_id : null;
+    });
+
+    const { tickDetails } = useTickDetails({
+        getDatasetId: () => layout.datasetId,
+        getSequenceId: () => layout.sequenceId,
+        getSeqNumber: () => layout.workspace.currentTick,
+        getDisplayFrameId: () => layout.workspace.referenceFrameId || undefined
+    });
+    const { query: cameraFrames } = useTickCameraFrames(() => ({
+        datasetId: layout.datasetId,
+        sequenceId: layout.sequenceId,
+        seqNumber: layout.workspace.currentTick,
+        displayFrameId: layout.workspace.referenceFrameId || undefined
+    }));
+
+    const cameraPairs = $derived(
+        layout.workspace.isShowingSensorFrames
+            ? []
+            : layout.workspace.cameraChannels
+                  .filter((ch) => layout.selectedCameraChannelIds.includes(ch.channel_id))
+                  .flatMap((ch) => {
+                      const projection =
+                          tickDetails.data?.camera_channels[ch.group_component_name]?.projection;
+                      const blob = cameraFrames.data?.[ch.channel_id];
+                      return projection && blob ? [{ projection, blob }] : [];
+                  })
+    );
+
+    const cameraRgb = useCameraRgbColors({
+        getBatch: () => layout.sceneFrame?.batch,
+        getColorMode: () => layout.colorMode,
+        getCameraPairs: () => cameraPairs
+    });
+
+    provideCameraRgbColors(() => cameraRgb.colors);
+</script>
+
+<PaneGroup direction={cameraStripIsRight ? 'horizontal' : 'vertical'} class="min-h-0 flex-1">
+    <Pane defaultSize={62} minSize={30} class="min-h-0">
+        <div class="flex h-full min-h-0 flex-col">
+            <PointCloudWorkspaceScene />
+        </div>
+    </Pane>
+    <PaneResizer
+        class={cn(
+            'group relative flex items-center justify-center bg-card transition-colors hover:bg-card',
+            cameraStripIsRight ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize',
+            layout.cameraStripCollapsed && 'hidden'
+        )}
+    >
+        <div
+            class={cn(
+                'flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100',
+                cameraStripIsRight && 'flex-col'
+            )}
+        >
+            <span class="size-1 rounded-full bg-muted-foreground"></span>
+            <span class="size-1 rounded-full bg-muted-foreground"></span>
+            <span class="size-1 rounded-full bg-muted-foreground"></span>
+        </div>
+    </PaneResizer>
+    <Pane
+        bind:this={cameraPane.pane}
+        defaultSize={26}
+        minSize={12}
+        collapsedSize={0}
+        maxSize={45}
+        collapsible
+        onCollapse={() => layout.onCameraStripCollapsedChange(true)}
+        onExpand={() => layout.onCameraStripCollapsedChange(false)}
+        class="min-h-0"
+    >
+        {#if !layout.cameraStripCollapsed}
+            <CameraProjectionStrip
+                datasetId={layout.datasetId}
+                sequenceId={layout.sequenceId}
+                cameraChannels={layout.workspace.cameraChannels}
+                seqNumber={layout.workspace.currentTick}
+                displayFrameId={layout.workspace.referenceFrameId}
+                selectedChannelIds={layout.selectedCameraChannelIds}
+                batch={layout.cameraBatch}
+                annotations={layout.snapshotAnnotations.filter(
+                    (annotation) => !layout.isTickAnnotationHidden(annotation)
+                )}
+                annotationClasses={layout.annotationClasses}
+                canProject={!layout.workspace.isShowingSensorFrames}
+                onPlaybackToggle={layout.onPlayToggle}
+                onHide={cameraPane.toggle}
+                dock={layout.cameraStripDock}
+                onDockChange={layout.onCameraStripDockChange}
+                onToggleCameraChannel={layout.onToggleCameraChannel}
+                onSetCameraChannels={layout.onSetCameraChannels}
+                openCamera={layout.openCamera}
+                onOpenCameraChange={layout.onOpenCameraChange}
+            />
+        {/if}
+    </Pane>
+</PaneGroup>
+
+<div class="flex-none">
+    <FrameTimeline
+        ticks={layout.workspace.ticks}
+        tracks={tracksQuery.query.data?.tracks ?? []}
+        selectedAnnotationId={layout.selectedCuboidId}
+        currentTick={layout.workspace.currentTick}
+        isPlaying={layout.workspace.isPlaying}
+        playbackIntervalMs={layout.workspace.playbackIntervalMs}
+        bufferEntireSequence={layout.bufferEntireSequence}
+        onBufferEntireSequenceChange={layout.onBufferEntireSequenceChange}
+        bufferedRanges={layout.bufferedRanges}
+        bufferStatus={layout.bufferStatus}
+        onPreviousFrame={layout.onPreviousFrame}
+        onNextFrame={layout.onNextFrame}
+        onPlayToggle={layout.onPlayToggle}
+        onPlaybackIntervalChange={layout.onPlaybackIntervalChange}
+        onSelectTick={layout.onSelectTick}
+        onSelectAnnotation={layout.onSelect}
+        onAddTrack={layout.isEditingMode ? layout.onToggleAddTrack : undefined}
+        isAddingTrack={layout.isAddingTrack}
+        sequenceId={layout.sequenceId}
+        onDeleteTrack={layout.isEditingMode
+            ? async (track) => {
+                  const deleted = await layout.onDeleteTrack({
+                      trackId: track.object_track_id,
+                      annotationSourceId: track.annotation_source_id,
+                      annotationIds: track.annotations.map(({ annotation_id }) => annotation_id)
+                  });
+                  if (!deleted) throw new Error('Track not deleted');
+              }
+            : undefined}
+        onExtendTrack={layout.isEditingMode
+            ? (track, startSeqNumber, endSeqNumber) =>
+                  layout.onExtendTrack({
+                      trackId: track.object_track_id,
+                      annotationSourceId: track.annotation_source_id,
+                      startSeqNumber,
+                      endSeqNumber
+                  })
+            : undefined}
+        onStartTrack={startableCuboidId ? () => layout.onStartTrack(startableCuboidId) : undefined}
+        onSeekStart={layout.onSeekStart}
+        onSeekEnd={layout.onSeekEnd}
+        onPreviousSequence={layout.onPreviousSequence}
+        onNextSequence={layout.onNextSequence}
+        showObjectTracks={objectTracksPanel.visible}
+        onHideObjectTracks={objectTracksPanel.toggle}
+        showFrameTags={tagTracksPanel.visible}
+        onHideFrameTags={tagTracksPanel.toggle}
+        frameTags={tickTagsQuery.query.data?.tags ?? []}
+    />
+</div>

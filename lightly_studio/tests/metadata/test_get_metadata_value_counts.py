@@ -256,6 +256,51 @@ def test_get_metadata_value_counts__filters_and_own_key_exclusion(
     assert [(entry.value, entry.count) for entry in counts["group"].value_counts] == [("x", 1)]
 
 
+def test_get_metadata_value_counts__applies_annotation_filter(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    images = []
+    for split in ["labeled", "labeled", "unlabeled"]:
+        image = create_image(
+            session=db_session,
+            collection_id=collection_id,
+            file_path_abs=f"/path/to/{uuid4()}.png",
+        )
+        image.sample["split"] = split
+        images.append(image)
+    car = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=images[index].sample_id,
+                annotation_label_id=car.annotation_label_id,
+            )
+            for index in (0, 2)
+        ],
+    )
+
+    counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(
+                annotations_filter=AnnotationsFilter(annotation_label_ids=[car.annotation_label_id])
+            )
+        ),
+    )
+
+    assert {entry.value: entry.count for entry in counts["split"].value_counts} == {
+        "labeled": 1,
+        "unlabeled": 1,
+    }
+
+
 def test_get_metadata_value_counts__video_width_filter(db_session: Session) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     for path, width, weather in [("a.mp4", 640, "sunny"), ("b.mp4", 1920, "rainy")]:

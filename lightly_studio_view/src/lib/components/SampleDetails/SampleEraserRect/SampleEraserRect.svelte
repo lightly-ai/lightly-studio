@@ -34,6 +34,7 @@
         collectionId: string;
         brushRadius: number;
         drawerStrokeColor: string;
+        previewOpacity: number;
         refetch: () => void;
         onFinishErasePendingChange?: (pendingChange: PendingChange) => void;
     };
@@ -45,6 +46,7 @@
         collectionId,
         brushRadius,
         drawerStrokeColor,
+        previewOpacity,
         refetch,
         onFinishErasePendingChange
     }: Props = $props();
@@ -255,13 +257,14 @@
     y="0"
     width={sample.width}
     height={sample.height}
+    opacity={previewOpacity}
     class:previewHidden={!isPreviewVisible}
 >
     <canvas
         bind:this={previewCanvas}
         width={sample.width}
         height={sample.height}
-        style="width: 100%; height: 100%; pointer-events: none; opacity: 0.85;"
+        style="width: 100%; height: 100%; pointer-events: none;"
     ></canvas>
 </foreignObject>
 
