@@ -1,4 +1,9 @@
 import { rgbaFromBytes } from '$lib/utils/colorConvert';
+import {
+    MIN_POLYGON_PART_VERTICES,
+    normalizePolygonWinding,
+    type PolygonPart
+} from '$lib/utils/normalizePolygonWinding';
 
 export interface MaskInput {
     rle: ReadonlyArray<number>;
@@ -11,6 +16,12 @@ export interface BoundingBoxInput {
     width: number;
     height: number;
     color: [number, number, number, number];
+}
+
+export interface PolygonInput {
+    parts: PolygonPart[];
+    strokeColor: [number, number, number, number];
+    fillColor: [number, number, number, number];
 }
 
 export interface SourceCrop {
@@ -172,4 +183,64 @@ export const drawBoxesOnContext = (ctx: BoxContext, boxes: BoundingBoxInput[], s
         ctx.strokeRect(box.x, box.y, box.width, box.height);
     }
     ctx.restore();
+};
+
+/** Maps polygon vertices onto the output canvas. The canvas clips what lies outside. */
+export const transformPolygons = (
+    geometry: RenderGeometry,
+    polygons: PolygonInput[]
+): PolygonInput[] => {
+    const { scale, offsetX, offsetY } = getRenderTransform(geometry);
+
+    return polygons.map((polygon) => ({
+        ...polygon,
+        parts: polygon.parts.map((part) =>
+            part.map(([x, y]) => [x * scale + offsetX, y * scale + offsetY] as const)
+        )
+    }));
+};
+
+type PolygonContext = Pick<
+    CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    | 'save'
+    | 'restore'
+    | 'lineWidth'
+    | 'strokeStyle'
+    | 'fillStyle'
+    | 'beginPath'
+    | 'moveTo'
+    | 'lineTo'
+    | 'closePath'
+    | 'fill'
+    | 'stroke'
+>;
+
+export const drawPolygonsOnContext = (
+    ctx: PolygonContext,
+    polygons: PolygonInput[],
+    stroke = 2
+) => {
+    if (!polygons.length) return;
+    ctx.save();
+    ctx.lineWidth = stroke;
+    for (const polygon of polygons) {
+        // One path per polygon: with the nonzero rule, parts of equal winding merge.
+        ctx.beginPath();
+        for (const part of normalizePolygonWinding(polygon.parts)) {
+            addPolygonPartToPath(ctx, part);
+        }
+        ctx.fillStyle = rgbaFromBytes(polygon.fillColor);
+        ctx.fill('nonzero');
+        ctx.strokeStyle = rgbaFromBytes(polygon.strokeColor);
+        ctx.stroke();
+    }
+    ctx.restore();
+};
+
+const addPolygonPartToPath = (ctx: PolygonContext, part: PolygonPart) => {
+    if (part.length < MIN_POLYGON_PART_VERTICES) return;
+    const [[startX, startY], ...rest] = part;
+    ctx.moveTo(startX, startY);
+    for (const [x, y] of rest) ctx.lineTo(x, y);
+    ctx.closePath();
 };
