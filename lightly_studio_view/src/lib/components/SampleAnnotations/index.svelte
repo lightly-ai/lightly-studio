@@ -68,13 +68,11 @@
             } satisfies AnnotationCanvasAnnotation;
         }
 
-        // The GUI does not draw polygon outlines yet, so it shows the box of the polygon.
         if (annotation.annotation_type === 'polygon' && annotation.polygon_details) {
-            const { x, y, width, height } = annotation.polygon_details;
             return {
-                annotation_type: 'object_detection',
+                annotation_type: 'polygon',
                 annotation_label_name,
-                object_detection_details: { x, y, width, height }
+                polygons: annotation.polygon_details.polygons
             } satisfies AnnotationCanvasAnnotation;
         }
 

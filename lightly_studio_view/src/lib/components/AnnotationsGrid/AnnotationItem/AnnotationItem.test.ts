@@ -92,7 +92,7 @@ describe('AnnotationItem', () => {
         expect(container.querySelector('.annotation-box')).toHaveClass('invisible');
     });
 
-    it('shows the box of a polygon annotation', () => {
+    it('draws the polygon on the canvas and hides its box', () => {
         const annotation = {
             sample_id: 'annotation-2',
             annotation_type: 'polygon',
@@ -112,10 +112,18 @@ describe('AnnotationItem', () => {
             }
         } as AnnotationView;
 
-        render(AnnotationItem, { props: { ...defaultProps, annotation } });
+        render(AnnotationItem, { props: { ...defaultProps, annotation, showLabel: true } });
 
+        const canvas = screen.getByTestId('mock-annotation-canvas');
+        expect(canvas).toHaveAttribute('data-annotation-type', 'polygon');
+        expect(canvas).toHaveAttribute(
+            'data-polygons',
+            JSON.stringify(annotation.polygon_details!.polygons)
+        );
+        expect(screen.getByText('car')).toBeInTheDocument();
         // The 200x100 tile shows the 400x200 padded crop at half size.
         expect(screen.getByTestId('annotation-box')).toHaveStyle({
+            borderColor: 'transparent',
             width: '180px',
             height: '80px'
         });

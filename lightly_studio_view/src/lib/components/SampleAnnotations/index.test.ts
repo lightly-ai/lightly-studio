@@ -93,6 +93,12 @@ type Mock2dContext = {
     save: ReturnType<typeof vi.fn>;
     restore: ReturnType<typeof vi.fn>;
     strokeRect: ReturnType<typeof vi.fn>;
+    beginPath: ReturnType<typeof vi.fn>;
+    moveTo: ReturnType<typeof vi.fn>;
+    lineTo: ReturnType<typeof vi.fn>;
+    closePath: ReturnType<typeof vi.fn>;
+    fill: ReturnType<typeof vi.fn>;
+    stroke: ReturnType<typeof vi.fn>;
 };
 
 const SAMPLE_SOURCE_ID = 'col-default';
@@ -175,7 +181,13 @@ describe('SampleAnnotations', () => {
             putImageData: vi.fn(),
             save: vi.fn(),
             restore: vi.fn(),
-            strokeRect: vi.fn()
+            strokeRect: vi.fn(),
+            beginPath: vi.fn(),
+            moveTo: vi.fn(),
+            lineTo: vi.fn(),
+            closePath: vi.fn(),
+            fill: vi.fn(),
+            stroke: vi.fn()
         };
 
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
@@ -232,7 +244,8 @@ describe('SampleAnnotations', () => {
         });
     });
 
-    it('draws the box of a polygon annotation', async () => {
+    it('draws the outline of a polygon annotation without a box', async () => {
+        setShowBoundingBoxesForSegmentation(true);
         const sample = {
             width: 100,
             height: 80,
@@ -262,8 +275,11 @@ describe('SampleAnnotations', () => {
         render(SampleAnnotations, { props: { sample } });
 
         await waitFor(() => {
-            expect(hasStrokeRectCall(mockContext, 5, 6, 7, 8)).toBe(true);
+            expect(mockContext.moveTo).toHaveBeenCalledWith(5, 6);
+            expect(mockContext.lineTo).toHaveBeenCalledWith(12, 6);
+            expect(mockContext.lineTo).toHaveBeenCalledWith(12, 14);
         });
+        expect(mockContext.strokeRect).not.toHaveBeenCalled();
     });
 
     it('draws nothing once the user unchecks every annotation source', async () => {
