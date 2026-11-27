@@ -2,92 +2,61 @@ import { describe, expect, it, vi } from 'vitest';
 import { createBrushDrawer } from './brushDrawer';
 
 type Mock2dContext = {
-    beginPath: ReturnType<typeof vi.fn>;
-    arc: ReturnType<typeof vi.fn>;
-    fill: ReturnType<typeof vi.fn>;
-    moveTo: ReturnType<typeof vi.fn>;
-    lineTo: ReturnType<typeof vi.fn>;
-    stroke: ReturnType<typeof vi.fn>;
+    fillRect: ReturnType<typeof vi.fn>;
     globalCompositeOperation: string;
     fillStyle: string;
-    strokeStyle: string;
-    lineWidth: number;
-    lineCap: CanvasLineCap;
-    lineJoin: CanvasLineJoin;
 };
 
 describe('createBrushDrawer', () => {
-    it('draws brush dots on the source context', () => {
+    it('fills the exact pixels of a size 2 dot', () => {
         const context: Mock2dContext = {
-            beginPath: vi.fn(),
-            arc: vi.fn(),
-            fill: vi.fn(),
-            moveTo: vi.fn(),
-            lineTo: vi.fn(),
-            stroke: vi.fn(),
+            fillRect: vi.fn(),
             globalCompositeOperation: 'destination-over',
-            fillStyle: 'transparent',
-            strokeStyle: 'transparent',
-            lineWidth: 0,
-            lineCap: 'butt',
-            lineJoin: 'bevel'
+            fillStyle: 'transparent'
         };
 
         const ensureSourceMaskContext = vi.fn(() => context as unknown as CanvasRenderingContext2D);
         const brushDrawer = createBrushDrawer({ ensureSourceMaskContext });
 
         brushDrawer.drawBrushDot({
-            point: { x: 3, y: 5 },
-            brushRadius: 4,
+            point: { x: 3.7, y: 5.2 },
+            brushSize: 2,
             width: 100,
             height: 50
         });
 
         expect(ensureSourceMaskContext).toHaveBeenCalledWith(100, 50);
-        expect(context.beginPath).toHaveBeenCalledTimes(1);
-        expect(context.arc).toHaveBeenCalledWith(3, 5, 4, 0, Math.PI * 2);
-        expect(context.fill).toHaveBeenCalledTimes(1);
+        expect(context.fillRect.mock.calls).toEqual([
+            [3, 4, 2, 1],
+            [3, 5, 2, 1]
+        ]);
         expect(context.globalCompositeOperation).toBe('source-over');
         expect(context.fillStyle).toBe('black');
     });
 
-    it('draws brush lines on the source context', () => {
+    it('fills a size 1 line as one span', () => {
         const context: Mock2dContext = {
-            beginPath: vi.fn(),
-            arc: vi.fn(),
-            fill: vi.fn(),
-            moveTo: vi.fn(),
-            lineTo: vi.fn(),
-            stroke: vi.fn(),
-            globalCompositeOperation: 'destination-over',
-            fillStyle: 'transparent',
-            strokeStyle: 'transparent',
-            lineWidth: 0,
-            lineCap: 'butt',
-            lineJoin: 'bevel'
+            fillRect: vi.fn(),
+            globalCompositeOperation: 'source-over',
+            fillStyle: 'transparent'
         };
 
         const ensureSourceMaskContext = vi.fn(() => context as unknown as CanvasRenderingContext2D);
         const brushDrawer = createBrushDrawer({ ensureSourceMaskContext });
 
         brushDrawer.drawBrushLine({
-            from: { x: 1, y: 2 },
-            to: { x: 10, y: 12 },
-            brushRadius: 6,
+            from: { x: 0.5, y: 0.5 },
+            to: { x: 3.5, y: 0.5 },
+            brushSize: 1,
             width: 100,
-            height: 50
+            height: 50,
+            compositeOperation: 'destination-out'
         });
 
         expect(ensureSourceMaskContext).toHaveBeenCalledWith(100, 50);
-        expect(context.beginPath).toHaveBeenCalledTimes(1);
-        expect(context.moveTo).toHaveBeenCalledWith(1, 2);
-        expect(context.lineTo).toHaveBeenCalledWith(10, 12);
-        expect(context.stroke).toHaveBeenCalledTimes(1);
-        expect(context.globalCompositeOperation).toBe('source-over');
-        expect(context.strokeStyle).toBe('black');
-        expect(context.lineWidth).toBe(12);
-        expect(context.lineCap).toBe('round');
-        expect(context.lineJoin).toBe('round');
+        expect(context.fillRect.mock.calls).toEqual([[0, 0, 4, 1]]);
+        expect(context.globalCompositeOperation).toBe('destination-out');
+        expect(context.fillStyle).toBe('black');
     });
 
     it('does nothing when source context is unavailable', () => {
@@ -96,7 +65,7 @@ describe('createBrushDrawer', () => {
 
         brushDrawer.drawBrushDot({
             point: { x: 0, y: 0 },
-            brushRadius: 2,
+            brushSize: 2,
             width: 10,
             height: 10
         });
@@ -104,7 +73,7 @@ describe('createBrushDrawer', () => {
         brushDrawer.drawBrushLine({
             from: { x: 0, y: 0 },
             to: { x: 1, y: 1 },
-            brushRadius: 2,
+            brushSize: 2,
             width: 10,
             height: 10
         });

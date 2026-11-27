@@ -13,6 +13,7 @@
         useCollectionWithChildren,
         useSegmentationMaskBrush,
         useSegmentationMaskPreview,
+        getBrushCursor,
         useAnnotationLabels,
         useAnnotation,
         useAnnotationLabelContext,
@@ -119,6 +120,10 @@
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
     let previewCanvas = $state<HTMLCanvasElement | null>(null);
     let isPreviewVisible = $state(false);
+
+    // The slider sets a radius; the brush paints a disc of 2 * radius pixels.
+    const brushSize = $derived(brushRadius * 2);
+    const brushCursor = $derived(mousePosition ? getBrushCursor(mousePosition, brushSize) : null);
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
@@ -275,12 +280,25 @@
     };
 </script>
 
-{#if mousePosition}
-    <circle
-        cx={mousePosition.x}
-        cy={mousePosition.y}
-        r={brushRadius}
+{#if brushCursor?.type === 'outline'}
+    <path
+        d={brushCursor.path}
         fill={withAlpha(drawerStrokeColor, 0.25)}
+        stroke={drawerStrokeColor}
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+        pointer-events="none"
+    />
+{:else if brushCursor?.type === 'circle'}
+    <circle
+        cx={brushCursor.center.x}
+        cy={brushCursor.center.y}
+        r={brushCursor.radius}
+        fill={withAlpha(drawerStrokeColor, 0.25)}
+        stroke={drawerStrokeColor}
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
+        pointer-events="none"
     />
 {/if}
 <foreignObject
@@ -314,29 +332,14 @@
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
 
-        if (lastBrushPoint) {
-            // Connect sampled points; dot-only strokes leave gaps on fast movement.
-            previewApi.drawBrushLine({
-                from: lastBrushPoint,
-                to: point,
-                brushRadius,
-                width: sample.width,
-                height: sample.height
-            });
-            previewApi.drawBrushDot({
-                point,
-                brushRadius,
-                width: sample.width,
-                height: sample.height
-            });
-        } else {
-            previewApi.drawBrushDot({
-                point,
-                brushRadius,
-                width: sample.width,
-                height: sample.height
-            });
-        }
+        // Connect sampled points; dot-only strokes leave gaps on fast movement.
+        previewApi.drawBrushLine({
+            from: lastBrushPoint ?? point,
+            to: point,
+            brushSize,
+            width: sample.width,
+            height: sample.height
+        });
 
         lastBrushPoint = point;
         previewApi.schedulePreviewCompose({
@@ -371,7 +374,7 @@
         previewApi.drawMaskToCanvas(baseMask, sample.width, sample.height);
         previewApi.drawBrushDot({
             point,
-            brushRadius,
+            brushSize,
             width: sample.width,
             height: sample.height
         });

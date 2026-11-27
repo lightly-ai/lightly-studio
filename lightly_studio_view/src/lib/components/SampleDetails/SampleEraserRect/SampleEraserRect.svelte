@@ -15,7 +15,7 @@
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
+    import { getBrushCursor, useSegmentationMaskPreview } from '$lib/hooks';
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import { useSegmentationMaskEraser } from '$lib/hooks/useSegmentationMaskEraser';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
@@ -82,6 +82,10 @@
     let lastBrushPoint = $state<{ x: number; y: number } | null>(null);
     let previewCanvas = $state<HTMLCanvasElement | null>(null);
     let isPreviewVisible = $state(false);
+
+    // The slider sets a radius; the eraser clears a disc of 2 * radius pixels.
+    const brushSize = $derived(brushRadius * 2);
+    const brushCursor = $derived(mousePosition ? getBrushCursor(mousePosition, brushSize) : null);
 
     // Parse the color once and cache it for direct mask rendering.
     const parsedColor = $derived(parseColor(drawerStrokeColor));
@@ -241,14 +245,24 @@
     };
 </script>
 
-{#if mousePosition}
-    <circle
-        cx={mousePosition.x}
-        cy={mousePosition.y}
-        r={brushRadius}
+{#if brushCursor?.type === 'outline'}
+    <path
+        d={brushCursor.path}
         fill="rgba(255, 255, 255, 0.15)"
         stroke="white"
         stroke-width="1"
+        vector-effect="non-scaling-stroke"
+        pointer-events="none"
+    />
+{:else if brushCursor?.type === 'circle'}
+    <circle
+        cx={brushCursor.center.x}
+        cy={brushCursor.center.y}
+        r={brushCursor.radius}
+        fill="rgba(255, 255, 255, 0.15)"
+        stroke="white"
+        stroke-width="1"
+        vector-effect="non-scaling-stroke"
         pointer-events="none"
     />
 {/if}
@@ -289,7 +303,7 @@
         previewApi.drawMaskToCanvas(baseMask, sample.width, sample.height);
         previewApi.drawBrushDot({
             point,
-            brushRadius,
+            brushSize,
             width: sample.width,
             height: sample.height,
             compositeOperation: 'destination-out'
@@ -307,31 +321,14 @@
         const point = getImageCoordsFromMouse(e, interactionRect, sample.width, sample.height);
         if (!point) return;
 
-        if (lastBrushPoint) {
-            previewApi.drawBrushLine({
-                from: lastBrushPoint,
-                to: point,
-                brushRadius,
-                width: sample.width,
-                height: sample.height,
-                compositeOperation: 'destination-out'
-            });
-            previewApi.drawBrushDot({
-                point,
-                brushRadius,
-                width: sample.width,
-                height: sample.height,
-                compositeOperation: 'destination-out'
-            });
-        } else {
-            previewApi.drawBrushDot({
-                point,
-                brushRadius,
-                width: sample.width,
-                height: sample.height,
-                compositeOperation: 'destination-out'
-            });
-        }
+        previewApi.drawBrushLine({
+            from: lastBrushPoint ?? point,
+            to: point,
+            brushSize,
+            width: sample.width,
+            height: sample.height,
+            compositeOperation: 'destination-out'
+        });
 
         lastBrushPoint = point;
         previewApi.schedulePreviewCompose({
