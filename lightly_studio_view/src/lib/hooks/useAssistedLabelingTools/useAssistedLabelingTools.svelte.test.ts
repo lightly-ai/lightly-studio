@@ -240,6 +240,23 @@ describe('useAssistedLabelingTools', () => {
         expect(tools.modelSaveAs).toBe('mask');
     });
 
+    it("uses the model's default confidence until the user changes it", () => {
+        const { tools } = setup('label-with-model');
+        expect(tools.modelThreshold).toBe(0.5);
+
+        tools.selectModel('browser:grounding-dino-tiny');
+        flushSync();
+        expect(tools.modelThreshold).toBe(0.3);
+
+        tools.state.modelThreshold = 0.6;
+        flushSync();
+        expect(tools.modelThreshold).toBe(0.6);
+
+        tools.selectModel('server:detector');
+        flushSync();
+        expect(tools.modelThreshold).toBe(0.5);
+    });
+
     it('picks a server model that has the same id as the browser model', () => {
         const { tools, models } = setup('label-with-model');
         models.models = [{ id: 'ltdetrv2-s-coco', task: 'object_detection' }];

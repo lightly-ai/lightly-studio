@@ -15,11 +15,10 @@
 
     let { open = $bindable(), selectedCount, onStart }: Props = $props();
 
-    const DEFAULT_THRESHOLD = 0.5;
     const BYTES_PER_MB = 1_000_000;
     const { models, loadProgress, getDetector, setPromptClassNames } = useBrowserModels();
     let modelId = $state($models[0].id);
-    let threshold = $state(DEFAULT_THRESHOLD);
+    let threshold = $state($models[0].defaultThreshold);
     // Every class is ticked by default.
     let excluded = $state(new Set<string>());
 
@@ -52,6 +51,7 @@
 
     const selectModel = (value: string) => {
         modelId = value;
+        threshold = $models.find((item) => item.id === value)?.defaultThreshold ?? threshold;
         excluded = new Set();
     };
 

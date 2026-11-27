@@ -25,14 +25,16 @@ const COCO_MODEL = {
     task: 'object_detection',
     class_names: [],
     runsIn: 'browser',
-    isTextPrompted: false
+    isTextPrompted: false,
+    defaultThreshold: 0.5
 };
 const TEXT_PROMPTED_MODEL = {
     id: 'grounding-dino-tiny',
     task: 'object_detection',
     class_names: ['forklift'],
     runsIn: 'browser',
-    isTextPrompted: true
+    isTextPrompted: true,
+    defaultThreshold: 0.3
 };
 
 describe('AutoLabelDialog', () => {
@@ -51,7 +53,7 @@ describe('AutoLabelDialog', () => {
         expect(screen.queryByText('Loading the model classes…')).not.toBeInTheDocument();
     });
 
-    it('asks a text-prompted model what to find and starts with the typed classes', async () => {
+    it('asks a text-prompted model what to find and starts with its default confidence', async () => {
         mocks.models = [TEXT_PROMPTED_MODEL];
         mocks.getDetector.mockResolvedValue({ classNames: [] });
         const onStart = vi.fn();
@@ -69,7 +71,7 @@ describe('AutoLabelDialog', () => {
         expect(screen.queryByText(/no class names/)).not.toBeInTheDocument();
         expect(onStart).toHaveBeenCalledWith({
             modelId: 'grounding-dino-tiny',
-            threshold: 0.5,
+            threshold: 0.3,
             classNames: ['forklift']
         });
     });

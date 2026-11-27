@@ -18,6 +18,8 @@ interface BrowserModel {
     runsIn: 'browser';
     // Finds the objects that its class names describe, instead of a fixed set of classes.
     isTextPrompted: boolean;
+    // The confidence that the Auto-label tools start with.
+    defaultThreshold: number;
 }
 
 interface LoadProgress {
@@ -29,13 +31,20 @@ interface LoadProgress {
 const DEFAULT_MODEL_ID = 'ltdetrv2-s-coco';
 const DEFAULT_MODEL_URL = `/models/${DEFAULT_MODEL_ID}.onnx`;
 const TEXT_PROMPTED_MODEL_ID = 'grounding-dino-tiny';
+const DEFAULT_THRESHOLD = 0.5;
+// Grounding DINO scores right objects around 0.3, so 0.5 misses most of them.
+const TEXT_PROMPTED_THRESHOLD = 0.3;
 const ONNX_EXTENSION = /\.onnx$/i;
 // `?ep=wasm` forces the CPU runtime, to try the fallback on a machine with WebGPU.
 const EXECUTION_PROVIDER_PARAM = 'ep';
 
 const models = writable<BrowserModel[]>([
     toModel(DEFAULT_MODEL_ID, []),
-    { ...toModel(TEXT_PROMPTED_MODEL_ID, []), isTextPrompted: true }
+    {
+        ...toModel(TEXT_PROMPTED_MODEL_ID, []),
+        isTextPrompted: true,
+        defaultThreshold: TEXT_PROMPTED_THRESHOLD
+    }
 ]);
 const loadProgress = writable<LoadProgress | null>(null);
 // A file the user loaded stays in memory until the tab closes.
@@ -138,6 +147,7 @@ function toModel(id: string, classNames: string[]): BrowserModel {
         task: 'object_detection',
         class_names: classNames,
         runsIn: 'browser',
-        isTextPrompted: false
+        isTextPrompted: false,
+        defaultThreshold: DEFAULT_THRESHOLD
     };
 }

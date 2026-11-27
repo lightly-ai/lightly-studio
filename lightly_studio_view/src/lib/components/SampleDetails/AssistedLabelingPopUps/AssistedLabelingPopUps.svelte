@@ -50,8 +50,8 @@
     <LabelWithModelPopUp
         models={assistedLabeling.labelingModels}
         model={assistedLabeling.selectedModel}
-        onModelChange={(value) => (toolState.modelId = value)}
-        threshold={toolState.modelThreshold}
+        onModelChange={assistedLabeling.selectModel}
+        threshold={assistedLabeling.modelThreshold}
         onThresholdChange={(value) => (toolState.modelThreshold = value)}
         saveAs={assistedLabeling.modelSaveAs}
         onSaveAsChange={(value) => (toolState.saveAs = value)}

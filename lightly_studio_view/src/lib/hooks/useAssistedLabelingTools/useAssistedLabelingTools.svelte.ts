@@ -34,7 +34,8 @@ class AssistedLabelingToolState {
     isDrawingInstancesBox = $state(false);
     // The toModelKey of the selected model. Null selects the first model.
     modelId = $state<string | null>(null);
-    modelThreshold = $state(DEFAULT_MODEL_THRESHOLD);
+    // Null uses the default of the selected model.
+    modelThreshold = $state<number | null>(null);
 }
 
 // Shares the tool state between the pop-ups and the overlays, and falls back to the cursor
@@ -69,10 +70,17 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     // Browser models come first, so a dataset without a Python model can still auto-label.
     const models = $derived([
         ...browserModels.current,
-        ...labelingModels.models.map((model) => ({ ...model, runsIn: 'server' as const }))
+        ...labelingModels.models.map((model) => ({
+            ...model,
+            runsIn: 'server' as const,
+            defaultThreshold: DEFAULT_MODEL_THRESHOLD
+        }))
     ]);
     const selectedModel = $derived(
         models.find((model) => toModelKey(model) === state.modelId) ?? models[0] ?? null
+    );
+    const modelThreshold = $derived(
+        state.modelThreshold ?? selectedModel?.defaultThreshold ?? DEFAULT_MODEL_THRESHOLD
     );
     // Object detection models return no masks.
     const modelSaveAs = $derived(
@@ -116,13 +124,19 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             modelId: selectedModel?.id ?? null,
             modelRunsIn: selectedModel?.runsIn ?? null,
             promptClassNames: selectedModel?.class_names ?? [],
-            threshold: state.modelThreshold,
+            threshold: modelThreshold,
             saveAs: modelSaveAs,
             annotationSource: annotationLabelContext.annotationSource,
             annotationSourceBlockedReason: annotationLabelContext.annotationSourceBlockedReason,
             onSaved: refetch
         };
     });
+
+    // A new model starts at its own default confidence.
+    const selectModel = (modelKey: string) => {
+        state.modelId = modelKey;
+        state.modelThreshold = null;
+    };
 
     const endInstancesBoxDrawing = () => {
         state.isDrawingInstancesBox = false;
@@ -161,6 +175,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         labelWithModel,
         clearInstances,
         endInstancesBoxDrawing,
+        selectModel,
         get activeTool() {
             return activeTool;
         },
@@ -184,6 +199,9 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         },
         get modelSaveAs() {
             return modelSaveAs;
+        },
+        get modelThreshold() {
+            return modelThreshold;
         }
     };
 };

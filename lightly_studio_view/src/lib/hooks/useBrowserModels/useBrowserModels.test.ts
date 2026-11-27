@@ -45,14 +45,16 @@ describe('useBrowserModels', () => {
                 task: 'object_detection',
                 class_names: [],
                 runsIn: 'browser',
-                isTextPrompted: false
+                isTextPrompted: false,
+                defaultThreshold: 0.5
             },
             {
                 id: 'grounding-dino-tiny',
                 task: 'object_detection',
                 class_names: [],
                 runsIn: 'browser',
-                isTextPrompted: true
+                isTextPrompted: true,
+                defaultThreshold: 0.3
             }
         ]);
     });
