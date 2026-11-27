@@ -5,6 +5,18 @@ import {
     type SceneNavigationAction
 } from '$lib/components/PointCloudViewer';
 
+const NAVIGATION_KEY_ACTIONS: Record<string, SceneNavigationAction> = {
+    w: 'forward',
+    a: 'left',
+    s: 'backward',
+    d: 'right'
+};
+
+/** Whether the key moves the scene camera, so other shortcuts must not use it. */
+export function isSceneNavigationKey(key: string): boolean {
+    return Object.hasOwn(NAVIGATION_KEY_ACTIONS, key.toLowerCase());
+}
+
 /** Active viewport checks and visual feedback used by navigation input handlers. */
 interface Params {
     /** Identifies the viewport receiving navigation commands. */
@@ -20,12 +32,6 @@ export function createSceneNavigationInput({
     onAction,
     navigationId
 }: Params = {}) {
-    const keyActions: Record<string, SceneNavigationAction> = {
-        w: 'forward',
-        a: 'left',
-        s: 'backward',
-        d: 'right'
-    };
     let holdDelay: ReturnType<typeof setTimeout> | undefined;
     let holdAction: SceneNavigationAction | undefined;
     let holdRepeated = false;
@@ -57,7 +63,7 @@ export function createSceneNavigationInput({
     function cancel() {
         stopHold();
         for (const key of pressedKeys) {
-            const action = keyActions[key];
+            const action = NAVIGATION_KEY_ACTIONS[key];
             onAction?.(action, 'stop');
             stopSceneNavigation(action, navigationId);
         }
@@ -75,7 +81,7 @@ export function createSceneNavigationInput({
                 return;
             }
             const key = event.key.toLowerCase();
-            const action = keyActions[key];
+            const action = NAVIGATION_KEY_ACTIONS[key];
             if (!action || pressedKeys.has(key)) return;
             if (!isActive()) return;
             pressedKeys.add(key);
@@ -85,7 +91,7 @@ export function createSceneNavigationInput({
         };
         const handleKeyup = (event: KeyboardEvent) => {
             const key = event.key.toLowerCase();
-            const action = keyActions[key];
+            const action = NAVIGATION_KEY_ACTIONS[key];
             if (!action || !pressedKeys.has(key)) return;
             pressedKeys.delete(key);
             onAction?.(action, 'stop');

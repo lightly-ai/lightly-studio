@@ -9,8 +9,11 @@ import { useWorkspacePlayback } from './useWorkspacePlayback/useWorkspacePlaybac
 import { useWorkspaceSceneData } from './useWorkspaceSceneData/useWorkspaceSceneData.svelte';
 import { useWorkspaceEditing } from './useWorkspaceEditing/useWorkspaceEditing.svelte';
 import { useWorkspaceFullscreen } from './useWorkspaceFullscreen/useWorkspaceFullscreen.svelte';
-import { useCameraPane } from './useCameraPane/useCameraPane.svelte';
+import { usePanelVisibility } from './usePanelVisibility/usePanelVisibility.svelte';
+import { useCollapsiblePane } from './useCollapsiblePane/useCollapsiblePane.svelte';
 import { useCuboidTargetSource } from './useCuboidTargetSource';
+import { useDeleteSelectedCuboidShortcut } from './useDeleteSelectedCuboidShortcut';
+import { useOpenCameraState } from './useOpenCameraState';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { isSelectedCuboidHidden, useAnnotationVisibility } from './useAnnotationVisibility';
 
@@ -54,7 +57,10 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
 
     const presentation = useWorkspacePresentation();
     const fullscreen = useWorkspaceFullscreen();
-    const cameraPane = useCameraPane();
+    const cameraPane = useCollapsiblePane('lightlyStudio_pointCloudCameraStripCollapsed');
+    const detailsPane = useCollapsiblePane('lightlyStudio_pointCloudDetailsCollapsed');
+    const objectTracksPanel = usePanelVisibility('lightlyStudio_pointCloudObjectTracksShown', true);
+    const tagTracksPanel = usePanelVisibility('lightlyStudio_pointCloudFrameTagTracksShown', false);
     const playback = useWorkspacePlayback(
         () => workspace,
         getOptions,
@@ -73,7 +79,14 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         () => presentation.isEditingMode,
         () => targetSource
     );
+    useDeleteSelectedCuboidShortcut({
+        getSelectedCuboidId: () => editing.selectedCuboidId,
+        getIsTickStale: () => data.tick?.isStale ?? false,
+        getIsEditingMode: () => presentation.isEditingMode,
+        deleteCuboid: editing.handleDeleteCuboid
+    });
     const visibility = useAnnotationVisibility(() => getOptions().sequenceId);
+    const openCameraState = useOpenCameraState(getOptions);
     // A hidden cuboid cannot be seen, so it must not stay selected. This covers every way to
     // select one: the panel, the timeline, and a new cuboid in a hidden source.
     $effect(() => {
@@ -100,26 +113,34 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         activeTool: editing.activeTool,
         effectiveTool: editing.effectiveTool,
         isEditingMode: presentation.isEditingMode,
-        showOrthographicViews:
-            presentation.orthographicViewsEnabled && !presentation.orthographicViewsCollapsed,
-        orthographicViewsEnabled: presentation.orthographicViewsEnabled,
-        orthographicViewsCollapsed: presentation.orthographicViewsCollapsed,
+        showOrthographicViews: presentation.showOrthographicViews,
+        orthographicDock: presentation.orthographicDock,
+        cameraStripDock: presentation.cameraStripDock,
         pointSize: presentation.pointSize,
         showNavigationHelpers: presentation.showNavigationHelpers,
         accumulation,
         colorMode: presentation.colorMode,
+        onColorModeChange: presentation.setColorMode,
+        selectedLidarChannelIds: lidarSelection.selectedChannelIds,
+        onToggleLidarChannel: lidarSelection.toggleChannel,
+        onSetLidarChannels: lidarSelection.setChannels,
         selectedCuboidId: editing.selectedCuboidId,
         hoveredCuboidId: editing.hoveredCuboidId,
         // The draft target does not clear its highlight on teardown, so it ends with the tool.
         draftCuboid: editing.effectiveTool === 'create-cuboid' ? editing.draftCuboid : null,
         selectedCameraChannelIds: cameraSelection.selectedChannelIds,
+        onToggleCameraChannel: cameraSelection.toggleChannel,
+        onSetCameraChannels: cameraSelection.setChannels,
         cameraStripCollapsed: cameraPane.collapsed,
+        openCamera: openCameraState.openCamera,
+        onOpenCameraChange: openCameraState.setOpenCamera,
         bufferEntireSequence: playback.bufferEntireSequence,
         bufferedRanges: playback.bufferedRanges,
         bufferStatus: playback.bufferStatus,
         onCameraStripCollapsedChange: cameraPane.setCollapsed,
-        onOrthographicViewsEnabledChange: presentation.setOrthographicViewsEnabled,
-        onOrthographicViewsCollapsedChange: presentation.setOrthographicViewsCollapsed,
+        onToggleOrthographicProjections: presentation.toggleOrthographicProjections,
+        onOrthographicDockChange: presentation.setOrthographicDock,
+        onCameraStripDockChange: presentation.setCameraStripDock,
         onPointSizeChange: presentation.setPointSize,
         onToggleNavigationHelpers: presentation.setShowNavigationHelpers,
         onToolChange: (tool) => {
@@ -169,6 +190,9 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         presentation,
         fullscreen,
         cameraPane,
+        detailsPane,
+        objectTracksPanel,
+        tagTracksPanel,
         playback,
         data,
         targetSource,

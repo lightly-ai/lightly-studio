@@ -8,13 +8,11 @@ vi.mock('$lib/hooks', async () => {
     return { useGlobalStorage: () => ({ isEditingMode: writable(true) }) };
 });
 
-const enabledKey = 'lightlyStudio_pointCloudOrthographicViewsEnabled';
-const collapsedKey = 'lightlyStudio_pointCloudOrthographicViewsCollapsed';
+const key = 'lightlyStudio_pointCloudOrthographicViewsEnabled';
 const cleanups: (() => void)[] = [];
 afterEach(() => {
     cleanups.splice(0).forEach((dispose) => dispose());
-    sessionStorage.removeItem(enabledKey);
-    sessionStorage.removeItem(collapsedKey);
+    sessionStorage.removeItem(key);
 });
 
 function setup() {
@@ -28,19 +26,11 @@ function setup() {
     return presentation;
 }
 
-it('shows the orthographic views expanded by default', () => {
+it('stores orthographic visibility locally and restores it in a new workspace', () => {
     const presentation = setup();
-    expect(presentation.orthographicViewsEnabled).toBe(true);
-    expect(presentation.orthographicViewsCollapsed).toBe(false);
-});
-
-it('stores the orthographic views preferences locally and restores them in a new workspace', () => {
-    const presentation = setup();
-    presentation.setOrthographicViewsEnabled(false);
-    presentation.setOrthographicViewsCollapsed(true);
-    expect(sessionStorage.getItem(enabledKey)).toBe('false');
-    expect(sessionStorage.getItem(collapsedKey)).toBe('true');
-    const restored = setup();
-    expect(restored.orthographicViewsEnabled).toBe(false);
-    expect(restored.orthographicViewsCollapsed).toBe(true);
+    expect(presentation.showOrthographicViews).toBe(true);
+    presentation.toggleOrthographicProjections(false);
+    expect(presentation.showOrthographicViews).toBe(false);
+    expect(sessionStorage.getItem(key)).toBe('false');
+    expect(setup().showOrthographicViews).toBe(false);
 });

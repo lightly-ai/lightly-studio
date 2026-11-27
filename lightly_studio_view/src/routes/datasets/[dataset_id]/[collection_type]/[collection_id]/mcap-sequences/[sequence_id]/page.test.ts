@@ -13,7 +13,7 @@ const adjacentSequences = vi.hoisted(() => ({
         | undefined
 }));
 
-vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: vi.fn(), afterNavigate: vi.fn() }));
 
 vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
@@ -53,7 +53,8 @@ vi.mock('$app/state', () => ({
         ),
         params: { dataset_id: 'dataset-1' },
         state: {}
-    }
+    },
+    navigating: { type: null }
 }));
 
 vi.mock('$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences', () => ({
@@ -81,8 +82,10 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation',
 
 vi.mock('$lib/hooks', async () => {
     const { readonly, writable } = await import('svelte/store');
+    const { useSettings } = await import('$lib/hooks/useSettings');
     const featureFlags = writable<string[]>([]);
     return {
+        useSettings,
         useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
         useGlobalStorage: () => ({
             isEditingMode: writable(false),

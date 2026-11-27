@@ -30,8 +30,10 @@
         ) => void;
         onSeekStart?: () => void;
         onSeekEnd?: () => void;
+        showObjectTracks?: boolean;
+        onHideObjectTracks?: () => void;
         showFrameTags?: boolean;
-        onShowFrameTagsChange?: (checked: boolean) => void;
+        onHideFrameTags?: () => void;
         frameTags?: TickTagView[];
     }
 
@@ -51,13 +53,16 @@
         sequenceId,
         onSeekStart,
         onSeekEnd,
+        showObjectTracks,
+        onHideObjectTracks,
         showFrameTags,
-        onShowFrameTagsChange,
+        onHideFrameTags,
         frameTags
     }: Props = $props();
     const viewport = getTimelineViewport();
     const rowsHeight = useTrackRowsHeight();
     let container = $state<HTMLElement | null>(null);
+    let viewportWidth = $state(0);
     let content = $state<HTMLElement | null>(null);
     let previewTick = $state<number | null>(null);
     const activeIndex = $derived(
@@ -126,10 +131,16 @@
     class="scrollbar-thin shrink-0 overflow-auto overscroll-contain"
     style:max-height={`${rowsHeight.height + headerHeight}px`}
     bind:this={container}
+    bind:clientWidth={viewportWidth}
     onscroll={syncViewportFromScroll}
     data-testid="timeline-scroll-container"
 >
-    <div class="relative" style:width={`${viewport.zoom * 100}%`} bind:this={content}>
+    <div
+        class="relative"
+        style:width={`${viewport.zoom * 100}%`}
+        style:--timeline-viewport-width={`${viewportWidth}px`}
+        bind:this={content}
+    >
         <TimelineTracks
             {ticks}
             {currentTick}
@@ -153,8 +164,10 @@
             {sequenceId}
             onExtendStart={onSeekStart}
             onExtendEnd={onSeekEnd}
+            {showObjectTracks}
+            {onHideObjectTracks}
             {showFrameTags}
-            {onShowFrameTagsChange}
+            {onHideFrameTags}
             {frameTags}
             {rowsHeight}
             {getRowsRenderedHeight}

@@ -26,7 +26,11 @@ const DEFAULT_SETTINGS: SettingView = {
     key_toolbar_segmentation_mask: 'm',
     key_toolbar_slic: 'a',
     key_toolbar_brush: 'r',
-    key_toolbar_eraser: 'x'
+    key_toolbar_eraser: 'x',
+    key_previous_camera: '[',
+    key_next_camera: ']',
+    key_point_cloud_select: 'q',
+    key_point_cloud_create_cuboid: 'c'
 };
 
 // Create stores for settings state

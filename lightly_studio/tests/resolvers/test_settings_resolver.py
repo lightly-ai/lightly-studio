@@ -29,6 +29,10 @@ def test_get_settings_creates_default_settings(
     assert settings.key_toolbar_slic == "a"
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"
+    assert settings.key_previous_camera == "["
+    assert settings.key_next_camera == "]"
+    assert settings.key_point_cloud_select == "q"
+    assert settings.key_point_cloud_create_cuboid == "c"
 
 
 def test_set_settings_updates_grid_view_rendering(
@@ -60,6 +64,10 @@ def test_set_settings_updates_grid_view_rendering(
         key_toolbar_slic="f",
         key_toolbar_brush="r",
         key_toolbar_eraser="x",
+        key_previous_camera="[",
+        key_next_camera="]",
+        key_point_cloud_select="q",
+        key_point_cloud_create_cuboid="c",
     )
 
     updated_settings = settings_resolver.set_settings(session=db_session, settings=input_settings)
@@ -97,3 +105,39 @@ def test_set_settings_updates_grid_view_rendering(
     assert settings.key_toolbar_slic == "f"
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"
+
+
+def test_set_settings_updates_camera_shortcuts(
+    db_session: Session,
+) -> None:
+    """Test that set_settings persists the previous and next camera shortcuts."""
+    current_settings = settings_resolver.get_settings(session=db_session)
+
+    settings_resolver.set_settings(
+        session=db_session,
+        settings=current_settings.model_copy(
+            update={"key_previous_camera": "q", "key_next_camera": "r"}
+        ),
+    )
+
+    settings = settings_resolver.get_settings(session=db_session)
+    assert settings.key_previous_camera == "q"
+    assert settings.key_next_camera == "r"
+
+
+def test_set_settings_updates_point_cloud_tool_shortcuts(
+    db_session: Session,
+) -> None:
+    """Test that set_settings persists the point cloud tool shortcuts."""
+    current_settings = settings_resolver.get_settings(session=db_session)
+
+    settings_resolver.set_settings(
+        session=db_session,
+        settings=current_settings.model_copy(
+            update={"key_point_cloud_select": "z", "key_point_cloud_create_cuboid": "n"}
+        ),
+    )
+
+    settings = settings_resolver.get_settings(session=db_session)
+    assert settings.key_point_cloud_select == "z"
+    assert settings.key_point_cloud_create_cuboid == "n"

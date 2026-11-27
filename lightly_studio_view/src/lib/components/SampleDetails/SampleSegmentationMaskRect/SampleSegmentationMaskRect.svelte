@@ -301,7 +301,7 @@
 <SampleAnnotationRect
     bind:interactionRect
     {sample}
-    cursor={'crosshair'}
+    cursor="crosshair"
     onpointermove={(e) => {
         if (!annotationLabelContext.isDrawing) return;
         const currentAnnotation = resolveSelectedAnnotation();

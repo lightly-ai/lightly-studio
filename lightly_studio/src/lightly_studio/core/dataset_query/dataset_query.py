@@ -28,7 +28,7 @@ from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.models.video import VideoFrameTable, VideoTable
-from lightly_studio.sampling.sample import Sampling
+from lightly_studio.sampling.sample import SampleIdSnapshot, Sampling
 from lightly_studio.transport import active_transport
 
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
@@ -118,8 +118,9 @@ class DatasetQuery(Generic[T]):
     ```
 
     ## Selecting a subset of samples using sampling
-    A Sampling interface can be created from the current query results. It will only
-    select the samples matching the current query at the time of calling sampling().
+    A Sampling interface can be created from the current query. With the SQL path, it
+    takes the matching samples at the time of calling sampling(). With the transport, it
+    finds the matching samples when each sampling strategy runs.
     ```python
     # Choosing 100 diverse samples from the 'cat' tag.
     # Save them under the tag name "diverse_cats".
@@ -379,14 +380,15 @@ class DatasetQuery(Generic[T]):
             query = query.where(col(SampleTable.sample_id).in_(self._sample_ids_subquery))
 
         # Apply ordering
-        if self.order_by_expressions:
-            for order_by in self.order_by_expressions:
-                query = order_by.apply(query)
-        elif self.dataset.sample_type == SampleType.IMAGE:
+        order_by_expressions = self.order_by_expressions
+        if not order_by_expressions and self.dataset.sample_type == SampleType.IMAGE:
             # TODO(lukas 1/2026): provide default order for other sample types
-            # Order by ImageSampleField.created_at by default.
-            default_order_by = OrderByField(ImageSampleField.created_at)
-            query = default_order_by.apply(query)
+            order_by_expressions = [OrderByField(ImageSampleField.created_at)]
+        if order_by_expressions:
+            for order_by in order_by_expressions:
+                query = order_by.apply(query)
+            # The sample ID breaks ties, as in the transport.
+            query = query.order_by(col(SampleTable.sample_id))
         elif self.dataset.sample_type == SampleType.VIDEO_FRAME:
             query = query.join(VideoFrameTable.video).order_by(
                 col(VideoTable.file_path_abs),
@@ -452,16 +454,23 @@ class DatasetQuery(Generic[T]):
     def sampling(self) -> Sampling:
         """Sampling interface for this query.
 
-        The returned Sampling snapshots the current query results immediately.
-        Mutating the query after calling this method will therefore not affect
-        the samples used by that Sampling instance.
+        Mutating the query after calling this method does not affect the returned
+        Sampling. With the SQL path, the Sampling takes the matching samples now. With the
+        transport, it finds the matching samples when each sampling strategy runs.
 
         Returns:
-            Sampling interface operating on the current query result snapshot.
+            Sampling interface for the samples that match the current query.
         """
-        input_sample_ids = (sample.sample_id for sample in self)
-        return Sampling(
-            dataset_id=self.dataset.collection_id,
-            session=self.session,
-            input_sample_ids=input_sample_ids,
+        request = transport_query.build_sampling_request(
+            sample_type=self.dataset.sample_type,
+            match_expression=self.match_expression,
+            filters_sample_ids=self._sample_ids_subquery is not None,
+            is_ordered=bool(self.order_by_expressions),
+            is_sliced=self._slice is not None,
         )
+        if request is not None:
+            return Sampling(dataset_id=self.dataset.collection_id, samples=request.query_expr)
+        snapshot = SampleIdSnapshot(
+            session=self.session, sample_ids=[sample.sample_id for sample in self]
+        )
+        return Sampling(dataset_id=self.dataset.collection_id, samples=snapshot)

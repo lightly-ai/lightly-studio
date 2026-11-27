@@ -77,25 +77,25 @@
         {#if balanceBy === 'metadata'}
             <label class="block text-sm font-medium text-foreground">
                 Metadata field
-                <select class={selectClass}
-                    ><option>Location</option><option>Weather</option></select
-                >
+                <select class={selectClass}>
+                    <option>Location</option><option>Weather</option>
+                </select>
             </label>
         {:else}
             <label class="block text-sm font-medium text-foreground">
                 Annotation source
-                <select class={selectClass}
-                    ><option>Ground truth</option><option>Predictions</option></select
-                >
+                <select class={selectClass}>
+                    <option>Ground truth</option><option>Predictions</option>
+                </select>
             </label>
         {/if}
         <p class="text-xs text-muted-foreground">Aim for an even mix across the chosen values.</p>
     {:else if goal === 'numeric'}
         <label class="block text-sm font-medium text-foreground">
             Numeric field
-            <select class={selectClass}
-                ><option>Confidence</option><option>Sharpness</option></select
-            >
+            <select class={selectClass}>
+                <option>Confidence</option><option>Sharpness</option>
+            </select>
         </label>
         <fieldset class="space-y-2 text-sm font-medium text-foreground">
             <legend>Prefer</legend>

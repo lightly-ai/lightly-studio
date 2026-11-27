@@ -98,9 +98,9 @@
     <div role="alert">
         <Typography component="p" variant="body2">{$error}</Typography>
         {#if $needsRefresh}
-            <Button variant="secondary" disabled={$isSaving} onclick={retryRefresh}
-                >Retry refresh</Button
-            >
+            <Button variant="secondary" disabled={$isSaving} onclick={retryRefresh}>
+                Retry refresh
+            </Button>
         {/if}
     </div>
 {/if}

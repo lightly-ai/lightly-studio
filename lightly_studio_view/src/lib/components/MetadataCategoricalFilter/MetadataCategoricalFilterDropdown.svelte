@@ -30,9 +30,9 @@
 </script>
 
 <div class="mt-2 flex items-center gap-2" data-testid="metadata-categorical-filter">
-    <span class="w-[100px] shrink-0 truncate text-xs text-muted-foreground" title={fieldLabel}
-        >{fieldLabel}</span
-    >
+    <span class="w-[100px] shrink-0 truncate text-xs text-muted-foreground" title={fieldLabel}>
+        {fieldLabel}
+    </span>
     <Popover.Root {onOpenChange}>
         <Popover.Trigger>
             {#snippet child({ props })}

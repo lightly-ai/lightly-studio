@@ -48,3 +48,9 @@ class TestHttpSampleTransport:
 
         with pytest.raises(NotImplementedError):
             transport.get_image_ids_by_paths(collection_id=uuid4(), file_paths=["/a.png"])
+
+    def test_get_video_ids_by_stems(self, test_client: TestClient) -> None:
+        transport: SampleTransport = HttpSampleTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.get_video_ids_by_stems(collection_id=uuid4())

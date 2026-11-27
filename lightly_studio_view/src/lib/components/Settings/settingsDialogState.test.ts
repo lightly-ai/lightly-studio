@@ -28,7 +28,11 @@ const TEST_SETTINGS: SettingView = {
     key_toolbar_bounding_box: 'b',
     key_toolbar_segmentation_mask: 'm',
     key_toolbar_brush: 'r',
-    key_toolbar_eraser: 'x'
+    key_toolbar_eraser: 'x',
+    key_previous_camera: '[',
+    key_next_camera: ']',
+    key_point_cloud_select: 'q',
+    key_point_cloud_create_cuboid: 'c'
 };
 
 describe('createSettingsDialogFormState', () => {
@@ -43,7 +47,11 @@ describe('createSettingsDialogFormState', () => {
                 keyToolbarSegmentationMask: 'm',
                 keyToolbarSlic: 'a',
                 keyToolbarBrush: 'r',
-                keyToolbarEraser: 'x'
+                keyToolbarEraser: 'x',
+                keyPreviousCamera: '[',
+                keyNextCamera: ']',
+                keyPointCloudSelect: 'q',
+                keyPointCloudCreateCuboid: 'c'
             },
             gridViewRendering: 'contain',
             gridViewThumbnailQuality: 'raw',
@@ -69,7 +77,11 @@ describe('createSettingsSavePayload', () => {
                     keyToolbarSegmentationMask: 'w',
                     keyToolbarSlic: 'f',
                     keyToolbarBrush: 'p',
-                    keyToolbarEraser: 'o'
+                    keyToolbarEraser: 'o',
+                    keyPreviousCamera: ',',
+                    keyNextCamera: '.',
+                    keyPointCloudSelect: 'z',
+                    keyPointCloudCreateCuboid: 'n'
                 },
                 gridViewRendering: 'cover',
                 gridViewThumbnailQuality: 'high',
@@ -95,7 +107,11 @@ describe('createSettingsSavePayload', () => {
             key_toolbar_segmentation_mask: 'w',
             key_toolbar_slic: 'f',
             key_toolbar_brush: 'p',
-            key_toolbar_eraser: 'o'
+            key_toolbar_eraser: 'o',
+            key_previous_camera: ',',
+            key_next_camera: '.',
+            key_point_cloud_select: 'z',
+            key_point_cloud_create_cuboid: 'n'
         });
     });
 });
@@ -155,10 +171,10 @@ describe('SettingsDialogState', () => {
         state.hydrate(TEST_SETTINGS);
         state.startRecording('toggleEditMode');
 
-        const event = new KeyboardEvent('keydown', { key: 'q' });
+        const event = new KeyboardEvent('keydown', { key: 'g' });
         state.handleKeyDown(event);
 
-        expect(state.shortcuts.toggleEditMode).toBe('q');
+        expect(state.shortcuts.toggleEditMode).toBe('g');
         // Other shortcuts remain unchanged
         expect(state.shortcuts.hideAnnotations).toBe('v');
         expect(state.shortcuts.keyToolbarSelection).toBe('s');
@@ -176,6 +192,128 @@ describe('SettingsDialogState', () => {
         expect(state.shortcuts.hideAnnotations).toBe('v');
         expect(state.recordingShortcut).toBeNull();
         expect(event.defaultPrevented).toBe(true);
+    });
+
+    it('records the next camera shortcut and saves it', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyNextCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: '.' }));
+
+        expect(state.shortcuts.keyNextCamera).toBe('.');
+        expect(state.shortcuts.keyPreviousCamera).toBe('[');
+        expect(state.getSavePayload().key_next_camera).toBe('.');
+    });
+
+    it('keeps recording past modifier keys and records the typed character', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyNextCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'AltGraph' }));
+        expect(state.recordingShortcut).toBe('keyNextCamera');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'Shift' }));
+        expect(state.recordingShortcut).toBe('keyNextCamera');
+
+        state.handleKeyDown(
+            new KeyboardEvent('keydown', { key: ']', altKey: true, ctrlKey: true })
+        );
+
+        expect(state.shortcuts.keyNextCamera).toBe(']');
+        expect(state.recordingShortcut).toBeNull();
+    });
+
+    it('does not record Space as a camera shortcut', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyPreviousCamera');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: ' ' }));
+
+        expect(state.shortcuts.keyPreviousCamera).toBe('[');
+        expect(state.recordingShortcut).toBe('keyPreviousCamera');
+    });
+
+    it.each(['W', 'd', 'e', '3', 'ArrowLeft', 'Enter', 'Delete'])(
+        'does not record the reserved workspace key %s as a point cloud shortcut',
+        (key) => {
+            const state = new SettingsDialogState();
+            state.hydrate(TEST_SETTINGS);
+            state.startRecording('keyPointCloudSelect');
+
+            state.handleKeyDown(new KeyboardEvent('keydown', { key }));
+
+            expect(state.shortcuts.keyPointCloudSelect).toBe('q');
+            expect(state.recordingShortcut).toBe('keyPointCloudSelect');
+        }
+    );
+
+    it.each([
+        ['keyPointCloudCreateCuboid', 'q'],
+        ['keyPointCloudSelect', ']'],
+        ['keyNextCamera', 'C']
+    ] as const)(
+        'does not record %s on the key of another point cloud shortcut (%s)',
+        (shortcut, key) => {
+            const state = new SettingsDialogState();
+            state.hydrate(TEST_SETTINGS);
+            const before = state.shortcuts[shortcut];
+            state.startRecording(shortcut);
+
+            state.handleKeyDown(new KeyboardEvent('keydown', { key }));
+
+            expect(state.shortcuts[shortcut]).toBe(before);
+            expect(state.recordingShortcut).toBe(shortcut);
+        }
+    );
+
+    it('does not record the edit mode key on a point cloud shortcut key', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('toggleEditMode');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'q' }));
+        expect(state.recordingShortcut).toBe('toggleEditMode');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'g' }));
+
+        expect(state.shortcuts.toggleEditMode).toBe('g');
+    });
+
+    it('records a point cloud shortcut again on its own key', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyPointCloudSelect');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'q' }));
+
+        expect(state.shortcuts.keyPointCloudSelect).toBe('q');
+        expect(state.recordingShortcut).toBeNull();
+    });
+
+    it('records the point cloud tool shortcuts and saves them', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+
+        state.startRecording('keyPointCloudSelect');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'z' }));
+        state.startRecording('keyPointCloudCreateCuboid');
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'n' }));
+
+        expect(state.getSavePayload()).toMatchObject({
+            key_point_cloud_select: 'z',
+            key_point_cloud_create_cuboid: 'n'
+        });
+    });
+
+    it('still records a workspace key as an image annotation shortcut', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('keyToolbarSelection');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'w' }));
+
+        expect(state.shortcuts.keyToolbarSelection).toBe('w');
     });
 
     it('ignores keydown when not recording', () => {

@@ -8,12 +8,14 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video.video_dataset import VideoDataset
+from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.resolvers import collection_resolver, image_resolver, tag_resolver
 from lightly_studio.sampling import sample as sampling_file
 from lightly_studio.sampling.mundig import Mundig
+from lightly_studio.sampling.sample import Sampling
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
     EmbeddingDiversityStrategy,
@@ -541,6 +543,20 @@ class TestSampling:
 
         with pytest.raises(ValueError, match="'nonexistent'"):
             query.sampling().subpart_diversity(
+                n_samples_to_select=3,
+                sampling_result_tag_name="subpart_sampling",
+                annotation_source="nonexistent",
+            )
+
+    @pytest.mark.usefixtures("patch_collection")
+    def test_subpart_diversity__annotation_source_not_found__transport(self) -> None:
+        collection_id = helpers_resolvers.create_collection(
+            session=db_manager.persistent_session()
+        ).collection_id
+        sampling = Sampling(dataset_id=collection_id, samples=None)
+
+        with pytest.raises(ValueError, match="'nonexistent'"):
+            sampling.subpart_diversity(
                 n_samples_to_select=3,
                 sampling_result_tag_name="subpart_sampling",
                 annotation_source="nonexistent",

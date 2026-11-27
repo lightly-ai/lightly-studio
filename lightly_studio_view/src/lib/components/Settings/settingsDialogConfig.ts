@@ -15,7 +15,11 @@ export type ShortcutSettingKey =
     | 'keyToolbarSegmentationMask'
     | 'keyToolbarSlic'
     | 'keyToolbarBrush'
-    | 'keyToolbarEraser';
+    | 'keyToolbarEraser'
+    | 'keyPreviousCamera'
+    | 'keyNextCamera'
+    | 'keyPointCloudSelect'
+    | 'keyPointCloudCreateCuboid';
 
 export interface ShortcutSettingConfig {
     /** Unique HTML id for the control (used by label `for`). */
@@ -39,7 +43,7 @@ export const generalShortcuts: readonly ShortcutSettingConfig[] = [
     { id: 'toggle-edit-mode', label: 'Toggle edit mode', key: 'toggleEditMode' }
 ] as const;
 
-/** Recordable shortcuts that select a tool in the annotation toolbar. */
+/** Recordable shortcuts that select a tool in the image annotation toolbar. */
 export const toolShortcuts: readonly ShortcutSettingConfig[] = [
     { id: 'toolbar-selection', label: 'Selection', key: 'keyToolbarSelection' },
     { id: 'toolbar-drag', label: 'Drag', key: 'keyToolbarDrag' },
@@ -54,6 +58,14 @@ export const toolShortcuts: readonly ShortcutSettingConfig[] = [
     { id: 'toolbar-eraser-mode', label: 'Eraser', key: 'keyToolbarEraser' }
 ] as const;
 
+/** Recordable shortcuts of the point cloud workspace. */
+export const pointCloudShortcuts: readonly ShortcutSettingConfig[] = [
+    { id: 'point-cloud-select', label: 'Select cuboid', key: 'keyPointCloudSelect' },
+    { id: 'point-cloud-create-cuboid', label: 'Create cuboid', key: 'keyPointCloudCreateCuboid' },
+    { id: 'previous-camera', label: 'Previous camera', key: 'keyPreviousCamera' },
+    { id: 'next-camera', label: 'Next camera', key: 'keyNextCamera' }
+] as const;
+
 /** Non-recordable general shortcut rows (static display only). */
 export const staticGeneralShortcuts: readonly StaticShortcutConfig[] = [
     { id: 'go-back', label: 'Go back', displayValue: 'Escape' }
@@ -62,4 +74,16 @@ export const staticGeneralShortcuts: readonly StaticShortcutConfig[] = [
 /** Non-recordable tool shortcut rows (static display only). */
 export const staticToolShortcuts: readonly StaticShortcutConfig[] = [
     { id: 'change-brush-size', label: 'Brush size', displayValue: 'Alt + scroll' }
+] as const;
+
+/** Non-recordable point cloud shortcut rows (static display only). */
+export const staticPointCloudShortcuts: readonly StaticShortcutConfig[] = [
+    { id: 'open-camera-n', label: 'Open camera 1–9', displayValue: '1–9' },
+    { id: 'play-pause', label: 'Play / pause', displayValue: 'Space' },
+    { id: 'previous-next-tick', label: 'Previous / next tick', displayValue: '← / →' },
+    { id: 'move-camera', label: 'Move camera', displayValue: 'W / A / S / D' },
+    { id: 'delete-cuboid', label: 'Delete selected cuboid', displayValue: 'Delete / Backspace' },
+    { id: 'cancel-deselect', label: 'Cancel or deselect', displayValue: 'Escape' },
+    { id: 'confirm-geometry', label: 'Confirm geometry field', displayValue: 'Enter' },
+    { id: 'zoom-timeline', label: 'Zoom timeline', displayValue: 'Ctrl/Cmd + scroll' }
 ] as const;

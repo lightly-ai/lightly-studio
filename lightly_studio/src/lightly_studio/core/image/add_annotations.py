@@ -85,6 +85,7 @@ def add_annotations_from_labelformat(
 
     path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection] = {}
     missing_paths: list[str] = []
+    skipped_polygons = 0
 
     for image_data in tqdm(
         input_labels.get_labels(), desc="Processing annotations", unit=" images"
@@ -94,24 +95,29 @@ def add_annotations_from_labelformat(
         path_to_anno_data[file_path_abs] = annotation_data
 
         if len(path_to_anno_data) >= SAMPLE_BATCH_SIZE:
-            missing_paths += _process_annotation_batch(
+            batch_missing_paths, batch_skipped_polygons = _process_annotation_batch(
                 root_collection_id=root_collection_id,
                 path_to_anno_data=path_to_anno_data,
                 label_map=label_map,
                 collection_name=collection_name,
                 restrict_to_sample_ids=restrict_to_sample_ids,
             )
+            missing_paths += batch_missing_paths
+            skipped_polygons += batch_skipped_polygons
             path_to_anno_data.clear()
 
     if path_to_anno_data:
-        missing_paths += _process_annotation_batch(
+        batch_missing_paths, batch_skipped_polygons = _process_annotation_batch(
             root_collection_id=root_collection_id,
             path_to_anno_data=path_to_anno_data,
             label_map=label_map,
             collection_name=collection_name,
             restrict_to_sample_ids=restrict_to_sample_ids,
         )
+        missing_paths += batch_missing_paths
+        skipped_polygons += batch_skipped_polygons
 
+    labelformat_helpers.warn_skipped_polygons(count=skipped_polygons)
     return missing_paths
 
 
@@ -141,7 +147,7 @@ def _process_annotation_batch(
     label_map: dict[int, UUID],
     collection_name: str | None,
     restrict_to_sample_ids: set[UUID] | None,
-) -> list[str]:
+) -> tuple[list[str], int]:
     """Process annotations for a batch of images.
 
     Args:
@@ -152,10 +158,11 @@ def _process_annotation_batch(
         restrict_to_sample_ids: If provided, only process samples in this set.
 
     Returns:
-        Paths with no matching sample in the collection.
+        Paths with no matching sample in the collection, and the number of polygon annotations
+        skipped because they have no valid part.
     """
     if not path_to_anno_data:
-        return []
+        return [], 0
 
     transport = active_transport.get_transport()
     path_to_sample_id = transport.samples.get_image_ids_by_paths(
@@ -164,6 +171,7 @@ def _process_annotation_batch(
     matched_sample_ids: set[UUID] = set()
     annotations_to_create: list[AnnotationCreate] = []
     missing_paths: list[str] = []
+    skipped_polygons = 0
 
     for sample_path, anno_data in path_to_anno_data.items():
         sample_id = path_to_sample_id.get(sample_path)
@@ -176,14 +184,17 @@ def _process_annotation_batch(
 
         matched_sample_ids.add(sample_id)
         if isinstance(anno_data, ImageInstanceSegmentation):
-            annotations_to_create += [
-                labelformat_helpers.get_segmentation_annotation_create(
+            instance_segmentations = [
+                labelformat_helpers.get_instance_segmentation_annotation_create(
                     parent_sample_id=sample_id,
                     annotation_label_id=label_map[obj.category.id],
                     segmentation=obj.segmentation,
                 )
                 for obj in anno_data.objects
             ]
+            valid_segmentations = [a for a in instance_segmentations if a is not None]
+            skipped_polygons += len(instance_segmentations) - len(valid_segmentations)
+            annotations_to_create += valid_segmentations
         else:
             annotations_to_create += [
                 labelformat_helpers.get_object_detection_annotation_create(
@@ -203,4 +214,4 @@ def _process_annotation_batch(
             covered_sample_ids=list(matched_sample_ids),
         )
 
-    return missing_paths
+    return missing_paths, skipped_polygons

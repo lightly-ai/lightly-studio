@@ -13,31 +13,37 @@
             component="dd"
             variant="body2"
             className="break-all"
-            props={{ 'data-testid': 'video-file-name' }}>{video.file_name}</Typography
+            props={{ 'data-testid': 'video-file-name' }}
         >
+            {video.file_name}
+        </Typography>
         <Typography component="dt" variant="body2">Width:</Typography>
         <Typography
             component="dd"
             variant="body2"
             className="break-all"
-            props={{ 'data-testid': 'video-width' }}>{video.width}px</Typography
+            props={{ 'data-testid': 'video-width' }}
         >
+            {video.width}px
+        </Typography>
         <Typography component="dt" variant="body2">Height:</Typography>
         <Typography
             component="dd"
             variant="body2"
             className="break-all"
-            props={{ 'data-testid': 'video-height' }}>{video.height}px</Typography
+            props={{ 'data-testid': 'video-height' }}
         >
+            {video.height}px
+        </Typography>
         {#if video.duration_s !== null && video.duration_s !== undefined}
             <Typography component="dt" variant="body2">Duration:</Typography>
-            <Typography component="dd" variant="body2" className="break-all"
-                >{video.duration_s.toFixed(2)} seconds</Typography
-            >
+            <Typography component="dd" variant="body2" className="break-all">
+                {video.duration_s.toFixed(2)} seconds
+            </Typography>
         {/if}
         <Typography component="dt" variant="body2">FPS:</Typography>
-        <Typography component="dd" variant="body2" className="break-all"
-            >{video.fps.toFixed(2)}</Typography
-        >
+        <Typography component="dd" variant="body2" className="break-all">
+            {video.fps.toFixed(2)}
+        </Typography>
     </dl>
 </Segment>
