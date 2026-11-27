@@ -116,3 +116,26 @@ us and needs no setup from the user.
 - Whether the existing preview save path is fast enough for hundreds of annotations, or
   needs a bulk create.
 - Test depth: smoke tests for post-processing; the rest is manual.
+
+## Results (2026-11-27, Apple Silicon Mac, Claude desktop browser pane, Chromium)
+
+Model: `ltdetrv2-s-coco`, fp32 ONNX, 41.8 MB, input 640×640, 300 queries × 80 classes.
+
+| Measurement | WebGPU | WASM (`?ep=wasm`) |
+|---|---|---|
+| Session creation | 3.5 s | 0.35 s |
+| First image | 1.4 s (shader compile) | 1.1 s |
+| Each later image, inference only | ~140 ms | ~1.1 s |
+| Batch of 200 COCO val images, saves included | ~55 s (~0.27 s/image) | not measured |
+
+- The first download is 42 MB from the dev server. Later loads come from Cache Storage in about 25 ms.
+- The predictions look right on COCO val images (TV, chairs, person, stop sign, bear, teddy bears).
+- **Batch UI:** the grid kept scrolling during a 200-image run with inference on the main thread, so the Web Worker (approach 2) isn't needed yet.
+- **Stop:** a run stopped at 117 of 200 kept the 117 finished images.
+
+**Not verified:**
+- Stopping the run when leaving the collection by client-side navigation. The demo has one collection, and a synthetic `popstate` did not navigate.
+- The `beforeunload` warning on tab close.
+- A very large source image.
+- A server model registered from Python, next to the browser model. Unit tests cover the server path.
+- fp16 export.
