@@ -164,11 +164,11 @@ class TestDatasetQuery:
 
     def test_export_request(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
-        query = DatasetQuery(dataset=collection, session=db_session)
+        query = DatasetQuery(dataset=collection)
         query.match(ImageSampleField.width > 10).order_by(OrderByField(ImageSampleField.width))
         query.slice(offset=2, limit=10)
 
-        assert query._export_request() == SampleQueryRequest(
+        assert query.build_export_request() == SampleQueryRequest(
             query_expr=QueryExpr(
                 match_expr=IntegerExpr(
                     field=FieldRef(table="image", name="width"),
@@ -183,23 +183,29 @@ class TestDatasetQuery:
 
     def test_export_request__sample_ids(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
-        query = DatasetQuery(dataset=collection, session=db_session)
+        query = DatasetQuery(dataset=collection)
         query.filter_by_sample_ids(sqlmodel.select(SampleTable.sample_id))
 
-        assert query._export_request() is None
+        assert query.build_export_request() is None
+
+    def test_export_request__own_session(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        query = DatasetQuery(dataset=collection, session=db_session)
+
+        assert query.build_export_request() is None
 
     def test_evaluation_request(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
-        query = DatasetQuery(dataset=collection, session=db_session)
+        query = DatasetQuery(dataset=collection)
         query.order_by(OrderByField(ImageSampleField.width)).slice(offset=2, limit=10)
 
-        assert query._evaluation_request() == SampleQueryRequest(
+        assert query.build_evaluation_request() == SampleQueryRequest(
             sort=[SortKey(field=FieldRef(table="image", name="width"))], offset=2
         )
 
     def test_evaluation_request__no_slice(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
-        query = DatasetQuery(dataset=collection, session=db_session)
+        query = DatasetQuery(dataset=collection)
         query.order_by(OrderByField(ImageSampleField.width))
 
-        assert query._evaluation_request() == SampleQueryRequest()
+        assert query.build_evaluation_request() == SampleQueryRequest()

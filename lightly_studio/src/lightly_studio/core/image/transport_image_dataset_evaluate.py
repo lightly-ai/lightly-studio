@@ -138,10 +138,8 @@ class TransportImageDatasetEvaluate(ImageDatasetEvaluate):
         Raises:
             UnsupportedQueryError: If the transport is remote and cannot send the query.
         """
-        request = self._query._evaluation_request()  # noqa: SLF001
-        # The transport cannot use the session of the query.
-        has_own_session = self._query._session is not None  # noqa: SLF001
-        if request is None or has_own_session:
+        request = self._query.build_evaluation_request()
+        if request is None:
             # Each task method of the base class has the name of its task type.
             evaluate_locally: Callable[..., EvaluationResult] = getattr(super(), task_type.value)
             return evaluate_locally(

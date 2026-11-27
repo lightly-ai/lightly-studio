@@ -9,6 +9,8 @@ description: Python API reference for LightlyStudio's DatasetQuery, used to filt
 ::: lightly_studio.core.dataset_query.dataset_query
     options:
         members: [DatasetQuery]
+        # The transport members are internal.
+        filters: ["!^_[^_]", "!^limit$", "!^build_export_request$", "!^build_evaluation_request$"]
 
 ## ImageSampleField
 
