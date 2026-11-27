@@ -97,7 +97,14 @@ def create_sampling(
     sampling_metadata.compute_metadata(
         session=session, collection=collection, computations=request.metadata_computations
     )
-    sampling_via_database(session=session, config=config, input_sample_ids=input_sample_ids)
+    sampling_via_database(
+        session=session,
+        config=config,
+        input_sample_ids=input_sample_ids,
+        required_embedding_model_names=sampling_metadata.get_embedding_model_names(
+            computations=request.metadata_computations
+        ),
+    )
 
 
 def _get_input_sample_ids(

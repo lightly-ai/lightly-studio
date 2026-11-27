@@ -234,6 +234,7 @@ def sampling_via_database(
     session: Session,
     config: SamplingConfig,
     input_sample_ids: list[UUID],
+    required_embedding_model_names: Sequence[str | None] = (),
 ) -> None:
     """Run sampling using the provided candidate sample ids.
 
@@ -246,13 +247,17 @@ def sampling_via_database(
 
     When ``config.selected_sequence_length`` is set, sampling runs over mean-pooled
     sequence proxies and the tag contains every frame of each selected sequence.
-    Otherwise, candidates without an embedding of a model that a strategy uses are
-    left out, and a warning gives their count.
+    Otherwise, candidates without an embedding of a model that a strategy uses, or of a
+    model in ``required_embedding_model_names``, are left out, and a warning gives
+    their count.
 
     Args:
         session: Database session used to resolve and store sampling data.
         config: Sampling configuration.
         input_sample_ids: Candidate sample IDs.
+        required_embedding_model_names: Embedding models that the strategies read
+            indirectly, for example through precomputed metadata. ``None`` stands for
+            the default embedding model of the collection.
 
     Raises:
         ValueError: If the preselected tag does not exist, if its sample IDs are
@@ -280,7 +285,9 @@ def sampling_via_database(
     _check_preselection(
         input_sample_ids=input_sample_ids, preselected_sample_ids=preselected_sample_ids
     )
-    embedding_model_names = _get_strategy_embedding_model_names(strategies=config.strategies)
+    embedding_model_names = _get_strategy_embedding_model_names(
+        strategies=config.strategies
+    ).union(required_embedding_model_names)
     input_sample_ids = _drop_samples_without_embeddings(
         session=session,
         collection_id=config.collection_id,

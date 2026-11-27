@@ -79,6 +79,49 @@ def test_sampling_metadata__similarity_creates_result_tag(
     assert len(tag_resolver.get_sample_ids_by_tag_id(session=db_session, tag_id=tag.tag_id)) == 3
 
 
+def test_sampling_metadata__similarity_leaves_out_samples_without_embedding(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=3, embedding_model_names=["test-model"]
+    )
+    embedded_sample_ids = list(
+        image_resolver.get_sample_ids(session=db_session, collection_id=collection_id)
+    )
+    helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="no_embedding.jpg"
+    )
+    query_tag = helpers_resolvers.create_tag(
+        session=db_session, collection_id=collection_id, tag_name="query"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=query_tag.tag_id, sample_ids=embedded_sample_ids[:1]
+    )
+    response = test_client.post(
+        f"/api/collections/{collection_id}/sampling",
+        json={
+            "n_samples_to_select": 4,
+            "sampling_result_tag_name": "result",
+            "strategies": [{"strategy_name": "weights", "metadata_key": "similarity"}],
+            "metadata_computations": [
+                {
+                    "kind": "similarity",
+                    "metadata_name": "similarity",
+                    "query_tag_id": str(query_tag.tag_id),
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 204, response.text
+    tag = tag_resolver.get_by_name(
+        session=db_session, collection_id=collection_id, tag_name="result"
+    )
+    assert tag is not None
+    tagged_sample_ids = tag_resolver.get_sample_ids_by_tag_id(session=db_session, tag_id=tag.tag_id)
+    assert set(tagged_sample_ids) == set(embedded_sample_ids)
+
+
 @pytest.mark.parametrize("foreign_tag", [False, True])
 def test_sampling_metadata__invalid_query_tag_rolls_back(
     test_client: TestClient, db_session: Session, foreign_tag: bool

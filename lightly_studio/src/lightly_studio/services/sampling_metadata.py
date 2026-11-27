@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -58,6 +59,14 @@ def compute_metadata(
     except Exception:
         session.rollback()
         raise
+
+
+def get_embedding_model_names(computations: Sequence[MetadataComputation]) -> list[str | None]:
+    """Return the names of the embedding models that the computations read.
+
+    All computations read the default embedding model, which the name ``None`` stands for.
+    """
+    return [None] if computations else []
 
 
 def _compute_metadata(
