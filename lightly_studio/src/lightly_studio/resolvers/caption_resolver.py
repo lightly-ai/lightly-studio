@@ -105,16 +105,18 @@ def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTabl
 def get_by_parent_sample_ids(
     session: Session, parent_sample_ids: Sequence[UUID]
 ) -> list[CaptionTable]:
-    """Get the captions of samples."""
+    """Get the captions of samples, in the order of creation."""
     if not parent_sample_ids:
         return []
     return list(
         session.exec(
-            select(CaptionTable).where(
+            select(CaptionTable)
+            .where(
                 db_array.in_array(
                     column=col(CaptionTable.parent_sample_id), values=parent_sample_ids
                 )
             )
+            .order_by(col(CaptionTable.created_at), col(CaptionTable.sample_id))
         ).all()
     )
 
