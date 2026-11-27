@@ -6,6 +6,8 @@ import pytest
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_run import EvaluationTaskType
+from lightly_studio.models.evaluation_task import EvaluationTask, ObjectDetectionEvaluationConfig
 from lightly_studio.models.query_expr import (
     FieldRef,
     IntegerExpr,
@@ -19,11 +21,20 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.sampling.sampling_config import EmbeddingDiversityStrategy, SamplingConfig
 from lightly_studio.transport.compute_transport import ComputeTransport
 from lightly_studio.transport.local.local_compute_transport import LocalComputeTransport
+from tests.api.routes.api.evaluation import helpers as evaluation_helpers
 from tests.helpers_resolvers import (
     ImageStub,
     create_collection,
     create_embedding_model,
     create_samples_with_embeddings,
+)
+
+OBJECT_DETECTION_TASK = EvaluationTask(
+    task_type=EvaluationTaskType.OBJECT_DETECTION,
+    name="run",
+    gt_annotation_source="gt",
+    pred_annotation_source="pred",
+    config=ObjectDetectionEvaluationConfig(),
 )
 
 
@@ -119,4 +130,53 @@ class TestLocalComputeTransport:
                 ),
                 request=SampleQueryRequest(),
                 limit=None,
+            )
+
+    @pytest.mark.parametrize(
+        ("query_expr", "sample_count"),
+        [
+            (None, 2),
+            (
+                QueryExpr(
+                    match_expr=IntegerExpr(
+                        field=FieldRef(table="image", name="width"),
+                        operator=OrdinalComparisonOperator.LT,
+                        value=15,
+                    )
+                ),
+                1,
+            ),
+        ],
+    )
+    def test_evaluate(self, query_expr: QueryExpr | None, sample_count: int) -> None:
+        collection = evaluation_helpers.create_dataset_with_annotations(
+            db_session=db_manager.persistent_session(), image_widths=(10, 20)
+        )
+        transport: ComputeTransport = LocalComputeTransport()
+
+        result = transport.evaluate(
+            collection_id=collection.collection_id,
+            query_expr=query_expr,
+            task=OBJECT_DETECTION_TASK,
+        )
+
+        assert result.sample_count == sample_count
+        assert result.gt_annotation_count == sample_count
+
+    def test_evaluate__unknown_collection(self) -> None:
+        transport: ComputeTransport = LocalComputeTransport()
+
+        with pytest.raises(ValueError, match=r"not found"):
+            transport.evaluate(collection_id=uuid4(), query_expr=None, task=OBJECT_DETECTION_TASK)
+
+    def test_evaluate__video_collection(self) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(
+            session=session, sample_type=SampleType.VIDEO
+        ).collection_id
+        transport: ComputeTransport = LocalComputeTransport()
+
+        with pytest.raises(ValueError, match=r"only be triggered on image collections"):
+            transport.evaluate(
+                collection_id=collection_id, query_expr=None, task=OBJECT_DETECTION_TASK
             )

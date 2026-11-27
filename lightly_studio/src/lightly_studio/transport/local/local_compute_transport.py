@@ -6,11 +6,15 @@ from uuid import UUID
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_task import EvaluationResult, EvaluationTask
+from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.resolvers import collection_resolver, tag_resolver
+from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.sampling import sampling_via_db
 from lightly_studio.sampling.sampling_config import SamplingConfig
-from lightly_studio.services import compute_metadata_service
+from lightly_studio.services import compute_metadata_service, evaluation_service
 from lightly_studio.services.sample_services import sample_query_service
 
 
@@ -69,4 +73,23 @@ class LocalComputeTransport:
         )
         sampling_via_db.sampling_via_database(
             session=session, config=config, input_sample_ids=input_sample_ids
+        )
+
+    def evaluate(
+        self, collection_id: UUID, query_expr: QueryExpr | None, task: EvaluationTask
+    ) -> EvaluationResult:
+        """Create an evaluation run on the matching image samples and store its metrics."""
+        session = db_manager.persistent_session()
+        collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+        if collection is None:
+            raise ValueError(f"Collection {collection_id} not found.")
+        return evaluation_service.run_evaluation(
+            session=session,
+            collection=collection,
+            task_type=task.task_type,
+            gt_annotation_source=task.gt_annotation_source,
+            pred_annotation_source=task.pred_annotation_source,
+            config=task.config,
+            filters=ImageFilter(sample_filter=SampleFilter(query_expr=query_expr)),
+            name=task.name,
         )
