@@ -92,3 +92,6 @@ from lightly_studio.models.temporal_span import (
 from lightly_studio.models.export_job import (
     ExportJobTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.user_account import (
+    UserAccountTable,  # noqa: F401, required for SQLModel to work properly
+)

@@ -16,7 +16,8 @@ _HANDLED_TABLES_COUNT = 40
 
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
-_EXCLUDED_TABLES_COUNT = 1
+# - user_account (application-level, not collection-specific)
+_EXCLUDED_TABLES_COUNT = 2
 
 _TOTAL_TABLES_COUNT = _HANDLED_TABLES_COUNT + _EXCLUDED_TABLES_COUNT
 
