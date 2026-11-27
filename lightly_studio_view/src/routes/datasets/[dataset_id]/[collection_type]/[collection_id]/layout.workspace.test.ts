@@ -95,7 +95,7 @@ vi.mock(
     async () => ({ default: (await import('./LayoutStub.test.svelte')).default })
 );
 vi.mock('$lib/components/BatchAutoLabel', async () => ({
-    BatchAutoLabel: (await import('./LayoutStub.test.svelte')).default
+    BatchAutoLabel: (await import('./BatchAutoLabelStub.test.svelte')).default
 }));
 vi.mock('$lib/components/ClearAllFiltersButton', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
@@ -534,6 +534,14 @@ describe('+layout.svelte collection-grid workspace', () => {
 // Details routes bypass the workspace
 
 describe('+layout.svelte details-route bypass', () => {
+    it('keeps the batch auto-label run mounted on the image-details route', async () => {
+        setPageRoute(APP_ROUTES.imageDetails);
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        expect(screen.getByTestId('batch-auto-label-stub')).toBeInTheDocument();
+    });
+
     it('does NOT render filter panel on image-details route', async () => {
         setPageRoute(APP_ROUTES.imageDetails);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });

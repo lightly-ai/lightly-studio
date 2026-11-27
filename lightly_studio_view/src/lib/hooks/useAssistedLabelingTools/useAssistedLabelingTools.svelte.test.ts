@@ -229,14 +229,23 @@ describe('useAssistedLabelingTools', () => {
         expect(tools.selectedModel).toMatchObject({ id: 'ltdetrv2-s-coco', runsIn: 'browser' });
         expect(tools.modelSaveAs).toBe('box');
 
-        tools.state.modelId = 'detector';
+        tools.state.modelId = 'server:detector';
         flushSync();
         expect(tools.selectedModel).toMatchObject({ id: 'detector', runsIn: 'server' });
         expect(tools.modelSaveAs).toBe('box');
 
-        tools.state.modelId = 'segmenter';
+        tools.state.modelId = 'server:segmenter';
         flushSync();
         expect(tools.selectedModel?.id).toBe('segmenter');
         expect(tools.modelSaveAs).toBe('mask');
+    });
+
+    it('picks a server model that has the same id as the browser model', () => {
+        const { tools, models } = setup('label-with-model');
+        models.models = [{ id: 'ltdetrv2-s-coco', task: 'object_detection' }];
+        tools.state.modelId = 'server:ltdetrv2-s-coco';
+        flushSync();
+
+        expect(tools.selectedModel).toMatchObject({ id: 'ltdetrv2-s-coco', runsIn: 'server' });
     });
 });

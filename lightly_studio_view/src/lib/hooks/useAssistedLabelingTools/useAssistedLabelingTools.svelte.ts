@@ -14,6 +14,7 @@ import { useSmartSelect } from '$lib/components/SampleDetails/SmartSelectOverlay
 import { DEFAULT_MAX_INSTANCES } from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.helpers';
 import { useFindInstances } from '$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte';
 import { useLabelWithModel } from '$lib/components/SampleDetails/LabelWithModelOverlay';
+import { toModelKey } from './toModelKey';
 
 const DEFAULT_MODEL_THRESHOLD = 0.5;
 
@@ -31,7 +32,7 @@ class AssistedLabelingToolState {
     instancesPrompt = $state('');
     maxInstances = $state(DEFAULT_MAX_INSTANCES);
     isDrawingInstancesBox = $state(false);
-    // Null selects the first model of the server.
+    // The toModelKey of the selected model. Null selects the first model.
     modelId = $state<string | null>(null);
     modelThreshold = $state(DEFAULT_MODEL_THRESHOLD);
 }
@@ -71,7 +72,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         ...labelingModels.models.map((model) => ({ ...model, runsIn: 'server' as const }))
     ]);
     const selectedModel = $derived(
-        models.find((model) => model.id === state.modelId) ?? models[0] ?? null
+        models.find((model) => toModelKey(model) === state.modelId) ?? models[0] ?? null
     );
     // Object detection models return no masks.
     const modelSaveAs = $derived(

@@ -11,6 +11,7 @@
     import type { useLabelWithModel } from '$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte';
     import ModelRunControls from './ModelRunControls/ModelRunControls.svelte';
     import ThresholdInput from './ThresholdInput/ThresholdInput.svelte';
+    import { toModelKey } from '$lib/hooks/useAssistedLabelingTools/toModelKey';
     import { LOAD_MODEL_FILE_VALUE, toModelSelectItems } from './modelSelectItems';
 
     type SaveAs = ComponentProps<typeof SaveAsToggle>['saveAs'];
@@ -19,7 +20,8 @@
     interface Props {
         models: AutoLabelModel[];
         model: AutoLabelModel | null;
-        onModelChange: (modelId: string) => void;
+        // Receives the toModelKey of the picked model.
+        onModelChange: (modelKey: string) => void;
         threshold: number;
         onThresholdChange: (value: number) => void;
         saveAs: SaveAs;
@@ -55,7 +57,7 @@
     const loadModelFile = async () => {
         const file = fileInput.files?.[0];
         fileInput.value = '';
-        if (file) onModelChange(await addModelFile(file));
+        if (file) onModelChange(toModelKey({ id: await addModelFile(file), runsIn: 'browser' }));
     };
 </script>
 
@@ -78,7 +80,7 @@
 >
     <Select
         {items}
-        value={model?.id}
+        value={model ? toModelKey(model) : undefined}
         size="sm"
         placeholder="Select a model"
         testId="label-with-model-select"

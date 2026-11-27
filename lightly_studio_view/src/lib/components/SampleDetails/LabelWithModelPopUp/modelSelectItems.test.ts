@@ -9,13 +9,13 @@ describe('toModelSelectItems', () => {
         ]);
 
         expect(items.map(({ value, label, group }) => ({ value, label, group }))).toEqual([
-            { value: 'coco', label: 'coco', group: 'Browser · Object detection' },
+            { value: 'browser:coco', label: 'coco', group: 'Browser · Object detection' },
             {
                 value: LOAD_MODEL_FILE_VALUE,
                 label: 'Load model file (.onnx)…',
                 group: 'Browser · Object detection'
             },
-            { value: 'seg', label: 'seg', group: 'Server · Instance segmentation' }
+            { value: 'server:seg', label: 'seg', group: 'Server · Instance segmentation' }
         ]);
     });
 });

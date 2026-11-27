@@ -125,7 +125,7 @@
     const collectionIdStore = toStore(() => collectionId);
 
     const { selectedCount, clearSelection } = $derived(useSelectionSummary(collectionId));
-    // Image collections only. Also true on the sample details page, so a run keeps going there.
+    // Image collections only, on the grid and on the sample details page.
     const canAutoLabel = $derived(page.params.collection_type === 'image');
     let isAutoLabelDialogOpen = $state(false);
 
@@ -865,14 +865,6 @@
                             : undefined}
                     />
                 {/if}
-                {#if canAutoLabel}
-                    <BatchAutoLabel
-                        {collectionId}
-                        {datasetId}
-                        selectedCount={$selectedCount}
-                        bind:isDialogOpen={isAutoLabelDialogOpen}
-                    />
-                {/if}
             {/snippet}
 
             {#snippet paneResizer()}
@@ -1004,6 +996,15 @@
             filteredSamples={isCaptions ? $filteredCaptionCount : $filteredSampleCount}
             {totalAnnotations}
             filteredAnnotations={$filteredAnnotationCount}
+        />
+    {/if}
+    <!-- Outside the route and panel branches, so opening a sample keeps a batch run going. -->
+    {#if canAutoLabel}
+        <BatchAutoLabel
+            {collectionId}
+            {datasetId}
+            selectedCount={$selectedCount}
+            bind:isDialogOpen={isAutoLabelDialogOpen}
         />
     {/if}
 </div>

@@ -5,8 +5,9 @@ interface Size {
     height: number;
 }
 
-// Decodes a sample image straight to the model's input size, so a huge image never needs a
-// full-size canvas. Also returns the original size, to scale the boxes back.
+// Decodes a sample image once and resizes the bitmap to the model's input size, so a huge
+// image never needs a full-size canvas. Also returns the original size, to scale the boxes back.
+// The full-size decode still peaks at width * height * 4 bytes of memory.
 export const loadImageBitmap = async (
     sampleId: string,
     size: Size
@@ -15,14 +16,16 @@ export const loadImageBitmap = async (
     if (!response.ok) {
         throw new Error(`Could not load the image of sample ${sampleId}: HTTP ${response.status}.`);
     }
-    const blob = await response.blob();
-    const fullSize = await createImageBitmap(blob);
+    const fullSize = await createImageBitmap(await response.blob());
     const original = { width: fullSize.width, height: fullSize.height };
-    fullSize.close();
-    const bitmap = await createImageBitmap(blob, {
-        resizeWidth: size.width,
-        resizeHeight: size.height,
-        resizeQuality: 'high'
-    });
-    return { bitmap, original };
+    try {
+        const bitmap = await createImageBitmap(fullSize, {
+            resizeWidth: size.width,
+            resizeHeight: size.height,
+            resizeQuality: 'high'
+        });
+        return { bitmap, original };
+    } finally {
+        fullSize.close();
+    }
 };

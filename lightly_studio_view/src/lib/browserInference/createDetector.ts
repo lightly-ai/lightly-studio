@@ -1,6 +1,7 @@
 import type { ModelAnnotationPreview } from '$lib/api/lightly_studio_local';
 import { decodeDetections, toInputTensor } from './detection';
 import { parseClassNames, readOnnxMetadata } from './onnxMetadata';
+import { runOneAtATime } from './runOneAtATime';
 
 type Ort = typeof import('onnxruntime-web/webgpu');
 type InferenceSession = Awaited<ReturnType<Ort['InferenceSession']['create']>>;
@@ -50,8 +51,10 @@ export const createDetector = async (
     const context = new OffscreenCanvas(inputSize.width, inputSize.height).getContext('2d', {
         willReadFrequently: true
     })!;
+    // Replaces the pixels on each draw, so transparent areas never show the previous image.
+    context.globalCompositeOperation = 'copy';
 
-    const detect: Detector['detect'] = async (image, original, threshold) => {
+    const detect: Detector['detect'] = runOneAtATime(async (image, original, threshold) => {
         context.drawImage(image, 0, 0, inputSize.width, inputSize.height);
         const { data: rgba } = context.getImageData(0, 0, inputSize.width, inputSize.height);
         const input = toInputTensor({ rgba, ...inputSize, normalize });
@@ -70,7 +73,7 @@ export const createDetector = async (
             threshold,
             topK: TOP_K
         });
-    };
+    });
 
     return { classNames, inputSize, executionProvider, detect };
 };

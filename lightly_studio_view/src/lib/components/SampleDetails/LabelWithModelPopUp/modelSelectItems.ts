@@ -3,6 +3,7 @@ import FileUp from '@lucide/svelte/icons/file-up';
 import SquareDashed from '@lucide/svelte/icons/square-dashed';
 import type { LabelingModelView } from '$lib/api/lightly_studio_local';
 import type { SelectItem } from '$lib/components/Select/Select.svelte';
+import { toModelKey } from '$lib/hooks/useAssistedLabelingTools/toModelKey';
 
 type AutoLabelModel = LabelingModelView & { runsIn: 'browser' | 'server' };
 
@@ -19,7 +20,7 @@ const BROWSER_DETECTION_GROUP = `${RUNS_IN_LABELS.browser} · ${TASKS.object_det
 // browser group ends with an item that loads an ONNX file of the user's own model.
 export const toModelSelectItems = (models: AutoLabelModel[]): SelectItem[] => {
     const toItem = (model: AutoLabelModel): SelectItem => ({
-        value: model.id,
+        value: toModelKey(model),
         label: model.id,
         group: `${RUNS_IN_LABELS[model.runsIn]} · ${TASKS[model.task].label}`,
         icon: TASKS[model.task].icon

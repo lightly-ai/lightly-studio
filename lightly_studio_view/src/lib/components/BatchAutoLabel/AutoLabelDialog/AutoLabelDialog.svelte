@@ -25,12 +25,25 @@
     const model = $derived($models.find((item) => item.id === modelId));
     const classNames = $derived(model?.class_names ?? []);
     const items = $derived($models.map((item) => ({ value: item.id, label: item.id })));
-    const isLoading = $derived(classNames.length === 0);
+    // Set when loading the model failed, for the model it names.
+    let loadFailure = $state<{ modelId: string; message: string } | null>(null);
+    const loadError = $derived(loadFailure?.modelId === modelId ? loadFailure.message : null);
+    const isLoading = $derived(classNames.length === 0 && loadError === null);
     const keptClassNames = $derived(classNames.filter((name) => !excluded.has(name)));
 
     // The class list comes from the model file, so opening the dialog loads the model.
     $effect(() => {
-        if (open) void getDetector(modelId);
+        if (!open) return;
+        const loadingModelId = modelId;
+        getDetector(loadingModelId)
+            .then(({ classNames: loaded }) => {
+                if (loaded.length > 0) return;
+                loadFailure = { modelId: loadingModelId, message: 'it has no class names.' };
+            })
+            .catch((error: unknown) => {
+                const message = error instanceof Error ? error.message : String(error);
+                loadFailure = { modelId: loadingModelId, message };
+            });
     });
 
     const selectModel = (value: string) => {
@@ -55,7 +68,9 @@
         <div class="flex flex-col gap-3">
             <Select {items} value={modelId} size="sm" onValueChange={selectModel} />
             <ThresholdInput value={threshold} onChange={(value) => (threshold = value)} />
-            {#if isLoading}
+            {#if loadError}
+                <p class="text-xs text-destructive">Could not load the model: {loadError}</p>
+            {:else if isLoading}
                 <p class="text-xs text-muted-foreground">
                     {#if $loadProgress}
                         Downloading model… {Math.round($loadProgress.loaded / BYTES_PER_MB)} of
@@ -73,7 +88,7 @@
             {/if}
         </div>
         <Dialog.Footer>
-            <Button disabled={isLoading || keptClassNames.length === 0} onclick={start}>
+            <Button disabled={keptClassNames.length === 0} onclick={start}>
                 Auto-label {selectedCount} images
             </Button>
         </Dialog.Footer>
