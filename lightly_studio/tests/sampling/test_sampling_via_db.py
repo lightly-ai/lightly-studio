@@ -224,6 +224,36 @@ def test_sampling_via_database__preselected_sample_after_samples_without_embeddi
     }
 
 
+def test_sampling_via_database__required_model_no_strategy_uses(
+    db_session: Session,
+) -> None:
+    collection_id, sample_ids = helpers_sampling.create_images_with_embeddings(
+        session=db_session,
+        embeddings_per_image=[
+            {"model-a": [0.0, 0.0], "model-b": [0.0, 0.0]},
+            {"model-a": [1.0, 1.0]},
+            {"model-a": [2.0, 2.0], "model-b": [2.0, 2.0]},
+        ],
+    )
+    config = SamplingConfig(
+        collection_id=collection_id,
+        n_samples_to_select=3,
+        sampling_result_tag_name="result",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="model-a")],
+    )
+
+    sampling_via_database(
+        session=db_session,
+        config=config,
+        input_sample_ids=sample_ids,
+        required_embedding_model_names=["model-b"],
+    )
+
+    assert set(
+        _sample_ids_by_tag_name(session=db_session, collection_id=collection_id, tag_name="result")
+    ) == {sample_ids[0], sample_ids[2]}
+
+
 def test_sampling_via_database__no_sample_has_embedding(
     db_session: Session,
 ) -> None:
