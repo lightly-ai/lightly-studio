@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import Typography from '$lib/components/Typography/Typography.svelte';
+    import { Typography } from '$lib/components';
     import { cn } from '$lib/utils';
 
     interface Props {
