@@ -5,13 +5,14 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID
 
+from lightly_studio.models.evaluation_task import EvaluationResult, EvaluationTask
+from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.sampling.sampling_config import SamplingConfig
 
 
-# TODO(Iunir, 11/2026): Add evaluation when its config and result models have no DB imports.
 class ComputeTransport(Protocol):
-    """Runs metadata computations and sampling.
+    """Runs metadata computations, sampling and evaluation.
 
     The server finds the matching samples, so a remote call sends no list of sample IDs.
     """
@@ -64,4 +65,22 @@ class ComputeTransport(Protocol):
             request: The filter, the sort and the offset of the samples to sample from. The
                 `cursor` and the `limit` of the request are not used.
             limit: The maximum number of samples to sample from. None uses all.
+        """
+
+    def evaluate(
+        self, collection_id: UUID, query_expr: QueryExpr | None, task: EvaluationTask
+    ) -> EvaluationResult:
+        """Create an evaluation run on the matching samples and store its metrics.
+
+        Args:
+            collection_id: The ID of the collection.
+            query_expr: The samples to evaluate. None uses all samples of the collection.
+            task: The evaluation run to create.
+
+        Returns:
+            The number of samples and annotations that the run uses.
+
+        Raises:
+            ValueError: If the collection does not exist or is not an image collection, or an
+                annotation source is not valid for the task.
         """

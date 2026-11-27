@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
+
+from lightly_studio.models.evaluation_run import EvaluationTaskType
 
 
 class ObjectDetectionEvaluationConfig(BaseModel):
@@ -71,3 +73,45 @@ class InstanceSegmentationEvaluationConfig(BaseModel):
 
     iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     classwise: bool = True
+
+
+EvaluationConfig = (
+    ObjectDetectionEvaluationConfig
+    | ClassificationEvaluationConfig
+    | InstanceSegmentationEvaluationConfig
+    | SemanticSegmentationEvaluationConfig
+)
+
+
+class EvaluationTask(BaseModel):
+    """An evaluation run to create.
+
+    Attributes:
+        task_type: The type of the evaluation task.
+        name: The name of the evaluation run.
+        gt_annotation_source: The annotation source with the ground truth annotations.
+        pred_annotation_source: The annotation source with the predictions.
+        config: The config of the task. Its type must agree with `task_type`.
+    """
+
+    task_type: EvaluationTaskType
+    name: str
+    gt_annotation_source: str
+    pred_annotation_source: str
+    config: EvaluationConfig
+
+    @field_validator("config", mode="before")
+    @classmethod
+    def _validate_config_for_task_type(cls, config: object, info: ValidationInfo) -> object:
+        """Validate with the config class of the task type. The union cannot select the class."""
+        if "task_type" not in info.data:
+            return config
+        return _CONFIG_CLASS_BY_TASK_TYPE[info.data["task_type"]].model_validate(config)
+
+
+_CONFIG_CLASS_BY_TASK_TYPE: dict[EvaluationTaskType, type[EvaluationConfig]] = {
+    EvaluationTaskType.OBJECT_DETECTION: ObjectDetectionEvaluationConfig,
+    EvaluationTaskType.CLASSIFICATION: ClassificationEvaluationConfig,
+    EvaluationTaskType.SEMANTIC_SEGMENTATION: SemanticSegmentationEvaluationConfig,
+    EvaluationTaskType.INSTANCE_SEGMENTATION: InstanceSegmentationEvaluationConfig,
+}
