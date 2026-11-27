@@ -241,7 +241,7 @@ def test_sampling_via_database__no_sample_has_embedding(
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="model")],
     )
 
-    with pytest.raises(ValueError, match=r"None of the 2 samples has an embedding\."):
+    with pytest.raises(ValueError, match=r"No sample has an embedding\."):
         sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
 

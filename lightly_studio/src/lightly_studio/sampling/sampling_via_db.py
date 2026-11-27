@@ -447,7 +447,7 @@ def _drop_samples_without_embeddings(
     if n_left_out == 0:
         return kept_sample_ids
     if not kept_sample_ids:
-        raise ValueError(f"None of the {n_left_out} samples has an embedding.")
+        raise ValueError("No sample has an embedding.")
     logger.warning(
         "%d of %d samples have no embedding and were left out of sampling.",
         n_left_out,
