@@ -83,7 +83,6 @@
             : getColorByLabel(label, alpha);
 
     const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
-    // TODO(Michal, 11/2026): Polygons are read-only in the GUI until polygon editing is added.
     const polygons = $derived(
         isPolygonAnnotation(annotation) ? annotation.polygon_details.polygons : undefined
     );
@@ -180,6 +179,7 @@
         />
     {/if}
 
+    <!-- TODO(Michal, 11/2026): Polygons are read-only in the GUI until polygon editing is added. -->
     {#if polygons}
         <SampleAnnotationPolygon
             {polygons}

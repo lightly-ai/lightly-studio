@@ -94,9 +94,6 @@
     });
     const opacity = $derived($customLabelColorsStore[labelName]?.alpha ?? 0.4);
 
-    const isRLESegmentation = $derived(!!segmentationMask);
-    const isPolygon = $derived(!!annotation.polygon_details);
-    const hasCanvasOutline = $derived(isRLESegmentation || isPolygon);
     const canvasAnnotation = $derived.by(() => {
         if (segmentationMask) {
             return {
@@ -187,8 +184,8 @@
             top: ${(containerHeight - annotationHeight * scale) / 2}px;
             width: ${annotationWidth * scale}px;
             height: ${annotationHeight * scale}px;
-            border-color: ${hasCanvasOutline ? 'transparent' : (colorStroke ?? getColorByLabel(labelName).color)};
-            background-color: ${hasCanvasOutline ? 'transparent' : (colorFill ?? getColorByLabel(labelName, 0.4).color)};
+            border-color: ${canvasAnnotation ? 'transparent' : (colorStroke ?? getColorByLabel(labelName).color)};
+            background-color: ${canvasAnnotation ? 'transparent' : (colorFill ?? getColorByLabel(labelName, 0.4).color)};
             border-style: solid;
             
         `}

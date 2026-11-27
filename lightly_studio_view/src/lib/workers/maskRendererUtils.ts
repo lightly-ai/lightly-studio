@@ -1,5 +1,9 @@
 import { rgbaFromBytes } from '$lib/utils/colorConvert';
-import { normalizePolygonWinding, type PolygonPart } from '$lib/utils/normalizePolygonWinding';
+import {
+    MIN_POLYGON_PART_VERTICES,
+    normalizePolygonWinding,
+    type PolygonPart
+} from '$lib/utils/normalizePolygonWinding';
 
 export interface MaskInput {
     rle: ReadonlyArray<number>;
@@ -210,8 +214,6 @@ type PolygonContext = Pick<
     | 'fill'
     | 'stroke'
 >;
-
-const MIN_POLYGON_PART_VERTICES = 3;
 
 export const drawPolygonsOnContext = (
     ctx: PolygonContext,

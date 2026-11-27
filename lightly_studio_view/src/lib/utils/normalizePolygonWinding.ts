@@ -1,5 +1,7 @@
 export type PolygonPart = ReadonlyArray<readonly [number, number]>;
 
+export const MIN_POLYGON_PART_VERTICES = 3;
+
 /**
  * Returns each part with a non-negative signed area. Parts with a negative
  * area are reversed. The input is not changed.

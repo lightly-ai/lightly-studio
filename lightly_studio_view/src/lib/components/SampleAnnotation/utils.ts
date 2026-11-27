@@ -6,9 +6,10 @@ import {
     type Annotation
 } from '$lib/services/types';
 import type { BoundingBox } from '$lib/types';
-import { normalizePolygonWinding } from '$lib/utils/normalizePolygonWinding';
-
-const MIN_POLYGON_VERTICES = 3;
+import {
+    MIN_POLYGON_PART_VERTICES,
+    normalizePolygonWinding
+} from '$lib/utils/normalizePolygonWinding';
 
 export function getBoundingBox(annotation: Annotation): BoundingBox {
     let boundingBox: BoundingBox | null | undefined;
@@ -199,7 +200,7 @@ export const rleToSvgPath = (rle: number[], width: number): string => {
 // `nonzero` fill rule fills them all and never cuts a hole.
 export const polygonsToSvgPath = (polygons: Array<Array<[number, number]>>): string =>
     normalizePolygonWinding(polygons)
-        .filter((part) => part.length >= MIN_POLYGON_VERTICES)
+        .filter((part) => part.length >= MIN_POLYGON_PART_VERTICES)
         .map((part) => `M${part.map(([x, y]) => `${x} ${y}`).join('L')}Z`)
         .join('');
 
