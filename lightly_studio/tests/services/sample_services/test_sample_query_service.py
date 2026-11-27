@@ -8,6 +8,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.order_by import OrderByMetadataField
 from lightly_studio.errors import QueryExprError
+from lightly_studio.metadata.gps_coordinate import GPSCoordinate
 from lightly_studio.models.query_expr import (
     FieldRef,
     IntegerExpr,
@@ -17,6 +18,7 @@ from lightly_studio.models.query_expr import (
 )
 from lightly_studio.models.sample_query import (
     EvaluationMetricSortKey,
+    MetadataRecord,
     SampleInclude,
     SampleQueryRequest,
     SortKey,
@@ -127,6 +129,30 @@ def test_query_samples__include_tags(db_session: Session) -> None:
     assert {s.file_name: s.tags for s in page.samples} == {"a.png": ["a", "b"], "b.png": []}
 
 
+def test_query_samples__include_metadata(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.png")
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/b.png")
+    metadata_resolver.bulk_update_metadata(
+        session=db_session,
+        sample_metadata=[(image.sample_id, {"score": 3, "gps": GPSCoordinate(lat=1.5, lon=2.5)})],
+    )
+    request = SampleQueryRequest(include=[SampleInclude.METADATA])
+
+    page = sample_query_service.query_samples(
+        session=db_session, collection_id=collection_id, request=request
+    )
+
+    assert {s.file_name: s.metadata for s in page.samples} == {
+        "a.png": MetadataRecord(
+            data={"score": 3, "gps": {"lat": 1.5, "lon": 2.5}},
+            metadata_schema={"score": "integer", "gps": "gps_coordinate"},
+        ),
+        "b.png": MetadataRecord(data={}, metadata_schema={}),
+    }
+    assert page.samples[0].tags is None
+
+
 def test_query_samples__cursor_of_other_sort__raises(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     for path in ["/a.png", "/b.png"]:
@@ -188,7 +214,7 @@ def test_query_samples__cursor_values_not_valid__raises(
 @pytest.mark.parametrize(
     ("request_", "error"),
     [
-        (SampleQueryRequest(include=[SampleInclude.METADATA]), ValueError),
+        (SampleQueryRequest(include=[SampleInclude.CAPTIONS]), ValueError),
         (
             SampleQueryRequest(sort=[SortKey(field=FieldRef(table="video", name="fps"))]),
             QueryExprError,
