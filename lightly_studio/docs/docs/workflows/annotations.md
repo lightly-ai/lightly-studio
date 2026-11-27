@@ -4,14 +4,14 @@ LightlyStudio supports three annotation types:
 
 - classification,
 - object detection, and
-- segmentation.
+- segmentation, with masks or polygons.
 
 You can inspect and edit annotations in the GUI, or add and read them in Python. For dataset-level
 ingestion from formats such as COCO, YOLO, and Label Studio, see [Image Dataset](image_dataset.md)
 and [Video Dataset](video_dataset.md).
 
 !!! info "Terminology"
-    - **Annotation**: A classification, object-detection box, or segmentation mask attached to a sample.
+    - **Annotation**: A classification, object-detection box, polygon, or segmentation mask attached to a sample.
     - **Prediction**: An annotation with an optional confidence score.
     - **Annotation class**: The category of an annotation, e.g. `"dog"` or `"cat"`.
     - **Annotation source**: A named group of annotations, e.g. `ground_truth` or `model_a`.
@@ -132,7 +132,7 @@ To add object detection annotations at the dataset level, use
 or
 [add_annotations_from_labelformat](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_labelformat).
 
-### Segmentation
+### Segmentation Mask
 
 Use [CreateSegmentationMask](../api/annotation.md#createsegmentationmask) for segmentation masks.
 In most cases, [`from_binary_mask(...)`](../api/annotation.md#lightly_studio.core.annotation.CreateSegmentationMask.from_binary_mask) is the easiest option:
@@ -193,6 +193,34 @@ To add segmentation annotations at the dataset level, use
 or
 [add_annotations_from_pascal_voc_segmentations](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_pascal_voc_segmentations).
 
+### Polygon
+
+Use [CreatePolygon](../api/annotation.md#createpolygon) for instance outlines. A polygon has one or
+more parts. Each part is a list of `(x, y)` vertices in pixels:
+
+```python
+from lightly_studio.core.annotation import CreatePolygon
+
+sample.add_annotation(
+    CreatePolygon(
+        class_name="car",
+        polygons=[
+            [(10, 20), (40, 20), (40, 60), (10, 60)],
+            [(50, 20), (70, 20), (60, 40)],
+        ],
+        confidence=0.8,  # optional
+    )
+)
+```
+
+LightlyStudio computes the bounding box from the vertices.
+
+To add polygon annotations at the dataset level, pass
+`annotation_task=ls.AnnotationFileTask.INSTANCE_SEGMENTATION` to
+[add_annotations_from_coco](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_coco)
+or
+[add_annotations_from_yolo](../api/dataset.md#lightly_studio.ImageDataset.add_annotations_from_yolo).
+
 
 ### Predictions
 
@@ -249,6 +277,7 @@ Available annotation classes:
 - [ClassificationAnnotation](../api/annotation.md#classificationannotation)
 - [ObjectDetectionAnnotation](../api/annotation.md#objectdetectionannotation)
 - [SegmentationMaskAnnotation](../api/annotation.md#segmentationmaskannotation)
+- [PolygonAnnotation](../api/annotation.md#polygonannotation)
 
 See [Annotation API Reference](../api/annotation.md) for the full API and
 [Search and Filter](search_and_filter.md) for annotation-based queries.
