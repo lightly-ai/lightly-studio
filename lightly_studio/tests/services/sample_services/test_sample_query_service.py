@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from sqlmodel import Session
 
+from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.order_by import OrderByMetadataField
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.query_expr import (
     FieldRef,
@@ -18,12 +22,18 @@ from lightly_studio.models.sample_query import (
     SortKey,
 )
 from lightly_studio.models.sort_direction import SortDirection
-from lightly_studio.resolvers import tag_resolver
+from lightly_studio.resolvers import metadata_resolver, tag_resolver
 from lightly_studio.services.sample_services import sample_query_cursor, sample_query_service
 from tests.helpers_resolvers import create_collection, create_image, create_tag
+from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
+    SampleMetricStub,
+    create_run,
+    create_sample_metrics,
+)
 
 WIDTH = FieldRef(table="image", name="width")
 FILE_NAME = FieldRef(table="image", name="file_name")
+SCORE = FieldRef(table="metadata", name="score")
 
 
 def test_query_samples__filter_and_sort(db_session: Session) -> None:
@@ -196,24 +206,86 @@ def test_query_samples__not_supported__raises(
         )
 
 
-@pytest.mark.parametrize(
-    ("sort_key", "message"),
-    [
-        (SortKey(field=FieldRef(table="metadata", name="weather")), "by metadata"),
-        (EvaluationMetricSortKey(run_name="run", metric_name="miou"), "by an evaluation metric"),
-    ],
-)
-def test_query_samples__sort_without_keyset__raises(
-    db_session: Session, sort_key: SortKey | EvaluationMetricSortKey, message: str
+@pytest.mark.parametrize("direction", [SortDirection.asc, SortDirection.desc])
+def test_query_samples__metadata_sort__pages_in_order_of_sql_path(
+    db_session: Session, direction: SortDirection
 ) -> None:
-    collection_id = create_collection(session=db_session).collection_id
+    collection = create_collection(session=db_session)
+    images = [
+        create_image(session=db_session, collection_id=collection.collection_id, file_path_abs=p)
+        for p in ["/a.png", "/b.png", "/c.png", "/d.png", "/e.png"]
+    ]
+    metadata_resolver.bulk_update_metadata(
+        session=db_session,
+        sample_metadata=[
+            (images[0].sample_id, {"score": 3}),
+            (images[1].sample_id, {"score": 10}),
+            (images[2].sample_id, {"score": 3}),
+            (images[3].sample_id, {"other": 1}),
+        ],
+    )
+    order_by = OrderByMetadataField(field_name="score")
+    sql_query = DatasetQuery(dataset=collection, session=db_session).order_by(
+        order_by.asc() if direction == SortDirection.asc else order_by.desc()
+    )
+    request = SampleQueryRequest(sort=[SortKey(field=SCORE, direction=direction)], limit=2)
 
-    with pytest.raises(QueryExprError, match=f"Sorting {message} is not supported yet"):
+    sample_ids = _all_sample_ids(
+        session=db_session, collection_id=collection.collection_id, request=request
+    )
+
+    assert sample_ids == [sample.sample_id for sample in sql_query]
+
+
+def test_query_samples__evaluation_metric_sort(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    low, high, missing = (
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=path)
+        for path in ["/low.png", "/high.png", "/missing.png"]
+    )
+    run = create_run(session=db_session, collection_id=collection_id, name="run")
+    create_sample_metrics(
+        session=db_session,
+        run_id=run.id,
+        sample_metrics=[
+            SampleMetricStub(sample_id=low.sample_id, metrics={"miou": 0.2}),
+            SampleMetricStub(sample_id=high.sample_id, metrics={"miou": 0.8}),
+        ],
+    )
+    sort_key = EvaluationMetricSortKey(
+        run_name="run", metric_name="miou", direction=SortDirection.desc
+    )
+    request = SampleQueryRequest(sort=[sort_key], limit=1, offset=1)
+
+    sample_ids = _all_sample_ids(session=db_session, collection_id=collection_id, request=request)
+
+    assert sample_ids == [low.sample_id, missing.sample_id]
+
+
+def test_query_samples__offset_paging_with_unknown_sort_field__raises(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    request = SampleQueryRequest(
+        sort=[SortKey(field=SCORE), SortKey(field=FieldRef(table="video", name="fps"))]
+    )
+
+    with pytest.raises(QueryExprError, match=r"Unknown sort field: video\.fps"):
         sample_query_service.query_samples(
-            session=db_session,
-            collection_id=collection_id,
-            request=SampleQueryRequest(sort=[sort_key]),
+            session=db_session, collection_id=collection_id, request=request
         )
+
+
+def _all_sample_ids(
+    session: Session, collection_id: UUID, request: SampleQueryRequest
+) -> list[UUID]:
+    sample_ids = []
+    while True:
+        page = sample_query_service.query_samples(
+            session=session, collection_id=collection_id, request=request
+        )
+        sample_ids += [sample.sample_id for sample in page.samples]
+        if page.next_cursor is None:
+            return sample_ids
+        request = request.model_copy(update={"cursor": page.next_cursor, "offset": 0})
 
 
 def _width_filter(table: str) -> IntegerExpr:

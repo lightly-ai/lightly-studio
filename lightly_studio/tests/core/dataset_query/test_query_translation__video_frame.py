@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from lightly_studio.core.dataset_query import query_translation
+from lightly_studio.core.dataset_query import query_translation, sort_translation
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
@@ -128,7 +128,7 @@ def test_to_match_expression__video_created_at() -> None:
     "name", ["frame_number", "frame_timestamp_s", "frame_timestamp_pts", "rotation_deg"]
 )
 def test_sort_to_order_by__video_frame_fields(name: str) -> None:
-    order_by = query_translation.sort_to_order_by(
+    order_by = sort_translation.sort_to_order_by(
         key=("video_frame", name), direction=SortDirection.desc
     )
     assert isinstance(order_by, OrderByField)

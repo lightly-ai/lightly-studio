@@ -46,9 +46,12 @@ def build_request(
             )
         )
         sort = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=sample_type)
-        # TODO(iunir, 11/2026): Remove when the server pages metadata and metric sorts.
-        if not all(_is_field_sort(key=key, table=sample_type.value) for key in sort):
-            raise UnsupportedQueryError("The server cannot page this sort yet.")
+        needs_offset_paging = not all(
+            _is_field_sort(key=key, table=sample_type.value) for key in sort
+        )
+        # Offset paging can skip samples that a loop changes, so local mode uses SQL.
+        if needs_offset_paging and not active_transport.is_remote():
+            return None
     except UnsupportedQueryError:
         if active_transport.is_remote():
             raise
