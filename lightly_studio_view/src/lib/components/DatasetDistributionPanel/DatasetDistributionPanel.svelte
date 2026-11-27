@@ -2,8 +2,7 @@
     import DistributionPlotContainer from './DistributionPlotContainer/DistributionPlotContainer.svelte';
     import { untrack } from 'svelte';
     import X from '@lucide/svelte/icons/x';
-    import { Button } from '$lib/components';
-    import Typography from '$lib/components/Typography/Typography.svelte';
+    import { Button, PanelTitleBar } from '$lib/components';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { BarChart, type CategoryCount } from '$lib/components/BarChart';
     import type { CategoryCountSeries } from '$lib/components/BarChart/types';
@@ -411,24 +410,23 @@
     class="flex h-full min-w-0 flex-1 flex-col rounded-panel bg-card p-4"
     data-testid="dataset-distribution-panel"
 >
-    <div class="flex items-center justify-between">
-        <Typography variant="h5" component="h2" className="text-foreground">
-            {title}
-        </Typography>
-        {#if onClose}
-            <Button
-                variant="ghost"
-                icon={X}
-                ariaLabel="Close distribution panel"
-                buttonProps={{
-                    size: 'sm',
-                    class: 'h-8 w-8 p-0',
-                    onclick: onClose,
-                    'data-testid': 'dataset-distribution-close-button'
-                }}
-            />
-        {/if}
-    </div>
+    <PanelTitleBar {title}>
+        {#snippet actions()}
+            {#if onClose}
+                <Button
+                    variant="ghost"
+                    icon={X}
+                    ariaLabel="Close distribution panel"
+                    buttonProps={{
+                        size: 'sm',
+                        class: 'h-8 w-8 p-0',
+                        onclick: onClose,
+                        'data-testid': 'dataset-distribution-close-button'
+                    }}
+                />
+            {/if}
+        {/snippet}
+    </PanelTitleBar>
     {#if hasSourceSelector || groupItems.length > 0}
         <!-- Fixed-width labels + flex-1 triggers keep both selects the same
              width, filling the panel row. -->

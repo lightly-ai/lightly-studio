@@ -123,7 +123,7 @@ describe('GridHeader', () => {
             }
         });
 
-        const bar = container.querySelector('.my-2')!;
+        const bar = container.querySelector('.mb-2')!;
         // Full layout: measured flex-nowrap so overflow is observable.
         expect(screen.getByTestId('compact-state')).toHaveTextContent('full');
         expect(bar).toHaveClass('flex-nowrap');

@@ -56,6 +56,9 @@ vi.mock('$lib/components', async () => {
     const { default: Stub } = await import('./LayoutStub.test.svelte');
     // The footer text is asserted in the tests, so it renders for real.
     const { default: Footer } = await import('$lib/components/Footer/Footer.svelte');
+    // The filter panel buttons render inside the title bar, so it renders for real.
+    const { default: PanelTitleBar } =
+        await import('$lib/components/PanelTitleBar/PanelTitleBar.svelte');
     return {
         Button: Stub,
         CombinedMetadataDimensionsFilters: Stub,
@@ -63,6 +66,7 @@ vi.mock('$lib/components', async () => {
         Footer,
         LabelsMenu: Stub,
         Onboarding: Stub,
+        PanelTitleBar,
         SelectionPill: Stub,
         ShowFiltersButton: Stub,
         TagsMenu: Stub,

@@ -8,6 +8,7 @@
         Footer,
         LabelsMenu,
         Onboarding,
+        PanelTitleBar,
         SelectionPill,
         ShowFiltersButton,
         TagsMenu
@@ -714,14 +715,11 @@
                     aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-panel bg-card py-4">
-                        <h2
-                            class="flex items-center justify-between px-4 py-2 text-lg font-semibold"
-                        >
-                            <span class="flex items-center space-x-2">
+                        <PanelTitleBar title="Filters" class="px-4 pb-2">
+                            {#snippet leading()}
                                 <Filter class="size-5" />
-                                <span>Filters</span>
-                            </span>
-                            <span class="flex items-center gap-1">
+                            {/snippet}
+                            {#snippet actions()}
                                 <ClearAllFiltersButton
                                     collectionId={metadataCollectionId}
                                     {isCaptions}
@@ -742,8 +740,8 @@
                                         }}
                                     />
                                 </Tooltip>
-                            </span>
-                        </h2>
+                            {/snippet}
+                        </PanelTitleBar>
                         <div
                             class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 [scrollbar-gutter:stable] dark:[color-scheme:dark]"
                         >
