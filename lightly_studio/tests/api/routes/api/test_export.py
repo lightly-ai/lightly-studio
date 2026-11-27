@@ -708,7 +708,9 @@ def test_export_collection_annotations_prepare__pascal_voc(
     assert (export_dir / "SegmentationClass" / "img1.png").exists()
 
 
+@pytest.mark.parametrize("export_format", ["youtube_vis_segmentation", "caption_coco"])
 def test_export_collection_annotations_prepare__unsupported_format(
+    export_format: str,
     db_session: Session,
     test_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -722,12 +724,12 @@ def test_export_collection_annotations_prepare__unsupported_format(
 
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/export/annotations/prepare",
-        json={"export_format": "youtube_vis_segmentation"},
+        json={"export_format": export_format},
     )
 
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
     assert response.json() == {
-        "detail": "Export format 'youtube_vis_segmentation' is not supported for this endpoint."
+        "detail": f"Export format '{export_format}' is not supported for this endpoint."
     }
     generate_annotations_export.assert_not_called()
     make_temp_dir.assert_not_called()

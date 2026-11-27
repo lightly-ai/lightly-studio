@@ -73,6 +73,11 @@ class TestTransportImageDatasetExport:
                 ExportFormat.CLASSIFICATION_CSV,
                 uuid4(),
             ),
+            (
+                lambda export, path, _: export.to_coco_captions(output_json=path),
+                ExportFormat.CAPTION_COCO,
+                None,
+            ),
         ],
     )
     def test_export(
@@ -112,6 +117,7 @@ class TestTransportImageDatasetExport:
             (lambda export: export.to_coco_object_detections(), Path("coco_export.json")),
             (lambda export: export.to_coco_instance_segmentation(), Path("coco_export.json")),
             (lambda export: export.to_csv_classifications(), Path("classification_export.csv")),
+            (lambda export: export.to_coco_captions(), Path("coco_export.json")),
         ],
     )
     def test_export__default_path(
@@ -180,6 +186,19 @@ class TestTransportImageDatasetExport:
         )
 
         export_locally.assert_called_once_with(tmp_path / "export", None)
+        transport_export.assert_not_called()
+
+    def test_export__ordered_query__captions(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        query = dataset.query().order_by(OrderByField(ImageSampleField.width))
+        export_locally = mocker.patch.object(ImageDatasetExport, "to_coco_captions")
+        transport_export = mocker.spy(LocalExportTransport, "export")
+
+        TransportImageDatasetExport(
+            session=dataset.session, dataset_id=dataset.dataset_id, query=query
+        ).to_coco_captions(output_json=tmp_path / "captions.json")
+
+        export_locally.assert_called_once_with(output_json=tmp_path / "captions.json")
         transport_export.assert_not_called()
 
     def test_export__ordered_query__sample_order(self, tmp_path: Path) -> None:

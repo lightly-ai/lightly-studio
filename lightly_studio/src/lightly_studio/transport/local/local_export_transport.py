@@ -18,6 +18,10 @@ from lightly_studio.resolvers import collection_resolver
 from lightly_studio.services.sample_services import sample_query_service
 
 _IMAGE_EXPORTS: dict[ExportFormat, Callable[[ImageDatasetExport, Path, UUID | None], None]] = {
+    # Captions are not annotations, so the annotation collection does not apply.
+    ExportFormat.CAPTION_COCO: lambda exporter, output_json, _: exporter.to_coco_captions(
+        output_json=output_json
+    ),
     ExportFormat.CLASSIFICATION_CSV: ImageDatasetExport.to_csv_classifications,
     ExportFormat.OBJECT_DETECTION_COCO: ImageDatasetExport.to_coco_object_detections,
     ExportFormat.OBJECT_DETECTION_YOLO: ImageDatasetExport.to_yolo_object_detections,

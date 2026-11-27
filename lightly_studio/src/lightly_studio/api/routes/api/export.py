@@ -245,7 +245,7 @@ def export_collection_annotations_prepare(
     body: ExportAnnotationsPrepareBody,
 ) -> ExportKeyResponse:
     """Generate the annotations export and persist its path."""
-    if body.export_format == ExportFormat.YOUTUBE_VIS_SEGMENTATION:
+    if body.export_format in (ExportFormat.YOUTUBE_VIS_SEGMENTATION, ExportFormat.CAPTION_COCO):
         raise HTTPException(
             status_code=400,
             detail=(
