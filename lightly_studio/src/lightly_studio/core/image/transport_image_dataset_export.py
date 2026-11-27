@@ -54,6 +54,18 @@ class TransportImageDatasetExport(ImageDatasetExport):
         )
 
     @override
+    def to_coco_captions(self, output_json: PathLike | None = None) -> None:
+        if output_json is None:
+            output_json = dataset_export.DEFAULT_EXPORT_FILENAME
+        export_captions_locally = super().to_coco_captions
+        self._export(
+            export_format=ExportFormat.CAPTION_COCO,
+            output_path=output_json,
+            annotation_collection_id=None,
+            export_locally=lambda output_path, _: export_captions_locally(output_json=output_path),
+        )
+
+    @override
     def to_coco_instance_segmentation(
         self, output_json: PathLike | None = None, annotation_collection_id: UUID | None = None
     ) -> None:

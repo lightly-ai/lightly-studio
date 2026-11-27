@@ -20,7 +20,7 @@ from lightly_studio.models.query_expr import (
 from lightly_studio.transport.export_transport import ExportTransport
 from lightly_studio.transport.local import local_export_transport
 from lightly_studio.transport.local.local_export_transport import LocalExportTransport
-from tests.helpers_resolvers import create_collection, create_image
+from tests.helpers_resolvers import create_caption, create_collection, create_image
 
 
 @pytest.mark.usefixtures("patch_collection")
@@ -72,6 +72,37 @@ class TestLocalExportTransport:
 
         coco = json.loads(output_json.read_text())
         assert [image["file_name"] for image in coco["images"]] == ["/a.png", "/b.png"]
+
+    def test_export__captions(self, tmp_path: Path) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+        image = create_image(
+            session=session,
+            collection_id=collection_id,
+            file_path_abs="/a.png",
+            width=100,
+            height=50,
+        )
+        create_caption(
+            session=session,
+            collection_id=collection_id,
+            parent_sample_id=image.sample_id,
+            text="a cat",
+        )
+        output_json = tmp_path / "captions.json"
+
+        LocalExportTransport().export(
+            collection_id=collection_id,
+            query_expr=None,
+            export_format=ExportFormat.CAPTION_COCO,
+            output_path=output_json,
+            annotation_collection_id=None,
+        )
+
+        assert json.loads(output_json.read_text()) == {
+            "images": [{"id": 0, "file_name": "/a.png", "width": 100, "height": 50}],
+            "annotations": [{"id": 0, "image_id": 0, "caption": "a cat"}],
+        }
 
     def test_export__annotation_collection_id(self, mocker: MockerFixture, tmp_path: Path) -> None:
         session = db_manager.persistent_session()
