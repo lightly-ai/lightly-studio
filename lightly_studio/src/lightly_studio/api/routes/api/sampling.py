@@ -74,7 +74,7 @@ def create_sampling(
         request: Sampling parameters including sample count and tag name.
 
     Returns:
-        The number of samples left out because they have no embedding.
+        A response with the number of samples left out because they have no embedding.
 
     Raises:
         HTTPException: 400 if sampling fails due to invalid parameters or other errors.

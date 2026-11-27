@@ -268,7 +268,7 @@ def sampling_via_database(
             the default embedding model of the collection.
 
     Returns:
-        The number of candidates that were left out for a missing embedding.
+        A result with the number of candidates left out for a missing embedding.
 
     Raises:
         ValueError: If the preselected tag does not exist, if its sample IDs are
