@@ -12,7 +12,8 @@ The following export formats are supported:
 | Classification CSV | Image and whole-video classification annotations and confidence scores | CSV |
 | COCO Object Detection | Bounding box annotations | JSON |
 | YOLO Object Detection | Bounding box annotations | TXT labels + `data.yaml` (zipped) |
-| COCO Segmentation Mask | Segmentation masks with bounding boxes | JSON |
+| COCO Instance Segmentation | Polygons and segmentation masks with bounding boxes | JSON |
+| YOLO Instance Segmentation | Polygons | TXT labels + `data.yaml` (zipped) |
 | COCO Captions | Image captions | JSON |
 | Pascal VOC Semantic Segmentation | Per-pixel class masks | PNG masks + class map |
 | YouTube-VIS Segmentation Mask | Video segmentation mask tracks | JSON |
@@ -29,7 +30,8 @@ and select `Export`. The dialog shows a dropdown with all available formats for 
 For annotation formats (`Image Classifications (CSV)`, `Video Classifications (CSV)`,
 `Image Object Detections (COCO)`,
 `Image Object Detections (YOLO)`,
-`Image Segmentation Mask (COCO)`, `Image Segmentation Mask (PASCAL VOC)`, `Image Captions`,
+`Image Segmentation (COCO)`, `Image Segmentation Polygons (YOLO)`,
+`Image Segmentation Mask (PASCAL VOC)`, `Image Captions`,
 `YouTube-VIS Video Segmentation Masks`),
 select the format and click `Download`. A zip file is created if the export includes multiple files.
 The export includes all samples in the dataset.
@@ -61,7 +63,8 @@ dataset = ls.ImageDataset.load()
 dataset.export().to_csv_classifications("classifications.csv")
 dataset.export().to_coco_object_detections("detections.json")
 dataset.export().to_yolo_object_detections("yolo_output_dir/")
-dataset.export().to_coco_segmentation_masks("segmentations.json")
+dataset.export().to_coco_instance_segmentation("segmentations.json")
+dataset.export().to_yolo_instance_segmentation("yolo_seg_output_dir/")
 dataset.export().to_coco_captions("captions.json")
 dataset.export().to_pascalvoc_segmentation_mask("pascalvoc_output_dir/")
 
@@ -70,6 +73,10 @@ dataset = ls.VideoDataset.load()
 dataset.export().to_csv_classifications("classifications.csv")
 dataset.export().to_youtube_vis_segmentation_mask("youtube_vis.json")
 ```
+
+!!! note "Crowd regions in COCO"
+    COCO export writes polygons and masks with `iscrowd=0`. LightlyStudio does not store the
+    crowd flag, so crowd annotations from an ingested COCO file export as normal objects.
 
 ### Export a filtered subset
 

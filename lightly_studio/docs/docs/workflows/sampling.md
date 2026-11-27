@@ -392,7 +392,7 @@ dataset = ls.ImageDataset.create()
 dataset.add_samples_from_coco(
     annotations_json="/path/to/annotations.json",
     images_path="/path/to/images",
-    annotation_type=ls.AnnotationType.OBJECT_DETECTION,
+    annotation_task=ls.AnnotationFileTask.OBJECT_DETECTION,
 )
 
 # Select 20 images whose object crops are as diverse as possible.

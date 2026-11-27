@@ -91,6 +91,25 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 
     </details>
 
+=== "YOLO Instance Segmentation"
+
+    ```python
+    import lightly_studio as ls
+
+    dataset = ls.ImageDataset.create()
+    dataset.add_samples_from_yolo(
+        data_yaml="path/to/data.yaml",
+        annotation_task=ls.AnnotationFileTask.INSTANCE_SEGMENTATION,
+    )
+    ```
+
+    The folder structure is the same as for YOLO object detections. Each line of a label file
+    is one polygon with normalized vertex coordinates:
+
+    ```
+    <class> <x1> <y1> <x2> <y2> <x3> <y3> ...
+    ```
+
 === "COCO Object Detections"
 
     ```python
@@ -127,7 +146,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
 
     </details>
 
-=== "COCO Segmentation Masks"
+=== "COCO Instance Segmentation"
 
     ```python
     import lightly_studio as ls
@@ -139,7 +158,7 @@ standard formats. See [API reference](../api/dataset.md#lightly_studio.ImageData
     dataset.add_samples_from_coco(
         annotations_json=f"{dataset_path}/coco_subset_128_images/instances_train2017.json",
         images_path=f"{dataset_path}/coco_subset_128_images/images",
-        annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
+        annotation_task=ls.AnnotationFileTask.INSTANCE_SEGMENTATION,
     )
     ```
 
