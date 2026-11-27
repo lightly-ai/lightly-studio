@@ -53,6 +53,7 @@ _ANNOTATION_SCOPES: dict[type[BaseModel], str] = {
 }
 _SORT_FIELDS = {"file_name", "file_path_abs", "created_at", "width", "height"}
 _SUPPORTED_INCLUDES = {SampleInclude.TAGS}
+_DEFAULT_SORT_KEY = SortKey(field=FieldRef(table="image", name="created_at"))
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,25 @@ def query_samples(session: Session, collection_id: UUID, request: SampleQueryReq
     tags = _tag_names(session=session, sample_ids=sample_ids, include=request.include)
     records = [_to_record(image=image, collection_id=collection_id, tags=tags) for image in page]
     return SamplePage(samples=records, next_cursor=next_cursor)
+
+
+def get_sample_ids(
+    session: Session, collection_id: UUID, request: SampleQueryRequest, limit: int | None
+) -> list[UUID]:
+    """Get the IDs of the image samples of a collection that match a request, in sort order.
+
+    The IDs start after `request.offset` samples. `limit` sets the maximum number of IDs, and
+    None gets all. The `cursor` and the `limit` of the request are not used.
+
+    Raises:
+        QueryExprError: If the filter or the sort uses an unknown field.
+    """
+    query = _filtered_query(collection_id=collection_id, request=request)
+    for key in request.sort or [_DEFAULT_SORT_KEY]:
+        query = _to_order_by(key=key).apply(query=query)
+    query = query.order_by(col(SampleTable.sample_id))
+    images = session.exec(query.offset(request.offset).limit(limit)).all()
+    return [image.sample_id for image in images]
 
 
 def _keyset_page(
@@ -177,7 +197,7 @@ def _check_filter_fields(value: object, table: str) -> None:
 
 
 def _sort_columns(sort: Sequence[SortKey | EvaluationMetricSortKey]) -> list[_SortColumn]:
-    keys = sort or [SortKey(field=FieldRef(table="image", name="created_at"))]
+    keys = sort or [_DEFAULT_SORT_KEY]
     columns = []
     for key in keys:
         field = _keyset_sort_field(key=key)

@@ -12,6 +12,7 @@ from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
+from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.resolvers import collection_resolver, image_resolver, tag_resolver
 from lightly_studio.sampling import sample as sampling_file
 from lightly_studio.sampling.mundig import Mundig
@@ -553,7 +554,7 @@ class TestSampling:
         collection_id = helpers_resolvers.create_collection(
             session=db_manager.persistent_session()
         ).collection_id
-        sampling = Sampling(dataset_id=collection_id, samples=None)
+        sampling = Sampling(dataset_id=collection_id, samples=SampleQueryRequest(), limit=None)
 
         with pytest.raises(ValueError, match="'nonexistent'"):
             sampling.subpart_diversity(

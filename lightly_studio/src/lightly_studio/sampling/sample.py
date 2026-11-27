@@ -9,7 +9,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.models.query_expr import QueryExpr
+from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.resolvers import collection_resolver
 from lightly_studio.sampling.sampling_config import (
     AnnotationClassBalancingStrategy,
@@ -137,16 +137,19 @@ class Sampling:
     ```
     """
 
-    def __init__(self, dataset_id: UUID, samples: SampleIdSnapshot | QueryExpr | None) -> None:
+    def __init__(
+        self, dataset_id: UUID, samples: SampleIdSnapshot | SampleQueryRequest, limit: int | None
+    ) -> None:
         """Create the sampling interface.
 
         Args:
             dataset_id: Dataset in which the sampling is performed.
-            samples: The candidate samples. A query expression or None sends the sampling
-                through the transport. None uses all samples of the dataset.
+            samples: The candidate samples. A request sends the sampling through the transport.
+            limit: The maximum number of candidates of a request. None uses all.
         """
         self._dataset_id: Final[UUID] = dataset_id
-        self._samples: Final[SampleIdSnapshot | QueryExpr | None] = samples
+        self._samples: Final[SampleIdSnapshot | SampleQueryRequest] = samples
+        self._limit: Final[int | None] = limit
 
     def metadata_weighting(
         self,
@@ -394,7 +397,9 @@ class Sampling:
                 input_sample_ids=self._samples.sample_ids,
             )
             return
-        active_transport.get_transport().compute.sampling(config=config, query_expr=self._samples)
+        active_transport.get_transport().compute.sampling(
+            config=config, request=self._samples, limit=self._limit
+        )
 
     def _get_annotation_source_id(self, name: str) -> UUID | None:
         if isinstance(self._samples, SampleIdSnapshot):
