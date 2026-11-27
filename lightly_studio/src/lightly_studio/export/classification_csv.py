@@ -5,14 +5,17 @@ from __future__ import annotations
 import csv
 from collections.abc import Iterable
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.export import annotation_batches
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+
+if TYPE_CHECKING:
+    from lightly_studio.core.image.image_sample import ImageSample
+    from lightly_studio.core.video.video_sample import VideoSample
 
 CSV_FIELDNAMES = (
     "file_path_abs",

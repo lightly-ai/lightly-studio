@@ -209,6 +209,10 @@ follow_imports = "skip"
 # function from `tests/helpers.py`.
 python_files = "tests/*.py tests/**/*.py"
 
+[tool.coverage.report]
+# Imports for type checking only do not run.
+exclude_also = ["if TYPE_CHECKING:"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

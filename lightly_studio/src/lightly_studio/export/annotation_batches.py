@@ -4,19 +4,21 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable, Iterator, Sequence
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 from uuid import UUID
 
 from sqlalchemy.orm import joinedload, lazyload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.core.sample import Sample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.utils import batching
 
-_Sample = TypeVar("_Sample", bound=Sample)
+if TYPE_CHECKING:
+    from lightly_studio.core.sample import Sample
+
+_Sample = TypeVar("_Sample", bound="Sample")
 
 # Bound the number of samples whose annotation payloads are loaded at once.
 _EXPORT_BATCH_SIZE = 500
