@@ -114,10 +114,8 @@ class TransportImageDatasetExport(ImageDatasetExport):
         Raises:
             UnsupportedQueryError: If the transport is remote and cannot send the query.
         """
-        request = self._query._export_request()  # noqa: SLF001
-        # The transport cannot use the session of the query.
-        has_own_session = self._query._session is not None  # noqa: SLF001
-        if request is None or has_own_session:
+        request = self._query.build_export_request()
+        if request is None:
             export_locally(output_path, annotation_collection_id)
             return
         task = ExportTask(

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from typing import Generic, Self, cast
 from uuid import UUID
 
@@ -181,6 +181,28 @@ class DatasetQuery(Generic[T]):
         stop: int = self._slice.stop
         start: int = self._slice.start or 0
         return max(stop - start, 0)
+
+    def build_export_request(self) -> SampleQueryRequest | None:
+        """Build the request of an export through the transport.
+
+        None means that the export uses SQL, because the transport cannot send the query or
+        cannot use the session of the query.
+
+        Raises:
+            UnsupportedQueryError: If the transport is remote and cannot send the query.
+        """
+        return self._build_request(order_by=self.order_by_expressions or [])
+
+    def build_evaluation_request(self) -> SampleQueryRequest | None:
+        """Build the request of an evaluation through the transport. None means SQL.
+
+        The order changes only the samples of a slice, so only the request of a slice has it.
+
+        Raises:
+            UnsupportedQueryError: If the transport is remote and cannot send the query.
+        """
+        order_by = self.order_by_expressions if self._slice is not None else None
+        return self._build_request(order_by=order_by or [])
 
     def match(self, match_expression: MatchExpression) -> Self:
         """Store a field condition for filtering.
@@ -370,26 +392,14 @@ class DatasetQuery(Generic[T]):
             offset=0 if self._slice is None else self._slice.start or 0,
         )
 
-    def _export_request(self) -> SampleQueryRequest | None:
-        """Get the request for the export transport, or None to export with SQL."""
+    def _build_request(self, order_by: Sequence[OrderByExpression]) -> SampleQueryRequest | None:
+        # The transport cannot use the session of the query.
+        if self._session is not None:
+            return None
         return transport_query.build_export_request(
             sample_type=self.dataset.sample_type,
             match_expression=self.match_expression,
-            order_by=self.order_by_expressions or [],
-            filters_sample_ids=self._sample_ids_subquery is not None,
-            offset=0 if self._slice is None else self._slice.start or 0,
-        )
-
-    def _evaluation_request(self) -> SampleQueryRequest | None:
-        """Get the request for an evaluation through the transport, or None to use SQL.
-
-        The order changes only the samples of a slice, so only the request of a slice has it.
-        """
-        order_by = self.order_by_expressions if self._slice is not None else None
-        return transport_query.build_export_request(
-            sample_type=self.dataset.sample_type,
-            match_expression=self.match_expression,
-            order_by=order_by or [],
+            order_by=order_by,
             filters_sample_ids=self._sample_ids_subquery is not None,
             offset=0 if self._slice is None else self._slice.start or 0,
         )
