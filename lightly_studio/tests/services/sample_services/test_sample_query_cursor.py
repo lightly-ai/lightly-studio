@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -66,6 +67,20 @@ def test_encode_decode() -> None:
     ]
 
 
+def test_encode_offset_decode_offset() -> None:
+    cursor = sample_query_cursor.encode_offset(query_hash="q1", offset=512)
+
+    assert "=" not in cursor
+    assert sample_query_cursor.decode_offset(cursor=cursor, query_hash="q1") == 512
+
+
+def test_decode__offset_cursor__raises() -> None:
+    cursor = sample_query_cursor.encode_offset(query_hash="q1", offset=512)
+
+    with pytest.raises(ValueError, match="not valid"):
+        sample_query_cursor.decode(cursor=cursor, query_hash="q1")
+
+
 def test_decode__other_query__raises() -> None:
     cursor = sample_query_cursor.encode(query_hash="q1", after=[SAMPLE_ID])
 
@@ -92,3 +107,19 @@ def test_decode__invalid_characters__raises() -> None:
 
     with pytest.raises(ValueError, match="not valid"):
         sample_query_cursor.decode(cursor=cursor + "!!!!", query_hash="q1")
+
+
+@pytest.mark.parametrize("offset", [None, -1, 2**63, "5", True])
+def test_decode_offset__not_valid__raises(offset: object) -> None:
+    payload = json.dumps({"v": 1, "q": "q1", "offset": offset})
+    cursor = base64.urlsafe_b64encode(payload.encode()).decode()
+
+    with pytest.raises(ValueError, match="not valid"):
+        sample_query_cursor.decode_offset(cursor=cursor, query_hash="q1")
+
+
+def test_decode_offset__other_query__raises() -> None:
+    cursor = sample_query_cursor.encode_offset(query_hash="q1", offset=512)
+
+    with pytest.raises(ValueError, match="different query"):
+        sample_query_cursor.decode_offset(cursor=cursor, query_hash="q2")

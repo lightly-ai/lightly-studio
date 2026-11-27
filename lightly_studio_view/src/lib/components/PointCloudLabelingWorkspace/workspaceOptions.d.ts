@@ -1,5 +1,8 @@
 import type { WorkspaceCrumb } from './types';
 
+/** `push` adds a browser history entry, `replace` updates the current one. */
+export type HistoryMode = 'push' | 'replace';
+
 /** Route inputs and host callbacks used to initialize a labeling workspace. */
 export interface WorkspaceOptions {
     /** Dataset the labeled point-cloud sequence belongs to. */
@@ -17,6 +20,13 @@ export interface WorkspaceOptions {
     tickNumber?: number;
     /** Reports the active tick as a 1-based number for route synchronization. */
     onTickChange?: (tickNumber: number) => void;
+    /** Camera shown in the enlarged camera dialog, or undefined when it is closed. */
+    openCamera?: string;
+    /**
+     * Reports the open camera for route synchronization; `push` adds a history entry. Without it,
+     * the workspace keeps the open camera itself and ignores `openCamera`.
+     */
+    onOpenCameraChange?: (camera: string | undefined, historyMode: HistoryMode) => void;
     /** Opens the previous sequence; the timeline control is disabled when absent. */
     onPreviousSequence?: () => void;
     /** Opens the next sequence; the timeline control is disabled when absent. */

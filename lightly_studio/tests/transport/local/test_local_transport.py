@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import pytest
-
 from lightly_studio.transport.local.local_annotation_transport import LocalAnnotationTransport
 from lightly_studio.transport.local.local_caption_transport import LocalCaptionTransport
 from lightly_studio.transport.local.local_collection_transport import LocalCollectionTransport
+from lightly_studio.transport.local.local_compute_transport import LocalComputeTransport
+from lightly_studio.transport.local.local_export_transport import LocalExportTransport
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from lightly_studio.transport.local.local_metadata_transport import LocalMetadataTransport
 from lightly_studio.transport.local.local_sample_transport import LocalSampleTransport
@@ -23,9 +23,5 @@ class TestLocalTransport:
         assert isinstance(transport.ingestion, LocalIngestionTransport)
         assert isinstance(transport.metadata, LocalMetadataTransport)
         assert isinstance(transport.captions, LocalCaptionTransport)
-
-    @pytest.mark.parametrize("area", ["compute", "export"])
-    def test_area__not_implemented(self, area: str) -> None:
-        with pytest.raises(AttributeError, match=r"does not exist yet"):
-            getattr(LocalTransport(), area)
-        assert not hasattr(LocalTransport(), area)
+        assert isinstance(transport.compute, LocalComputeTransport)
+        assert isinstance(transport.export, LocalExportTransport)

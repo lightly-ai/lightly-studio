@@ -60,7 +60,7 @@ class TestDatasetExport:
                     "category_id": 0,
                     "segmentation": {"counts": [20, 2, 8, 2, 8, 1, 59], "size": [10, 10]},
                     "bbox": [2.0, 0.0, 3.0, 2.0],
-                    "iscrowd": 1,
+                    "iscrowd": 0,
                 },
             ],
         }
@@ -151,10 +151,12 @@ class TestDatasetExport:
         ).to_coco_instance_segmentation(output_json=output_json)
 
         with open(output_json) as f:
-            annotations = sorted(json.load(f)["annotations"], key=lambda a: a["iscrowd"])
+            annotations = sorted(
+                json.load(f)["annotations"], key=lambda a: isinstance(a["segmentation"], dict)
+            )
         assert annotations[0]["iscrowd"] == 0
         assert annotations[0]["segmentation"] == [[1, 1, 5, 1, 5, 5], [10, 10, 12, 10, 12, 12]]
-        assert annotations[1]["iscrowd"] == 1
+        assert annotations[1]["iscrowd"] == 0
         assert "counts" in annotations[1]["segmentation"]
 
     def test_to_coco_segmentation_masks__deprecated(

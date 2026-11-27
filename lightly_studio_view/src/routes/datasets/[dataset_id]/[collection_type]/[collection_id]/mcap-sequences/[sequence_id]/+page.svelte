@@ -1,12 +1,11 @@
 <script lang="ts">
     import type { PageData } from './$types';
-    import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { useMcapSequenceSummary } from '$lib/hooks';
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
     import type { WorkspaceCrumb } from '$lib/components/PointCloudLabelingWorkspace/types';
     import { useCanNavigateDataset } from '$lib/hooks/useCanNavigateDataset/useCanNavigateDataset';
-    import { getTickNumberFromHash } from './getTickNumberFromHash';
+    import { useSequenceHashState } from './useSequenceHashState.svelte';
     import { routeHelpers } from '$lib/routes';
     import { useSequenceNeighbours } from './useSequenceNeighbours.svelte';
     import {
@@ -26,7 +25,7 @@
     // A sequence opened from a hosted workflow batch is that batch's file: the header shows
     // its state and transitions, and editing follows whose turn it is.
     const workflow = createWorkflowFileContext(() => getWorkflowParams(page.url, sequenceId));
-    const tickNumber = $derived(getTickNumberFromHash(page.url.hash));
+    const hashState = useSequenceHashState({ getSequenceId: () => sequenceId });
     // The workspace loads the same summary, so this query is deduplicated by TanStack.
     const { summary } = useMcapSequenceSummary({
         getDatasetId: () => datasetId,
@@ -110,19 +109,6 @@
         const onNextSequence = neighbours.onNextSequence;
         if (onNextSequence) return workflow.registerNext(onNextSequence);
     });
-
-    const updateTickNumber = (nextTickNumber: number) => {
-        const url = new URL(page.url);
-        const hash = new URLSearchParams(url.hash.slice(1));
-        hash.set('tick', String(nextTickNumber));
-        url.hash = hash.toString();
-        void goto(url, {
-            replaceState: true,
-            noScroll: true,
-            keepFocus: true,
-            state: page.state
-        });
-    };
 </script>
 
 <div
@@ -136,8 +122,10 @@
             {annotationSourceCollectionId}
             {sequenceId}
             {sourcePath}
-            {tickNumber}
-            onTickChange={updateTickNumber}
+            tickNumber={hashState.tick}
+            openCamera={hashState.openCamera}
+            onOpenCameraChange={hashState.setOpenCamera}
+            onTickChange={hashState.setTick}
             onPreviousSequence={neighbours.onPreviousSequence}
             onNextSequence={neighbours.onNextSequence}
         />

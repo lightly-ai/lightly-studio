@@ -19,6 +19,7 @@ from lightly_studio_serve.embedder import (
 from lightly_studio_serve.protocol import MULTIPART_MAX_FILES, ServerLimits
 from lightly_studio_serve.server import create_app
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from tests.labeling.helpers import FakeLabelingModel
 
 SPACE_KEY = "acme/model@v1"
 DIMENSION = 2
@@ -123,6 +124,11 @@ def no_uvicorn(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(uvicorn, "run", _do_not_run)
 
 
+def test_create_app__no_model() -> None:
+    with pytest.raises(ValueError, match="Got neither"):
+        create_app()
+
+
 def test_create_app__describe() -> None:
     client = TestClient(create_app(embedder=FakeTextEmbedder()))
 
@@ -165,6 +171,23 @@ def test_create_app__describe_while_the_model_loads() -> None:
     assert response.json()["ready"] is False
     assert response.json()["space_key"] == SPACE_KEY
     assert response.json()["dimension"] == DIMENSION
+
+
+def test_create_app__describe_labeling_model_only() -> None:
+    client = TestClient(create_app(labeling_model=FakeLabelingModel()))
+
+    assert client.get("/v1/describe").status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_create_app__describe_embedder_and_labeling_model() -> None:
+    client = TestClient(
+        create_app(
+            embedder=FakeTextEmbedder(), labeling_model=FakeLabelingModel(model_id="car-detector")
+        )
+    )
+
+    assert client.get("/v1/describe").json()["space_key"] == SPACE_KEY
+    assert client.get("/v1/labeling/describe").json()["model_id"] == "car-detector"
 
 
 def test_create_app__embedder_without_a_served_capability() -> None:
@@ -378,7 +401,7 @@ def test_create_app__model_raises_not_implemented_error() -> None:
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert response.json()["detail"] == (
-        "The embedder raised NotImplementedError. See the server log."
+        "The model raised NotImplementedError. See the server log."
     )
     assert MODEL_ERROR_MESSAGE not in response.text
 

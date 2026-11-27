@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Pane, PaneGroup, PaneResizer } from 'paneforge';
+    import { cn } from '$lib/utils';
     import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import PointCloudWorkspaceScene from './PointCloudWorkspaceScene/PointCloudWorkspaceScene.svelte';
@@ -12,19 +13,19 @@
     import { useSequenceTracks } from './FrameTimeline/useSequenceTracks.svelte';
     import { useSequenceTickTags } from './FrameTimeline/useSequenceTickTags.svelte';
 
-    const { cameraPane } = useWorkspaceControllerContext();
+    const { cameraPane, objectTracksPanel, tagTracksPanel } = useWorkspaceControllerContext();
     const getLayout = usePointCloudWorkspaceLayoutContext();
     const layout = $derived(getLayout());
+    const cameraStripIsRight = $derived(layout.cameraStripDock === 'right');
     const tracksQuery = useSequenceTracks(() => ({
         datasetId: layout.datasetId,
         sequenceId: layout.sequenceId,
         displayFrameId: layout.workspace.referenceFrameId || undefined
     }));
-    let showFrameTags = $state(false);
     const tickTagsQuery = useSequenceTickTags(() => ({
         datasetId: layout.datasetId,
         sequenceId: layout.sequenceId,
-        enabled: showFrameTags
+        enabled: tagTracksPanel.visible
     }));
 
     // Only an untracked cuboid of the loaded tick can start a track, and only while editing.
@@ -71,16 +72,25 @@
     provideCameraRgbColors(() => cameraRgb.colors);
 </script>
 
-<PaneGroup direction="vertical" class="min-h-0 flex-1">
+<PaneGroup direction={cameraStripIsRight ? 'horizontal' : 'vertical'} class="min-h-0 flex-1">
     <Pane defaultSize={62} minSize={30} class="min-h-0">
         <div class="flex h-full min-h-0 flex-col">
             <PointCloudWorkspaceScene />
         </div>
     </Pane>
     <PaneResizer
-        class="group relative flex h-2 cursor-row-resize items-center justify-center bg-card transition-colors hover:bg-card"
+        class={cn(
+            'group relative flex items-center justify-center bg-card transition-colors hover:bg-card',
+            cameraStripIsRight ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize',
+            layout.cameraStripCollapsed && 'hidden'
+        )}
     >
-        <div class="flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100">
+        <div
+            class={cn(
+                'flex gap-0.5 opacity-40 transition-opacity group-hover:opacity-100',
+                cameraStripIsRight && 'flex-col'
+            )}
+        >
             <span class="size-1 rounded-full bg-muted-foreground"></span>
             <span class="size-1 rounded-full bg-muted-foreground"></span>
             <span class="size-1 rounded-full bg-muted-foreground"></span>
@@ -90,30 +100,37 @@
         bind:this={cameraPane.pane}
         defaultSize={26}
         minSize={12}
-        collapsedSize={4}
+        collapsedSize={0}
         maxSize={45}
         collapsible
         onCollapse={() => layout.onCameraStripCollapsedChange(true)}
         onExpand={() => layout.onCameraStripCollapsedChange(false)}
         class="min-h-0"
     >
-        <CameraProjectionStrip
-            datasetId={layout.datasetId}
-            sequenceId={layout.sequenceId}
-            cameraChannels={layout.workspace.cameraChannels}
-            seqNumber={layout.workspace.currentTick}
-            displayFrameId={layout.workspace.referenceFrameId}
-            selectedChannelIds={layout.selectedCameraChannelIds}
-            batch={layout.cameraBatch}
-            annotations={layout.snapshotAnnotations.filter(
-                (annotation) => !layout.isTickAnnotationHidden(annotation)
-            )}
-            annotationClasses={layout.annotationClasses}
-            canProject={!layout.workspace.isShowingSensorFrames}
-            onPlaybackToggle={layout.onPlayToggle}
-            collapsed={layout.cameraStripCollapsed}
-            onToggleCollapsed={cameraPane.toggle}
-        />
+        {#if !layout.cameraStripCollapsed}
+            <CameraProjectionStrip
+                datasetId={layout.datasetId}
+                sequenceId={layout.sequenceId}
+                cameraChannels={layout.workspace.cameraChannels}
+                seqNumber={layout.workspace.currentTick}
+                displayFrameId={layout.workspace.referenceFrameId}
+                selectedChannelIds={layout.selectedCameraChannelIds}
+                batch={layout.cameraBatch}
+                annotations={layout.snapshotAnnotations.filter(
+                    (annotation) => !layout.isTickAnnotationHidden(annotation)
+                )}
+                annotationClasses={layout.annotationClasses}
+                canProject={!layout.workspace.isShowingSensorFrames}
+                onPlaybackToggle={layout.onPlayToggle}
+                onHide={cameraPane.toggle}
+                dock={layout.cameraStripDock}
+                onDockChange={layout.onCameraStripDockChange}
+                onToggleCameraChannel={layout.onToggleCameraChannel}
+                onSetCameraChannels={layout.onSetCameraChannels}
+                openCamera={layout.openCamera}
+                onOpenCameraChange={layout.onOpenCameraChange}
+            />
+        {/if}
     </Pane>
 </PaneGroup>
 
@@ -162,8 +179,10 @@
         onSeekEnd={layout.onSeekEnd}
         onPreviousSequence={layout.onPreviousSequence}
         onNextSequence={layout.onNextSequence}
-        {showFrameTags}
-        onShowFrameTagsChange={(checked) => (showFrameTags = checked)}
+        showObjectTracks={objectTracksPanel.visible}
+        onHideObjectTracks={objectTracksPanel.toggle}
+        showFrameTags={tagTracksPanel.visible}
+        onHideFrameTags={tagTracksPanel.toggle}
         frameTags={tickTagsQuery.query.data?.tags ?? []}
     />
 </div>

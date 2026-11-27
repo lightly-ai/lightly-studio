@@ -2,7 +2,9 @@
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import {
         generalShortcuts,
+        pointCloudShortcuts,
         staticGeneralShortcuts,
+        staticPointCloudShortcuts,
         staticToolShortcuts,
         toolShortcuts
     } from '../settingsDialogConfig';
@@ -48,8 +50,12 @@
         {@render recordableRows(generalShortcuts)}
         {@render staticRows(staticGeneralShortcuts)}
     </SettingsGroup>
-    <SettingsGroup title="Annotation tools" columns={2}>
+    <SettingsGroup title="Image annotation" columns={2}>
         {@render recordableRows(toolShortcuts)}
         {@render staticRows(staticToolShortcuts)}
+    </SettingsGroup>
+    <SettingsGroup title="Point cloud" columns={2}>
+        {@render recordableRows(pointCloudShortcuts)}
+        {@render staticRows(staticPointCloudShortcuts)}
     </SettingsGroup>
 </div>

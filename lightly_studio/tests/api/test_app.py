@@ -12,7 +12,7 @@ from lightly_studio.api.dependencies.identity import Identity, IdentityDep, Role
 from lightly_studio.api.replaceable import Replaceable
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 
-_ADA = Identity(email="ada@example.com", role=Role.VIEWER)
+_ADA = Identity(email="ada@example.com", role=Role.VIEWER, user_id=None)
 
 
 def test_create_app__serves_extra_router_before_webapp_catch_all() -> None:

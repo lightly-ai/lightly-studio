@@ -13,13 +13,19 @@
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { countVisibleSources, resolveEffectiveColorBySource } from '$lib/utils';
+    import {
+        countVisibleSources,
+        listLockableIds,
+        resolveEffectiveColorBySource
+    } from '$lib/utils';
     import {
         groupAnnotationsBySource,
         listAllSourceGroups
     } from './SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationPanelVisibility } from './useAnnotationPanelVisibility.svelte';
     import { useAnnotationRowActions } from './useAnnotationRowActions.svelte';
+    import { useAnnotationLocks } from './useAnnotationLocks';
+    import { AnnotationLockToggle } from '$lib/components/SampleDetails/AnnotationLockToggle';
     import AnnotationSourceGroupList from './AnnotationSourceGroupList/AnnotationSourceGroupList.svelte';
 
     type SampleDetailsAnnotationSegmentProps = {
@@ -54,6 +60,8 @@
         refetch: () => refetch()
     });
 
+    const locks = useAnnotationLocks({ getCollectionId: () => collectionId });
+
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { enforceColoringByClassStore } = useSettings();
     const setTargetSource = useSetTargetSource(() => collectionId);
@@ -72,6 +80,8 @@
                   )
             : [];
     });
+
+    const lockableIds = $derived(listLockableIds(annotationsSort));
 
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     // Every source gets a group, also without annotations here, so any source can be the target.
@@ -120,14 +130,14 @@
         onClick={() => rowActions.toggleSelection(annotation.sample_id)}
         onDeleteAnnotation={() => rowActions.remove(annotation)}
         isHidden={annotationsIdsToHide.has(annotation.sample_id)}
-        isLocked={annotationLabelContext.lockedAnnotationIds?.has(annotation.sample_id) ?? false}
+        isLocked={locks.isLocked(annotation.sample_id)}
         onToggleShowAnnotation={(e) => {
             e.stopPropagation();
             visibility.toggleAnnotation(annotation.sample_id);
         }}
         onToggleLock={(e) => {
             e.stopPropagation();
-            rowActions.toggleLock(annotation.sample_id);
+            locks.toggle([annotation.sample_id], 'annotation');
         }}
         onUpdate={refetch}
         onChangeAnnotationLabel={(newLabel) => rowActions.relabel(annotation, newLabel)}
@@ -136,7 +146,17 @@
     />
 {/snippet}
 
-<Segment title="Annotations">
+{#snippet panelLock()}
+    {#if $isEditingMode && lockableIds.length > 0}
+        <AnnotationLockToggle
+            locked={locks.areAllLocked(lockableIds)}
+            scope="all"
+            onToggle={() => locks.toggle(lockableIds, 'all')}
+        />
+    {/if}
+{/snippet}
+
+<Segment title="Annotations" actions={panelLock}>
     {#if isGrouped}
         <AnnotationSourceGroupList
             groups={allSourceGroups}
@@ -145,6 +165,8 @@
             {canPickTarget}
             onSetTarget={setTargetSource}
             {visibility}
+            canLock={$isEditingMode}
+            {locks}
             {colorBySource}
             row={annotationRow}
         />

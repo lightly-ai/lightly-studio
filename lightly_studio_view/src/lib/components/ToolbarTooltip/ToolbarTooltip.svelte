@@ -55,12 +55,13 @@
             >
                 <span class="font-medium">{label}</span>
                 {#if shortcut && action}
-                    <span class="text-white/70"
-                        >{verb}
-                        <kbd class="rounded border border-white/10 bg-white/10 px-1">{shortcut}</kbd
-                        >
-                        to {action}</span
-                    >
+                    <span class="text-white/70">
+                        {verb}
+                        <kbd class="rounded border border-white/10 bg-white/10 px-1">
+                            {shortcut}
+                        </kbd>
+                        to {action}
+                    </span>
                 {/if}
                 {#if hint}
                     <span class="text-white/50">{hint}</span>

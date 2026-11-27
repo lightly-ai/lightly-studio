@@ -14,27 +14,21 @@ interface UseAnnotationRowActionsReturn {
     select: (annotationId: string) => void;
     /** A click on the row. A Space pan must not select. */
     toggleSelection: (annotationId: string) => void;
-    toggleLock: (annotationId: string) => void;
     remove: (annotation: AnnotationView) => Promise<void>;
     /** A relabel is an explicit class pick: it becomes the class for new annotations. */
     relabel: (annotation: AnnotationView, className: string) => void;
 }
 
 /**
- * What a row of the Annotations panel does: select, lock, delete with undo and relabel its
+ * What a row of the Annotations panel does: select, delete with undo and relabel its
  * annotation. Call during component init: it reads the annotation label context.
  */
 export const useAnnotationRowActions = (
     params: UseAnnotationRowActionsParams
 ): UseAnnotationRowActionsReturn => {
     const { getCollectionId, getAnnotations } = params;
-    const {
-        context,
-        setAnnotationId,
-        setAnnotationLabel,
-        setLastCreatedAnnotationId,
-        setLockedAnnotationIds
-    } = useAnnotationLabelContext();
+    const { context, setAnnotationId, setAnnotationLabel, setLastCreatedAnnotationId } =
+        useAnnotationLabelContext();
     const { selectAnnotation } = useAnnotationSelection();
     const { deleteWithUndo } = useDeleteAnnotationWithUndo(getCollectionId);
     const { pickClass } = useStickyClass();
@@ -49,11 +43,6 @@ export const useAnnotationRowActions = (
         select,
         toggleSelection: (annotationId: string) => {
             if (!params.getIsPanModeEnabled()) select(annotationId);
-        },
-        toggleLock: (annotationId: string) => {
-            const locked = new Set(context.lockedAnnotationIds);
-            if (!locked.delete(annotationId)) locked.add(annotationId);
-            setLockedAnnotationIds(locked);
         },
         remove: async (annotation: AnnotationView) => {
             const isDeleted = await deleteWithUndo(annotation, params.refetch);

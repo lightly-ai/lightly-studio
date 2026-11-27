@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from uuid import uuid4
 
+import pytest
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
 from labelformat.model.category import Category
@@ -78,6 +79,64 @@ def test_get_segmentation_annotation_create__with_binary_mask() -> None:
     assert isinstance(annotation.segmentation_mask, list)
 
 
+def test_get_instance_segmentation_annotation_create__multipolygon_is_polygon() -> None:
+    result = labelformat_helpers.get_instance_segmentation_annotation_create(
+        parent_sample_id=uuid4(),
+        annotation_label_id=uuid4(),
+        segmentation=MultiPolygon(
+            polygons=[[(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)], [(0.0, 0.0), (1.0, 1.0)]]
+        ),
+    )
+
+    assert result is not None
+    assert result.annotation_type == AnnotationType.POLYGON
+    assert result.polygons == [[(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)]]
+
+
+def test_get_instance_segmentation_annotation_create__no_valid_part() -> None:
+    result = labelformat_helpers.get_instance_segmentation_annotation_create(
+        parent_sample_id=uuid4(),
+        annotation_label_id=uuid4(),
+        segmentation=MultiPolygon(polygons=[[(0.0, 0.0), (1.0, 1.0)]]),
+    )
+
+    assert result is None
+
+
+def test_get_instance_segmentation_annotation_create__binary_mask() -> None:
+    binary_mask = BinaryMaskSegmentation.from_rle(
+        rle_row_wise=[0, 2, 2, 2, 10],
+        width=4,
+        height=4,
+        bounding_box=BoundingBox(xmin=0.0, ymin=0.0, xmax=2.0, ymax=2.0),
+    )
+
+    result = labelformat_helpers.get_instance_segmentation_annotation_create(
+        parent_sample_id=uuid4(),
+        annotation_label_id=uuid4(),
+        segmentation=binary_mask,
+    )
+
+    assert result is not None
+    assert result.annotation_type == AnnotationType.SEGMENTATION_MASK
+    assert result.segmentation_mask == binary_mask.get_rle()
+
+
+def test_warn_skipped_polygons__zero_is_silent(caplog: pytest.LogCaptureFixture) -> None:
+    labelformat_helpers.warn_skipped_polygons(count=0)
+
+    assert caplog.text == ""
+
+
+def test_warn_skipped_polygons__warns_with_count(caplog: pytest.LogCaptureFixture) -> None:
+    labelformat_helpers.warn_skipped_polygons(count=2)
+
+    assert (
+        "Skipped 2 polygon annotations without a valid part. "
+        "A valid part has at least 3 vertices and finite coordinates." in caplog.text
+    )
+
+
 def test_get_object_detection_annotation_create() -> None:
     """Test creating object detection annotation from BoundingBox."""
     parent_sample_id = uuid4()
@@ -143,9 +202,9 @@ def test_get_object_detection_annotation_create__with_confidence() -> None:
     assert annotation.confidence == 0.95
 
 
-def test_create_label_map(db_session: Session) -> None:
+def test_create_label_map(persistent_session: Session) -> None:
     # Test the creation of new labels and re-use of existing labels
-    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    collection_id = helpers_resolvers.create_collection(session=persistent_session).collection_id
 
     class TestLabels1:
         def get_categories(self) -> Iterable[Category]:
@@ -157,7 +216,6 @@ def test_create_label_map(db_session: Session) -> None:
     label_input = TestLabels1()
 
     label_map_1 = labelformat_helpers.create_label_map(
-        session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input,
     )
@@ -173,7 +231,6 @@ def test_create_label_map(db_session: Session) -> None:
     label_input_2 = TestLabels2()
 
     label_map_2 = labelformat_helpers.create_label_map(
-        session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input_2,
     )
@@ -185,3 +242,18 @@ def test_create_label_map(db_session: Session) -> None:
     assert label_map_2[0] == label_map_1[0]  # dog exists already
     assert label_map_2[1] == label_map_1[1]  # cat exists already
     assert label_map_2[2] not in label_map_1.values()  # bird is new
+
+
+def test_valid_polygon_parts__drops_short_and_non_finite_parts() -> None:
+    multipolygon = MultiPolygon(
+        polygons=[
+            [(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)],
+            [(0.0, 0.0), (1.0, 1.0)],
+            [(0.0, 0.0), (1.0, float("nan")), (2.0, 2.0)],
+            [(0.0, 0.0), (float("inf"), 1.0), (2.0, 2.0)],
+        ]
+    )
+
+    assert labelformat_helpers._valid_polygon_parts(multipolygon=multipolygon) == [
+        [(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)]
+    ]

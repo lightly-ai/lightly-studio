@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 import pytest
@@ -9,7 +10,14 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
+from lightly_studio.models.query_expr import (
+    FieldRef,
+    IntegerExpr,
+    OrdinalComparisonOperator,
+    QueryExpr,
+)
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_query import SampleQueryRequest
 from tests.helpers_resolvers import create_collection, create_image
 
 
@@ -154,3 +162,64 @@ class TestDatasetQuery:
         assert next(it).sample_id == image2.sample_id
         with pytest.raises(StopIteration):
             next(it)
+
+    def test_export_request(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        query = DatasetQuery(dataset=collection, session=db_session)
+        query.match(ImageSampleField.width > 10)
+
+        assert query._export_request() == SampleQueryRequest(
+            query_expr=QueryExpr(
+                match_expr=IntegerExpr(
+                    field=FieldRef(table="image", name="width"),
+                    operator=OrdinalComparisonOperator.GT,
+                    value=10,
+                )
+            )
+        )
+
+    @pytest.mark.parametrize(
+        "restrict",
+        [
+            lambda query: query.order_by(OrderByField(ImageSampleField.width)),
+            lambda query: query.slice(limit=10),
+            lambda query: query.filter_by_sample_ids(sqlmodel.select(SampleTable.sample_id)),
+        ],
+    )
+    def test_export_request__order_slice_or_sample_ids(
+        self, db_session: Session, restrict: Callable[[DatasetQuery], DatasetQuery]
+    ) -> None:
+        collection = create_collection(session=db_session)
+        query = restrict(DatasetQuery(dataset=collection, session=db_session))
+
+        assert query._export_request() is None
+
+    def test_evaluation_request__ordered(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        query = DatasetQuery(dataset=collection, session=db_session)
+        query.match(ImageSampleField.width > 10).order_by(OrderByField(ImageSampleField.width))
+
+        assert query._evaluation_request() == SampleQueryRequest(
+            query_expr=QueryExpr(
+                match_expr=IntegerExpr(
+                    field=FieldRef(table="image", name="width"),
+                    operator=OrdinalComparisonOperator.GT,
+                    value=10,
+                )
+            )
+        )
+
+    @pytest.mark.parametrize(
+        "restrict",
+        [
+            lambda query: query.slice(limit=10),
+            lambda query: query.filter_by_sample_ids(sqlmodel.select(SampleTable.sample_id)),
+        ],
+    )
+    def test_evaluation_request__slice_or_sample_ids(
+        self, db_session: Session, restrict: Callable[[DatasetQuery], DatasetQuery]
+    ) -> None:
+        collection = create_collection(session=db_session)
+        query = restrict(DatasetQuery(dataset=collection, session=db_session))
+
+        assert query._evaluation_request() is None

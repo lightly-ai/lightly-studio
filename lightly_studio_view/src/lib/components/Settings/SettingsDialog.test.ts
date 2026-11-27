@@ -25,7 +25,11 @@ vi.mock('$lib/hooks/useSettings', () => {
         key_toolbar_segmentation_mask: 'm',
         key_toolbar_slic: 'a',
         key_toolbar_brush: 'r',
-        key_toolbar_eraser: 'x'
+        key_toolbar_eraser: 'x',
+        key_previous_camera: '[',
+        key_next_camera: ']',
+        key_point_cloud_select: 'q',
+        key_point_cloud_create_cuboid: 'c'
     });
     const isLoadedStore = writable(true);
 
@@ -357,6 +361,27 @@ describe('SettingsDialog', () => {
         expect(saveSettings).not.toHaveBeenCalled();
     });
 
+    it('should show the point cloud shortcuts', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        expect(screen.getByText('Image annotation')).toBeInTheDocument();
+        expect(screen.getByText('Point cloud')).toBeInTheDocument();
+        expect(screen.getByLabelText('Select cuboid')).toHaveTextContent('q');
+        expect(screen.getByLabelText('Create cuboid')).toHaveTextContent('c');
+        const moveCamera = screen.getByLabelText('Move camera');
+        expect(moveCamera).toHaveTextContent('W / A / S / D');
+        expect(moveCamera).toBeDisabled();
+        expect(screen.getByLabelText('Delete selected cuboid')).toHaveTextContent(
+            'Delete / Backspace'
+        );
+        expect(screen.getByLabelText('Previous camera')).toHaveTextContent('[');
+        expect(screen.getByLabelText('Next camera')).toHaveTextContent(']');
+        const open = screen.getByLabelText('Open camera 1–9');
+        expect(open).toHaveTextContent('1–9');
+        expect(open).toBeDisabled();
+    });
+
     it('should have unique IDs for all shortcut controls', async () => {
         render(SettingsDialog);
         await openDialog();
@@ -371,7 +396,19 @@ describe('SettingsDialog', () => {
             'toolbar-segmentation-mask',
             'toolbar-brush-mode',
             'toolbar-eraser-mode',
-            'change-brush-size'
+            'change-brush-size',
+            'previous-camera',
+            'next-camera',
+            'open-camera-n',
+            'point-cloud-select',
+            'point-cloud-create-cuboid',
+            'play-pause',
+            'previous-next-tick',
+            'move-camera',
+            'delete-cuboid',
+            'cancel-deselect',
+            'confirm-geometry',
+            'zoom-timeline'
         ];
 
         for (const id of ids) {

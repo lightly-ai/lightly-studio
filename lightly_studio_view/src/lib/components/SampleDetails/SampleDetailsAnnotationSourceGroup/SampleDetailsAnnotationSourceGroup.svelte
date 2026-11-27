@@ -12,6 +12,7 @@
     import { untrack, type Snippet } from 'svelte';
     import { slide } from 'svelte/transition';
     import { cn } from '$lib/utils';
+    import { AnnotationLockToggle } from '$lib/components/SampleDetails/AnnotationLockToggle';
 
     interface Props {
         name: string;
@@ -25,6 +26,10 @@
          * are not drawn on the canvas and so cannot be toggled). */
         allHidden?: boolean;
         onToggleVisibility?: (e: MouseEvent) => void;
+        /** Whether all lockable annotations of the source are locked. */
+        allLocked?: boolean;
+        /** When omitted, the lock is hidden (e.g. outside edit mode, or nothing to lock). */
+        onToggleLock?: () => void;
         /** Called when the user expands or collapses the group. */
         onOpenChange?: (open: boolean) => void;
         /** Rendered at the start of the header, e.g. the button that makes this the target. */
@@ -44,6 +49,8 @@
         showColorMarker,
         allHidden = false,
         onToggleVisibility,
+        allLocked = false,
+        onToggleLock,
         onOpenChange,
         leading,
         highlighted = false,
@@ -84,8 +91,8 @@
 <Collapsible bind:open={() => open, setOpen}>
     <div
         class={cn(
-            '-mx-1 flex items-center gap-2 rounded-md px-1',
-            highlighted && 'bg-primary/10 ring-1 ring-primary/40'
+            'flex items-center gap-2 rounded-sm px-3',
+            highlighted && 'bg-primary/10 ring-1 ring-inset ring-primary/40'
         )}
         data-testid="annotation-source-group-header"
         title={name}
@@ -104,8 +111,10 @@
                 {#if subtitle}
                     <span
                         class="text-xs text-primary"
-                        data-testid="annotation-source-group-subtitle">{subtitle}</span
+                        data-testid="annotation-source-group-subtitle"
                     >
+                        {subtitle}
+                    </span>
                 {/if}
             </span>
             <div class="flex shrink-0 items-center gap-2">
@@ -116,6 +125,9 @@
                 />
             </div>
         </CollapsibleTrigger>
+        {#if onToggleLock}
+            <AnnotationLockToggle locked={allLocked} scope="source" onToggle={onToggleLock} />
+        {/if}
         {#if onToggleVisibility}
             <div class="flex shrink-0 items-center">
                 {#if allHidden}

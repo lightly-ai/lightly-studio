@@ -11,10 +11,13 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.dataset_query.query_expr_conversion import UnsupportedQueryError
 from lightly_studio.core.image.record_image_sample import RecordImageSample
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample_query import (
     DEFAULT_PAGE_SIZE,
+    EvaluationMetricSortKey,
     SampleInclude,
     SampleQueryRequest,
+    SortKey,
 )
 from lightly_studio.transport import active_transport
 
@@ -34,20 +37,80 @@ def build_request(
     if not active_transport.use_transport_queries():
         return None
     try:
-        if sample_type != SampleType.IMAGE or filters_sample_ids:
-            raise UnsupportedQueryError("Only image queries without sample IDs are supported.")
-        query_expr = (
-            None
-            if match_expression is None
-            else query_expr_conversion.to_query_expr(match_expression=match_expression)
+        query_expr = _to_image_query_expr(
+            sample_type=sample_type,
+            match_expression=match_expression,
+            filters_sample_ids=filters_sample_ids,
         )
-        sort = query_expr_conversion.to_sort_keys(order_by=order_by)
+        sort = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=sample_type)
+        needs_offset_paging = not all(
+            _is_field_sort(key=key, table=sample_type.value) for key in sort
+        )
+        # Offset paging can skip samples that a loop changes, so local mode uses SQL.
+        if needs_offset_paging and not active_transport.is_remote():
+            return None
     except UnsupportedQueryError:
         if active_transport.is_remote():
             raise
         return None
     return SampleQueryRequest(
         query_expr=query_expr, sort=sort, offset=offset, include=[SampleInclude.TAGS]
+    )
+
+
+def build_export_request(
+    sample_type: SampleType,
+    match_expression: MatchExpression | None,
+    filters_sample_ids: bool,
+    is_ordered: bool,
+    is_sliced: bool,
+) -> SampleQueryRequest | None:
+    """Build the request of an export. None means the export uses SQL.
+
+    The request has only the filter. The export transport cannot send an order or a slice
+    yet.
+
+    Raises:
+        UnsupportedQueryError: If the transport is remote and cannot send the query.
+    """
+    try:
+        if is_ordered or is_sliced:
+            raise UnsupportedQueryError("The export transport cannot send an order or a slice.")
+        query_expr = _to_image_query_expr(
+            sample_type=sample_type,
+            match_expression=match_expression,
+            filters_sample_ids=filters_sample_ids,
+        )
+    except UnsupportedQueryError:
+        if active_transport.is_remote():
+            raise
+        return None
+    return SampleQueryRequest(query_expr=query_expr)
+
+
+def build_evaluation_request(
+    sample_type: SampleType,
+    match_expression: MatchExpression | None,
+    filters_sample_ids: bool,
+    is_sliced: bool,
+) -> SampleQueryRequest | None:
+    """Build the request of an evaluation. None means the evaluation uses SQL.
+
+    The order does not change the evaluated samples, so the request has only the filter.
+
+    Raises:
+        UnsupportedQueryError: If the transport is remote and cannot send the query.
+    """
+    if is_sliced:
+        if active_transport.is_remote():
+            raise UnsupportedQueryError("The transport cannot send the slice of an evaluation.")
+        return None
+    return build_export_request(
+        sample_type=sample_type,
+        match_expression=match_expression,
+        filters_sample_ids=filters_sample_ids,
+        is_ordered=False,
+        is_sliced=False,
     )
 
 
@@ -74,3 +137,19 @@ def iter_samples(
         if remaining is not None:
             remaining -= len(page.samples)
         request = request.model_copy(update={"cursor": page.next_cursor, "offset": 0})
+
+
+def _is_field_sort(key: SortKey | EvaluationMetricSortKey, table: str) -> bool:
+    return isinstance(key, SortKey) and key.field.table == table
+
+
+def _to_image_query_expr(
+    sample_type: SampleType, match_expression: MatchExpression | None, filters_sample_ids: bool
+) -> QueryExpr | None:
+    if sample_type != SampleType.IMAGE or filters_sample_ids:
+        raise UnsupportedQueryError("Only image queries without sample IDs are supported.")
+    if match_expression is None:
+        return None
+    return query_expr_conversion.to_query_expr(
+        match_expression=match_expression, sample_type=sample_type
+    )

@@ -18,19 +18,12 @@ from lightly_studio.evaluation.image_dataset_evaluate import (
     ImageDatasetEvaluate,
     InstanceSegmentationEvaluationConfig,
     ObjectDetectionEvaluationConfig,
-    SemanticSegmentationEvaluationConfig,
 )
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.evaluation_run import EvaluationTaskType
+from lightly_studio.models.evaluation_task import EvaluationConfig
 from lightly_studio.resolvers import collection_resolver, image_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
-
-EvaluationConfig = (
-    ObjectDetectionEvaluationConfig
-    | ClassificationEvaluationConfig
-    | InstanceSegmentationEvaluationConfig
-    | SemanticSegmentationEvaluationConfig
-)
 
 
 def run_evaluation(  # noqa: PLR0913

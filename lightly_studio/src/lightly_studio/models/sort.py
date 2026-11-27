@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
-from lightly_studio.core.dataset_query import query_translation
+from lightly_studio.core.dataset_query import sort_translation
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.models.sort_direction import SortDirection
 
@@ -99,7 +99,7 @@ def sort_field_expr_to_order_by(expr: SortFieldExprBase) -> OrderByExpression:
     Returns:
         An OrderByExpression ready to be applied to a database query.
     """
-    return query_translation.sort_to_order_by(
+    return sort_translation.sort_to_order_by(
         key=(expr.source, expr.field_name),
         direction=expr.direction,
     )
@@ -131,7 +131,7 @@ def adjacent_sort_expr_to_order_by(expr: AdjacentSortExpr) -> OrderByExpression:
         An OrderByExpression ready to be applied to a database query.
     """
     if isinstance(expr, EvaluationMetricSortExpr):
-        return query_translation.evaluation_metric_sort_to_order_by(
+        return sort_translation.evaluation_metric_sort_to_order_by(
             evaluation_run_name=expr.evaluation_run_name,
             metric_name=expr.metric_name,
             direction=expr.direction,

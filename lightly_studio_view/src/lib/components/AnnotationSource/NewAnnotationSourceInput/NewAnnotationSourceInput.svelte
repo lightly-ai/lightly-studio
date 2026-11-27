@@ -36,7 +36,7 @@
         }}
     >
         <Input
-            class="h-8 bg-transparent px-2 text-sm"
+            class="h-8 bg-transparent px-2 text-sm focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-offset-0"
             placeholder="Source name"
             aria-label="New annotation source name"
             autofocus
@@ -47,8 +47,8 @@
         />
         <p class="text-xs text-muted-foreground">
             {isExisting
-                ? 'Enter selects this existing source.'
-                : 'Created when you add the first annotation.'}
+                ? 'Press Enter to select this source.'
+                : 'Press Enter to use this source. It’s created with your first annotation.'}
         </p>
     </form>
 {:else}

@@ -115,9 +115,9 @@
                         >
                             {#snippet children()}
                                 {#each exportOptions as option}
-                                    <SelectMenuItem value={option.value} label={option.label}
-                                        >{option.label}</SelectMenuItem
-                                    >
+                                    <SelectMenuItem value={option.value} label={option.label}>
+                                        {option.label}
+                                    </SelectMenuItem>
                                 {/each}
                             {/snippet}
                         </Select>

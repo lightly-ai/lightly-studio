@@ -143,9 +143,6 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     return {
         useGlobalStorage: () => ({
             isEditingMode: writable(true),
-            // The right side panel and its header toggle read the shared collapsed flag.
-            isSampleDetailsSidePanelCollapsed: writable(false),
-            toggleSampleDetailsSidePanelCollapsed: vi.fn(),
             lastAnnotationSource: writable({}),
             updateLastAnnotationSource: vi.fn(),
             removeLastAnnotationSource: vi.fn(),
@@ -277,7 +274,7 @@ describe('PointCloudLabelingWorkspace', () => {
 
         expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-header')).toBeInTheDocument();
-        expect(screen.getByTestId('workspace-filter-bar')).toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-filter-bar')).not.toBeInTheDocument();
         expect(screen.queryByTestId('workspace-tool-rail')).not.toBeInTheDocument();
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
@@ -621,6 +618,8 @@ describe('PointCloudLabelingWorkspace', () => {
             const props = defaultProps;
             const { rerender } = render(PointCloudLabelingWorkspace, { props });
 
+            // The lidar select sits in the scene settings.
+            await user.click(screen.getByRole('button', { name: 'Scene settings' }));
             await user.click(screen.getByTestId('workspace-lidar-select'));
             await user.click(screen.getByTestId('workspace-lidar-select-1'));
             expect(screen.getByTestId('workspace-lidar-select')).not.toHaveTextContent(':');

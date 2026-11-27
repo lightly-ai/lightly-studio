@@ -42,8 +42,8 @@
 <section aria-label={cameraMode} data-testid="scene-viewport-instance">
     {@render header?.()}
     {@render tools?.()}
-    <output aria-label={`${cameraMode} scale`}
-        >{(viewState ?? localViewState)?.worldUnitsPerPixel ?? 'unset'}</output
-    >
+    <output aria-label={`${cameraMode} scale`}>
+        {(viewState ?? localViewState)?.worldUnitsPerPixel ?? 'unset'}
+    </output>
     <button onclick={navigate}>Navigate {cameraMode}</button>
 </section>

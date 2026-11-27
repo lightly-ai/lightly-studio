@@ -16,6 +16,7 @@ from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_frame_sample import VideoFrameSample
 from lightly_studio.core.group.group_dataset import GroupDataset
+from lightly_studio.core.annotation_file_task import AnnotationFileTask
 from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.component_spec import McapComponentSpec
@@ -40,6 +41,7 @@ from lightly_studio.core.lightly_train_helpers.generate_train_script import lt_t
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 
 __all__ = [
+    "AnnotationFileTask",
     "AnnotationType",
     "CreateImage",
     "CreateMcap",

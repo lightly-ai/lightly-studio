@@ -127,8 +127,9 @@ ls.start_gui()
 
 Run `python example_coco.py` and open the printed URL to inspect images with their annotations.
 
-To ingest COCO samples with segmentation masks instead of object detections, pass
-`annotation_type=ls.AnnotationType.SEGMENTATION_MASK` to `add_samples_from_coco()`.
+To ingest COCO samples with instance segmentation (polygons and masks) instead of object
+detections, pass `annotation_task=ls.AnnotationFileTask.INSTANCE_SEGMENTATION` to
+`add_samples_from_coco()`.
 
 </details>
 

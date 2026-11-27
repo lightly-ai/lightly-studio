@@ -8,6 +8,8 @@ declare global {
         interface PageState {
             /** Set when a sample is opened from the dataset grid; see `datasetNavigation.ts`. */
             nav?: 'dataset';
+            /** Set on the history entry that the point cloud page pushed to open a camera. */
+            cameraEntry?: boolean;
         }
         // interface Platform {}
     }

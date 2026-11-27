@@ -4,17 +4,19 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 from labelformat.model.image import Image
 from sqlmodel import Session
 
-from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.core.sample import Sample
 from lightly_studio.export import classification_csv
 from lightly_studio.export.dataset_export import DatasetExport
 from lightly_studio.type_definitions import PathLike
+
+if TYPE_CHECKING:
+    from lightly_studio.core.image.image_sample import ImageSample
+    from lightly_studio.core.sample import Sample
 
 DEFAULT_CLASSIFICATION_EXPORT_FILENAME = "classification_export.csv"
 
@@ -82,7 +84,7 @@ def image_sample_to_image(sample: Sample, image_id: int, use_relative_filename: 
 
     COCO stores the absolute path verbatim; YOLO and Pascal VOC need a relative file name.
     """
-    image_sample = cast(ImageSample, sample)
+    image_sample = cast("ImageSample", sample)
     filename = image_sample.file_name if use_relative_filename else image_sample.file_path_abs
     return Image(
         id=image_id,

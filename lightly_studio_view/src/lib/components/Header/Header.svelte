@@ -78,8 +78,10 @@
                     {@const dataset = datasetCollection.data}
                     <a
                         href="/datasets/{dataset.collection_id}/{dataset.sample_type.toLowerCase()}/{dataset.collection_id}"
-                        data-testid="header-logo-link"><Logo /></a
+                        data-testid="header-logo-link"
                     >
+                        <Logo />
+                    </a>
                 {:else}
                     <a href="/" data-testid="header-logo-link"><Logo /></a>
                 {/if}

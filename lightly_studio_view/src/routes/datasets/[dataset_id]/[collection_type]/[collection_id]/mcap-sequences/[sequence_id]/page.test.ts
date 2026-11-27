@@ -35,7 +35,7 @@ const workflowMocks = vi.hoisted(() => ({
 
 const authState = vi.hoisted(() => ({ role: undefined as 'labeler' | 'editor' | undefined }));
 
-vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: vi.fn(), afterNavigate: vi.fn() }));
 
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
     default: () => ({
@@ -84,7 +84,8 @@ vi.mock('$app/state', () => ({
         get state() {
             return pageState.state;
         }
-    }
+    },
+    navigating: { type: null }
 }));
 
 vi.mock('$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences', () => ({
@@ -112,8 +113,10 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation',
 
 vi.mock('$lib/hooks', async () => {
     const { readonly, writable } = await import('svelte/store');
+    const { useSettings } = await import('$lib/hooks/useSettings');
     const featureFlags = writable<string[]>([]);
     return {
+        useSettings,
         useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
         useGlobalStorage: () => ({
             isEditingMode: writable(false),
@@ -178,7 +181,6 @@ vi.mock('$lib/hooks', async () => {
             mutation: { mutateAsync: workflowMocks.mutateAsync, isPending: false }
         }),
         useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn() }),
-        useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) }),
         usePostHog: () => ({ trackEvent: vi.fn() })
     };
 });

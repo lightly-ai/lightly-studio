@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
+import userEvent from '@testing-library/user-event';
+import Camera from '@lucide/svelte/icons/camera';
+import Grid2x2 from '@lucide/svelte/icons/grid-2x2';
 import { describe, expect, it, vi } from 'vitest';
 import WorkspaceHeader from './WorkspaceHeader.svelte';
 
@@ -17,12 +19,6 @@ vi.mock('$lib/hooks', async () => {
         usePostHog: () => ({ trackEvent: vi.fn() })
     };
 });
-vi.mock('$lib/hooks/useGlobalStorage', () => ({
-    useGlobalStorage: () => ({
-        isSampleDetailsSidePanelCollapsed: writable(false),
-        toggleSampleDetailsSidePanelCollapsed: vi.fn()
-    })
-}));
 vi.mock('$lib/hooks/useSettingsDialog/useSettingsDialog', () => ({
     useSettingsDialog: () => ({ openSettingsDialog: vi.fn() })
 }));
@@ -34,13 +30,19 @@ vi.mock('$lib/contexts/WorkflowFile.svelte', () => ({
     useWorkflowFileContext: () => undefined
 }));
 
+const toggles = [
+    { id: 'orthographic', label: 'Orthographic views', icon: Grid2x2, isActive: false },
+    { id: 'camera', label: 'Camera strip', icon: Camera, isActive: true }
+];
+
 const defaultProps = {
     collectionId: 'collection-1',
     sequenceId: 'sequence-1',
     sourcePath: [{ label: 'Home', href: '/home' }, { label: 'drive.mcap' }],
     isFullscreen: false,
     onToggleFullscreen: vi.fn(),
-    onToggleCameraStrip: vi.fn()
+    layoutToggles: toggles,
+    onToggleLayout: vi.fn()
 };
 
 const visibleButtonNames = () =>
@@ -51,7 +53,7 @@ const visibleButtonNames = () =>
         .filter(Boolean);
 
 describe('WorkspaceHeader', () => {
-    it('shows the breadcrumb, edit actions, camera strip, fullscreen and side-panel toggle in one row', () => {
+    it('shows the breadcrumb, edit actions, layout toggles and fullscreen in one row', () => {
         render(WorkspaceHeader, { props: defaultProps });
 
         expect(screen.getByTestId('workspace-breadcrumb')).toHaveTextContent('drive.mcap');
@@ -60,16 +62,50 @@ describe('WorkspaceHeader', () => {
             'Edit annotations',
             'Plugins',
             'Settings',
-            'Hide camera strip',
-            'Enter fullscreen',
-            'Hide side panel'
+            'Orthographic views',
+            'Camera strip',
+            'Enter fullscreen'
         ]);
     });
 
-    it('shows only the breadcrumb, camera strip and fullscreen in fullscreen', () => {
+    it('shows only the breadcrumb, layout toggles and fullscreen in fullscreen', () => {
         render(WorkspaceHeader, { props: { ...defaultProps, isFullscreen: true } });
 
         expect(screen.getByTestId('workspace-breadcrumb')).toBeInTheDocument();
-        expect(visibleButtonNames()).toEqual(['Hide camera strip', 'Exit fullscreen']);
+        expect(visibleButtonNames()).toEqual([
+            'Orthographic views',
+            'Camera strip',
+            'Exit fullscreen'
+        ]);
+    });
+});
+
+describe('WorkspaceHeader layout toggles', () => {
+    it('shows one pressed-state button per panel', () => {
+        render(WorkspaceHeader, { props: defaultProps });
+
+        expect(screen.getByRole('button', { name: 'Orthographic views' })).toHaveAttribute(
+            'aria-pressed',
+            'false'
+        );
+        expect(screen.getByRole('button', { name: 'Camera strip' })).toHaveAttribute(
+            'aria-pressed',
+            'true'
+        );
+    });
+
+    it('reports the id of the clicked toggle', async () => {
+        const onToggleLayout = vi.fn();
+        render(WorkspaceHeader, { props: { ...defaultProps, onToggleLayout } });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Camera strip' }));
+
+        expect(onToggleLayout).toHaveBeenCalledWith('camera');
+    });
+
+    it('renders no toggle group without toggles', () => {
+        render(WorkspaceHeader, { props: { ...defaultProps, layoutToggles: [] } });
+
+        expect(screen.queryByRole('group', { name: 'Workspace layout' })).toBeNull();
     });
 });

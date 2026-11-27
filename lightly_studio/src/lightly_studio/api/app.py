@@ -35,7 +35,6 @@ from lightly_studio.api.routes.api import (
     collection,
     collection_tag,
     embeddings2d,
-    enterprise,
     evaluation,
     export,
     features,
@@ -214,7 +213,6 @@ def _create_api_router() -> APIRouter:
     api_router.include_router(video.video_router)
     api_router.include_router(group.group_router)
     api_router.include_router(mcap_sequence.mcap_sequence_router)
-    api_router.include_router(enterprise.enterprise_router)
     api_router.include_router(tracks.tracks_router)
     api_router.include_router(version.version_router)
     api_router.include_router(workflow.workflow_router)
