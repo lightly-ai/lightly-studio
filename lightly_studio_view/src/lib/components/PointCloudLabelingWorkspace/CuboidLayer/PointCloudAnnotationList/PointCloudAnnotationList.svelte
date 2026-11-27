@@ -21,6 +21,11 @@
     import PointCloudAnnotationParentGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationParentGroup';
     import { Typography } from '$lib/components/Typography';
     import PointCloudSourcePicker from './PointCloudSourcePicker';
+    import {
+        getFlatDistance,
+        isBeyondRange,
+        type EgoRange
+    } from '$lib/components/PointCloudLabelingWorkspace/EgoRange';
 
     type AnnotationTreeNode = ReturnType<typeof buildAnnotationForest>[number];
 
@@ -57,6 +62,8 @@
         onToggleTrackVisibility?: (cuboid: CuboidAnnotation) => void;
         /** Hides or shows a source; group eye buttons are omitted without it. */
         onToggleSourceVisibility?: (sourceId: string) => void;
+        /** Range around the ego; rows show their distance while it is set. */
+        egoRange?: EgoRange | null;
     }
 
     let {
@@ -73,8 +80,15 @@
         isSourceHidden = () => false,
         onToggleTrackVisibility,
         onToggleSourceVisibility,
-        sourcePicker
+        sourcePicker,
+        egoRange = null
     }: Props = $props();
+
+    function getDistance(cuboid: CuboidAnnotation) {
+        if (!egoRange) return undefined;
+        const meters = getFlatDistance(cuboid.center, egoRange.position);
+        return { meters, isBeyondRange: isBeyondRange(meters, egoRange.radius) };
+    }
 
     const groups = $derived(
         sourcePicker
@@ -127,6 +141,7 @@
         isHidden={isCuboidHidden(cuboid)}
         isVisibilityLocked={isSourceHidden(cuboid.annotationSourceId)}
         onToggleVisibility={onToggleTrackVisibility}
+        distance={getDistance(cuboid)}
     />
 {/snippet}
 

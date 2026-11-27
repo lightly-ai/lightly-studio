@@ -46,6 +46,7 @@
             <Pane defaultSize={28} minSize={20} maxSize={45}>
                 <PointCloudRightSidePanel
                     cuboids={editing.annotations}
+                    egoRange={controller.egoRange.range}
                     annotationClasses={data.annotationClasses}
                     annotationSources={data.annotationSources}
                     bind:selectedCuboidId={editing.selectedCuboidId}

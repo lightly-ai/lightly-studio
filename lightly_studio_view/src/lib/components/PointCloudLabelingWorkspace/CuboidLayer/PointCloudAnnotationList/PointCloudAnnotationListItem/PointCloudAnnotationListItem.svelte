@@ -2,8 +2,10 @@
     import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
     import PointCloudAnnotationDetails from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationDetails';
+    import AnnotationEgoDistance from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationDetails/AnnotationEgoDistance';
     import PointCloudAnnotationHeader from './PointCloudAnnotationHeader';
     import { cn } from '$lib/utils';
+    import type { ComponentProps } from 'svelte';
 
     interface Props {
         /** Cuboid displayed by this row. */
@@ -40,6 +42,8 @@
         isVisibilityLocked?: boolean;
         /** Hides or shows the track of this cuboid. */
         onToggleVisibility?: (cuboid: CuboidAnnotation) => void;
+        /** Flat distance from the ego; omitted while the ego range is off. */
+        distance?: ComponentProps<typeof AnnotationEgoDistance>;
     }
 
     let {
@@ -57,7 +61,8 @@
         onDelete,
         isHidden = false,
         isVisibilityLocked = false,
-        onToggleVisibility
+        onToggleVisibility,
+        distance
     }: Props = $props();
 
     function handleAnnotationChange(
@@ -105,6 +110,14 @@
                 onAnnotationChange={handleAnnotationChange}
                 {onTrackChange}
             />
+            {#if distance}
+                <dl class="mt-3 text-diffuse-foreground">
+                    <AnnotationEgoDistance
+                        meters={distance.meters}
+                        isBeyondRange={distance.isBeyondRange}
+                    />
+                </dl>
+            {/if}
         </div>
     {/if}
 </div>

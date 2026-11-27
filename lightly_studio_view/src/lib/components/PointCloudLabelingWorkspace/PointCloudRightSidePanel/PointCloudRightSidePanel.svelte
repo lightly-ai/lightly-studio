@@ -7,6 +7,7 @@
     import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
     import PointCloudAnnotationList from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList';
     import { Segment, SegmentTags } from '$lib/components';
+    import type { EgoRange } from '$lib/components/PointCloudLabelingWorkspace/EgoRange';
 
     interface Props {
         /** Cuboid annotations to display in the list. */
@@ -65,6 +66,8 @@
         onToggleTrackVisibility?: (cuboid: CuboidAnnotation) => void;
         /** Hides or shows every cuboid of a source. */
         onToggleSourceVisibility?: (sourceId: string) => void;
+        /** Range around the ego; annotation rows show their distance while it is set. */
+        egoRange?: EgoRange | null;
     }
 
     let {
@@ -88,7 +91,8 @@
         targetSourceName,
         pendingSourceName,
         needsPick,
-        onPickSource
+        onPickSource,
+        egoRange = null
     }: Props = $props();
 </script>
 
@@ -144,6 +148,7 @@
                 {isCuboidHidden}
                 {isSourceHidden}
                 {onToggleTrackVisibility}
+                {egoRange}
                 {onToggleSourceVisibility}
             />
         </Segment>
