@@ -1,4 +1,9 @@
 import { rgbaFromBytes } from '$lib/utils/colorConvert';
+import {
+    MIN_POLYGON_PART_VERTICES,
+    normalizePolygonWinding,
+    type PolygonPart
+} from '$lib/utils/normalizePolygonWinding';
 
 export interface MaskInput {
     rle: ReadonlyArray<number>;
@@ -13,12 +18,20 @@ export interface BoundingBoxInput {
     color: [number, number, number, number];
 }
 
+export interface PolygonInput {
+    parts: PolygonPart[];
+    strokeColor: [number, number, number, number];
+    fillColor: [number, number, number, number];
+}
+
 export interface SourceCrop {
     x: number;
     y: number;
     width: number;
     height: number;
 }
+
+export type CanvasRect = SourceCrop;
 
 /** Describes how source-image coordinates map onto the output canvas. */
 export interface RenderGeometry {
@@ -172,4 +185,86 @@ export const drawBoxesOnContext = (ctx: BoxContext, boxes: BoundingBoxInput[], s
         ctx.strokeRect(box.x, box.y, box.width, box.height);
     }
     ctx.restore();
+};
+
+/** Maps polygon vertices onto the output canvas. The canvas clips what lies outside. */
+export const transformPolygons = (
+    geometry: RenderGeometry,
+    polygons: PolygonInput[]
+): PolygonInput[] => {
+    const { scale, offsetX, offsetY } = getRenderTransform(geometry);
+
+    return polygons.map((polygon) => ({
+        ...polygon,
+        parts: polygon.parts.map((part) =>
+            part.map(([x, y]) => [x * scale + offsetX, y * scale + offsetY] as const)
+        )
+    }));
+};
+
+/** Gives the canvas area that shows the image inside the source crop. */
+export const getVisibleCanvasRect = (geometry: RenderGeometry): CanvasRect => {
+    const { sourceWidth, sourceHeight, outputWidth, outputHeight } = geometry;
+    const { scale, offsetX, offsetY, viewport } = getRenderTransform(geometry);
+    const sourceLeft = Math.max(0, viewport.x);
+    const sourceTop = Math.max(0, viewport.y);
+    const sourceRight = Math.min(sourceWidth, viewport.x + viewport.width);
+    const sourceBottom = Math.min(sourceHeight, viewport.y + viewport.height);
+    const left = Math.max(0, sourceLeft * scale + offsetX);
+    const top = Math.max(0, sourceTop * scale + offsetY);
+    const right = Math.min(outputWidth, sourceRight * scale + offsetX);
+    const bottom = Math.min(outputHeight, sourceBottom * scale + offsetY);
+    return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
+};
+
+type PolygonContext = Pick<
+    CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    | 'save'
+    | 'restore'
+    | 'lineWidth'
+    | 'strokeStyle'
+    | 'fillStyle'
+    | 'beginPath'
+    | 'moveTo'
+    | 'lineTo'
+    | 'closePath'
+    | 'fill'
+    | 'stroke'
+    | 'rect'
+    | 'clip'
+>;
+
+export const drawPolygonsOnContext = (
+    ctx: PolygonContext,
+    polygons: PolygonInput[],
+    clipRect: CanvasRect,
+    stroke = 2
+) => {
+    if (!polygons.length) return;
+    ctx.save();
+    // Vertices can lie outside the image. Like boxes and masks, polygons stay on the image.
+    ctx.beginPath();
+    ctx.rect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
+    ctx.clip();
+    ctx.lineWidth = stroke;
+    for (const polygon of polygons) {
+        // One path per polygon: with the nonzero rule, parts of equal winding merge.
+        ctx.beginPath();
+        for (const part of normalizePolygonWinding(polygon.parts)) {
+            addPolygonPartToPath(ctx, part);
+        }
+        ctx.fillStyle = rgbaFromBytes(polygon.fillColor);
+        ctx.fill('nonzero');
+        ctx.strokeStyle = rgbaFromBytes(polygon.strokeColor);
+        ctx.stroke();
+    }
+    ctx.restore();
+};
+
+const addPolygonPartToPath = (ctx: PolygonContext, part: PolygonPart) => {
+    if (part.length < MIN_POLYGON_PART_VERTICES) return;
+    const [[startX, startY], ...rest] = part;
+    ctx.moveTo(startX, startY);
+    for (const [x, y] of rest) ctx.lineTo(x, y);
+    ctx.closePath();
 };

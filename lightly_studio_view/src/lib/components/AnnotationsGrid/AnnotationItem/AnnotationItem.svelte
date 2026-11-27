@@ -94,7 +94,25 @@
     });
     const opacity = $derived($customLabelColorsStore[labelName]?.alpha ?? 0.4);
 
-    const isRLESegmentation = $derived(!!segmentationMask);
+    const canvasAnnotation = $derived.by(() => {
+        if (segmentationMask) {
+            return {
+                annotation_type: 'segmentation_mask' as const,
+                annotation_label_name: labelName,
+                segmentation_mask: segmentationMask,
+                color: colorFill,
+                opacity
+            };
+        }
+        if (annotation.polygon_details) {
+            return {
+                annotation_type: 'polygon' as const,
+                annotation_label_name: labelName,
+                polygons: annotation.polygon_details.polygons
+            };
+        }
+        return null;
+    });
 
     // Calculate values for use in template
     const xOffset = $derived(getXOffset());
@@ -142,7 +160,7 @@
         background-repeat: no-repeat;
     `}
     >
-        {#if isRLESegmentation}
+        {#if canvasAnnotation}
             <div class:invisible={$isHidden || $isAnnotationClassHidden}>
                 <AnnotationCanvas
                     sampleId={annotation.sample_id}
@@ -152,15 +170,7 @@
                     outputHeight={containerHeight}
                     objectFit="contain"
                     {sourceCrop}
-                    annotations={[
-                        {
-                            annotation_type: 'segmentation_mask',
-                            annotation_label_name: labelName,
-                            segmentation_mask: segmentationMask,
-                            color: colorFill,
-                            opacity
-                        }
-                    ]}
+                    annotations={[canvasAnnotation]}
                     className="pointer-events-none absolute inset-0 z-[1]"
                 />
             </div>
@@ -174,8 +184,8 @@
             top: ${(containerHeight - annotationHeight * scale) / 2}px;
             width: ${annotationWidth * scale}px;
             height: ${annotationHeight * scale}px;
-            border-color: ${isRLESegmentation ? 'transparent' : (colorStroke ?? getColorByLabel(labelName).color)};
-            background-color: ${isRLESegmentation ? 'transparent' : (colorFill ?? getColorByLabel(labelName, 0.4).color)};
+            border-color: ${canvasAnnotation ? 'transparent' : (colorStroke ?? getColorByLabel(labelName).color)};
+            background-color: ${canvasAnnotation ? 'transparent' : (colorFill ?? getColorByLabel(labelName, 0.4).color)};
             border-style: solid;
             
         `}

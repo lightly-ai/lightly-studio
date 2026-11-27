@@ -24,10 +24,16 @@
     } from '$lib/workers/maskRendererPool';
     import {
         drawBoxesOnContext,
+        drawPolygonsOnContext,
+        getVisibleCanvasRect,
         transformBoxes,
+        transformPolygons,
+        type CanvasRect,
+        type PolygonInput,
         type RenderGeometry,
         type SourceCrop
     } from '$lib/workers/maskRendererUtils';
+    import { toPolygonInput, type PolygonAnnotation } from './AnnotationCanvas.helpers';
 
     interface InstanceAnnotation {
         annotation_type: 'segmentation_mask';
@@ -51,7 +57,10 @@
         sourceName?: string;
     }
 
-    type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
+    type AnnotationCanvasAnnotation =
+        | InstanceAnnotation
+        | ObjectDetectionAnnotation
+        | PolygonAnnotation;
 
     interface Props {
         sampleId: string;
@@ -213,11 +222,19 @@
     // Collect mask RLEs and any available bounding boxes in image space.
     const buildRenderPayload = (
         customColorMaps: CustomColorMaps
-    ): { masks: MaskPayload[]; boxes: BoxPayload[] } => {
+    ): { masks: MaskPayload[]; boxes: BoxPayload[]; polygons: PolygonInput[] } => {
         const masks: MaskPayload[] = [];
         const boxes: BoxPayload[] = [];
+        const polygons: PolygonInput[] = [];
 
         for (const annotation of annotations) {
+            if (annotation.annotation_type === 'polygon') {
+                const resolveColor = (colorAlpha: number) =>
+                    resolveAnnotationColor(annotation, colorAlpha, customColorMaps);
+                polygons.push(toPolygonInput(annotation.polygons, resolveColor));
+                continue;
+            }
+
             const rle = toCloneableRLE(annotation.segmentation_mask);
             if (rle.length) {
                 masks.push({
@@ -239,7 +256,7 @@
             }
         }
 
-        return { masks, boxes };
+        return { masks, boxes, polygons };
     };
 
     const render = (
@@ -276,10 +293,12 @@
             }
 
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-            if (!payload.boxes.length) {
+            if (!payload.boxes.length && !payload.polygons.length) {
                 return;
             }
 
+            const polygons = transformPolygons(geometry, payload.polygons);
+            drawPolygonsOnContext(ctx, polygons, getVisibleCanvasRect(geometry));
             drawBoxesOnContext(ctx, transformBoxes(geometry, payload.boxes));
             return;
         }
@@ -317,6 +336,8 @@
             height: h,
             data,
             boxes = [],
+            polygons = [],
+            polygonClipRect,
             stroke = 2
         } = event.data as {
             canvasId: string;
@@ -324,6 +345,8 @@
             height: number;
             data: Uint8ClampedArray;
             boxes?: BoxPayload[];
+            polygons?: PolygonInput[];
+            polygonClipRect: CanvasRect;
             stroke?: number;
         };
 
@@ -336,10 +359,7 @@
         const imageData = new ImageData(new Uint8ClampedArray(data), w, h);
         ctx.putImageData(imageData, 0, 0);
 
-        if (!boxes.length) {
-            return;
-        }
-
+        drawPolygonsOnContext(ctx, polygons, polygonClipRect, stroke);
         drawBoxesOnContext(ctx, boxes, stroke);
     };
 
