@@ -45,6 +45,34 @@ class TestTransportImageDatasetExport:
                 ExportFormat.OBJECT_DETECTION_YOLO,
                 uuid4(),
             ),
+            (
+                lambda export, path, collection_id: export.to_coco_instance_segmentation(
+                    output_json=path, annotation_collection_id=collection_id
+                ),
+                ExportFormat.SEGMENTATION_MASK_COCO,
+                None,
+            ),
+            (
+                lambda export, path, collection_id: export.to_yolo_instance_segmentation(
+                    output_folder=path, annotation_collection_id=collection_id
+                ),
+                ExportFormat.INSTANCE_SEGMENTATION_YOLO,
+                uuid4(),
+            ),
+            (
+                lambda export, path, collection_id: export.to_pascalvoc_segmentation_mask(
+                    output_folder=path, annotation_collection_id=collection_id
+                ),
+                ExportFormat.PASCAL_VOC,
+                None,
+            ),
+            (
+                lambda export, path, collection_id: export.to_csv_classifications(
+                    output_csv=path, annotation_collection_id=collection_id
+                ),
+                ExportFormat.CLASSIFICATION_CSV,
+                uuid4(),
+            ),
         ],
     )
     def test_export(
@@ -82,6 +110,8 @@ class TestTransportImageDatasetExport:
         ("export_samples", "output_path"),
         [
             (lambda export: export.to_coco_object_detections(), Path("coco_export.json")),
+            (lambda export: export.to_coco_instance_segmentation(), Path("coco_export.json")),
+            (lambda export: export.to_csv_classifications(), Path("classification_export.csv")),
         ],
     )
     def test_export__default_path(
@@ -111,6 +141,22 @@ class TestTransportImageDatasetExport:
             (
                 lambda export, path: export.to_yolo_object_detections(output_folder=path),
                 "to_yolo_object_detections",
+            ),
+            (
+                lambda export, path: export.to_coco_instance_segmentation(output_json=path),
+                "to_coco_instance_segmentation",
+            ),
+            (
+                lambda export, path: export.to_yolo_instance_segmentation(output_folder=path),
+                "to_yolo_instance_segmentation",
+            ),
+            (
+                lambda export, path: export.to_pascalvoc_segmentation_mask(output_folder=path),
+                "to_pascalvoc_segmentation_mask",
+            ),
+            (
+                lambda export, path: export.to_csv_classifications(output_csv=path),
+                "to_csv_classifications",
             ),
         ],
     )
