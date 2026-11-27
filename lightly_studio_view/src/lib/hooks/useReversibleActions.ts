@@ -23,9 +23,11 @@ export const useReversibleActions = () => {
             const action = actions.find((a) => a.id === actionId);
             if (action) {
                 await action.execute();
-                // Remove this action and all actions added after it
-                const actionIndex = actions.findIndex((a) => a.id === actionId);
-                reversibleActions.update((actions) => actions.slice(actionIndex + 1));
+                // Remove this action and all actions added after it. Find it again, because
+                // actions can be added while the undo runs.
+                reversibleActions.update((current) =>
+                    current.slice(current.findIndex((a) => a.id === actionId) + 1)
+                );
             }
         },
         clearReversibleActions: () => {

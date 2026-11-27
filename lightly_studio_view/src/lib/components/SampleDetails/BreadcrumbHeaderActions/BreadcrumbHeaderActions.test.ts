@@ -107,6 +107,31 @@ describe('BreadcrumbHeaderActions', () => {
         expect(screen.getByTestId('breadcrumb-undo-button')).toBeDisabled();
     });
 
+    it('disables Undo while an undo runs', async () => {
+        isEditingMode.set(true);
+        reversibleActions.set([
+            {
+                id: 'action-1',
+                description: 'Delete annotation',
+                execute: vi.fn(),
+                timestamp: new Date(),
+                groupId: 'group-1'
+            }
+        ]);
+        let finishUndo = () => {};
+        mocks.executeReversibleAction.mockReturnValueOnce(
+            new Promise<void>((resolve) => (finishUndo = resolve))
+        );
+        render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
+        const undoButton = screen.getByTestId('breadcrumb-undo-button');
+
+        await fireEvent.click(undoButton);
+        expect(undoButton).toBeDisabled();
+
+        finishUndo();
+        await vi.waitFor(() => expect(undoButton).not.toBeDisabled());
+    });
+
     it('toggles edit mode when the edit shortcut is pressed', async () => {
         render(BreadcrumbHeaderActions, { props: { collectionId: 'collection-1' } });
 

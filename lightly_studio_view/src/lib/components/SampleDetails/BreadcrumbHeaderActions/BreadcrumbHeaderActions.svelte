@@ -20,7 +20,7 @@
 
     let { collectionId }: Props = $props();
 
-    const { isEditingMode, reversibleActions, setEditMode, undo } = useEditModeControls(
+    const { isEditingMode, reversibleActions, isUndoing, setEditMode, undo } = useEditModeControls(
         () => collectionId
     );
     const { openOperatorsDialog } = useOperatorsDialog();
@@ -61,6 +61,7 @@
                     variant="ghost"
                     ariaLabel="Undo"
                     disabledReason={undoDisabledReason}
+                    isPending={$isUndoing}
                     buttonProps={{
                         onclick: () => undo('click'),
                         'data-testid': 'breadcrumb-undo-button',

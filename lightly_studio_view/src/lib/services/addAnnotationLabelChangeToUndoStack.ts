@@ -37,7 +37,10 @@ export const addAnnotationLabelChangeToUndoStack = ({
     const count = annotations.length;
     addReversibleAction({
         id: `annotation-label-change-${Date.now()}`,
-        description: `Change annotation class of ${count} annotation${count > 1 ? 's' : ''}`,
+        description:
+            count > 1
+                ? `Change annotation class of ${count} annotations`
+                : 'Change annotation class',
         execute,
         timestamp: new Date(),
         groupId: ANNOTATION_LABEL_CHANGE_GROUP_ID

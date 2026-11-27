@@ -48,7 +48,7 @@ describe('addAnnotationLabelChangeToUndoStack', () => {
         });
 
         const action = addReversibleAction.mock.calls[0][0] as ReversibleAction;
-        expect(action.description).toBe('Change annotation class of 1 annotation');
+        expect(action.description).toBe('Change annotation class');
     });
 
     it('should call updateAnnotations with previous labels and refresh when executed', async () => {

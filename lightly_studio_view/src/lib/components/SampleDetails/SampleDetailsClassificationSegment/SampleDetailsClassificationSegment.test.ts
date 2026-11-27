@@ -516,11 +516,11 @@ describe('SampleDetailsClassificationSegment', () => {
 
             expect(mocks.deleteAnnotation).toHaveBeenCalledTimes(1);
             expect(mocks.deleteAnnotation).toHaveBeenCalledWith('c1', 'classification');
-            expect(mocks.addReversibleAction).toHaveBeenCalledTimes(1);
             expect(deleteButton()).toBeDisabled();
 
             resolveDelete();
             await waitFor(() => expect(deleteButton()).not.toBeDisabled());
+            expect(mocks.addReversibleAction).toHaveBeenCalledTimes(1);
         });
 
         it('allows another attempt once a failed delete settles', async () => {
@@ -529,6 +529,7 @@ describe('SampleDetailsClassificationSegment', () => {
 
             await user.click(deleteButton());
             await waitFor(() => expect(toast.error).toHaveBeenCalled());
+            expect(mocks.addReversibleAction).not.toHaveBeenCalled();
             await user.click(deleteButton());
 
             expect(mocks.deleteAnnotation).toHaveBeenCalledTimes(2);
@@ -630,8 +631,7 @@ describe('SampleDetailsClassificationSegment', () => {
                     }
                 ])
             );
-            // The undo entry is pushed before the request, so the old class can be restored.
-            expect(mocks.addReversibleAction).toHaveBeenCalledTimes(1);
+            await waitFor(() => expect(mocks.addReversibleAction).toHaveBeenCalledTimes(1));
         });
 
         it('reports an error when the update fails', async () => {
@@ -642,6 +642,7 @@ describe('SampleDetailsClassificationSegment', () => {
             await user.click(screen.getByRole('option', { name: 'dog' }));
 
             await waitFor(() => expect(toast.error).toHaveBeenCalled());
+            expect(mocks.addReversibleAction).not.toHaveBeenCalled();
         });
     });
 
