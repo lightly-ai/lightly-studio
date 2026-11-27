@@ -1,19 +1,15 @@
 <script lang="ts">
     import { polygonsToSvgPath } from '../utils';
 
-    const {
-        polygons,
-        label,
-        colorStroke,
-        colorFill,
-        opacity
-    }: {
+    interface Props {
         polygons: Array<Array<[number, number]>>;
         label: string;
         colorStroke: string;
         colorFill: string;
         opacity: number;
-    } = $props();
+    }
+
+    const { polygons, label, colorStroke, colorFill, opacity }: Props = $props();
 
     const path = $derived(polygonsToSvgPath(polygons));
 </script>

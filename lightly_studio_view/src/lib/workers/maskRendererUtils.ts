@@ -227,11 +227,7 @@ export const drawPolygonsOnContext = (
         // One path per polygon: with the nonzero rule, parts of equal winding merge.
         ctx.beginPath();
         for (const part of normalizePolygonWinding(polygon.parts)) {
-            if (part.length < MIN_POLYGON_PART_VERTICES) continue;
-            const [[startX, startY], ...rest] = part;
-            ctx.moveTo(startX, startY);
-            for (const [x, y] of rest) ctx.lineTo(x, y);
-            ctx.closePath();
+            addPolygonPartToPath(ctx, part);
         }
         ctx.fillStyle = rgbaFromBytes(polygon.fillColor);
         ctx.fill('nonzero');
@@ -239,4 +235,12 @@ export const drawPolygonsOnContext = (
         ctx.stroke();
     }
     ctx.restore();
+};
+
+const addPolygonPartToPath = (ctx: PolygonContext, part: PolygonPart) => {
+    if (part.length < MIN_POLYGON_PART_VERTICES) return;
+    const [[startX, startY], ...rest] = part;
+    ctx.moveTo(startX, startY);
+    for (const [x, y] of rest) ctx.lineTo(x, y);
+    ctx.closePath();
 };

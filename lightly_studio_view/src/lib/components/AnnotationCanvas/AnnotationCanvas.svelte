@@ -60,8 +60,8 @@
         polygons: Array<Array<[number, number]>>;
         segmentation_mask?: undefined;
         object_detection_details?: undefined;
-        color?: string;
-        opacity?: number;
+        color?: undefined;
+        opacity?: undefined;
         // If set, color by this source instead of by class.
         sourceName?: string;
     }
@@ -72,6 +72,7 @@
         | PolygonAnnotation;
 
     const POLYGON_FILL_ALPHA = 0.4;
+    const OPAQUE_ALPHA_BYTE = 255;
 
     interface Props {
         sampleId: string;
@@ -240,10 +241,12 @@
 
         for (const annotation of annotations) {
             if (annotation.annotation_type === 'polygon') {
+                // The custom alpha applies only to the fill, as in the detail view.
+                const [r, g, b] = resolveAnnotationColor(annotation, 1, customColorMaps);
                 polygons.push({
                     // Plain arrays, so postMessage never receives reactive proxies.
                     parts: annotation.polygons.map((part) => part.map(([x, y]) => [x, y])),
-                    strokeColor: resolveAnnotationColor(annotation, 1, customColorMaps),
+                    strokeColor: [r, g, b, OPAQUE_ALPHA_BYTE],
                     fillColor: resolveAnnotationColor(
                         annotation,
                         POLYGON_FILL_ALPHA,

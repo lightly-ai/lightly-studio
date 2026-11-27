@@ -6,10 +6,7 @@ import {
     type Annotation
 } from '$lib/services/types';
 import type { BoundingBox } from '$lib/types';
-import {
-    MIN_POLYGON_PART_VERTICES,
-    normalizePolygonWinding
-} from '$lib/utils/normalizePolygonWinding';
+import { MIN_POLYGON_PART_VERTICES, normalizePolygonWinding } from '$lib/utils';
 
 export function getBoundingBox(annotation: Annotation): BoundingBox {
     let boundingBox: BoundingBox | null | undefined;

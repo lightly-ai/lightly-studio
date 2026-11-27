@@ -49,3 +49,4 @@ export {
 } from './colorConvert';
 export { trackAnnotationClassEvent, trackClassCreatedInPicker } from './trackAnnotationClassEvent';
 export { dimensionRanges, withFilterOverrides } from './gridFilter';
+export * from './normalizePolygonWinding';

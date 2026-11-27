@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import AnnotationCanvas from './AnnotationCanvas.svelte';
+import { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
 
 vi.mock('$lib/utils', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/utils')>()),
@@ -693,6 +694,31 @@ describe('AnnotationCanvas', () => {
 
             const context = canvasContexts.get(container.querySelector('canvas')!);
             expect(context?.strokeStylesAtStroke[0]).toMatch(/^rgba\(200, 100, 50,/);
+        });
+
+        it('keeps a polygon stroke opaque when the custom class color is transparent', async () => {
+            setAnnotationClasses('dataset-polygon', [
+                {
+                    annotation_label_id: 'class-car',
+                    annotation_label_name: 'car',
+                    dataset_id: 'dataset-polygon',
+                    color: 'rgba(255, 0, 0, 1)',
+                    alpha: 0
+                }
+            ]);
+            const { container } = render(AnnotationCanvas, {
+                props: {
+                    sampleId: 'sample-polygon-transparent',
+                    sourceWidth: 100,
+                    sourceHeight: 100,
+                    annotations: [polygonAnnotation]
+                }
+            });
+            await tick();
+
+            const context = canvasContexts.get(container.querySelector('canvas')!);
+            expect(context?.strokeStylesAtStroke[0]).toBe('rgba(255, 0, 0, 1)');
+            setAnnotationClasses('dataset-polygon-cleanup', []);
         });
 
         it('sends polygons to the worker when masks are present', async () => {
