@@ -11,6 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import Depends, Request
 
@@ -18,6 +19,8 @@ from lightly_studio.errors import ForbiddenError, UnauthenticatedError
 
 _EMAIL_HEADER = "X-User-Email"
 _ROLE_HEADER = "X-User-Role"
+_USER_ID_HEADER = "X-User-Id"
+_USER_HEADERS = (_EMAIL_HEADER, _ROLE_HEADER, _USER_ID_HEADER)
 
 
 class Role(str, Enum):
@@ -44,13 +47,16 @@ class Identity:
     Attributes:
         email: The email of the user. None for the local user.
         role: The role of the user.
+        user_id: The id of the user in the `user_account` table. None for the local user, and
+            for a request without the user id header.
     """
 
     email: str | None
     role: Role
+    user_id: UUID | None
 
 
-LOCAL_USER = Identity(email=None, role=Role.ADMIN)
+LOCAL_USER = Identity(email=None, role=Role.ADMIN, user_id=None)
 
 
 def get_identity(request: Request) -> Identity:
@@ -60,7 +66,7 @@ def get_identity(request: Request) -> Identity:
         RuntimeError: If the request carries user headers. They are only valid behind an auth
             proxy, and that deployment replaces this dependency with `get_proxy_identity`.
     """
-    if request.headers.getlist(_EMAIL_HEADER) or request.headers.getlist(_ROLE_HEADER):
+    if any(request.headers.getlist(name) for name in _USER_HEADERS):
         raise RuntimeError("User headers are not supported in a local run.")
     return LOCAL_USER
 
@@ -68,12 +74,15 @@ def get_identity(request: Request) -> Identity:
 def get_proxy_identity(request: Request) -> Identity:
     """Returns the user's identity from the headers that an auth proxy sets.
 
+    The user id header is optional, because not every auth proxy sends it.
+
     Raises:
-        UnauthenticatedError: If the request has no email, an unknown role, or a header sent
-            more than once.
+        UnauthenticatedError: If the request has no email, an unknown role, a user id that is
+            not a UUID, or a header sent more than once.
     """
     emails = request.headers.getlist(_EMAIL_HEADER)
     roles = request.headers.getlist(_ROLE_HEADER)
+    user_ids = request.headers.getlist(_USER_ID_HEADER)
     email = _single_header(name=_EMAIL_HEADER, values=emails).strip().lower()
     if not email:
         raise UnauthenticatedError(f"The {_EMAIL_HEADER} header is missing or empty.")
@@ -84,7 +93,8 @@ def get_proxy_identity(request: Request) -> Identity:
         raise UnauthenticatedError(
             f"The {_ROLE_HEADER} header has an unknown role: '{role_value}'."
         ) from error
-    return Identity(email=email, role=role)
+    user_id = _parse_user_id(value=_single_header(name=_USER_ID_HEADER, values=user_ids))
+    return Identity(email=email, role=role, user_id=user_id)
 
 
 IdentityDep = Annotated[Identity, Depends(get_identity)]
@@ -109,3 +119,16 @@ def _single_header(name: str, values: list[str]) -> str:
     if len(values) > 1:
         raise UnauthenticatedError(f"The {name} header is sent more than once.")
     return values[0] if values else ""
+
+
+def _parse_user_id(value: str) -> UUID | None:
+    """Returns the user id of a user id header value, or None if the value is empty."""
+    stripped = value.strip()
+    if not stripped:
+        return None
+    try:
+        return UUID(stripped)
+    except ValueError as error:
+        raise UnauthenticatedError(
+            f"The {_USER_ID_HEADER} header is not a UUID: '{stripped}'."
+        ) from error

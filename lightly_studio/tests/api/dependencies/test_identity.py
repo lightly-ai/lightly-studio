@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Annotated
+from uuid import UUID
 
 import pytest
 from fastapi import Depends, FastAPI
@@ -16,6 +17,8 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_UNAUTHORIZED,
 )
 
+_USER_ID = "0b6f3c1e-8f2a-4d4b-9a51-3c2e7d9f1a6b"
+
 
 @pytest.fixture
 def app() -> FastAPI:
@@ -24,7 +27,8 @@ def app() -> FastAPI:
 
     @app.get("/identity")
     def _get_identity(user: IdentityDep) -> dict[str, str | None]:
-        return {"email": user.email, "role": user.role.value}
+        user_id = str(user.user_id) if user.user_id else None
+        return {"email": user.email, "role": user.role.value, "user_id": user_id}
 
     @app.get("/editor")
     def _get_editor(
@@ -50,7 +54,7 @@ def test_get_identity(client: TestClient) -> None:
     response = client.get("/identity")
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == {"email": None, "role": "admin"}
+    assert response.json() == {"email": None, "role": "admin", "user_id": None}
 
 
 @pytest.mark.parametrize(
@@ -60,6 +64,7 @@ def test_get_identity(client: TestClient) -> None:
         {"X-User-Email": "ada@example.com"},
         {"X-User-Role": "viewer"},
         {"X-User-Email": ""},
+        {"X-User-Id": _USER_ID},
     ],
 )
 def test_get_identity__with_headers(client: TestClient, headers: dict[str, str]) -> None:
@@ -70,31 +75,54 @@ def test_get_identity__with_headers(client: TestClient, headers: dict[str, str])
 
 def test_get_identity__override(app: FastAPI, client: TestClient) -> None:
     app.dependency_overrides[identity.get_identity] = lambda: Identity(
-        email="ada@example.com", role=Role.VIEWER
+        email="ada@example.com", role=Role.VIEWER, user_id=UUID(_USER_ID)
     )
 
     response = client.get("/identity", headers={"X-User-Email": "ignored@example.com"})
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == {"email": "ada@example.com", "role": "viewer"}
+    assert response.json() == {"email": "ada@example.com", "role": "viewer", "user_id": _USER_ID}
 
 
 def test_get_proxy_identity(proxy_client: TestClient) -> None:
     response = proxy_client.get(
-        "/identity", headers={"X-User-Email": "ada@example.com", "X-User-Role": "labeler"}
+        "/identity",
+        headers={
+            "X-User-Email": "ada@example.com",
+            "X-User-Role": "labeler",
+            "X-User-Id": _USER_ID,
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == {"email": "ada@example.com", "role": "labeler"}
+    assert response.json() == {"email": "ada@example.com", "role": "labeler", "user_id": _USER_ID}
+
+
+@pytest.mark.parametrize("user_id_headers", [{}, {"X-User-Id": ""}, {"X-User-Id": "  "}])
+def test_get_proxy_identity__without_user_id(
+    proxy_client: TestClient, user_id_headers: dict[str, str]
+) -> None:
+    response = proxy_client.get(
+        "/identity",
+        headers={"X-User-Email": "ada@example.com", "X-User-Role": "labeler", **user_id_headers},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"email": "ada@example.com", "role": "labeler", "user_id": None}
 
 
 def test_get_proxy_identity__normalizes(proxy_client: TestClient) -> None:
     response = proxy_client.get(
-        "/identity", headers={"X-User-Email": " Ada@Example.com ", "X-User-Role": " Editor "}
+        "/identity",
+        headers={
+            "X-User-Email": " Ada@Example.com ",
+            "X-User-Role": " Editor ",
+            "X-User-Id": f" {_USER_ID.upper()} ",
+        },
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == {"email": "ada@example.com", "role": "editor"}
+    assert response.json() == {"email": "ada@example.com", "role": "editor", "user_id": _USER_ID}
 
 
 @pytest.mark.parametrize(
@@ -105,6 +133,7 @@ def test_get_proxy_identity__normalizes(proxy_client: TestClient) -> None:
         {"X-User-Role": "admin"},
         {"X-User-Email": "  ", "X-User-Role": "admin"},
         {"X-User-Email": "ada@example.com", "X-User-Role": "owner"},
+        {"X-User-Email": "ada@example.com", "X-User-Role": "admin", "X-User-Id": "not-a-uuid"},
     ],
 )
 def test_get_proxy_identity__invalid_headers(
@@ -127,6 +156,12 @@ def test_get_proxy_identity__invalid_headers(
             ("X-User-Email", "ada@example.com"),
             ("X-User-Role", "admin"),
             ("X-User-Role", "viewer"),
+        ],
+        [
+            ("X-User-Email", "ada@example.com"),
+            ("X-User-Role", "admin"),
+            ("X-User-Id", _USER_ID),
+            ("X-User-Id", _USER_ID),
         ],
     ],
 )
