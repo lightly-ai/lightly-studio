@@ -34,6 +34,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.core.image.transport_image_dataset_export import TransportImageDatasetExport
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.embed import embed_samples
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
@@ -109,10 +110,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """
         if query is None:
             query = self.query()
-        return ImageDatasetExport(
-            session=self.session,
-            dataset_id=self.dataset_id,
-            samples=query,
+        return TransportImageDatasetExport(
+            session=self.session, dataset_id=self.dataset_id, query=query
         )
 
     def get_sample(self, sample_id: UUID) -> ImageSample:
