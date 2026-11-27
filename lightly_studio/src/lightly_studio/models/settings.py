@@ -91,6 +91,12 @@ class SettingBase(SQLModel):
     key_next_camera: str = Field(
         description="Key to show the next camera in the enlarged camera view",
     )
+    key_point_cloud_select: str = Field(
+        description="Key to activate the select tool in the point cloud workspace",
+    )
+    key_point_cloud_create_cuboid: str = Field(
+        description="Key to activate the create cuboid tool in the point cloud workspace",
+    )
 
 
 class SettingDefaults(SettingBase):
@@ -147,6 +153,12 @@ class SettingDefaults(SettingBase):
     )
     key_next_camera: str = Field(
         default="]",
+    )
+    key_point_cloud_select: str = Field(
+        default="q",
+    )
+    key_point_cloud_create_cuboid: str = Field(
+        default="c",
     )
 
 

@@ -10,7 +10,7 @@
     import { useCameraFrame } from './CameraProjectionFrame/useCameraFrame/useCameraFrame.svelte';
     import { useOpenCamera } from './useOpenCamera/useOpenCamera.svelte';
     import type { HistoryMode } from '../workspaceOptions';
-    import { useSettings } from '$lib/hooks/useSettings';
+    import { useSettings } from '$lib/hooks';
     import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
     import ProjectionControls from './ProjectionControls.svelte';
     import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';

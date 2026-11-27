@@ -82,8 +82,10 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation',
 
 vi.mock('$lib/hooks', async () => {
     const { readonly, writable } = await import('svelte/store');
+    const { useSettings } = await import('$lib/hooks/useSettings');
     const featureFlags = writable<string[]>([]);
     return {
+        useSettings,
         useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
         useGlobalStorage: () => ({
             isEditingMode: writable(false),
