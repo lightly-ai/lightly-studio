@@ -13,6 +13,7 @@ import { useCameraPane } from './useCameraPane/useCameraPane.svelte';
 import { useCuboidTargetSource } from './useCuboidTargetSource';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { isSelectedCuboidHidden, useAnnotationVisibility } from './useAnnotationVisibility';
+import { useEgoRange } from './EgoRange';
 
 /** Composes focused workspace controllers and projects their state for scene consumers. */
 export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
@@ -74,6 +75,14 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         () => targetSource
     );
     const visibility = useAnnotationVisibility(() => getOptions().sequenceId);
+    const egoRange = useEgoRange(() => ({
+        datasetId: getOptions().datasetId,
+        sequenceId: getOptions().sequenceId,
+        seqNumber: workspace.currentTick,
+        referenceFrameId: workspace.referenceFrameId,
+        referenceFrames: workspace.referenceFrames.map((frame) => frame.name),
+        isShowingSensorFrames: workspace.isShowingSensorFrames
+    }));
     // A hidden cuboid cannot be seen, so it must not stay selected. This covers every way to
     // select one: the panel, the timeline, and a new cuboid in a hidden source.
     $effect(() => {
@@ -107,6 +116,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         pointSize: presentation.pointSize,
         showNavigationHelpers: presentation.showNavigationHelpers,
         accumulation,
+        egoRange,
         colorMode: presentation.colorMode,
         selectedCuboidId: editing.selectedCuboidId,
         hoveredCuboidId: editing.hoveredCuboidId,
@@ -175,6 +185,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         editing,
         visibility,
         accumulation,
+        egoRange,
         lidarSelection,
         cameraSelection,
         get options() {

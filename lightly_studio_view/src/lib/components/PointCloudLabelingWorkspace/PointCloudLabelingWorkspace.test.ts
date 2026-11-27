@@ -87,6 +87,10 @@ vi.mock('./FrameTimeline/useSequenceTickTags.svelte', () => ({
     useSequenceTickTags: () => ({ query: { data: { tags: [] } } })
 }));
 
+vi.mock('./EgoRange/useEgoPosition.svelte', () => ({
+    useEgoPosition: () => ({ query: { data: undefined } })
+}));
+
 vi.mock('$lib/hooks/useTickData/useTickCameraFrames.svelte', () => ({
     useTickCameraFrames: () => ({ query: { data: undefined } })
 }));

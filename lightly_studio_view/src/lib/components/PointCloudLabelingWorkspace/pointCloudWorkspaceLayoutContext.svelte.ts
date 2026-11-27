@@ -64,6 +64,8 @@ export interface PointCloudWorkspaceLayoutState {
     showNavigationHelpers: boolean;
     /** Accumulation preferences and actions for the scene settings. */
     accumulation?: ReturnType<typeof createWorkspaceController>['accumulation'];
+    /** Ego range preferences, the range to draw, and why it is unavailable. */
+    egoRange?: ReturnType<typeof createWorkspaceController>['egoRange'];
     /** Strategy used to color the point cloud. */
     colorMode: Exclude<ColorMode, 'none'>;
     /** Selected cuboid identifier, or null. */

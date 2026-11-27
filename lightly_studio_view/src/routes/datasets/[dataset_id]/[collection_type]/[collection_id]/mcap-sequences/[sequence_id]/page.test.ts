@@ -46,6 +46,10 @@ vi.mock(
     })
 );
 
+vi.mock('$lib/components/PointCloudLabelingWorkspace/EgoRange/useEgoPosition.svelte', () => ({
+    useEgoPosition: () => ({ query: { data: undefined } })
+}));
+
 vi.mock('$app/state', () => ({
     page: {
         url: new URL(
