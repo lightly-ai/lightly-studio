@@ -1,5 +1,5 @@
 import { createSampling } from '$lib/api/lightly_studio_local/sdk.gen';
-import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
+import type { SamplingRequest, SamplingResponse } from '$lib/api/lightly_studio_local/types.gen';
 import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
@@ -27,11 +27,24 @@ interface SubmitParams {
     preselectedTagId?: string;
 }
 
+function showSelectionCreatedToast(nSamplesWithoutEmbedding: number): void {
+    if (nSamplesWithoutEmbedding === 0) {
+        toast.success('Sampling created successfully');
+        return;
+    }
+    const leftOut =
+        nSamplesWithoutEmbedding === 1
+            ? '1 sample has no embedding and was left out.'
+            : `${nSamplesWithoutEmbedding} samples have no embedding and were left out.`;
+    toast.warning(`Sampling created. ${leftOut}`);
+}
+
 async function handleSelectionSuccess(
     selectionResultTagName: string,
+    samplingResponse: SamplingResponse | undefined,
     params: UseSubmitCombinationSelectionParams
 ): Promise<void> {
-    toast.success('Sampling created successfully');
+    showSelectionCreatedToast(samplingResponse?.n_samples_without_embedding ?? 0);
     await params.loadTags();
     const newTag = get(params.tags).find((tag) => tag.name === selectionResultTagName);
     if (newTag) params.setTagSelected(newTag.tag_id, true);
@@ -112,7 +125,7 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 error_message: null
             });
             try {
-                await handleSelectionSuccess(selectionResultTagName, params);
+                await handleSelectionSuccess(selectionResultTagName, response.data, params);
             } catch (uiError) {
                 console.error('Unexpected error in handleSelectionSuccess:', uiError);
             }
