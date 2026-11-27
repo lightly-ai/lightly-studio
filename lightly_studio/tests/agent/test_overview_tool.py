@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from lightly_studio.agent import overview_tool
-from lightly_studio.agent.overview_tool import GetCollectionOverviewArgs
+from lightly_studio.agent.overview_tool import GetCollectionOverviewArgs, ListAnnotationClassesArgs
 from lightly_studio.resolvers import metadata_resolver
 from tests import helpers_resolvers
 from tests.agent import helpers_agent
@@ -92,3 +92,43 @@ def test_get_collection_overview__annotation_classes(db_session: Session) -> Non
         {"name": "car", "sample_count": 2},
         {"name": "bus", "sample_count": 1},
     ]
+
+
+def test_list_annotation_classes(db_session: Session) -> None:
+    collection, ids = helpers_agent.create_collection_with_embeddings(
+        session=db_session, embeddings_by_file=_EMBEDDINGS
+    )
+    clock = helpers_resolvers.create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="clock"
+    )
+    person = helpers_resolvers.create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="person"
+    )
+    for file_name, label in [("a.jpg", person), ("b.jpg", person), ("c.jpg", clock)]:
+        helpers_resolvers.create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=ids[file_name],
+            annotation_label_id=label.annotation_label_id,
+        )
+    context = helpers_agent.create_context(session=db_session, collection=collection)
+
+    result = overview_tool.list_annotation_classes(context, ListAnnotationClassesArgs())
+
+    assert result == {
+        "annotation_classes": [
+            {"name": "person", "sample_count": 2},
+            {"name": "clock", "sample_count": 1},
+        ]
+    }
+
+
+def test_list_annotation_classes__no_annotations(db_session: Session) -> None:
+    collection, _ = helpers_agent.create_collection_with_embeddings(
+        session=db_session, embeddings_by_file=_EMBEDDINGS
+    )
+    context = helpers_agent.create_context(session=db_session, collection=collection)
+
+    result = overview_tool.list_annotation_classes(context, ListAnnotationClassesArgs())
+
+    assert result == {"annotation_classes": []}

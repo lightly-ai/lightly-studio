@@ -126,6 +126,34 @@ def test_agent_chat__no_api_key(
     assert "LIGHTLY_STUDIO_OPENROUTER_API_KEY" in response.json()["detail"]
 
 
+def test_agent_greeting(db_session: Session, test_client: TestClient) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    _override_chat_model(
+        helpers_agent.ScriptedChatModel(
+            replies=[AgentMessage(role="assistant", content="Hi. What do you want to do?")]
+        )
+    )
+
+    response = test_client.post(f"/api/collections/{collection.collection_id}/agent/greeting")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.headers["content-type"] == "application/x-ndjson"
+    events = _read_events(text=response.text)
+    assert [event["type"] for event in events] == ["content_delta", "message", "turn_done"]
+    assert events[1]["message"]["content"] == "Hi. What do you want to do?"
+
+
+def test_agent_greeting__video_collection(db_session: Session, test_client: TestClient) -> None:
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.VIDEO
+    )
+    _override_chat_model(helpers_agent.ScriptedChatModel(replies=[]))
+
+    response = test_client.post(f"/api/collections/{collection.collection_id}/agent/greeting")
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
+
 @pytest.fixture(autouse=True)
 def _clear_chat_model_override() -> Generator[None, None, None]:
     yield

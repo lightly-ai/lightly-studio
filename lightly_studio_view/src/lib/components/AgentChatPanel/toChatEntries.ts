@@ -1,4 +1,5 @@
 import type { AgentMessage } from '$lib/api/lightly_studio_local/types.gen';
+import { SUGGEST_NEXT_STEPS } from './nextStepSuggestions';
 
 type ToolStatus = 'running' | 'done' | 'error';
 
@@ -17,7 +18,7 @@ const COUNT_KEYS: [string, string][] = [
 /**
  * Turns the agent transcript into the entries that the chat shows. The reasoning of a step
  * becomes a thinking entry, and its text a step entry. A tool call becomes a running tool
- * entry, which its result completes.
+ * entry, which its result completes. The call that suggests the next steps gets no entry.
  */
 export function toChatEntries(messages: AgentMessage[]): ChatEntry[] {
     const entries: ChatEntry[] = [];
@@ -39,7 +40,10 @@ function assistantEntries(
     message: AgentMessage,
     toolEntries: Map<string, Extract<ChatEntry, { kind: 'tool' }>>
 ): ChatEntry[] {
-    const calls = message.tool_calls ?? [];
+    // The chat shows the suggested next steps as buttons, not as a tool entry.
+    const calls = (message.tool_calls ?? []).filter(
+        (call) => call.function.name !== SUGGEST_NEXT_STEPS
+    );
     const entries: ChatEntry[] = [];
     if (message.reasoning) entries.push({ kind: 'thinking', text: message.reasoning });
     if (message.content) {

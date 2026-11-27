@@ -6,6 +6,7 @@ import json
 from collections.abc import Generator, Iterator, Sequence
 from typing import Any
 
+from lightly_studio.agent import overview_tool
 from lightly_studio.agent.agent_events import (
     AgentEvent,
     ContentDeltaEvent,
@@ -16,12 +17,14 @@ from lightly_studio.agent.agent_events import (
 from lightly_studio.agent.agent_tool import AgentContext, AgentTool
 from lightly_studio.agent.chat_messages import AgentMessage, AgentToolCall, ReasoningDelta
 from lightly_studio.agent.distribution_tools import DISTRIBUTION_TOOLS
+from lightly_studio.agent.docs_tools import DOCS_TOOLS
 from lightly_studio.agent.filter_tools import FILTER_TOOLS
 from lightly_studio.agent.openrouter_client import AgentLLMError, ChatModel
 from lightly_studio.agent.operator_tools import OPERATOR_TOOLS
-from lightly_studio.agent.overview_tool import OVERVIEW_TOOLS
+from lightly_studio.agent.overview_tool import OVERVIEW_TOOLS, GetCollectionOverviewArgs
 from lightly_studio.agent.search_tools import SEARCH_TOOLS
 from lightly_studio.agent.selection_tools import SELECTION_TOOLS
+from lightly_studio.agent.suggestion_tools import SUGGEST_NEXT_STEPS, SUGGESTION_TOOLS
 from lightly_studio.agent.tag_tools import TAG_TOOLS
 
 AGENT_TOOLS: list[AgentTool[Any]] = [
@@ -32,6 +35,8 @@ AGENT_TOOLS: list[AgentTool[Any]] = [
     *SELECTION_TOOLS,
     *TAG_TOOLS,
     *OPERATOR_TOOLS,
+    *DOCS_TOOLS,
+    *SUGGESTION_TOOLS,
 ]
 
 # The largest number of model calls in one turn. It stops a model that calls tools in a loop.
@@ -43,6 +48,8 @@ collection "{collection_name}". The user selected {selected_count} samples in th
 
 Rules:
 - Do the request with the tools. Do not ask for confirmation of a clear request.
+- When the user picks a task without its details, for example "I want to select samples", \
+ask one short question for the missing details. Suggest a default that fits the collection.
 - Before you call tools, write one short sentence that tells the user your next step.
 - Tools that find samples return a result handle such as "result_3". Pass the handle to \
 other tools. Never invent sample IDs or handles.
@@ -52,6 +59,13 @@ other tools. Never invent sample IDs or handles.
 get_collection_overview first.
 - To find samples by metadata values or annotation classes, use find_samples. To find them \
 by what the images show, use search_by_text.
+- When the user asks for samples that show an object, for example "images with clocks", and \
+the annotation classes are not in this conversation yet, call list_annotation_classes first. \
+When a class matches the object, also as a plural or a synonym, ask one short question: show \
+the samples with annotations of that class, with its sample count, or search the image \
+content with text search. This rule overrides the rule against confirmation questions. Do \
+not ask when the user already said "annotated", "labeled" or "search". When no class \
+matches, use search_by_text and do not ask.
 - To count the samples per metadata value, per year of a date or per annotation class, use \
 get_distribution. Do not call find_samples once per value.
 - To select samples, use run_selection. Choose the strategies and their strengths from the \
@@ -64,11 +78,41 @@ compute it first with compute_metadata.
 them first with tag_samples.
 - For a task that no other tool does, such as auto-labeling or inference, look for an \
 operator with list_operators and run it with run_operator.
+- To answer a question on how to use LightlyStudio, call search_docs and answer from its \
+results. Give the URL of the page. When the docs do not answer the question, say so.
 - When a tool returns an error, fix the call or explain the problem to the user.
 - When the user asks who developed you or which model you are, say that you are the \
 LightlyStudio assistant, developed by Lightly AI. Do not name the language model or its \
 provider.
-- Answer in one to three short sentences. Name the tag and the number of samples."""
+- Answer in one to three short sentences. Name the tag and the number of samples. An \
+answer from the docs can have up to six short sentences or steps.
+- Send each final answer together with a call of suggest_next_steps, in the same message. \
+Suggest two or three steps that follow from the result and that your tools can do. After a \
+search: tag the samples, find similar samples, or select diverse samples from them. After a \
+tag: select from the tag, or show the class distribution of the tag. After a selection: tag \
+it, or compare it with the target. After a docs answer: the task that the answer explains. \
+When your answer is a question, the steps are the answer options, for example "Annotated \
+clocks (12)" and "Text search for clocks". Each prompt is a complete request with real names \
+and counts. Do not suggest the request that the user just made."""
+
+# The user message of the greeting turn. The GUI does not show it and does not store it, so
+# the server adds it again before a transcript that starts with the greeting.
+GREETING_REQUEST = "Start the conversation."
+
+_GREETING_PROMPT = """\
+You are the assistant of LightlyStudio, a tool to curate image datasets. The user opened \
+the chat on the collection "{collection_name}". Greet the user in at most 90 words of plain \
+text, without markdown headings or bold text:
+- First, a brief analysis of the collection in two to four lines that start with "- ": its \
+size, its annotation classes and their balance, its metadata, and its tags and embeddings.
+- Name the most useful fact for curation, for example a strong class imbalance, or that \
+text search and similarity selection do not work because there is no embedding model.
+- Then ask what the user wants to do: select samples, find and tag samples, analyze the \
+collection further, ask a question about the docs, or something else.
+- Do not invent facts that are not in the overview.
+
+The overview of the collection, as JSON:
+{overview}"""
 
 # How to turn a selection request into strategies and their strengths. The model reads it
 # together with the JSON schema of each strategy in run_selection.
@@ -116,8 +160,12 @@ def stream_agent_turn(
     """
     tools_by_name = {tool.name: tool for tool in tools}
     definitions = [tool.definition() for tool in tools]
+    conversation = [message for message in history if message.role != "system"]
     transcript = [_system_message(context=context)]
-    transcript.extend(message for message in history if message.role != "system")
+    # Some models reject a transcript that starts with an assistant message.
+    if conversation and conversation[0].role == "assistant":
+        transcript.append(AgentMessage(role="user", content=GREETING_REQUEST))
+    transcript.extend(conversation)
     for _ in range(MAX_STEPS):
         reply = yield from _stream_reply(
             chat_model=chat_model, transcript=transcript, definitions=definitions
@@ -131,10 +179,47 @@ def stream_agent_turn(
             tool_message = _run_tool_call(context=context, tools_by_name=tools_by_name, call=call)
             transcript.append(tool_message)
             yield MessageEvent(message=tool_message)
+        if _is_final_step(reply=reply):
+            yield TurnDoneEvent(ui_actions=context.ui_actions)
+            return
     stop_message = AgentMessage(
         role="assistant", content=f"I stopped after {MAX_STEPS} steps without a final answer."
     )
     yield MessageEvent(message=stop_message)
+    yield TurnDoneEvent(ui_actions=context.ui_actions)
+
+
+def stream_greeting_turn(chat_model: ChatModel, context: AgentContext) -> Iterator[AgentEvent]:
+    """Write the first message of a conversation: a brief analysis of the collection.
+
+    The server reads the overview itself, and the model gets no tools. The greeting therefore
+    takes one model call.
+
+    Args:
+        chat_model: The language model.
+        context: The context of the turn.
+
+    Returns:
+        An iterator over the events of the turn: the pieces of text while the model writes,
+        the greeting message, and a ``TurnDoneEvent`` without GUI actions.
+
+    Raises:
+        AgentLLMError: If the model gives no usable answer.
+    """
+    overview = overview_tool.get_collection_overview(
+        context=context, args=GetCollectionOverviewArgs()
+    )
+    prompt = _GREETING_PROMPT.format(
+        collection_name=context.collection.name, overview=json.dumps(overview)
+    )
+    transcript = [
+        AgentMessage(role="system", content=prompt),
+        AgentMessage(role="user", content=GREETING_REQUEST),
+    ]
+    greeting = yield from _stream_reply(
+        chat_model=chat_model, transcript=transcript, definitions=[]
+    )
+    yield MessageEvent(message=greeting)
     yield TurnDoneEvent(ui_actions=context.ui_actions)
 
 
@@ -144,6 +229,16 @@ def _system_message(context: AgentContext) -> AgentMessage:
         selected_count=len(context.selected_sample_ids),
     )
     return AgentMessage(role="system", content=f"{rules}\n\n{_SELECTION_PLAYBOOK}")
+
+
+def _is_final_step(reply: AgentMessage) -> bool:
+    """Check whether a step only suggests the next steps, so the model has nothing left to do.
+
+    The tool results of the step stay in the transcript, because the model rejects a tool call
+    without a result on the next turn.
+    """
+    calls = reply.tool_calls or []
+    return bool(calls) and all(call.function.name == SUGGEST_NEXT_STEPS for call in calls)
 
 
 def _stream_reply(

@@ -45,6 +45,7 @@ describe('useAgentChat', () => {
         expect(get(chat.draft)).toEqual({ reasoning: '', content: '' });
         expect(onUiActions).toHaveBeenCalledWith(uiActions);
         expect(get(chat.isSending)).toBe(false);
+        expect(get(chat.isPickingTask)).toBe(false);
     });
 
     it('shows the error detail of a rejected request', async () => {
@@ -101,6 +102,30 @@ describe('useAgentChat', () => {
         await chat.send('Hello');
 
         expect(get(chat.error)).toBe('The agent stopped before it finished.');
+    });
+
+    it('greet starts the conversation with the greeting of the agent', async () => {
+        const greeting = { role: 'assistant', content: '- 3 images. What do you want to do?' };
+        const fetchMock = stubFetch(
+            ndjson([
+                { type: 'message', message: greeting },
+                { type: 'turn_done', ui_actions: [] }
+            ])
+        );
+        const chat = useAgentChat({
+            collectionId: 'collection-6',
+            getSelectedSampleIds: () => [],
+            onUiActions: vi.fn(async () => {})
+        });
+
+        await chat.greet();
+        await chat.greet();
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        const [url] = fetchMock.mock.calls[0] as unknown as [string];
+        expect(url).toMatch(/\/api\/collections\/collection-6\/agent\/greeting$/);
+        expect(get(chat.messages)).toEqual([greeting]);
+        expect(get(chat.isPickingTask)).toBe(true);
     });
 
     it('reset clears the conversation', async () => {

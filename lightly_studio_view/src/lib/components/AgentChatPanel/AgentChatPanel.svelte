@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { untrack } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { get } from 'svelte/store';
     import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
     import X from '@lucide/svelte/icons/x';
@@ -11,7 +11,10 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import AgentChatInput from './AgentChatInput/AgentChatInput.svelte';
     import AgentChatMessages from './AgentChatMessages/AgentChatMessages.svelte';
+    import AgentChatSuggestions from './AgentChatSuggestions/AgentChatSuggestions.svelte';
+    import { TASK_SUGGESTIONS } from './AgentChatSuggestions/suggestions';
     import { applyUiActions } from './applyUiActions';
+    import { getNextStepSuggestions } from './nextStepSuggestions';
     import { toChatEntries } from './toChatEntries';
     import { useAgentChat } from './useAgentChat/useAgentChat';
 
@@ -32,7 +35,7 @@
         collection_id: collectionId
     });
 
-    const { messages, draft, isSending, error, send, reset } = useAgentChat({
+    const { messages, draft, isSending, isPickingTask, error, send, greet, reset } = useAgentChat({
         collectionId,
         getSelectedSampleIds: () => Array.from(get(getSelectedSampleIds(collectionId))),
         onUiActions: (actions) =>
@@ -56,6 +59,16 @@
     });
 
     const entries = $derived(toChatEntries($messages));
+    const suggestions = $derived.by(() => {
+        if ($isSending) return [];
+        return $isPickingTask ? TASK_SUGGESTIONS : getNextStepSuggestions($messages);
+    });
+    const startNewConversation = () => {
+        reset();
+        void greet();
+    };
+
+    onMount(() => void greet());
 </script>
 
 <div class="flex h-full min-w-0 flex-1 flex-col gap-3 rounded-[1vw] bg-card p-4">
@@ -68,7 +81,7 @@
                 ariaLabel="Start a new conversation"
                 buttonProps={{
                     size: 'icon',
-                    onclick: reset,
+                    onclick: startNewConversation,
                     disabled: $isSending,
                     class: 'h-8 w-8',
                     'data-testid': 'agent-chat-reset'
@@ -90,6 +103,9 @@
     <AgentChatMessages {entries} draft={$draft} isSending={$isSending} />
     {#if $error}
         <p class="text-sm text-destructive" data-testid="agent-chat-error">{$error}</p>
+    {/if}
+    {#if suggestions.length > 0}
+        <AgentChatSuggestions {suggestions} onPick={send} />
     {/if}
     <AgentChatInput disabled={$isSending} onSend={send} />
 </div>

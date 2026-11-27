@@ -114,9 +114,11 @@ class OpenRouterChatModel:
         payload: dict[str, Any] = {
             "model": self._model,
             "messages": [message.model_dump(exclude_none=True) for message in messages],
-            "tools": list(tools),
             "stream": True,
         }
+        # The OpenAI format rejects an empty tool list.
+        if tools:
+            payload["tools"] = list(tools)
         if self._reasoning_effort is not None:
             payload["reasoning"] = {"effort": self._reasoning_effort}
         return payload

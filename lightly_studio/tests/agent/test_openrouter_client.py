@@ -80,6 +80,18 @@ class TestOpenRouterChatModel:
 
         assert "reasoning" not in json.loads(requests[0].content)
 
+    def test_stream__no_tools(self) -> None:
+        requests: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return _sse_response(chunks=[{"choices": [{"delta": {"content": "Hi"}}]}])
+
+        model = _create_model(handler=handler, reasoning_effort=None)
+        list(model.stream(messages=[AgentMessage(role="user", content="hi")], tools=[]))
+
+        assert "tools" not in json.loads(requests[0].content)
+
     def test_stream__sends_reasoning_details_back(self) -> None:
         requests: list[httpx.Request] = []
 

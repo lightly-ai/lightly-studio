@@ -148,4 +148,17 @@ describe('toChatEntries', () => {
             }
         ]);
     });
+
+    it('shows an answer with suggested next steps as an answer, without a tool entry', () => {
+        const entries = toChatEntries([
+            { role: 'user', content: 'Find clocks' },
+            { ...toolCall('call_1', 'suggest_next_steps'), content: 'I found 12 clock images.' },
+            { role: 'tool', tool_call_id: 'call_1', content: '{"suggested_count": 2}' }
+        ]);
+
+        expect(entries).toEqual([
+            { kind: 'user', text: 'Find clocks' },
+            { kind: 'assistant', text: 'I found 12 clock images.' }
+        ]);
+    });
 });

@@ -1,7 +1,9 @@
-"""The agent tool that describes the collection, so the model can choose the other tools.
+"""The agent tools that describe the collection, so the model can choose the other tools.
 
 The overview lists the facts that the selection and filter tools need: the tags, the
-embedding models, the metadata keys with their values, and the annotation classes.
+embedding models, the metadata keys with their values, and the annotation classes. A second,
+lighter tool lists only the annotation classes, so the model can check whether a class matches
+an object before it searches.
 """
 
 from __future__ import annotations
@@ -38,6 +40,10 @@ class GetCollectionOverviewArgs(BaseModel):
     """The overview takes no arguments."""
 
 
+class ListAnnotationClassesArgs(BaseModel):
+    """The list of annotation classes takes no arguments."""
+
+
 def get_collection_overview(
     context: AgentContext, args: GetCollectionOverviewArgs
 ) -> dict[str, Any]:
@@ -63,6 +69,18 @@ def get_collection_overview(
     }
 
 
+def list_annotation_classes(
+    context: AgentContext, args: ListAnnotationClassesArgs
+) -> dict[str, Any]:
+    """List the annotation classes with the number of samples that have them."""
+    del args
+    return {
+        "annotation_classes": _get_annotation_classes(
+            session=context.session, collection_id=context.collection.collection_id
+        )
+    }
+
+
 OVERVIEW_TOOLS: list[AgentTool[Any]] = [
     AgentTool(
         name="get_collection_overview",
@@ -75,6 +93,16 @@ OVERVIEW_TOOLS: list[AgentTool[Any]] = [
         ),
         args_model=GetCollectionOverviewArgs,
         run=get_collection_overview,
+    ),
+    AgentTool(
+        name="list_annotation_classes",
+        description=(
+            "List the annotation classes of the collection with the number of samples that "
+            "have them, the most frequent first. Call it before you search for samples that "
+            "show an object, to check whether an annotation class matches the object."
+        ),
+        args_model=ListAnnotationClassesArgs,
+        run=list_annotation_classes,
     ),
 ]
 

@@ -37,7 +37,15 @@ class SearchByTextArgs(BaseModel):
     """Arguments of ``search_by_text``."""
 
     query: str = Field(min_length=1, description="What the images show, e.g. 'a tiger'.")
-    limit: int = Field(gt=0, le=MAX_SEARCH_LIMIT, description="How many samples to return.")
+    limit: int = Field(
+        gt=0,
+        le=MAX_SEARCH_LIMIT,
+        description=(
+            "How many of the best samples to return. The search ranks all samples and does "
+            "not filter them, so it always returns this many. When the user gives no number, "
+            "use 20. Never use the collection size."
+        ),
+    )
     within: str | None = Field(
         default=None,
         description="Optional. Search only these samples. " + sample_source.SOURCE_DESCRIPTION,
@@ -122,8 +130,9 @@ SEARCH_TOOLS: list[AgentTool[Any]] = [
         name="search_by_text",
         description=(
             "Find the samples whose image content best matches a text query, with the "
-            "embedding model of the collection. Returns a result handle, the count and the "
-            "best matches. Use it for requests such as 'images of a tiger'."
+            "embedding model of the collection. The result is a ranking by similarity, not a "
+            "filter. Returns a result handle, the count and the best matches. Use it for "
+            "requests such as 'images of a tiger'."
         ),
         args_model=SearchByTextArgs,
         run=search_by_text,

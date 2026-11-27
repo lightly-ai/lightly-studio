@@ -229,9 +229,28 @@ artifacts = [
 
 [tool.hatch.build.targets.wheel.force-include]
 "alembic.ini" = "lightly_studio/alembic.ini"
+# The markdown docs for the `search_docs` tool of the AI agent. Not `_static` (images) and not
+# `api` (mkdocstrings directives only).
+"docs/docs/index.md" = "lightly_studio/agent/docs/index.md"
+"docs/docs/faq.md" = "lightly_studio/agent/docs/faq.md"
+"docs/docs/glossary.md" = "lightly_studio/agent/docs/glossary.md"
+"docs/docs/get_started" = "lightly_studio/agent/docs/get_started"
+"docs/docs/workflows" = "lightly_studio/agent/docs/workflows"
+"docs/docs/tutorials" = "lightly_studio/agent/docs/tutorials"
+"docs/docs/ecosystem" = "lightly_studio/agent/docs/ecosystem"
+"docs/docs/enterprise" = "lightly_studio/agent/docs/enterprise"
 
 [tool.hatch.build.targets.sdist.force-include]
 "alembic.ini" = "alembic.ini"
+# `uv build` builds the wheel from the sdist, so the sdist must have the docs of the wheel.
+"docs/docs/index.md" = "docs/docs/index.md"
+"docs/docs/faq.md" = "docs/docs/faq.md"
+"docs/docs/glossary.md" = "docs/docs/glossary.md"
+"docs/docs/get_started" = "docs/docs/get_started"
+"docs/docs/workflows" = "docs/docs/workflows"
+"docs/docs/tutorials" = "docs/docs/tutorials"
+"docs/docs/ecosystem" = "docs/docs/ecosystem"
+"docs/docs/enterprise" = "docs/docs/enterprise"
 
 [tool.ruff]
 extend-exclude = [

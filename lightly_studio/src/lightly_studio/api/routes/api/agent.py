@@ -104,11 +104,7 @@ def agent_chat(
     Raises:
         HTTPException: 400 if the collection is not an image collection.
     """
-    if collection.sample_type != SampleType.IMAGE:
-        raise HTTPException(
-            status_code=HTTP_STATUS_BAD_REQUEST,
-            detail="The AI agent supports only image collections.",
-        )
+    _require_image_collection(collection=collection)
     context = AgentContext(
         session=session,
         collection=collection,
@@ -120,6 +116,49 @@ def agent_chat(
         chat_model=chat_model, context=context, history=request.messages
     )
     return NdjsonStreamingResponse(_to_lines(events=events))
+
+
+@agent_router.post(
+    "/collections/{collection_id}/agent/greeting",
+    response_class=NdjsonStreamingResponse,
+    responses={
+        200: {
+            "model": AgentStreamLine,
+            "description": "The events of the greeting turn, one JSON object per line.",
+        }
+    },
+)
+def agent_greeting(
+    session: SessionDep,
+    collection: Annotated[CollectionTable, Depends(get_and_validate_collection_id)],
+    chat_model: Annotated[ChatModel, Depends(get_chat_model)],
+) -> NdjsonStreamingResponse:
+    """Start a conversation: the agent writes a brief analysis of the collection.
+
+    The greeting asks the user what to do next. The GUI keeps the greeting as the first
+    message of the transcript.
+
+    Raises:
+        HTTPException: 400 if the collection is not an image collection.
+    """
+    _require_image_collection(collection=collection)
+    context = AgentContext(
+        session=session,
+        collection=collection,
+        selected_sample_ids=[],
+        result_store=default_result_store,
+        operator_registry=operator_registry,
+    )
+    events = agent_loop.stream_greeting_turn(chat_model=chat_model, context=context)
+    return NdjsonStreamingResponse(_to_lines(events=events))
+
+
+def _require_image_collection(collection: CollectionTable) -> None:
+    if collection.sample_type != SampleType.IMAGE:
+        raise HTTPException(
+            status_code=HTTP_STATUS_BAD_REQUEST,
+            detail="The AI agent supports only image collections.",
+        )
 
 
 def _to_lines(events: Iterator[AgentEvent]) -> Iterator[str]:
