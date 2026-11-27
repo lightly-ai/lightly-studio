@@ -205,7 +205,7 @@ test('Typicality sampling creates tag with correct number of samples', async ({
 
     // Metadata preparation and selection now complete in one sampling request.
     const samplingPromise = page.waitForResponse(
-        (response) => response.url().includes('/sampling') && response.status() === 204
+        (response) => response.url().includes('/sampling') && response.status() === 200
     );
 
     // Create typicality sampling.
@@ -240,7 +240,7 @@ test('Similarity sampling creates tag with correct number of samples', async ({
     expect(queryTagId).toBeTruthy();
 
     const samplingPromise = page.waitForResponse(
-        (response) => response.url().includes('/sampling') && response.status() === 204
+        (response) => response.url().includes('/sampling') && response.status() === 200
     );
 
     await samplesPage.createSampling(
