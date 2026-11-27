@@ -45,4 +45,19 @@ describe('SelectionPill', () => {
         await fireEvent.click(screen.getByTestId('clear-selection-button'));
         expect(onClear).toHaveBeenCalledOnce();
     });
+
+    it('shows Auto-label only when a handler is given, and calls it', async () => {
+        const onAutoLabel = vi.fn();
+        render(SelectionPill, { props: { selectedCount: 3, onClear: vi.fn(), onAutoLabel } });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Auto-label' }));
+
+        expect(onAutoLabel).toHaveBeenCalledOnce();
+    });
+
+    it('hides Auto-label without a handler', () => {
+        render(SelectionPill, { props: { selectedCount: 3, onClear: vi.fn() } });
+
+        expect(screen.queryByRole('button', { name: 'Auto-label' })).toBeNull();
+    });
 });

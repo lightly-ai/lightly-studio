@@ -99,6 +99,7 @@
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
     import { useOnboarding } from '$lib/hooks';
+    import { BatchAutoLabel } from '$lib/components/BatchAutoLabel';
     import { getLightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
     const { data, children } = $props();
     const {
@@ -124,6 +125,9 @@
     const collectionIdStore = toStore(() => collectionId);
 
     const { selectedCount, clearSelection } = $derived(useSelectionSummary(collectionId));
+    // Image collections only. Also true on the sample details page, so a run keeps going there.
+    const canAutoLabel = $derived(page.params.collection_type === 'image');
+    let isAutoLabelDialogOpen = $state(false);
 
     // Use hideAnnotations hook
     const { handleKeyEvent } = useHideAnnotations();
@@ -853,7 +857,21 @@
                     {@render children()}
                 </div>
                 {#if isCollectionGrid}
-                    <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
+                    <SelectionPill
+                        selectedCount={$selectedCount}
+                        onClear={clearSelection}
+                        onAutoLabel={canAutoLabel
+                            ? () => (isAutoLabelDialogOpen = true)
+                            : undefined}
+                    />
+                {/if}
+                {#if canAutoLabel}
+                    <BatchAutoLabel
+                        {collectionId}
+                        {datasetId}
+                        selectedCount={$selectedCount}
+                        bind:isDialogOpen={isAutoLabelDialogOpen}
+                    />
                 {/if}
             {/snippet}
 
