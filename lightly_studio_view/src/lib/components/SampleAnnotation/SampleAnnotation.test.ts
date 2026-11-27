@@ -71,6 +71,8 @@ const createPolygonAnnotation = (): ComponentProps<typeof SampleAnnotation>['ann
         }
     }) satisfies ComponentProps<typeof SampleAnnotation>['annotation'];
 
+const polygonProps = { annotation: createPolygonAnnotation(), imageWidth: 100 };
+
 const createObjectDetectionAnnotation = (): ComponentProps<typeof SampleAnnotation>['annotation'] =>
     ({
         ...BASE_ANNOTATION_FIELDS,
@@ -189,8 +191,7 @@ describe('SampleAnnotation', () => {
     it('draws a polygon outline instead of a box, also in edit mode', () => {
         render(SampleAnnotation, {
             props: {
-                annotation: createPolygonAnnotation(),
-                imageWidth: 100,
+                ...polygonProps,
                 isResizable: true,
                 constraintBox: { x: 0, y: 0, width: 100, height: 100 },
                 showBoundingBox: true
@@ -205,8 +206,7 @@ describe('SampleAnnotation', () => {
     it('draws the polygon when bounding boxes are hidden', () => {
         render(SampleAnnotation, {
             props: {
-                annotation: createPolygonAnnotation(),
-                imageWidth: 100,
+                ...polygonProps,
                 showBoundingBox: false
             }
         });
@@ -217,8 +217,7 @@ describe('SampleAnnotation', () => {
     it('shows the polygon label at the top-left of its box', () => {
         render(SampleAnnotation, {
             props: {
-                annotation: createPolygonAnnotation(),
-                imageWidth: 100,
+                ...polygonProps,
                 showLabel: true
             }
         });
@@ -227,9 +226,8 @@ describe('SampleAnnotation', () => {
     });
 
     it('dims a disabled polygon and clears the fill of an active one', async () => {
-        const props = { annotation: createPolygonAnnotation(), imageWidth: 100 };
         const { rerender } = render(SampleAnnotation, {
-            props: { ...props, highlight: 'disabled' }
+            props: { ...polygonProps, highlight: 'disabled' }
         });
 
         expect(screen.getByTestId('annotation_polygon')).toHaveAttribute(
@@ -237,7 +235,7 @@ describe('SampleAnnotation', () => {
             withAlpha(getColorByLabel('car', 1).color, 0.1)
         );
 
-        await rerender({ ...props, highlight: 'active' });
+        await rerender({ ...polygonProps, highlight: 'active' });
 
         expect(screen.getByTestId('annotation_polygon')).toHaveAttribute(
             'fill',
@@ -245,13 +243,11 @@ describe('SampleAnnotation', () => {
         );
     });
 
-    it('selects a polygon when the user clicks its outline area', async () => {
+    it('selects a polygon when the user clicks it', async () => {
         const onSelect = vi.fn();
-        const annotation = createPolygonAnnotation();
         render(SelectableSampleAnnotationHarness, {
             props: {
-                annotation,
-                imageWidth: 100,
+                ...polygonProps,
                 prerenderedDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
                 prerenderedHeight: 12,
                 onSelect
