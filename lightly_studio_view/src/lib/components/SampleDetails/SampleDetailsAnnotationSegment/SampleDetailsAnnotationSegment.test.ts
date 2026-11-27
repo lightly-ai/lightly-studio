@@ -838,6 +838,42 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('gt-mask-1')).toHaveAttribute('data-locked', 'false');
         });
 
+        it('includes a new mask in the panel and source locks', async () => {
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+            const user = userEvent.setup();
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations }
+            });
+            await user.click(screen.getByRole('button', { name: 'Lock all annotations' }));
+
+            await rerender({
+                ...defaultProps,
+                annotations: [
+                    ...annotations,
+                    {
+                        ...createAnnotation('gt-mask-3', groundTruthSource.collection_id, 'cow'),
+                        annotation_type: 'segmentation_mask' as const
+                    }
+                ]
+            });
+            expect(
+                screen.getByRole('button', { name: 'Lock all annotations' })
+            ).toBeInTheDocument();
+
+            await user.click(
+                within(screen.getAllByTestId('annotation-source-group-header')[0]).getByRole(
+                    'button',
+                    { name: 'Lock all annotations in this source' }
+                )
+            );
+            expect(mocks.context.lockedAnnotationIds).toEqual(
+                new Set(['gt-mask-1', 'gt-mask-2', 'pred-mask', 'gt-mask-3'])
+            );
+        });
+
         it('tracks a row lock with the annotation scope', async () => {
             const user = userEvent.setup();
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });

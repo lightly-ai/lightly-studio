@@ -13,7 +13,11 @@
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { countVisibleSources, resolveEffectiveColorBySource } from '$lib/utils';
+    import {
+        countVisibleSources,
+        listLockableIds,
+        resolveEffectiveColorBySource
+    } from '$lib/utils';
     import {
         groupAnnotationsBySource,
         listAllSourceGroups
@@ -77,6 +81,8 @@
             : [];
     });
 
+    const lockableIds = $derived(listLockableIds(annotationsSort));
+
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     // Every source gets a group, also without annotations here, so any source can be the target.
     const allSourceGroups = $derived(
@@ -131,7 +137,7 @@
         }}
         onToggleLock={(e) => {
             e.stopPropagation();
-            locks.toggle([annotation], 'annotation');
+            locks.toggle([annotation.sample_id], 'annotation');
         }}
         onUpdate={refetch}
         onChangeAnnotationLabel={(newLabel) => rowActions.relabel(annotation, newLabel)}
@@ -141,11 +147,11 @@
 {/snippet}
 
 {#snippet panelLock()}
-    {#if $isEditingMode && locks.hasLockable(annotationsSort)}
+    {#if $isEditingMode && lockableIds.length > 0}
         <AnnotationLockToggle
-            locked={locks.areAllLocked(annotationsSort)}
+            locked={locks.areAllLocked(lockableIds)}
             scope="all"
-            onToggle={() => locks.toggle(annotationsSort, 'all')}
+            onToggle={() => locks.toggle(lockableIds, 'all')}
         />
     {/if}
 {/snippet}
