@@ -47,7 +47,7 @@
 
 <div class="flex w-full items-center">
     {#if editable}
-        <div class="relative flex min-w-0 flex-1 items-center gap-2 px-4 py-2">
+        <div class="relative flex min-w-0 flex-1 items-center gap-2 py-1.5 pl-2">
             <Button
                 type="button"
                 variant="ghost"
@@ -66,15 +66,16 @@
                 />
             </div>
             {#if trackNumber != null}
-                <Typography variant="body2" className="shrink-0 text-muted-foreground"
-                    >#{trackNumber}</Typography
-                >
+                <Typography variant="body2" className="shrink-0 text-muted-foreground">
+                    #{trackNumber}
+                </Typography>
             {/if}
         </div>
     {:else}
         <button
             type="button"
-            class="flex min-w-0 flex-1 items-center gap-2 px-4 py-3 text-left"
+            class="flex min-w-0 flex-1 items-center gap-2 py-2 pl-2 text-left"
+            title={className}
             onclick={onToggle}
             aria-expanded={isSelected}
             data-testid="point-cloud-annotation-list-row"
@@ -82,9 +83,9 @@
             {@render colorSwatch()}
             <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
             {#if trackNumber != null}
-                <Typography variant="body2" className="shrink-0 text-muted-foreground"
-                    >#{trackNumber}</Typography
-                >
+                <Typography variant="body2" className="shrink-0 text-muted-foreground">
+                    #{trackNumber}
+                </Typography>
             {/if}
         </button>
     {/if}
@@ -101,7 +102,7 @@
             <Button
                 variant="ghost"
                 size="icon"
-                class="p-2 text-muted-foreground hover:text-destructive"
+                class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
                 onclick={onDelete}
                 aria-label="Delete annotation"
                 data-testid="point-cloud-annotation-delete-button"
@@ -112,7 +113,7 @@
     {/if}
     <button
         type="button"
-        class="px-4 py-3"
+        class="shrink-0 px-1.5 py-2"
         onclick={onToggle}
         aria-expanded={isSelected}
         aria-label="Toggle annotation details"

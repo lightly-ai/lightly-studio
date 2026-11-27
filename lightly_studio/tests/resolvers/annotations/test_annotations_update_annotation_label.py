@@ -196,6 +196,48 @@ def test_update_annotation_label_segmentation_mask(
     )
 
 
+def test_update_annotation_label__polygon(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    old_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    new_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+    )
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=old_label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(1.5, 2.0), (11.0, 2.0), (11.0, 22.25)]],
+    )
+    annotation_id = annotation.sample_id
+
+    annotation_resolver.update_annotation_label(
+        session=db_session,
+        annotation_id=annotation_id,
+        annotation_label_id=new_label.annotation_label_id,
+    )
+
+    updated_annotation = annotation_resolver.get_by_id(
+        session=db_session, annotation_id=annotation_id
+    )
+    assert updated_annotation is not None
+    assert updated_annotation.annotation_label_id == new_label.annotation_label_id
+    assert_contains_properties(
+        updated_annotation.polygon_details,
+        {
+            "x": 1,
+            "y": 2,
+            "width": 10,
+            "height": 21,
+            "polygons": [[[1.5, 2.0], [11.0, 2.0], [11.0, 22.25]]],
+        },
+    )
+
+
 def test_update_annotation_label_raise_error_on_wrong_annotation_id(
     db_session: Session,
     annotations_test_data: AnnotationsTestData,

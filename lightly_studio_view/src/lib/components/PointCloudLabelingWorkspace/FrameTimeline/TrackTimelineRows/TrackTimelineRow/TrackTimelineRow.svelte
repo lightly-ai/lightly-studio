@@ -33,6 +33,9 @@
     }: Props = $props();
     let bar = $state<HTMLElement | null>(null);
 
+    const TICK_GRID_GRADIENT =
+        'linear-gradient(to right, transparent calc(100% - 1px), hsl(var(--border)) 0)';
+
     const runs = $derived(buildTrackRuns(ticks, track.annotations));
     const viewport = getTimelineViewport();
     const runTitle = (run: (typeof runs)[number]) => {
@@ -102,7 +105,7 @@
                 {#if ticks.length > 0 && ticks.length / viewport.zoom <= 100}
                     <span
                         class="pointer-events-none absolute inset-0"
-                        style:background-image={'linear-gradient(to right, transparent calc(100% - 1px), hsl(var(--border)) 0)'}
+                        style:background-image={TICK_GRID_GRADIENT}
                         style:background-size={`${100 / ticks.length}% 100%`}
                         aria-hidden="true"
                     ></span>

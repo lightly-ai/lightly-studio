@@ -251,9 +251,9 @@ VideoEventQuery returns Expression:
   {FunctionCall} name=EVENT_FUNCTION '(' args+=Classification<true> ')';
 
 AnnotationQuery returns Expression:
-  {FunctionCall} name=OBJECT_DETECTION_FUNCTION '(' args+=ObjectDetection ')'
-  | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' args+=Classification<false> ')'
-  | {FunctionCall} name=SEGMENTATION_MASK_FUNCTION '(' args+=SegmentationMask ')';
+  {FunctionCall} name=OBJECT_DETECTION_FUNCTION '(' (args+=ObjectDetection)? ')'
+  | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' (args+=Classification<false>)? ')'
+  | {FunctionCall} name=SEGMENTATION_MASK_FUNCTION '(' (args+=SegmentationMask)? ')';
 
 TagInExpression returns Expression:
   {TagInExpression} tag_name=StringLiteral IN TAGS_KEYWORD;

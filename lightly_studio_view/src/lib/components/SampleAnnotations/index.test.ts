@@ -56,7 +56,9 @@ vi.mock('$lib/hooks/useSettings', async () => {
         key_toolbar_bounding_box: 'b',
         key_toolbar_segmentation_mask: 'm',
         key_toolbar_brush: 'r',
-        key_toolbar_eraser: 'x'
+        key_toolbar_eraser: 'x',
+        key_previous_camera: '[',
+        key_next_camera: ']'
     });
     const showBoundingBoxesForSegmentationStore =
         writable<ShowBoundingBoxesForSegmentationValue>(true);
@@ -227,6 +229,40 @@ describe('SampleAnnotations', () => {
         await waitFor(() => {
             expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(true);
             expect(hasStrokeRectCall(mockContext, 2, 3, 4, 5)).toBe(true);
+        });
+    });
+
+    it('draws the box of a polygon annotation', async () => {
+        const sample = {
+            width: 100,
+            height: 80,
+            annotations: [
+                {
+                    sample_id: 'polygon-1',
+                    annotation_collection_id: SAMPLE_SOURCE_ID,
+                    annotation_type: 'polygon',
+                    annotation_label: { annotation_label_name: 'car' },
+                    polygon_details: {
+                        x: 5,
+                        y: 6,
+                        width: 7,
+                        height: 8,
+                        polygons: [
+                            [
+                                [5, 6],
+                                [12, 6],
+                                [12, 14]
+                            ]
+                        ]
+                    }
+                }
+            ]
+        } as ComponentProps<typeof SampleAnnotations>['sample'];
+
+        render(SampleAnnotations, { props: { sample } });
+
+        await waitFor(() => {
+            expect(hasStrokeRectCall(mockContext, 5, 6, 7, 8)).toBe(true);
         });
     });
 

@@ -18,7 +18,7 @@ concurrency:
 
 env:
   NODE_OPTIONS: --max-old-space-size=4096
-  DATASET_PATH: $(pwd)/datasets
+  DATASET_REVISION: 9e6e119bb274ffe6c135009963b15193da4e670e
   E2E_BASE_URL: http://localhost:8001
   # Every run restores the uv cache, only main writes one: per-ref copies are
   # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
@@ -35,6 +35,9 @@ jobs:
     timeout-minutes: 5
     outputs:
       file-hash: ${{ steps.file-hash.outputs.hash }}
+      general: ${{ steps.fixture-keys.outputs.general }}
+      videos: ${{ steps.fixture-keys.outputs.videos }}
+      evaluations: ${{ steps.fixture-keys.outputs.evaluations }}
       # Draft pull requests skip the tests. To run them on a draft, add the `run-e2e` or
       # `run-e2e-merge-queue` label and push again.
       skip: >-
@@ -51,6 +54,7 @@ jobs:
         run: |
           hash="${{ hashFiles(
             '.github/workflows/end2end_test.yml',
+            '.github/actions/e2e-*/**',
             'Makefile',
             'lightly_studio/Makefile',
             'lightly_studio/alembic.ini',
@@ -83,6 +87,20 @@ jobs:
           ) }}"
           [ -n "$hash" ] || { echo "::error::No files match the cache key file hash."; exit 1; }
           echo "hash=$hash" >> "$GITHUB_OUTPUT"
+
+      # Hash tracked inputs before any build or Python import writes into the source tree.
+      - name: Compute DuckDB fixture keys
+        id: fixture-keys
+        env:
+          SEED_INPUTS: >-
+            ${{ hashFiles('.github/actions/e2e-*/**', 'lightly_studio/e2e-tests/e2e_fixture.py',
+            'lightly_studio/alembic.ini', 'lightly_studio/src/**', 'lightly_studio_serve/src/**',
+            'lightly_studio/pyproject.toml', 'lightly_studio_serve/pyproject.toml', 'pyproject.toml', 'uv.lock') }}
+        run: |
+          prefix="e2e-duckdb-v1-$RUNNER_OS-$RUNNER_ARCH-$DATASET_REVISION-$SEED_INPUTS"
+          echo "general=$prefix-${{ hashFiles('lightly_studio/e2e-tests/index_general.py') }}" >> "$GITHUB_OUTPUT"
+          echo "videos=$prefix-${{ hashFiles('lightly_studio/e2e-tests/index_video.py', 'lightly_studio/e2e-tests/query_events.json') }}" >> "$GITHUB_OUTPUT"
+          echo "evaluations=$prefix-${{ hashFiles('lightly_studio/e2e-tests/index_evaluations.py') }}" >> "$GITHUB_OUTPUT"
 
       # Push and dispatch also run `end-to-end-after-merge`, which the marker does not cover.
       - name: Check e2e success cache for all matrix jobs
@@ -128,17 +146,6 @@ jobs:
               )
             }}
 
-      - name: Cache example dataset
-        id: cache-example-dataset
-        uses: actions/cache@v6
-        with:
-          # No need to download a cached version in cache preparation step
-          lookup-only: true
-          path: &cache-example-dataset-path lightly_studio/datasets
-          # Manually update the cache key to invalidate caches when files relevant to the CI change
-          # in the dataset_examples repo.
-          key: &cache-example-dataset-key example-dataset-2026-03-09
-
       ### Setup steps for the workflow ###
       - name: Set Up Python
         if: steps.cache-build.outputs.cache-hit != 'true'
@@ -177,10 +184,6 @@ jobs:
         working-directory: lightly_studio_view
         run: ./node_modules/.bin/playwright install chromium
 
-      - name: Download example dataset
-        if: steps.cache-example-dataset.outputs.cache-hit != 'true'
-        run: make download-example-dataset
-
       - name: Export schema and generate version file from backend
         if: steps.cache-build.outputs.cache-hit != 'true'
         working-directory: lightly_studio
@@ -202,6 +205,82 @@ jobs:
           rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
           cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
 
+  prepare-general:
+    name: Prepare General DuckDB fixture
+    needs: check-success
+    if: github.event_name != 'merge_group' && needs.check-success.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      artifact: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check General DuckDB snapshot cache
+        uses: actions/cache/restore@v6
+        id: general
+        with:
+          lookup-only: true
+          path: lightly_studio/e2e-seed.db
+          key: ${{ needs.check-success.outputs.general }}
+      - name: Check General shard 1 success cache
+        uses: actions/cache/restore@v6
+        id: shard-1
+        if: steps.general.outputs.cache-hit != 'true'
+        with:
+          lookup-only: true
+          path: .e2e-success-general-1
+          key: e2e-success-general-1-${{ needs.check-success.outputs.file-hash }}
+      - name: Check General shard 2 success cache
+        uses: actions/cache/restore@v6
+        id: shard-2
+        if: steps.general.outputs.cache-hit != 'true'
+        with:
+          lookup-only: true
+          path: .e2e-success-general-2
+          key: e2e-success-general-2-${{ needs.check-success.outputs.file-hash }}
+      - name: Check General shard 3 success cache
+        uses: actions/cache/restore@v6
+        id: shard-3
+        if: steps.general.outputs.cache-hit != 'true'
+        with:
+          lookup-only: true
+          path: .e2e-success-general-3
+          key: e2e-success-general-3-${{ needs.check-success.outputs.file-hash }}
+      - id: seed-needed
+        if: >-
+          steps.general.outputs.cache-hit != 'true' &&
+          (steps.shard-1.outputs.cache-hit != 'true' || steps.shard-2.outputs.cache-hit != 'true' ||
+          steps.shard-3.outputs.cache-hit != 'true')
+        run: echo "needed=true" >> "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@v10.0.1
+        if: steps.seed-needed.outputs.needed == 'true'
+        with:
+          version: "0.13.6"
+          python-version: "3.11"
+          enable-cache: true
+          save-cache: ${{ env.UV_SAVE_CACHE }}
+      - uses: ./.github/actions/e2e-media
+        if: steps.seed-needed.outputs.needed == 'true'
+      - uses: ./.github/actions/e2e-model
+        if: steps.seed-needed.outputs.needed == 'true'
+        with:
+          checkpoint: mobileclip_s0.pt
+      - if: steps.seed-needed.outputs.needed == 'true'
+        run: make -C lightly_studio mock-webapp-dist
+      - uses: ./.github/actions/e2e-seed
+        if: steps.seed-needed.outputs.needed == 'true'
+        with:
+          key: ${{ needs.check-success.outputs.general }}
+          script: index_general.py
+      - uses: actions/upload-artifact@v7
+        id: upload
+        if: steps.seed-needed.outputs.needed == 'true' && github.ref != 'refs/heads/main'
+        with:
+          name: general-duckdb-${{ github.run_attempt }}
+          path: lightly_studio/e2e-seed.db
+          if-no-files-found: error
+          retention-days: 1
+
   # The merge queue skips this job: the ruleset requires `End2End Success Check` on the pull request
   # before it can enter the queue, so these tests already passed. The queue still tests the merged
   # code with the Postgres jobs below.
@@ -214,34 +293,12 @@ jobs:
     needs:
       - check-success
       - prepare-caches
+    env:
+      FIXTURE_KEY: ${{ needs.check-success.outputs[matrix.playwright_project] }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: General 1 of 3
-            index_script: index_general.py
-            playwright_project: general
-            shard: "1/3"
-            success_marker: .e2e-success-general-1
-            success_key: e2e-success-general-1
-            artifact_name: Playwright Report (General 1)
-            postgres: false
-          - name: General 2 of 3
-            index_script: index_general.py
-            playwright_project: general
-            shard: "2/3"
-            success_marker: .e2e-success-general-2
-            success_key: e2e-success-general-2
-            artifact_name: Playwright Report (General 2)
-            postgres: false
-          - name: General 3 of 3
-            index_script: index_general.py
-            playwright_project: general
-            shard: "3/3"
-            success_marker: .e2e-success-general-3
-            success_key: e2e-success-general-3
-            artifact_name: Playwright Report (General 3)
-            postgres: false
           - name: Videos
             index_script: index_video.py
             playwright_project: videos
@@ -297,14 +354,15 @@ jobs:
           path: *cache-playwright-browsers-path
           key: *cache-playwright-browsers-key
 
-      - name: Cache example dataset
-        if: steps.cache-success.outputs.cache-hit != 'true'
-        id: cache-example-dataset
-        uses: actions/cache@v6
+      - name: Restore example media
+        if: steps.cache-success.outputs.cache-hit != 'true' && matrix.playwright_project != 'remote-embedder'
+        uses: ./.github/actions/e2e-media
+
+      - name: Restore embedding checkpoint
+        if: steps.cache-success.outputs.cache-hit != 'true' && matrix.playwright_project != 'remote-embedder' && matrix.playwright_project != 'groups'
+        uses: ./.github/actions/e2e-model
         with:
-          fail-on-cache-miss: true
-          path: *cache-example-dataset-path
-          key: *cache-example-dataset-key
+          checkpoint: ${{ matrix.playwright_project == 'videos' && 'PE-Core-T16-384.pt' || 'mobileclip_s0.pt' }}
 
       ### Setup ###
 
@@ -343,19 +401,45 @@ jobs:
 
       ### Run e2e tests ###
 
-      - name: Index dataset with using lightly_studio pypi package
+      - name: Download this run's General fixture
+        id: download-general
+        if: steps.cache-success.outputs.cache-hit != 'true' && matrix.playwright_project == 'general' && !matrix.postgres && env.GENERAL_ARTIFACT != ''
+        # A failed-job rerun can outlive the artifact. Seed locally in that case.
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ env.GENERAL_ARTIFACT }}
+          path: ${{ runner.temp }}/general-fixture
+          merge-multiple: true
+
+      - name: Restore or seed the DuckDB fixture
+        if: steps.cache-success.outputs.cache-hit != 'true' && env.FIXTURE_KEY != '' && steps.download-general.outcome != 'success'
+        uses: ./.github/actions/e2e-seed
+        with:
+          key: ${{ env.FIXTURE_KEY }}
+          script: ${{ matrix.index_script }}
+
+      - name: Start the E2E server
         if: steps.cache-success.outputs.cache-hit != 'true'
         working-directory: lightly_studio
-        # TODO(Michal, 10/2025): Starting up the server redownloads the embedding model. Consider caching it.
+        env:
+          INDEX_SCRIPT: ${{ matrix.index_script }}
+          DOWNLOAD_OUTCOME: ${{ steps.download-general.outcome }}
         run: |
-          if [ "${{ matrix.postgres }}" = "true" ]; then
-            LIGHTLY_STUDIO_DATABASE_URL=postgresql://lightly:lightly@localhost:5432/lightly_studio \
-              uv run e2e-tests/${{ matrix.index_script }} > server.log 2>&1 &
+          if [[ -n "${FIXTURE_KEY:-}" ]]; then
+            seed=e2e-seed.db
+            if [[ "$DOWNLOAD_OUTCOME" == "success" ]]; then
+              seed="$RUNNER_TEMP/general-fixture/e2e-seed.db"
+            fi
+            cp "$seed" lightly_studio.db
+            uv run lightly-studio gui --db-file lightly_studio.db --no-browser > server.log 2>&1 &
           else
-            uv run e2e-tests/${{ matrix.index_script }} > server.log 2>&1 &
+            if [[ "${{ matrix.postgres }}" == "true" ]]; then
+              export LIGHTLY_STUDIO_DATABASE_URL=postgresql://lightly:lightly@localhost:5432/lightly_studio
+            fi
+            uv run "e2e-tests/$INDEX_SCRIPT" > server.log 2>&1 &
           fi
-          echo "SERVER_PID=$!" >> $GITHUB_ENV
-        id: server
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
 
       - name: Wait for the server to start
         if: steps.cache-success.outputs.cache-hit != 'true'
@@ -450,7 +534,7 @@ jobs:
 
       ### Cleanup steps ###
       - name: Show server logs after failure
-        if: failure() && steps.cache-success.outputs.cache-hit != 'true'
+        if: failure() && env.SERVER_PID != ''
         working-directory: lightly_studio
         run: |
           echo "::group::Full backend server log"
@@ -487,15 +571,60 @@ jobs:
           retention-days: 5
 
       - name: Stop lightly_studio application running in background
-        if: always() && steps.cache-success.outputs.cache-hit != 'true'
-        run: |
-          kill ${{ env.SERVER_PID }} || true
+        if: always() && env.SERVER_PID != ''
+        run: kill "$SERVER_PID" || true
 
       - name: Log runner memory use
         if: always()
         uses: ./.github/actions/runner-info
         with:
           mode: end
+
+  # The merge queue skips this job: the ruleset requires `End2End Success Check` on the pull request
+  # before it can enter the queue, so these tests already passed. The queue still tests the merged
+  # code with the Postgres jobs below.
+  end-to-end-general:
+    name: End2End Test (${{ matrix.name }})
+    if: github.event_name != 'merge_group'
+    runs-on: ubuntu-latest
+    # Recent runs: 5.7min median, 9.2min worst.
+    timeout-minutes: 20
+    needs:
+      - check-success
+      - prepare-caches
+      - prepare-general
+    env:
+      FIXTURE_KEY: ${{ needs.check-success.outputs.general }}
+      GENERAL_ARTIFACT: ${{ needs.prepare-general.outputs.artifact }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: General 1 of 3
+            index_script: index_general.py
+            playwright_project: general
+            shard: "1/3"
+            success_marker: .e2e-success-general-1
+            success_key: e2e-success-general-1
+            artifact_name: Playwright Report (General 1)
+            postgres: false
+          - name: General 2 of 3
+            index_script: index_general.py
+            playwright_project: general
+            shard: "2/3"
+            success_marker: .e2e-success-general-2
+            success_key: e2e-success-general-2
+            artifact_name: Playwright Report (General 2)
+            postgres: false
+          - name: General 3 of 3
+            index_script: index_general.py
+            playwright_project: general
+            shard: "3/3"
+            success_marker: .e2e-success-general-3
+            success_key: e2e-success-general-3
+            artifact_name: Playwright Report (General 3)
+            postgres: false
+    steps: *end-to-end-steps
 
   # Pull requests skip this job to save runners; Postgres runs the same tests as the DuckDB jobs
   # above. The merge queue runs it before merge. To run it on a pull request, add the
@@ -605,6 +734,7 @@ jobs:
       - check-success
       - prepare-caches
       - end-to-end
+      - end-to-end-general
       - end-to-end-merge-queue
       - end-to-end-after-merge
     if: always()
@@ -612,7 +742,8 @@ jobs:
       - name: Check failure
         if: >-
           needs.check-success.outputs.skip != 'true' &&
-          ((github.event_name != 'merge_group' && needs.end-to-end.result != 'success') ||
+          ((github.event_name != 'merge_group' &&
+          (needs.end-to-end.result != 'success' || needs.end-to-end-general.result != 'success')) ||
           (github.event_name == 'merge_group' && needs.end-to-end-merge-queue.result != 'success') ||
           (needs.end-to-end-merge-queue.result != 'success' &&
           needs.end-to-end-merge-queue.result != 'skipped') ||
@@ -624,12 +755,16 @@ jobs:
 
       - name: Create e2e success marker for all matrix jobs
         # Without this job, the marker would skip a later run with the `run-e2e-merge-queue` label.
-        if: needs.end-to-end.result == 'success' && needs.end-to-end-merge-queue.result == 'success'
+        if: >-
+          needs.end-to-end.result == 'success' && needs.end-to-end-general.result == 'success' &&
+          needs.end-to-end-merge-queue.result == 'success'
         run: touch .e2e-success-all
 
       - name: Save e2e success marker for all matrix jobs
         # Without this job, the marker would skip a later run with the `run-e2e-merge-queue` label.
-        if: needs.end-to-end.result == 'success' && needs.end-to-end-merge-queue.result == 'success'
+        if: >-
+          needs.end-to-end.result == 'success' && needs.end-to-end-general.result == 'success' &&
+          needs.end-to-end-merge-queue.result == 'success'
         uses: actions/cache/save@v6
         with:
           path: .e2e-success-all

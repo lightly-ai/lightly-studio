@@ -8,7 +8,7 @@ vi.mock('$lib/hooks', async () => {
     return { useGlobalStorage: () => ({ isEditingMode: writable(true) }) };
 });
 
-const key = 'lightlyStudio_pointCloudShowOrthographicViews';
+const key = 'lightlyStudio_pointCloudOrthographicViewsEnabled';
 const cleanups: (() => void)[] = [];
 afterEach(() => {
     cleanups.splice(0).forEach((dispose) => dispose());
@@ -28,9 +28,9 @@ function setup() {
 
 it('stores orthographic visibility locally and restores it in a new workspace', () => {
     const presentation = setup();
-    expect(presentation.showOrthographicViews).toBe(false);
-    presentation.toggleOrthographicProjections(true);
     expect(presentation.showOrthographicViews).toBe(true);
-    expect(sessionStorage.getItem(key)).toBe('true');
-    expect(setup().showOrthographicViews).toBe(true);
+    presentation.toggleOrthographicProjections(false);
+    expect(presentation.showOrthographicViews).toBe(false);
+    expect(sessionStorage.getItem(key)).toBe('false');
+    expect(setup().showOrthographicViews).toBe(false);
 });

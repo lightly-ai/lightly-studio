@@ -18,19 +18,11 @@ from labelformat.model.object_detection import (
     ObjectDetectionInput,
 )
 from labelformat.utils import ImageDimensionError
-from sqlmodel import Session
 from tqdm import tqdm
 
 from lightly_studio.core import labelformat_helpers, path_utils
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate
-from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import (
-    annotation_collection_coverage_resolver,
-    annotation_resolver,
-    collection_resolver,
-    evaluation_run_resolver,
-    image_resolver,
-)
+from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -52,8 +44,7 @@ def skip_and_warn_unreadable_image(path: Path, error: Exception) -> None:
     logger.warning(f"Skipping annotation for unreadable image '{path}': {error}")
 
 
-def add_annotations_from_labelformat(  # noqa: PLR0913
-    session: Session,
+def add_annotations_from_labelformat(
     root_collection_id: UUID,
     input_labels: ObjectDetectionInput | InstanceSegmentationInput,
     images_root: PathLike,
@@ -67,7 +58,6 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
     collections to the same set of images.
 
     Args:
-        session: The database session.
         root_collection_id: The ID of the root collection containing the images.
         input_labels: The labelformat input containing images and annotations.
         images_root: The root path used to construct file_path_abs values for matching.
@@ -89,13 +79,13 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         input_labels.on_error = skip_and_warn_unreadable_image  # type: ignore[union-attr]
 
     label_map = labelformat_helpers.create_label_map(
-        session=session,
         root_collection_id=root_collection_id,
         input_labels=input_labels,
     )
 
     path_to_anno_data: dict[str, ImageInstanceSegmentation | ImageObjectDetection] = {}
     missing_paths: list[str] = []
+    skipped_polygons = 0
 
     for image_data in tqdm(
         input_labels.get_labels(), desc="Processing annotations", unit=" images"
@@ -105,26 +95,29 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         path_to_anno_data[file_path_abs] = annotation_data
 
         if len(path_to_anno_data) >= SAMPLE_BATCH_SIZE:
-            missing_paths += _process_annotation_batch(
-                session=session,
+            batch_missing_paths, batch_skipped_polygons = _process_annotation_batch(
                 root_collection_id=root_collection_id,
                 path_to_anno_data=path_to_anno_data,
                 label_map=label_map,
                 collection_name=collection_name,
                 restrict_to_sample_ids=restrict_to_sample_ids,
             )
+            missing_paths += batch_missing_paths
+            skipped_polygons += batch_skipped_polygons
             path_to_anno_data.clear()
 
     if path_to_anno_data:
-        missing_paths += _process_annotation_batch(
-            session=session,
+        batch_missing_paths, batch_skipped_polygons = _process_annotation_batch(
             root_collection_id=root_collection_id,
             path_to_anno_data=path_to_anno_data,
             label_map=label_map,
             collection_name=collection_name,
             restrict_to_sample_ids=restrict_to_sample_ids,
         )
+        missing_paths += batch_missing_paths
+        skipped_polygons += batch_skipped_polygons
 
+    labelformat_helpers.warn_skipped_polygons(count=skipped_polygons)
     return missing_paths
 
 
@@ -148,18 +141,16 @@ def resolve_yolo_splits(data_yaml: Path, input_split: str | None) -> list[str]:
     return splits
 
 
-def _process_annotation_batch(  # noqa: PLR0913
-    session: Session,
+def _process_annotation_batch(
     root_collection_id: UUID,
     path_to_anno_data: Mapping[str, ImageInstanceSegmentation | ImageObjectDetection],
     label_map: dict[int, UUID],
     collection_name: str | None,
     restrict_to_sample_ids: set[UUID] | None,
-) -> list[str]:
+) -> tuple[list[str], int]:
     """Process annotations for a batch of images.
 
     Args:
-        session: The database session.
         root_collection_id: The ID of the root collection.
         path_to_anno_data: Mapping from file path to annotation data.
         label_map: Mapping from labelformat category ID to annotation label UUID.
@@ -167,19 +158,20 @@ def _process_annotation_batch(  # noqa: PLR0913
         restrict_to_sample_ids: If provided, only process samples in this set.
 
     Returns:
-        Paths with no matching sample in the collection.
+        Paths with no matching sample in the collection, and the number of polygon annotations
+        skipped because they have no valid part.
     """
     if not path_to_anno_data:
-        return []
+        return [], 0
 
-    path_to_sample_id = image_resolver.get_sample_ids_by_paths(
-        session=session,
-        collection_id=root_collection_id,
-        file_paths_abs=list(path_to_anno_data.keys()),
+    transport = active_transport.get_transport()
+    path_to_sample_id = transport.samples.get_image_ids_by_paths(
+        collection_id=root_collection_id, file_paths=list(path_to_anno_data.keys())
     )
     matched_sample_ids: set[UUID] = set()
     annotations_to_create: list[AnnotationCreate] = []
     missing_paths: list[str] = []
+    skipped_polygons = 0
 
     for sample_path, anno_data in path_to_anno_data.items():
         sample_id = path_to_sample_id.get(sample_path)
@@ -192,14 +184,17 @@ def _process_annotation_batch(  # noqa: PLR0913
 
         matched_sample_ids.add(sample_id)
         if isinstance(anno_data, ImageInstanceSegmentation):
-            annotations_to_create += [
-                labelformat_helpers.get_segmentation_annotation_create(
+            instance_segmentations = [
+                labelformat_helpers.get_instance_segmentation_annotation_create(
                     parent_sample_id=sample_id,
                     annotation_label_id=label_map[obj.category.id],
                     segmentation=obj.segmentation,
                 )
                 for obj in anno_data.objects
             ]
+            valid_segmentations = [a for a in instance_segmentations if a is not None]
+            skipped_polygons += len(instance_segmentations) - len(valid_segmentations)
+            annotations_to_create += valid_segmentations
         else:
             annotations_to_create += [
                 labelformat_helpers.get_object_detection_annotation_create(
@@ -211,30 +206,12 @@ def _process_annotation_batch(  # noqa: PLR0913
                 for obj in anno_data.objects
             ]
 
-    if annotations_to_create:
-        annotation_resolver.create_many(
-            session=session,
+    if matched_sample_ids:
+        transport.annotations.create(
             parent_collection_id=root_collection_id,
             annotations=annotations_to_create,
             collection_name=collection_name,
+            covered_sample_ids=list(matched_sample_ids),
         )
 
-    if matched_sample_ids:
-        annotation_collection_id = collection_resolver.get_or_create_child_collection(
-            session=session,
-            collection_id=root_collection_id,
-            sample_type=SampleType.ANNOTATION,
-            name=collection_name,
-        )
-        annotation_collection_coverage_resolver.add_many(
-            session=session,
-            annotation_collection_id=annotation_collection_id,
-            parent_sample_ids=matched_sample_ids,
-        )
-        if annotations_to_create:
-            evaluation_run_resolver.mark_stale_by_collection_id(
-                session=session,
-                collection_id=annotation_collection_id,
-            )
-
-    return missing_paths
+    return missing_paths, skipped_polygons

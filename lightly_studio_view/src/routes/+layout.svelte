@@ -7,18 +7,13 @@
     import '../app.css';
     import { Toaster } from 'svelte-sonner';
     import { PluginExecutingOverlay } from '$lib/components/PluginExecutingOverlay';
-    import { ApiError } from '$lib/api/ApiError';
-
-    const isClientError = (error: Error) =>
-        error instanceof ApiError && error.status >= 400 && error.status < 500;
+    import { shouldRetryQuery } from '$lib/api/shouldRetryQuery';
 
     const queryClient = new QueryClient({
         defaultOptions: {
             queries: {
                 enabled: browser,
-                // Don't retry client errors (4xx).
-                // Only retry network errors and 5xx server errors up to 3 times.
-                retry: (failureCount, error) => !isClientError(error) && failureCount < 3
+                retry: shouldRetryQuery
             }
         }
     });

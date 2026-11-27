@@ -62,9 +62,9 @@
 <div class="space-y-2">
     <div class="flex justify-between text-xs">
         <Label for="projection-point-opacity">Point visibility</Label>
-        <span class="tabular-nums text-muted-foreground"
-            >{Math.round(settings.pointOpacity * 100)}%</span
-        >
+        <span class="tabular-nums text-muted-foreground">
+            {Math.round(settings.pointOpacity * 100)}%
+        </span>
     </div>
     <Slider
         id="projection-point-opacity"

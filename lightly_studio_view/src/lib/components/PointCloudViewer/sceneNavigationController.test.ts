@@ -117,6 +117,23 @@ describe('scene navigation controller', () => {
         expect(controls.target.z).toBeCloseTo(0);
     });
 
+    it('anchors the orbit target before a held action and before a step', () => {
+        const anchorTarget = vi.fn();
+        controller.dispose();
+        controller = createSceneNavigationController({
+            camera,
+            controls: controls as never,
+            invalidate: vi.fn(),
+            anchorTarget
+        });
+
+        startSceneNavigation('forward');
+        stopSceneNavigation('forward');
+        expect(anchorTarget).toHaveBeenCalledOnce();
+        navigateScene('rotate-left');
+        expect(anchorTarget).toHaveBeenCalledTimes(2);
+    });
+
     it('cancels all held actions and removes the subscription on disposal', () => {
         startSceneNavigation('left');
         startSceneNavigation('rotate-right');

@@ -84,8 +84,8 @@
 <Collapsible bind:open={() => open, setOpen}>
     <div
         class={cn(
-            '-mx-1 flex items-center gap-2 rounded-md px-1',
-            highlighted && 'bg-primary/10 ring-1 ring-primary/40'
+            'flex items-center gap-2 rounded-sm px-3',
+            highlighted && 'bg-primary/10 ring-1 ring-inset ring-primary/40'
         )}
         data-testid="annotation-source-group-header"
         title={name}
@@ -104,8 +104,10 @@
                 {#if subtitle}
                     <span
                         class="text-xs text-primary"
-                        data-testid="annotation-source-group-subtitle">{subtitle}</span
+                        data-testid="annotation-source-group-subtitle"
                     >
+                        {subtitle}
+                    </span>
                 {/if}
             </span>
             <div class="flex shrink-0 items-center gap-2">

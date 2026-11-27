@@ -27,15 +27,16 @@
         <li>Metadata: <code>metadata["quality_score"] &gt;= 0.8</code></li>
         {#if sampleType === 'image'}
             <li>
-                Sample evaluation: <code>sample_evaluation(name = "run-name" AND "tp" &gt;= 1)</code
-                >
+                Sample evaluation: <code>
+                    sample_evaluation(name = "run-name" AND "tp" &gt;= 1)
+                </code>
             </li>
         {/if}
         {#if sampleType === 'video'}
             <li>
-                Match annotations on one frame with <code
-                    >frame(object_detection(class_name = "person") AND frame_timestamp_s &lt; 5)</code
-                >.
+                Match annotations on one frame with <code>
+                    frame(object_detection(class_name = "person") AND frame_timestamp_s &lt; 5)
+                </code>.
             </li>
         {/if}
         <li>Tag membership: <code>"tag_name" IN tags</code></li>
@@ -45,8 +46,9 @@
                 classifications. Use <code>event(class_name = "run" AND start_time_s &lt; 5)</code> to
                 match one temporal event.
             {:else}
-                Annotation conditions: <code>segmentation_mask(…)</code>,
-                <code>object_detection(…)</code>, <code>classification(…)</code>
+                Match any annotation of a given type with <code>object_detection()</code>,
+                <code>segmentation_mask()</code>, or <code>classification()</code>. Add a condition
+                inside the parentheses to narrow the match.
             {/if}
         </li>
     </ul>

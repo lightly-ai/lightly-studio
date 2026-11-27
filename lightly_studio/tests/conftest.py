@@ -177,6 +177,12 @@ def db_session(
 
 
 @pytest.fixture
+def persistent_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the local transports write through."""
+    return db_manager.persistent_session()
+
+
+@pytest.fixture
 def test_client(db_session: Session) -> Generator[TestClient, None, None]:
     """Test client for API requests."""
     client = TestClient(app)

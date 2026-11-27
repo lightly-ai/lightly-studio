@@ -103,16 +103,20 @@
                         reviewing = false;
                         confirmed = false;
                     }
-                }}>Edit</Button
+                }}
             >
+                Edit
+            </Button>
             <Button
                 variant="default"
                 buttonProps={{
                     type: 'button',
                     disabled: confirmed,
                     onclick: () => (confirmed = true)
-                }}>Confirm preview</Button
+                }}
             >
+                Confirm preview
+            </Button>
         {:else}
             <Button
                 variant="default"
@@ -120,8 +124,10 @@
                     type: 'button',
                     disabled: !canReview,
                     onclick: () => (reviewing = true)
-                }}>Review selection</Button
+                }}
             >
+                Review selection
+            </Button>
         {/if}
     </div>
 </div>

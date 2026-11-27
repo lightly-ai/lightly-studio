@@ -7,8 +7,9 @@ import socket
 from contextlib import suppress
 
 import uvicorn
+from fastapi import FastAPI
 
-from lightly_studio.api.app import app
+from lightly_studio.api import app as app_module
 from lightly_studio.dataset import env
 
 
@@ -17,11 +18,13 @@ class Server:
 
     port: int
     host: str
+    app: FastAPI
 
     def __init__(
         self,
         host: str | None = None,
         port: int | None = None,
+        app: FastAPI | None = None,
     ) -> None:
         """Initialize the Server with host and port.
 
@@ -30,7 +33,9 @@ class Server:
                 LIGHTLY_STUDIO_HOST env var.
             port: The port number to run the server on. Falls back to
                 LIGHTLY_STUDIO_PORT env var.
+            app: The FastAPI app to serve. Defaults to the LightlyStudio app.
         """
+        self.app = app if app is not None else app_module.app
         self.host = host if host is not None else env.LIGHTLY_STUDIO_HOST
         if self.host == "localhost" and not _is_ipv6_available():
             # There is no config option for uvicorn to start in a IPv4-only mode. For the most
@@ -48,7 +53,7 @@ class Server:
     def create_uvicorn_server(self) -> uvicorn.Server:
         """Create a Uvicorn server instance."""
         config = uvicorn.Config(
-            app=app,
+            app=self.app,
             host=self.host,
             port=self.port,
             http="h11",

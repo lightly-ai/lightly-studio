@@ -50,6 +50,8 @@
                 rotation: [0, 0, 0, 1],
                 size: [1, 1, 1]
             });
-        }}>Transform cuboid</button
+        }}
     >
+        Transform cuboid
+    </button>
 </div>

@@ -12,7 +12,8 @@
     import Maximize from '@lucide/svelte/icons/maximize';
     import Minimize from '@lucide/svelte/icons/minimize';
     import { cn } from '$lib/utils/shadcn.js';
-    import { formatTime, clampPercent, timeFromClientX } from './VideoControls.helpers';
+    import { formatDuration } from '$lib/utils';
+    import { clampPercent, timeFromClientX } from './VideoControls.helpers';
 
     interface VideoControlsProps {
         currentTimeS: number;
@@ -110,7 +111,7 @@
         aria-valuemin={0}
         aria-valuemax={durationS}
         aria-valuenow={currentTimeS}
-        aria-valuetext={`${formatTime(currentTimeS)} of ${formatTime(durationS)}`}
+        aria-valuetext={`${formatDuration(currentTimeS)} of ${formatDuration(durationS)}`}
         onpointerdown={handlePointerDown}
         onpointermove={handlePointerMove}
         onpointerup={(event) => stopDragging(event.pointerId)}
@@ -144,7 +145,7 @@
         </button>
 
         <span class="tabular-nums text-white/90">
-            {formatTime(currentTimeS)} / {formatTime(durationS)}
+            {formatDuration(currentTimeS)} / {formatDuration(durationS)}
         </span>
 
         <div class="flex-1"></div>

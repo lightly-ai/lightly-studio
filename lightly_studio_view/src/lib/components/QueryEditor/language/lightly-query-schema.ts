@@ -258,18 +258,18 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     {
         name: 'object_detection',
         description: 'Match an object detection.',
-        insertText: 'object_detection(${1:class_name = "..."})'
+        insertText: 'object_detection(class_name = "${1:...}")'
     },
     {
         name: 'classification',
         description:
             'Match an image, frame, or whole-video classification. Use event(...) for temporal events.',
-        insertText: 'classification(${1:class_name = "..."})'
+        insertText: 'classification(class_name = "${1:...}")'
     },
     {
         name: 'segmentation_mask',
         description: 'Match a segmentation mask annotation.',
-        insertText: 'segmentation_mask(${1:class_name = "..."})'
+        insertText: 'segmentation_mask(class_name = "${1:...}")'
     }
 ];
 

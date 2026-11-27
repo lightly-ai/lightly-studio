@@ -43,7 +43,7 @@ def write_classifications_csv(
         for sample, annotations in annotation_batches.iter_sample_annotations(
             session=session,
             samples=samples,
-            annotation_type=AnnotationType.CLASSIFICATION,
+            annotation_types=[AnnotationType.CLASSIFICATION],
             annotation_collection_id=annotation_collection_id,
         ):
             for annotation in annotations:

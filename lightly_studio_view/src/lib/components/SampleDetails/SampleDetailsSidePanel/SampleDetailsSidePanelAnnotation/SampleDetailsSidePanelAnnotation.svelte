@@ -69,7 +69,9 @@
 
     const getAnnotationDimensions = (annotation: AnnotationView) => {
         const annotationWithDimensions =
-            annotation.object_detection_details || annotation.segmentation_details;
+            annotation.object_detection_details ||
+            annotation.segmentation_details ||
+            annotation.polygon_details;
         if (annotationWithDimensions) {
             const { width, height } = annotationWithDimensions;
             return `${Math.round(width)}x${Math.round(height)}px`;
@@ -223,7 +225,7 @@
                                     content="Unlock annotation. Allows new brush strokes to paint over this mask again."
                                 >
                                     <Lock
-                                        class="size-4 text-muted-foreground"
+                                        class="size-4 text-primary"
                                         onclick={(e) => {
                                             e.stopPropagation();
                                             onToggleLock?.(e);

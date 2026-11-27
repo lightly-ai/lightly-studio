@@ -12,6 +12,7 @@ from .order_by import (
     OrderByField,
     OrderByMetadataField,
 )
+from .polygon_query import PolygonField, PolygonQuery
 from .sample_evaluation_query import SampleEvaluationQuery
 from .segmentation_mask_query import SegmentationMaskField, SegmentationMaskQuery
 from .video_event_query import VideoEventField, VideoEventQuery
@@ -36,6 +37,8 @@ __all__ = [
     "OrderByExpression",
     "OrderByField",
     "OrderByMetadataField",
+    "PolygonField",
+    "PolygonQuery",
     "SampleEvaluationQuery",
     "SegmentationMaskField",
     "SegmentationMaskQuery",

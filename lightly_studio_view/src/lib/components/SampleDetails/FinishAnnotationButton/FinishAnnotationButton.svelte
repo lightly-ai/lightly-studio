@@ -22,7 +22,9 @@
             size="xs"
             aria-label="Done"
             disabled={!context.annotationId || context.isDrawing || isPending}
-            onclick={finish}>Done</Button
+            onclick={finish}
         >
+            Done
+        </Button>
     </div>
 {/if}

@@ -8,11 +8,16 @@
     import OrthographicMoveHandle from './OrthographicMoveHandle/OrthographicMoveHandle.svelte';
     import type { CameraMode, Vector3 } from '../domain';
 
+    // The yaw ring is larger than the move arrows, so the two gizmos never overlap.
+    const PERSPECTIVE_GIZMO_SIZES = { translate: 0.75, rotate: 1.2 } as const;
+
     interface Props extends Omit<Parameters<typeof useCuboidTransformControls>[0], 'getControls'> {
         mode: 'translate' | 'rotate';
         cameraMode: CameraMode;
         size: Vector3;
         enabled?: boolean;
+        /** Reports whether the pointer is on an axis of the perspective gizmo. */
+        onAxisHoverChange?: (isHovered: boolean) => void;
     }
 
     let {
@@ -23,7 +28,8 @@
         onTransformEnd,
         onTransformPreview,
         onInteractionStart,
-        onInteractionCancel
+        onInteractionCancel,
+        onAxisHoverChange
     }: Props = $props();
 
     const parentObject3D = useParentObject3D();
@@ -36,6 +42,17 @@
         onTransformPreview: (object) => onTransformPreview?.(object),
         onInteractionStart: () => onInteractionStart?.(),
         onInteractionCancel: () => onInteractionCancel?.()
+    });
+
+    $effect(() => {
+        const controls = controlsRef;
+        if (!controls) return;
+        const onAxisChange = () => onAxisHoverChange?.(controls.axis !== null);
+        controls.addEventListener('axis-changed', onAxisChange);
+        return () => {
+            controls.removeEventListener('axis-changed', onAxisChange);
+            onAxisHoverChange?.(false);
+        };
     });
 </script>
 
@@ -64,7 +81,7 @@
         showX={options.showX}
         showY={options.showY}
         showZ={options.showZ}
-        size={0.75}
+        size={PERSPECTIVE_GIZMO_SIZES[mode]}
         autoPauseControls={true}
         object={parentObject3D.current}
     />

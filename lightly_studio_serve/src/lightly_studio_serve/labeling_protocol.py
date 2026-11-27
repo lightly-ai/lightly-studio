@@ -35,6 +35,10 @@ IMAGE_FIELD_NAME = "image"
 # The multipart field that holds the confidence threshold, as a decimal number.
 THRESHOLD_FIELD_NAME = "threshold"
 
+# The status of an image that the server cannot decode. A number, because starlette
+# renamed its constant for this status.
+STATUS_UNUSABLE_INPUT = 422
+
 _FiniteFloat = Annotated[float, Field(allow_inf_nan=False)]
 
 _MASK_DIMENSIONS = 2
@@ -155,8 +159,8 @@ def _encode_mask(mask: NDArray[np.bool_]) -> str:
 def _decode_mask(mask_png: str, width: int, height: int) -> NDArray[np.bool_]:
     """Read a base64 PNG file as a boolean mask of shape (height, width)."""
     try:
-        data = base64.b64decode(mask_png, validate=True)
-        with PILImage.open(io.BytesIO(data), formats=["PNG"]) as image:
+        mask_bytes = base64.b64decode(mask_png, validate=True)
+        with PILImage.open(io.BytesIO(mask_bytes), formats=["PNG"]) as image:
             # Do not convert, because Pillow dithers a gray image into a wrong mask.
             if image.mode != "1":
                 raise ValueError("mask_png is not a PNG file with one bit for each pixel.")

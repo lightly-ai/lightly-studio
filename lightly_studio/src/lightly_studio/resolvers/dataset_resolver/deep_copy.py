@@ -37,6 +37,7 @@ from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
@@ -150,6 +151,7 @@ def deep_copy(
     _copy_annotations(session=session, now=now)
     _copy_annotation_details(session=session, detail_table=ObjectDetectionAnnotationTable)
     _copy_annotation_details(session=session, detail_table=SegmentationAnnotationTable)
+    _copy_annotation_details(session=session, detail_table=PolygonAnnotationTable)
     _copy_annotation_details(session=session, detail_table=Cuboid3DAnnotationTable)
     _copy_annotation_details(session=session, detail_table=TemporalSpanTable)
 

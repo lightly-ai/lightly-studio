@@ -97,6 +97,41 @@ describe('useMoveAnnotationByCopy', () => {
         );
     });
 
+    it('moves a polygon with its vertices', async () => {
+        mocks.create.mockResolvedValue({ sample_id: 'copy', annotation_type: 'polygon' });
+        const polygons: [number, number][][] = [
+            [
+                [0, 0],
+                [10, 0],
+                [10, 10]
+            ]
+        ];
+        const polygon: AnnotationView = {
+            ...box,
+            annotation_type: 'polygon',
+            object_detection_details: undefined,
+            polygon_details: { ...bounds, polygons }
+        };
+
+        await moveByCopy(polygon, 'gt');
+        expect(mocks.create).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                annotation_type: 'polygon',
+                annotation_collection_name: 'gt',
+                polygons
+            })
+        );
+
+        await mocks.undoActions[0].execute();
+        expect(mocks.create).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                annotation_type: 'polygon',
+                annotation_collection_name: 'predictions',
+                polygons
+            })
+        );
+    });
+
     it('deletes nothing when the copy fails', async () => {
         mocks.create.mockRejectedValue(new Error('offline'));
 

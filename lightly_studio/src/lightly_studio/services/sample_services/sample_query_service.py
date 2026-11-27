@@ -1,4 +1,9 @@
-"""Query the image samples of a collection, one page at a time, with keyset paging."""
+"""Query the image samples of a collection, one page at a time.
+
+Sorts on sample fields use keyset paging. Sorts on metadata or on evaluation metrics use offset
+paging, because their values can be NULL or of mixed types. With offset paging, a page can skip
+or repeat samples if samples change between the requests.
+"""
 
 from __future__ import annotations
 
@@ -13,17 +18,20 @@ from sqlalchemy import ColumnElement, and_, or_
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from lightly_studio.core.dataset_query import query_translation
+from lightly_studio.core.dataset_query import query_translation, sort_translation
+from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.query_expr import (
     ClassificationMatchExpr,
     FieldRef,
     ObjectDetectionMatchExpr,
+    PolygonMatchExpr,
     SegmentationMaskMatchExpr,
 )
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_query import (
+    EvaluationMetricSortKey,
     ImageSampleRecord,
     SampleInclude,
     SamplePage,
@@ -39,6 +47,7 @@ _ANNOTATION_SCOPES: dict[type[BaseModel], str] = {
     ClassificationMatchExpr: "classification",
     ObjectDetectionMatchExpr: "object_detection",
     SegmentationMaskMatchExpr: "segmentation_mask",
+    PolygonMatchExpr: "polygon",
 }
 _SORT_FIELDS = {"file_name", "file_path_abs", "created_at", "width", "height"}
 _SUPPORTED_INCLUDES = {SampleInclude.TAGS}
@@ -63,11 +72,31 @@ def query_samples(session: Session, collection_id: UUID, request: SampleQueryReq
         QueryExprError: If the filter or the sort uses an unknown field.
     """
     _check_includes(includes=request.include)
-    sort_columns = _sort_columns(sort=request.sort)
     hash_ = sample_query_cursor.query_hash(collection_id=collection_id, request=request)
     query = _filtered_query(collection_id=collection_id, request=request)
+    if any(_needs_offset_paging(key=key) for key in request.sort):
+        page, next_cursor = _offset_page(
+            session=session, query=query, request=request, query_hash=hash_
+        )
+    else:
+        page, next_cursor = _keyset_page(
+            session=session, query=query, request=request, query_hash=hash_
+        )
+    sample_ids = [image.sample_id for image in page]
+    tags = _tag_names(session=session, sample_ids=sample_ids, include=request.include)
+    records = [_to_record(image=image, collection_id=collection_id, tags=tags) for image in page]
+    return SamplePage(samples=records, next_cursor=next_cursor)
+
+
+def _keyset_page(
+    session: Session,
+    query: SelectOfScalar[ImageTable],
+    request: SampleQueryRequest,
+    query_hash: str,
+) -> tuple[Sequence[ImageTable], str | None]:
+    sort_columns = _sort_columns(sort=request.sort)
     if request.cursor is not None:
-        after = sample_query_cursor.decode(cursor=request.cursor, query_hash=hash_)
+        after = sample_query_cursor.decode(cursor=request.cursor, query_hash=query_hash)
         query = query.where(_after(sort_columns=sort_columns, values=after))
     query = query.order_by(*(c.column if c.ascending else c.column.desc() for c in sort_columns))
     offset = request.offset if request.cursor is None else 0
@@ -76,11 +105,30 @@ def query_samples(session: Session, collection_id: UUID, request: SampleQueryReq
     next_cursor = None
     if len(images) > request.limit:
         after = [getattr(page[-1], c.name) for c in sort_columns]
-        next_cursor = sample_query_cursor.encode(query_hash=hash_, after=after)
-    sample_ids = [image.sample_id for image in page]
-    tags = _tag_names(session=session, sample_ids=sample_ids, include=request.include)
-    records = [_to_record(image=image, collection_id=collection_id, tags=tags) for image in page]
-    return SamplePage(samples=records, next_cursor=next_cursor)
+        next_cursor = sample_query_cursor.encode(query_hash=query_hash, after=after)
+    return page, next_cursor
+
+
+def _offset_page(
+    session: Session,
+    query: SelectOfScalar[ImageTable],
+    request: SampleQueryRequest,
+    query_hash: str,
+) -> tuple[Sequence[ImageTable], str | None]:
+    offset = request.offset
+    if request.cursor is not None:
+        offset = sample_query_cursor.decode_offset(cursor=request.cursor, query_hash=query_hash)
+    for key in request.sort:
+        query = _to_order_by(key=key).apply(query=query)
+    # The sample ID breaks ties, as in the SQL path of the dataset query.
+    query = query.order_by(col(SampleTable.sample_id))
+    images = session.exec(query.offset(offset).limit(request.limit + 1)).all()
+    page = images[: request.limit]
+    next_cursor = None
+    if len(images) > request.limit:
+        next_offset = offset + len(page)
+        next_cursor = sample_query_cursor.encode_offset(query_hash=query_hash, offset=next_offset)
+    return page, next_cursor
 
 
 def _filtered_query(collection_id: UUID, request: SampleQueryRequest) -> SelectOfScalar[ImageTable]:
@@ -117,18 +165,42 @@ def _check_filter_fields(value: object, table: str) -> None:
             _check_filter_fields(value=child, table=table)
 
 
-def _sort_columns(sort: Sequence[SortKey]) -> list[_SortColumn]:
+def _sort_columns(sort: Sequence[SortKey | EvaluationMetricSortKey]) -> list[_SortColumn]:
     keys = sort or [SortKey(field=FieldRef(table="image", name="created_at"))]
     columns = []
     for key in keys:
-        if key.field.table != "image" or key.field.name not in _SORT_FIELDS:
-            raise QueryExprError(f"Unknown sort field: {key.field.table}.{key.field.name}")
-        parse = _CURSOR_PARSERS[key.field.name]
+        field = _keyset_sort_field(key=key)
+        parse = _CURSOR_PARSERS[field.name]
         ascending = key.direction == SortDirection.asc
-        columns.append(_SortColumn(name=key.field.name, ascending=ascending, parse=parse))
+        columns.append(_SortColumn(name=field.name, ascending=ascending, parse=parse))
     # The sample ID breaks ties, so the order is total and no sample is skipped.
     columns.append(_SortColumn(name="sample_id", ascending=True, parse=_parse_uuid))
     return columns
+
+
+def _keyset_sort_field(key: SortKey | EvaluationMetricSortKey) -> FieldRef:
+    """Get the field of a sort key that keyset paging can use."""
+    if isinstance(key, EvaluationMetricSortKey):
+        raise QueryExprError("Keyset paging cannot sort by an evaluation metric.")
+    if key.field.table != "image" or key.field.name not in _SORT_FIELDS:
+        raise QueryExprError(f"Unknown sort field: {key.field.table}.{key.field.name}")
+    return key.field
+
+
+def _needs_offset_paging(key: SortKey | EvaluationMetricSortKey) -> bool:
+    return isinstance(key, EvaluationMetricSortKey) or key.field.table == "metadata"
+
+
+def _to_order_by(key: SortKey | EvaluationMetricSortKey) -> OrderByExpression:
+    if isinstance(key, EvaluationMetricSortKey):
+        return sort_translation.evaluation_metric_sort_to_order_by(
+            evaluation_run_name=key.run_name, metric_name=key.metric_name, direction=key.direction
+        )
+    if key.field.table not in {"image", "metadata"}:
+        raise QueryExprError(f"Unknown sort field: {key.field.table}.{key.field.name}")
+    return sort_translation.sort_to_order_by(
+        key=(key.field.table, key.field.name), direction=key.direction
+    )
 
 
 def _after(sort_columns: Sequence[_SortColumn], values: Sequence[Any]) -> ColumnElement[bool]:

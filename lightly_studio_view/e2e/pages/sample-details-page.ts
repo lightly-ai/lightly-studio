@@ -59,7 +59,7 @@ export class SampleDetailsPage {
     }
 
     async clickEditButton() {
-        await this.page.getByTestId('header-editing-mode-button').click();
+        await this.page.getByTestId('breadcrumb-edit-button').click();
     }
 
     getAnnotationBoxByLabel(label: string) {
@@ -203,7 +203,9 @@ export class SampleDetailsPage {
     }
 
     async undoLastCaptionDelete() {
-        await this.captionUtils.undoLastCaptionDelete();
+        await this.captionUtils.undoLastCaptionDelete(
+            this.page.getByTestId('breadcrumb-undo-button')
+        );
     }
 
     async updateNthCaption(index: number, text: string) {

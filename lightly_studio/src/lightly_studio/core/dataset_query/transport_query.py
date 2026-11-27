@@ -13,8 +13,10 @@ from lightly_studio.core.image.record_image_sample import RecordImageSample
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample_query import (
     DEFAULT_PAGE_SIZE,
+    EvaluationMetricSortKey,
     SampleInclude,
     SampleQueryRequest,
+    SortKey,
 )
 from lightly_studio.transport import active_transport
 
@@ -39,9 +41,17 @@ def build_request(
         query_expr = (
             None
             if match_expression is None
-            else query_expr_conversion.to_query_expr(match_expression=match_expression)
+            else query_expr_conversion.to_query_expr(
+                match_expression=match_expression, sample_type=sample_type
+            )
         )
-        sort = query_expr_conversion.to_sort_keys(order_by=order_by)
+        sort = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=sample_type)
+        needs_offset_paging = not all(
+            _is_field_sort(key=key, table=sample_type.value) for key in sort
+        )
+        # Offset paging can skip samples that a loop changes, so local mode uses SQL.
+        if needs_offset_paging and not active_transport.is_remote():
+            return None
     except UnsupportedQueryError:
         if active_transport.is_remote():
             raise
@@ -74,3 +84,7 @@ def iter_samples(
         if remaining is not None:
             remaining -= len(page.samples)
         request = request.model_copy(update={"cursor": page.next_cursor, "offset": 0})
+
+
+def _is_field_sort(key: SortKey | EvaluationMetricSortKey, table: str) -> bool:
+    return isinstance(key, SortKey) and key.field.table == table

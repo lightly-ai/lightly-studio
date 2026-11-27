@@ -7,6 +7,7 @@ from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.classification_query import ClassificationQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.object_detection_query import ObjectDetectionQuery
+from lightly_studio.core.dataset_query.polygon_query import PolygonQuery
 from lightly_studio.core.dataset_query.sample_evaluation_query import SampleEvaluationQuery
 from lightly_studio.core.dataset_query.segmentation_mask_query import SegmentationMaskQuery
 from lightly_studio.core.dataset_query.video_event_query import VideoEventQuery
@@ -31,8 +32,8 @@ class VideoFrameQuery(MatchExpression):
         Raises:
             ValueError: A criterion contains a nested frame or event query.
         """
-        self._criterion = AND(*criteria)
-        _validate_frame_criterion(criterion=self._criterion)
+        self.criterion = AND(*criteria)
+        _validate_frame_criterion(criterion=self.criterion)
 
     def get(self) -> ColumnElement[bool]:
         """Get a single frame-existence expression for the combined criteria."""
@@ -40,7 +41,7 @@ class VideoFrameQuery(MatchExpression):
             select(VideoFrameTable.sample_id)
             .where(
                 col(VideoFrameTable.parent_sample_id) == col(SampleTable.sample_id),
-                VideoFrameTable.sample.has(self._criterion.get()),
+                VideoFrameTable.sample.has(self.criterion.get()),
             )
             .correlate(SampleTable)
             .exists()
@@ -55,7 +56,10 @@ def _validate_frame_criterion(criterion: MatchExpression) -> None:
             _validate_frame_criterion(criterion=term)
     elif isinstance(criterion, NOT):
         _validate_frame_criterion(criterion=criterion.term)
-    elif isinstance(criterion, (ClassificationQuery, ObjectDetectionQuery, SegmentationMaskQuery)):
+    elif isinstance(
+        criterion,
+        (ClassificationQuery, ObjectDetectionQuery, SegmentationMaskQuery, PolygonQuery),
+    ):
         _validate_frame_criterion(criterion=criterion.criterion)
     elif isinstance(criterion, SampleEvaluationQuery):
         for term in criterion.criteria:

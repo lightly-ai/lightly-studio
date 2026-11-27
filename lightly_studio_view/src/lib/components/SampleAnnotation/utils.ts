@@ -1,19 +1,21 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     isObjectDetectionAnnotation,
+    isPolygonAnnotation,
     isSegmentationMaskAnnotation,
-    type Annotation,
-    type ObjectDetectionAnnotationView
+    type Annotation
 } from '$lib/services/types';
 import type { BoundingBox } from '$lib/types';
 
 export function getBoundingBox(annotation: Annotation): BoundingBox {
-    let boundingBox: ObjectDetectionAnnotationView | null | undefined;
+    let boundingBox: BoundingBox | null | undefined;
 
     if (isObjectDetectionAnnotation(annotation)) {
         boundingBox = annotation.object_detection_details;
     } else if (isSegmentationMaskAnnotation(annotation)) {
         boundingBox = annotation.segmentation_details;
+    } else if (isPolygonAnnotation(annotation)) {
+        boundingBox = annotation.polygon_details;
     } else {
         throw new Error(
             `Annotation type is not supported for bounding box extraction: ${annotation.annotation_type}`

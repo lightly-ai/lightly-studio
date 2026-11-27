@@ -1,0 +1,28 @@
+name: Prepare DuckDB E2E fixture
+description: Restore or build a pristine database before the tests edit their local copy.
+inputs:
+  key:
+    description: Exact snapshot cache key
+    required: true
+  script:
+    description: Index script in lightly_studio/e2e-tests
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache/restore@v6
+      id: snapshot
+      with:
+        path: lightly_studio/e2e-seed.db
+        key: ${{ inputs.key }}
+    - if: steps.snapshot.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: lightly_studio
+      env:
+        INDEX_SCRIPT: ${{ inputs.script }}
+      run: uv run "e2e-tests/$INDEX_SCRIPT" --seed-db e2e-seed.db
+    - uses: actions/cache/save@v6
+      if: steps.snapshot.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main'
+      with:
+        path: lightly_studio/e2e-seed.db
+        key: ${{ inputs.key }}

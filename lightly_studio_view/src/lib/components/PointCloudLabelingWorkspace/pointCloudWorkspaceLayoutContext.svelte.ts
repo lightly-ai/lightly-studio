@@ -7,6 +7,8 @@ import type { PointCloudWorkspaceContext } from './provider/types';
 import type { AnnotationClass, AnnotationSource, CuboidAnnotation, WorkspaceTool } from './domain';
 import type { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
 import type { createWorkspaceController } from './createWorkspaceController.svelte';
+import type { HistoryMode } from './workspaceOptions';
+import type { PanelDock } from './PanelDockToggle';
 
 /** Inclusive range of timeline ticks already available for playback. */
 interface BufferRange {
@@ -52,8 +54,12 @@ export interface PointCloudWorkspaceLayoutState {
     effectiveTool: WorkspaceTool;
     /** Whether annotation edits are permitted. */
     isEditingMode: boolean;
-    /** Whether Top, Side, and Front views are visible. */
+    /** Whether the Top, Side, and Front views are on screen: turned on and not collapsed. */
     showOrthographicViews: boolean;
+    /** Where the orthographic views sit next to the 3D scene. */
+    orthographicDock: PanelDock;
+    /** Where the camera strip sits next to the scene column. */
+    cameraStripDock: PanelDock;
     /** Screen-space point size in CSS pixels. */
     pointSize: number;
     /** Whether navigation buttons and shortcut hints are shown. */
@@ -62,6 +68,14 @@ export interface PointCloudWorkspaceLayoutState {
     accumulation?: ReturnType<typeof createWorkspaceController>['accumulation'];
     /** Strategy used to color the point cloud. */
     colorMode: Exclude<ColorMode, 'none'>;
+    /** Changes how the points are colored. */
+    onColorModeChange: (colorMode: Exclude<ColorMode, 'none'>) => void;
+    /** Lidar channels currently shown in the scene. */
+    selectedLidarChannelIds: number[];
+    /** Toggles a lidar channel by its `channel_id`. */
+    onToggleLidarChannel: (channelId: number) => void;
+    /** Replaces the shown lidar channels. */
+    onSetLidarChannels: (channelIds: number[]) => void;
     /** Selected cuboid identifier, or null. */
     selectedCuboidId: string | null;
     /** Hovered cuboid identifier, or null. */
@@ -70,8 +84,16 @@ export interface PointCloudWorkspaceLayoutState {
     draftCuboid: CuboidBox | null;
     /** Camera channels currently visible in the strip. */
     selectedCameraChannelIds: number[];
+    /** Toggles a camera channel by its `channel_id`. */
+    onToggleCameraChannel: (channelId: number) => void;
+    /** Replaces the shown camera channels. */
+    onSetCameraChannels: (channelIds: number[]) => void;
     /** Whether the camera strip is reduced to its header. */
     cameraStripCollapsed: boolean;
+    /** Camera shown in the enlarged camera dialog, or undefined when it is closed. */
+    openCamera: string | undefined;
+    /** Opens, switches, or closes the enlarged camera dialog. */
+    onOpenCameraChange: (camera: string | undefined, historyMode: HistoryMode) => void;
     /** Whether buffering covers the complete sequence. */
     bufferEntireSequence: boolean;
     /** Inclusive tick ranges ready for playback. */
@@ -82,6 +104,10 @@ export interface PointCloudWorkspaceLayoutState {
     onCameraStripCollapsedChange: (collapsed: boolean) => void;
     /** Updates orthographic projection visibility. */
     onToggleOrthographicProjections: (show: boolean) => void | Promise<void>;
+    /** Moves the orthographic views. */
+    onOrthographicDockChange: (dock: PanelDock) => void;
+    /** Moves the camera strip. */
+    onCameraStripDockChange: (dock: PanelDock) => void;
     /** Updates the preferred point size. */
     onPointSizeChange: (value: number) => void;
     /** Updates navigation helper visibility. */

@@ -1,0 +1,31 @@
+name: Restore E2E embedding checkpoint
+description: Share the checkpoint downloaded by the embedder. Only main writes large caches.
+inputs:
+  checkpoint:
+    description: Model checkpoint filename
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: checkpoint
+      shell: bash
+      env:
+        CHECKPOINT: ${{ inputs.checkpoint }}
+      run: |
+        # Update the SHA-256 when the corresponding weights change.
+        case "$CHECKPOINT" in
+          mobileclip_s0.pt) digest=809b408eff74f8058843e86a1f92967097d42ba782450e85b8f4867b7f0ca0b7 ;;
+          PE-Core-T16-384.pt) digest=868f89f066b7c1ae51add02d2cb7b925fd051076282773f2ec3c71359fbdaf3b ;;
+          *) echo "::error::Unknown checkpoint: $CHECKPOINT"; exit 1 ;;
+        esac
+        echo "key=e2e-model-$CHECKPOINT-$digest" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v6
+      if: github.ref == 'refs/heads/main'
+      with:
+        path: ~/.cache/lightly-studio/${{ inputs.checkpoint }}
+        key: ${{ steps.checkpoint.outputs.key }}
+    - uses: actions/cache/restore@v6
+      if: github.ref != 'refs/heads/main'
+      with:
+        path: ~/.cache/lightly-studio/${{ inputs.checkpoint }}
+        key: ${{ steps.checkpoint.outputs.key }}

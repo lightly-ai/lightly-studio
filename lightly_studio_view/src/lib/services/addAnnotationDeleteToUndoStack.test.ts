@@ -101,6 +101,37 @@ describe('addAnnotationDeleteToUndoStack', () => {
         expect(refetch).toHaveBeenCalled();
     });
 
+    it('restores a deleted polygon with its vertices', async () => {
+        const addReversibleAction = vi.fn();
+        const createAnnotation = vi.fn().mockResolvedValue({} as CreateAnnotationResponse);
+        const polygons = [
+            [
+                [0, 0],
+                [10, 0],
+                [10, 10]
+            ]
+        ];
+
+        addAnnotationDeleteToUndoStack({
+            annotation: {
+                ...mockAnnotation,
+                annotation_type: 'polygon',
+                object_detection_details: undefined,
+                polygon_details: { x: 0, y: 0, width: 10, height: 10, polygons }
+            },
+            labels: mockLabels,
+            sources: mockSources,
+            addReversibleAction,
+            createAnnotation,
+            refetch: vi.fn()
+        });
+        await (addReversibleAction.mock.calls[0][0] as ReversibleAction).execute();
+
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ annotation_type: 'polygon', polygons })
+        );
+    });
+
     const executeUndo = async (refetch: () => unknown) => {
         const addReversibleAction = vi.fn();
         addAnnotationDeleteToUndoStack({

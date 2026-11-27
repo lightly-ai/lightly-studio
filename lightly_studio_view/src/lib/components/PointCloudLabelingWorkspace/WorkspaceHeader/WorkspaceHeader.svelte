@@ -1,10 +1,9 @@
 <script lang="ts">
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import ChevronUp from '@lucide/svelte/icons/chevron-up';
     import Maximize2 from '@lucide/svelte/icons/maximize-2';
     import Minimize2 from '@lucide/svelte/icons/minimize-2';
     import WorkspaceBreadcrumb from './WorkspaceBreadcrumb.svelte';
     import { Button } from '$lib/components';
+    import { WorkspaceLayoutToggles, type LayoutToggle } from '../WorkspaceLayoutToggles';
     import type { WorkspaceCrumb } from '../types';
 
     /** Inputs and callbacks for workspace header. */
@@ -17,10 +16,10 @@
         isFullscreen: boolean;
         /** Enters or leaves browser fullscreen mode. */
         onToggleFullscreen: () => void;
-        /** Whether the camera strip is reduced to its header. */
-        cameraStripCollapsed?: boolean;
-        /** Expands or collapses the camera strip. */
-        onToggleCameraStrip?: () => void;
+        /** Icon toggles that show or hide the workspace panels. */
+        layoutToggles?: readonly LayoutToggle[];
+        /** Shows or hides the panel with the given toggle id. */
+        onToggleLayout?: (id: string) => void;
     }
 
     let {
@@ -28,8 +27,8 @@
         sourcePath = [],
         isFullscreen,
         onToggleFullscreen,
-        cameraStripCollapsed = false,
-        onToggleCameraStrip
+        layoutToggles = [],
+        onToggleLayout = () => {}
     }: Props = $props();
 </script>
 
@@ -39,18 +38,9 @@
 >
     <WorkspaceBreadcrumb {sequenceId} {sourcePath} />
     <div class="flex shrink-0 items-center gap-1">
-        {#if onToggleCameraStrip}
-            <Button
-                variant="ghost"
-                icon={cameraStripCollapsed ? ChevronUp : ChevronDown}
-                ariaLabel={cameraStripCollapsed ? 'Show camera strip' : 'Hide camera strip'}
-                buttonProps={{
-                    type: 'button',
-                    size: 'sm',
-                    class: 'h-8 w-8 p-0',
-                    onclick: onToggleCameraStrip
-                }}
-            />
+        {#if layoutToggles.length > 0}
+            <WorkspaceLayoutToggles toggles={layoutToggles} onToggle={onToggleLayout} />
+            <div class="mx-1 h-5 w-px bg-border"></div>
         {/if}
         <Button
             variant="ghost"

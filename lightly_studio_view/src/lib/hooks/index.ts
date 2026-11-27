@@ -5,6 +5,10 @@ export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/us
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite.svelte';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 export { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
+export {
+    useEmbeddingPlotStatus,
+    useRefetchEmbeddingPlotStatus
+} from '$lib/hooks/useEmbeddingPlotStatus/useEmbeddingPlotStatus';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite.svelte';
 export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
 export {
@@ -154,3 +158,4 @@ export { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 export { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
 export { useInvalidateAnnotationSourceQueries } from '$lib/hooks/useInvalidateAnnotationSourceQueries';
 export { useLingeringValue } from '$lib/hooks/useLingeringValue/useLingeringValue.svelte';
+export type { ArrowData } from '$lib/hooks/useEmbeddings/parseEmbeddingsArrow';

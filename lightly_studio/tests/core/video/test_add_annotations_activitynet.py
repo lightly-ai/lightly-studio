@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.video import add_annotations
@@ -15,10 +16,12 @@ from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
-def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_path: Path) -> None:
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+def test_add_annotations_from_activitynet__adds_events(
+    persistent_session: Session, tmp_path: Path
+) -> None:
+    collection = create_collection(session=persistent_session, sample_type=SampleType.VIDEO)
     video = create_video(
-        session=db_session,
+        session=persistent_session,
         collection_id=collection.collection_id,
         video=VideoStub(path="/data/videos/v_action1.mp4", duration_s=30.0),
     )
@@ -48,7 +51,6 @@ def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_
     )
 
     missing = add_annotations.add_annotations_from_activitynet(
-        session=db_session,
         root_collection_id=collection.collection_id,
         annotations_json=annotations_json,
         collection_name="ground_truth",
@@ -57,7 +59,7 @@ def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_
     assert missing == ["v_missing"]
 
     annotations = annotation_resolver.get_all_by_parent_sample_ids(
-        session=db_session,
+        session=persistent_session,
         parent_sample_ids=[video.sample_id],
     )
     assert len(annotations) == 2
@@ -83,5 +85,46 @@ def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_
     }
     assert labels == {"Running", "Jumping"}
 
-    loaded_video = video_resolver.get_by_id(session=db_session, sample_id=video.sample_id)
+    loaded_video = video_resolver.get_by_id(session=persistent_session, sample_id=video.sample_id)
     assert loaded_video is not None
+
+
+def test_add_annotations_from_activitynet__flushes_full_batches(
+    persistent_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    mocker.patch.object(add_annotations, "ANNOTATION_BATCH_SIZE", 1)
+    collection = create_collection(session=persistent_session, sample_type=SampleType.VIDEO)
+    video = create_video(
+        session=persistent_session,
+        collection_id=collection.collection_id,
+        video=VideoStub(path="/data/videos/v_action1.mp4", duration_s=30.0),
+    )
+    annotations_json = tmp_path / "activitynet.json"
+    annotations_json.write_text(
+        json.dumps(
+            {
+                "database": {
+                    "v_action1": {
+                        "duration": 30.0,
+                        "subset": "training",
+                        "annotations": [
+                            {"label": "Running", "segment": [1.0, 5.5]},
+                            {"label": "Jumping", "segment": [6.0, 12.0]},
+                        ],
+                    },
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    add_annotations.add_annotations_from_activitynet(
+        root_collection_id=collection.collection_id,
+        annotations_json=annotations_json,
+    )
+
+    annotations = annotation_resolver.get_all_by_parent_sample_ids(
+        session=persistent_session,
+        parent_sample_ids=[video.sample_id],
+    )
+    assert len(annotations) == 2

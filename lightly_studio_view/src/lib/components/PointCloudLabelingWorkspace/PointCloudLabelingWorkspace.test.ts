@@ -1,4 +1,4 @@
-import { beforeAll, describe, it, expect, vi, afterEach } from 'vitest';
+import { beforeAll, beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
@@ -239,7 +239,12 @@ const defaultProps = {
 };
 
 describe('PointCloudLabelingWorkspace', () => {
+    beforeEach(() => {
+        // The tests query one viewport stub; the orthographic projections add three more.
+        sessionStorage.setItem('lightlyStudio_pointCloudOrthographicViewsEnabled', 'false');
+    });
     afterEach(() => {
+        sessionStorage.removeItem('lightlyStudio_pointCloudOrthographicViewsEnabled');
         vi.clearAllMocks();
         vi.useRealTimers();
         cloudQuery.data = undefined;
@@ -269,7 +274,7 @@ describe('PointCloudLabelingWorkspace', () => {
 
         expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-header')).toBeInTheDocument();
-        expect(screen.getByTestId('workspace-filter-bar')).toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-filter-bar')).not.toBeInTheDocument();
         expect(screen.queryByTestId('workspace-tool-rail')).not.toBeInTheDocument();
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
@@ -613,6 +618,8 @@ describe('PointCloudLabelingWorkspace', () => {
             const props = defaultProps;
             const { rerender } = render(PointCloudLabelingWorkspace, { props });
 
+            // The lidar select sits in the scene settings.
+            await user.click(screen.getByRole('button', { name: 'Scene settings' }));
             await user.click(screen.getByTestId('workspace-lidar-select'));
             await user.click(screen.getByTestId('workspace-lidar-select-1'));
             expect(screen.getByTestId('workspace-lidar-select')).not.toHaveTextContent(':');

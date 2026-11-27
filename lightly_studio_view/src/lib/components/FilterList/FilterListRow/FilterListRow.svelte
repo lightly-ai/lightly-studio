@@ -53,13 +53,15 @@
         <span
             class={cn('flex-1 truncate text-base font-normal', muted && 'text-muted-foreground')}
             data-testid="{testId}-name"
-            >{before}{#if match}<mark class="rounded-sm bg-primary/25 text-foreground">{match}</mark
-                >{/if}{after}</span
         >
+            {before}{#if match}<mark class="rounded-sm bg-primary/25 text-foreground">
+                    {match}
+                </mark>{/if}{after}
+        </span>
         {#if item.count !== undefined}
-            <span class="text-sm font-normal text-diffuse-foreground" data-testid="{testId}-count"
-                >{item.count}</span
-            >
+            <span class="text-sm font-normal text-diffuse-foreground" data-testid="{testId}-count">
+                {item.count}
+            </span>
         {/if}
     </Label>
     {@render trailing?.(item)}

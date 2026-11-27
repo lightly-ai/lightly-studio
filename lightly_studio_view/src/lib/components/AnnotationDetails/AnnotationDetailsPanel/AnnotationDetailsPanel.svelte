@@ -95,8 +95,10 @@
                                         handleDeleteAnnotation();
                                         showDeleteConfirmation = false;
                                     }
-                                }}>Delete</Button
+                                }}
                             >
+                                Delete
+                            </Button>
                             <Button
                                 variant="outline"
                                 buttonProps={{
@@ -105,8 +107,10 @@
                                         e.stopPropagation();
                                         showDeleteConfirmation = false;
                                     }
-                                }}>Cancel</Button
+                                }}
                             >
+                                Cancel
+                            </Button>
                         </div>
                     </Popover.Content>
                 </Popover.Root>

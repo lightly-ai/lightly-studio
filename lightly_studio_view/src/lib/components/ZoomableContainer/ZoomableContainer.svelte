@@ -289,7 +289,7 @@
     <svg
         bind:this={svgContainerUnscaled}
         class="pointer-events-none absolute inset-0"
-        viewBox={`0 0 1024 768`}
+        viewBox="0 0 1024 768"
         preserveAspectRatio="xMidYMid meet"
     >
     </svg>

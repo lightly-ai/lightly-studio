@@ -61,6 +61,29 @@ it.each(['classification', 'object_detection', 'segmentation_mask'] as const)(
     }
 );
 
+it('copies a polygon with its vertices', async () => {
+    const polygons: [number, number][][] = [
+        [
+            [0, 0],
+            [10, 0],
+            [10, 10]
+        ]
+    ];
+    const original: AnnotationView = {
+        ...annotation,
+        annotation_type: 'polygon',
+        polygon_details: { ...bounds, polygons }
+    };
+    mocks.create.mockResolvedValue({ ...original, sample_id: 'copy' });
+    const action = useCopyAnnotationToSource(() => ({ ...params(), annotation: original }));
+
+    expect(await action.copy('human')).toBe(true);
+
+    expect(mocks.create).toHaveBeenLastCalledWith(
+        expect.objectContaining({ annotation_type: 'polygon', polygons })
+    );
+});
+
 it('blocks repeated requests, reports failure, and allows retry', async () => {
     vi.resetAllMocks();
     mocks.create

@@ -19,8 +19,9 @@
         </div>
         <div class="flex items-center gap-2">
             <span class="font-medium">Timestamp:</span>
-            <span data-testid="current-frame-timestamp">{frame.frame_timestamp_s.toFixed(3)} s</span
-            >
+            <span data-testid="current-frame-timestamp">
+                {frame.frame_timestamp_s.toFixed(3)} s
+            </span>
         </div>
     </div>
 

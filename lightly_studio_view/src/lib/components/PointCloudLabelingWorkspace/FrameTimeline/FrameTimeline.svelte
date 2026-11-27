@@ -64,9 +64,14 @@
         onPreviousSequence?: () => void;
         /** Open the next sequence; the control is disabled when absent. */
         onNextSequence?: () => void;
+        /** Whether the object tracks panel shows. */
+        showObjectTracks?: boolean;
+        /** Hides the object tracks panel. */
+        onHideObjectTracks?: () => void;
+        /** Whether the frame tag tracks panel shows. */
         showFrameTags?: boolean;
-        /** Set when frame tags can be shown: toggles the frame tag rows. */
-        onShowFrameTagsChange?: (checked: boolean) => void;
+        /** Hides the frame tag tracks panel. */
+        onHideFrameTags?: () => void;
         frameTags?: TickTagView[];
     }
 
@@ -97,8 +102,10 @@
         onSeekEnd,
         onPreviousSequence,
         onNextSequence,
+        showObjectTracks,
+        onHideObjectTracks,
         showFrameTags,
-        onShowFrameTagsChange,
+        onHideFrameTags,
         frameTags
     }: Props = $props();
 
@@ -147,8 +154,10 @@
         {sequenceId}
         {onSeekStart}
         {onSeekEnd}
+        {showObjectTracks}
+        {onHideObjectTracks}
         {showFrameTags}
-        {onShowFrameTagsChange}
+        {onHideFrameTags}
         {frameTags}
     />
 </div>

@@ -14,6 +14,7 @@ from labelformat.formats import (
     COCOObjectDetectionInput,
     LightlyObjectDetectionInput,
     PascalVOCSemanticSegmentationInput,
+    YOLOv8InstanceSegmentationInput,
     YOLOv8ObjectDetectionInput,
 )
 from labelformat.model.instance_segmentation import (
@@ -26,6 +27,8 @@ from sqlmodel import Session
 
 from lightly_studio.analytics import ingest_tracking
 from lightly_studio.analytics.ingest_tracking import IngestFormat
+from lightly_studio.core import annotation_file_task
+from lightly_studio.core.annotation_file_task import AnnotationFileTask
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
@@ -192,7 +195,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed_annotations: If True, generate embeddings for the annotation crops.
         """
         missing = add_annotations.add_annotations_from_labelformat(
-            session=self.session,
             root_collection_id=self.collection_id,
             input_labels=input_labels,
             images_root=images_root,
@@ -206,13 +208,14 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             embed=embed_annotations,
         )
 
-    def add_annotations_from_coco(
+    def add_annotations_from_coco(  # noqa: PLR0913
         self,
         annotations_json: PathLike,
         images_root: PathLike,
         annotation_source: str,
-        annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+        annotation_type: AnnotationType | None = None,
         embed_annotations: bool = True,
+        annotation_task: AnnotationFileTask | None = None,
     ) -> None:
         """Attach COCO annotations to images already in the dataset.
 
@@ -220,18 +223,19 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotations_json: Path to the COCO annotations JSON file.
             images_root: Root path used for matching image filenames.
             annotation_source: Name of the annotation source.
-            annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
+            annotation_type: Deprecated. Use `annotation_task` instead.
             embed_annotations: If True, generate embeddings for the annotation crops.
+            annotation_task: What to read from the file. `OBJECT_DETECTION` (default) reads
+                the boxes. `INSTANCE_SEGMENTATION` reads the polygon and mask segmentations.
+
+        Raises:
+            ValueError: If both `annotation_task` and `annotation_type` are set.
         """
-        label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
-        if annotation_type == AnnotationType.OBJECT_DETECTION:
-            label_input = COCOObjectDetectionInput(input_file=annotations_json)
-        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
-            label_input = COCOInstanceSegmentationInput(input_file=annotations_json)
-        else:
-            raise ValueError(f"Invalid annotation type: {annotation_type}")
+        task = annotation_file_task.resolve_annotation_task(
+            annotation_task=annotation_task, annotation_type=annotation_type
+        )
         self.add_annotations_from_labelformat(
-            input_labels=label_input,
+            input_labels=_create_coco_input(annotations_json=annotations_json, task=task),
             images_root=images_root,
             annotation_source=annotation_source,
             embed_annotations=embed_annotations,
@@ -243,6 +247,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         annotation_source: str,
         input_split: str | None = None,
         embed_annotations: bool = True,
+        annotation_task: AnnotationFileTask | None = None,
     ) -> None:
         """Attach YOLO annotations to images already in the dataset.
 
@@ -251,15 +256,19 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_source: Name of the annotation source.
             input_split: Specific split (e.g. ``"train"``). ``None`` loads all splits.
             embed_annotations: If True, generate embeddings for the annotation crops.
+            annotation_task: What to read from the label files. `OBJECT_DETECTION` (default)
+                reads boxes. `INSTANCE_SEGMENTATION` reads polygons, one per line.
         """
+        task = annotation_file_task.resolve_annotation_task(
+            annotation_task=annotation_task, annotation_type=None
+        )
         data_yaml = Path(data_yaml).absolute()
         missing: list[str] = []
         for split in add_annotations.resolve_yolo_splits(
             data_yaml=data_yaml, input_split=input_split
         ):
-            label_input = YOLOv8ObjectDetectionInput(input_file=data_yaml, input_split=split)
+            label_input = _create_yolo_input(data_yaml=data_yaml, split=split, task=task)
             missing += add_annotations.add_annotations_from_labelformat(
-                session=self.session,
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
                 images_root=label_input._images_dir(),  # noqa: SLF001
@@ -370,7 +379,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_path = Path(images_path).absolute()
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
             ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=input_labels,
@@ -404,6 +412,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         embed_annotations: bool = True,
         limit: int | None = None,
         tag_depth: int = 0,
+        annotation_task: AnnotationFileTask | None = None,
     ) -> None:
         """Load a dataset in YOLO format and store in DB.
 
@@ -423,11 +432,16 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 split's images directory. `tag_depth=0` (default) skips this; `tag_depth=N`
                 creates a tag for each of the first `N` directory levels. These tags are
                 added on top of the split tag.
+            annotation_task: What to read from the label files. `OBJECT_DETECTION` (default)
+                reads boxes. `INSTANCE_SEGMENTATION` reads polygons, one per line.
 
         Raises:
             ValueError: If tag_depth is negative, or if limit is not None and not greater
                 than 0.
         """
+        task = annotation_file_task.resolve_annotation_task(
+            annotation_task=annotation_task, annotation_type=None
+        )
         source = ingest_tracking.get_source(path=data_yaml)
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
@@ -450,14 +464,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             if remaining is not None and remaining <= 0:
                 break
             # Load the dataset using labelformat.
-            label_input = YOLOv8ObjectDetectionInput(
-                input_file=data_yaml,
-                input_split=split,
-            )
+            label_input = _create_yolo_input(data_yaml=data_yaml, split=split, task=task)
             images_path = label_input._images_dir()  # noqa: SLF001
 
             created_sample_ids = add_images.load_into_dataset_from_labelformat(
-                session=self.session,
                 ingestion=active_transport.get_transport().ingestion,
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
@@ -506,21 +516,21 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         self,
         annotations_json: PathLike,
         images_path: PathLike,
-        annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
+        annotation_type: AnnotationType | None = None,
         split: str | None = None,
         embed: bool = True,
         annotation_source: str | None = None,
         embed_annotations: bool = True,
         limit: int | None = None,
         tag_depth: int = 0,
+        annotation_task: AnnotationFileTask | None = None,
     ) -> None:
-        """Load a dataset in COCO Object Detection format and store in DB.
+        """Load a dataset in COCO format and store in DB.
 
         Args:
             annotations_json: Path to the COCO annotations JSON file.
             images_path: Path to the folder containing the images.
-            annotation_type: The type of annotation to be loaded (e.g., 'ObjectDetection',
-                'InstanceSegmentation').
+            annotation_type: Deprecated. Use `annotation_task` instead.
             split: Optional split name to tag samples (e.g., 'train', 'val').
                 If provided, all samples will be tagged with this name.
             embed: If True, generate embeddings for the newly added samples. Existing images
@@ -534,11 +544,16 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 `images_path`. `tag_depth=0` (default) skips this; `tag_depth=N` creates a
                 tag for each of the first `N` directory levels (see `add_images_from_path`).
                 These tags are added on top of the `split` tag.
+            annotation_task: What to read from the file. `OBJECT_DETECTION` (default) reads
+                the boxes. `INSTANCE_SEGMENTATION` reads the polygon and mask segmentations.
 
         Raises:
             ValueError: If tag_depth is negative, or if limit is not None and not greater
-                than 0.
+                than 0, or if both `annotation_task` and `annotation_type` are set.
         """
+        task = annotation_file_task.resolve_annotation_task(
+            annotation_task=annotation_task, annotation_type=annotation_type
+        )
         source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
@@ -548,21 +563,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         if not str(annotations_json).endswith(".json") or not _is_file(fs=fs, path=fs_path):
             raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
 
-        label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
-
-        if annotation_type == AnnotationType.OBJECT_DETECTION:
-            label_input = COCOObjectDetectionInput(
-                input_file=annotations_json,
-            )
-        elif annotation_type == AnnotationType.SEGMENTATION_MASK:
-            label_input = COCOInstanceSegmentationInput(
-                input_file=annotations_json,
-            )
-        else:
-            raise ValueError(f"Invalid annotation type: {annotation_type}")
+        label_input = _create_coco_input(annotations_json=annotations_json, task=task)
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
             ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
@@ -645,7 +648,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
             ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
@@ -704,7 +706,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         images_path = input_folder / images_rel_path
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=self.session,
             ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
@@ -886,3 +887,19 @@ def _log_missing_images(annotation_source: str, missing_paths: list[str]) -> Non
         min(5, len(missing_paths)),
         missing_paths[:5],
     )
+
+
+def _create_coco_input(
+    annotations_json: PathLike, task: AnnotationFileTask
+) -> COCOObjectDetectionInput | COCOInstanceSegmentationInput:
+    if task == AnnotationFileTask.INSTANCE_SEGMENTATION:
+        return COCOInstanceSegmentationInput(input_file=annotations_json)
+    return COCOObjectDetectionInput(input_file=annotations_json)
+
+
+def _create_yolo_input(
+    data_yaml: Path, split: str, task: AnnotationFileTask
+) -> YOLOv8ObjectDetectionInput | YOLOv8InstanceSegmentationInput:
+    if task == AnnotationFileTask.INSTANCE_SEGMENTATION:
+        return YOLOv8InstanceSegmentationInput(input_file=data_yaml, input_split=split)
+    return YOLOv8ObjectDetectionInput(input_file=data_yaml, input_split=split)

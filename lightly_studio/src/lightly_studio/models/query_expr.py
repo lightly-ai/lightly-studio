@@ -69,7 +69,7 @@ class OrdinalFloatExpr(BaseModel):
     type: Literal["ordinal_float_expr"] = "ordinal_float_expr"
     field: FieldRef
     operator: OrdinalComparisonOperator
-    value: StrictInt | StrictFloat
+    value: StrictInt | Annotated[StrictFloat, Field(allow_inf_nan=False)]
 
 
 class EqualityFloatExpr(BaseModel):
@@ -78,7 +78,7 @@ class EqualityFloatExpr(BaseModel):
     type: Literal["equality_float_expr"] = "equality_float_expr"
     field: FieldRef
     operator: EqualityComparisonOperator
-    value: StrictInt | StrictFloat
+    value: StrictInt | Annotated[StrictFloat, Field(allow_inf_nan=False)]
 
 
 class TagsContainsExpr(BaseModel):
@@ -222,7 +222,7 @@ class ClassificationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching classification annotation."""
 
     type: Literal["classification_match_expr"] = "classification_match_expr"
-    subexpr: MatchExpr
+    subexpr: MatchExpr | None = None
 
 
 class VideoEventMatchExpr(BaseModel):
@@ -243,13 +243,20 @@ class ObjectDetectionMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
     type: Literal["object_detection_match_expr"] = "object_detection_match_expr"
-    subexpr: MatchExpr
+    subexpr: MatchExpr | None = None
 
 
 class SegmentationMaskMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching segmentation mask annotation."""
 
     type: Literal["segmentation_mask_match_expr"] = "segmentation_mask_match_expr"
+    subexpr: MatchExpr | None = None
+
+
+class PolygonMatchExpr(BaseModel):
+    """Leaf node checking if a sample has a matching polygon annotation."""
+
+    type: Literal["polygon_match_expr"] = "polygon_match_expr"
     subexpr: MatchExpr
 
 
@@ -291,6 +298,7 @@ MatchExpr: TypeAlias = Annotated[
     | VideoFrameMatchExpr
     | ObjectDetectionMatchExpr
     | SegmentationMaskMatchExpr
+    | PolygonMatchExpr
     | AndExpr
     | OrExpr
     | NotExpr,
@@ -308,6 +316,7 @@ VideoEventMatchExpr.model_rebuild()
 VideoFrameMatchExpr.model_rebuild()
 ObjectDetectionMatchExpr.model_rebuild()
 SegmentationMaskMatchExpr.model_rebuild()
+PolygonMatchExpr.model_rebuild()
 AndExpr.model_rebuild()
 OrExpr.model_rebuild()
 NotExpr.model_rebuild()
@@ -343,10 +352,12 @@ def _validate_evaluation_scope(expr: MatchExpr, in_annotation: bool) -> None:
             ClassificationMatchExpr,
             ObjectDetectionMatchExpr,
             SegmentationMaskMatchExpr,
+            PolygonMatchExpr,
             VideoEventMatchExpr,
         ),
     ):
-        _validate_evaluation_scope(expr=expr.subexpr, in_annotation=True)
+        if expr.subexpr is not None:
+            _validate_evaluation_scope(expr=expr.subexpr, in_annotation=True)
     elif isinstance(expr, (AndExpr, OrExpr)):
         for child in expr.children:
             _validate_evaluation_scope(expr=child, in_annotation=in_annotation)

@@ -15,8 +15,12 @@ import {
 } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
 import { tick } from 'svelte';
 import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
-import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
+import { EXCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
 import { clearPlotLayout } from './usePlotLayout/usePlotLayout';
+import { clearPlotViewState, usePlotViewState } from './usePlotViewState/usePlotViewState';
+
+// Every test lays the plot out as a square of this size.
+const PLOT_SIZE_PX = 400;
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
@@ -33,8 +37,6 @@ const originalAbortController = globalThis.AbortController;
 let plotDataStore: Writable<{ x: Float32Array; y: Float32Array; category: Uint8Array } | undefined>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
 let annotationLabelsQuery: { data?: unknown[]; isSuccess: boolean; isError: boolean };
-
-const mockResetCategoryVisibility = vi.fn();
 
 const tagsStore = writable([
     { tag_id: 'tag-a', name: 'alpha' },
@@ -80,16 +82,68 @@ vi.mock('embedding-atlas/svelte', async () => ({
     EmbeddingView: (await import('./EmbeddingViewStub.test.svelte')).default
 }));
 vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
+interface GateMockState {
+    view: 'checking' | 'error' | 'prompt' | 'computing' | 'plot';
+    embeddingCount: number;
+    startedAt: number | null;
+    statusError: string | null;
+    startCompute: () => void;
+    trackCompute: (compute: Promise<unknown>) => void;
+}
+const DEFAULT_GATE_STATE: GateMockState = {
+    view: 'plot',
+    embeddingCount: 0,
+    startedAt: null,
+    statusError: null,
+    startCompute: () => {},
+    trackCompute: () => {}
+};
+// A reactive map, so a test can change the gate after render like the real hook does.
+const gateMock = vi.hoisted(() => ({
+    values: null as Map<string, unknown> | null,
+    getPlotRequestKey: (() => '') as () => string,
+    getIsAxesLayout: (() => false) as () => boolean
+}));
+vi.mock('./usePlotComputeGate/usePlotComputeGate.svelte', async () => {
+    const { SvelteMap } = await import('svelte/reactivity');
+    const { isPlotRequestEnabled } = await import('./plotComputeGate/plotComputeGate');
+    const values = new SvelteMap<string, unknown>();
+    gateMock.values = values;
+    const read = <K extends keyof GateMockState>(key: K) => values.get(key) as GateMockState[K];
+    return {
+        usePlotComputeGate: (params: {
+            getPlotRequestKey: () => string;
+            getIsAxesLayout: () => boolean;
+        }) => {
+            gateMock.getPlotRequestKey = params.getPlotRequestKey;
+            gateMock.getIsAxesLayout = params.getIsAxesLayout;
+            return {
+                get view() {
+                    return read('view');
+                },
+                get isPlotRequestEnabled() {
+                    return isPlotRequestEnabled(read('view'));
+                },
+                get embeddingCount() {
+                    return read('embeddingCount');
+                },
+                get startedAt() {
+                    return read('startedAt');
+                },
+                get statusError() {
+                    return read('statusError');
+                },
+                startCompute: () => read('startCompute')(),
+                trackCompute: (compute: Promise<unknown>) => read('trackCompute')(compute)
+            };
+        }
+    };
+});
+const setGate = (state: Partial<GateMockState>) => {
+    for (const [key, value] of Object.entries(state)) gateMock.values?.set(key, value);
+};
 const mockEmbedTextAxes = vi.hoisted(() => vi.fn());
 vi.mock('./PlotTextAxesInputs/embedTextAxes', () => ({ embedTextAxes: mockEmbedTextAxes }));
-vi.mock('./useCategoryVisibility/useCategoryVisibility', () => ({
-    useCategoryVisibility: () => ({
-        hiddenCategories: writable(new Set<number>()),
-        toggleCategoryVisibility: vi.fn(),
-        focusCategoryVisibility: vi.fn(),
-        resetCategoryVisibility: mockResetCategoryVisibility
-    })
-}));
 const usePlotDataSpy = vi.hoisted(() => vi.fn());
 vi.mock('./usePlotData/usePlotData', () => ({
     usePlotData: (args: unknown) => {
@@ -193,6 +247,12 @@ const mockEmbeddingsQuery = (initialResult: Record<string, unknown>) => {
     return result;
 };
 
+// useEmbeddings is called once with a getter; the getter returns the current request.
+const lastEmbeddingsParams = () => vi.mocked(useEmbeddings).mock.lastCall![0]();
+const lastPlotHiddenCategories = () =>
+    (usePlotDataSpy.mock.lastCall![0] as { hiddenCategories: Set<number> }).hiddenCategories;
+const hiddenKeys = () => usePlotViewState('test-collection-id').hiddenKeys;
+
 describe('PlotPanel.svelte', () => {
     afterEach(() => {
         client.setConfig({ ...originalClientConfig, fetch: originalClientConfig.fetch });
@@ -220,8 +280,10 @@ describe('PlotPanel.svelte', () => {
         vi.stubGlobal('ResizeObserver', ResizeObserverMock);
         routeState.id = IMAGES_ROUTE;
         actualVideoFilters = null;
+        setGate(DEFAULT_GATE_STATE);
         clearAnnotationPlotSelection('test-collection-id');
         clearPlotLayout('test-collection-id');
+        clearPlotViewState('test-collection-id');
         usePlotColorByType('test-collection-id').clearSelectedColorByType();
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
@@ -584,23 +646,21 @@ describe('PlotPanel.svelte', () => {
 
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith(
-            'test-collection-id',
-            expect.anything(),
-            null,
-            null
-        );
+        expect(lastEmbeddingsParams()).toMatchObject({
+            collectionId: 'test-collection-id',
+            colorBy: null,
+            axes: null
+        });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
         await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
         await tick();
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith(
-            'test-collection-id',
-            expect.anything(),
-            { type: 'metadata_field', key: 'split' },
-            null
-        );
+        expect(lastEmbeddingsParams()).toMatchObject({
+            collectionId: 'test-collection-id',
+            colorBy: { type: 'metadata_field', key: 'split' },
+            axes: null
+        });
     });
 
     it('passes tag_ids colorBy to useEmbeddings when tags type is selected', async () => {
@@ -612,12 +672,46 @@ describe('PlotPanel.svelte', () => {
         await user.click(await screen.findByRole('option', { name: 'tags' }));
         await tick();
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith(
-            'test-collection-id',
-            expect.anything(),
-            { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
-            null
-        );
+        expect(lastEmbeddingsParams()).toMatchObject({
+            collectionId: 'test-collection-id',
+            colorBy: { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
+            axes: null
+        });
+    });
+
+    it('gives the gate a new plot request key when the color changes', async () => {
+        const user = userEvent.setup();
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const initialKey = gateMock.getPlotRequestKey();
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'tags' }));
+        await tick();
+
+        expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
+    });
+
+    it('gives the gate a new plot request key when the filter changes', async () => {
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const initialKey = gateMock.getPlotRequestKey();
+
+        imageFilterStore.set({ sample_filter: { sample_ids: [], tag_ids: ['tag-a'] } });
+        await tick();
+
+        expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
+    });
+
+    it('tells the gate about the text axes layout and gives it a new plot request key', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const initialKey = gateMock.getPlotRequestKey();
+        expect(gateMock.getIsAxesLayout()).toBe(false);
+
+        await commitTextAxes(user);
+
+        await vi.waitFor(() => expect(gateMock.getIsAxesLayout()).toBe(true));
+        expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
     });
 
     it('fetches without labels when the annotation labels fail to load', async () => {
@@ -627,12 +721,10 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith(
-            'test-collection-id',
-            expect.anything(),
-            { type: 'annotation', annotation_label_ids: [] },
-            null
-        );
+        expect(lastEmbeddingsParams().colorBy).toEqual({
+            type: 'annotation',
+            annotation_label_ids: []
+        });
     });
 
     it('lays the plot out on the committed text axes and saves them with the lasso region', async () => {
@@ -647,12 +739,11 @@ describe('PlotPanel.svelte', () => {
             y: { negative: 'sad', positive: 'happy' }
         });
         await vi.waitFor(() =>
-            expect(useEmbeddings).toHaveBeenLastCalledWith(
-                'test-collection-id',
-                expect.anything(),
-                null,
-                TEXT_LAYOUT_AXES
-            )
+            expect(lastEmbeddingsParams()).toMatchObject({
+                collectionId: 'test-collection-id',
+                colorBy: null,
+                axes: TEXT_LAYOUT_AXES
+            })
         );
 
         selectedSampleIdsStore.set(['sample-1']);
@@ -669,7 +760,7 @@ describe('PlotPanel.svelte', () => {
     it('shows a plot filter chip on the plot while a region is selected', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -691,7 +782,7 @@ describe('PlotPanel.svelte', () => {
 
     it('treats a short shift-drag as a click and keeps the picks', async () => {
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -717,7 +808,7 @@ describe('PlotPanel.svelte', () => {
         const viewport = () => screen.getByTestId('plot-viewport');
         const defaultViewport = JSON.stringify({ x: 0, y: 0, scale: 5 });
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -777,7 +868,7 @@ describe('PlotPanel.svelte', () => {
     it('restores the default layout and keeps descriptions', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -815,7 +906,7 @@ describe('PlotPanel.svelte', () => {
     it('disables reset while applying edited axes', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -856,15 +947,18 @@ describe('PlotPanel.svelte', () => {
     it('unmounts the plot and shows the loader while a new color-by loads', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
         const loaded = { data: { columns: {}, legend: new Map() } };
-        // Only the query of the new color-by is still loading.
-        vi.mocked(useEmbeddings).mockImplementation(
-            (_collectionId, _filters, colorBy) => (colorBy ? { isLoading: true } : loaded) as never
-        );
+        // Only the query of the new color-by is still loading. The plot creates its query once,
+        // so the result follows the current request.
+        vi.mocked(useEmbeddings).mockImplementation((getParams) => {
+            const result = (): Record<string, unknown> =>
+                getParams().colorBy ? { isLoading: true } : loaded;
+            return new Proxy({}, { get: (_, key: string) => result()[key] }) as never;
+        });
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         expect(await screen.findByTestId('plot-viewport')).toBeInTheDocument();
 
@@ -875,44 +969,430 @@ describe('PlotPanel.svelte', () => {
         expect(screen.queryByTestId('plot-viewport')).not.toBeInTheDocument();
     });
 
-    it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
-        const legend = new Map([[3, 'dog']]);
-        const embeddingsResult = mockEmbeddingsQuery({ data: { columns: {}, legend } });
+    it('keeps hidden classes when the legend changes', async () => {
+        hiddenKeys().set(new Set(['label:dog']));
+        const embeddingsResult = mockEmbeddingsQuery({
+            data: { columns: {}, legend: new Map([[4, 'dog']]) }
+        });
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
-        // Ignore the reset that fires on mount; assert the one triggered by the legend change.
-        mockResetCategoryVisibility.mockClear();
-        // The query keeps an equal legend's object, so a refetch keeps the hidden classes.
-        embeddingsResult.set({ data: { columns: {}, legend } });
-        await tick();
-        expect(mockResetCategoryVisibility).not.toHaveBeenCalled();
-
-        embeddingsResult.set({ data: { columns: {}, legend: new Map([[3, 'cat']]) } });
+        embeddingsResult.set({ data: { columns: {}, legend: new Map([[3, 'dog']]) } });
         await tick();
 
-        // Reserved rows are stable by index, so they must survive a legend refresh.
-        expect(mockResetCategoryVisibility).toHaveBeenCalledWith([
-            EXCLUDED_BY_FILTERS_CATEGORY,
-            INCLUDED_BY_FILTERS_CATEGORY
-        ]);
+        expect(lastPlotHiddenCategories()).toEqual(new Set([3]));
     });
 
-    it('drops the "Included by filters / No category" row when the color-by mode changes', async () => {
+    it('clears hidden classes when the color-by mode changes', async () => {
         const user = userEvent.setup();
+        hiddenKeys().set(new Set(['label:dog', 'reserved:excluded']));
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
-        // Ignore the resets from mount; assert the one triggered by the color-by change.
-        mockResetCategoryVisibility.mockClear();
         await user.click(screen.getByTestId('plot-color-by-button'));
         await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
         await tick();
 
-        // INCLUDED is relabeled when the color-by mode flips, so its hidden state must not carry
-        // over (it would otherwise hide every point in the relabeled slot). Only EXCLUDED survives.
-        expect(mockResetCategoryVisibility).toHaveBeenLastCalledWith([
-            EXCLUDED_BY_FILTERS_CATEGORY
-        ]);
+        expect(get(hiddenKeys())).toEqual(new Set(['reserved:excluded']));
+    });
+
+    it('creating a tag keeps hidden classes', async () => {
+        const user = userEvent.setup();
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'tags' }));
+        await tick();
+        hiddenKeys().set(new Set(['label:alpha']));
+
+        tagsStore.update((tags) => [...tags, { tag_id: 'tag-c', name: 'gamma' }]);
+        await tick();
+
+        expect(lastEmbeddingsParams().colorBy).toMatchObject({
+            tag_ids: ['tag-a', 'tag-b', 'tag-c']
+        });
+        expect(get(hiddenKeys())).toEqual(new Set(['label:alpha']));
+    });
+
+    describe('after the plot closes', () => {
+        const renderPlot = async (collectionId = 'test-collection-id') => {
+            const view = render(PlotPanel, { props: { collectionId } });
+            await screen.findByTestId('plot-viewport');
+            return view;
+        };
+
+        beforeEach(() => {
+            vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+                () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
+            );
+            const point = new Float32Array([0]);
+            plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+            mockEmbeddingsQuery({ data: { columns: {}, legend: new Map([[3, 'car']]) } });
+        });
+
+        afterEach(() => {
+            clearPlotViewState('other-collection-id');
+        });
+
+        it('restores hidden classes, zoom and tool after close and reopen', async () => {
+            const user = userEvent.setup();
+            const { unmount } = await renderPlot();
+            await user.click(screen.getByTestId('plot-legend-entry-3'));
+            await user.click(screen.getByRole('button', { name: 'Pan plot' }));
+            await user.click(screen.getByTestId('plot-tool-rectangle'));
+            unmount();
+
+            await renderPlot();
+
+            expect(screen.getByTestId('plot-legend-entry-3')).toHaveAttribute(
+                'aria-pressed',
+                'true'
+            );
+            expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
+                JSON.stringify({ x: 1, y: 1, scale: 3 })
+            );
+            expect(screen.getByTestId('plot-tool-rectangle')).toHaveAttribute(
+                'aria-pressed',
+                'true'
+            );
+        });
+
+        it('keeps the view of each collection apart', async () => {
+            const user = userEvent.setup();
+            const { unmount } = await renderPlot();
+            await user.click(screen.getByTestId('plot-legend-entry-3'));
+            unmount();
+
+            await renderPlot('other-collection-id');
+
+            expect(screen.getByTestId('plot-legend-entry-3')).toHaveAttribute(
+                'aria-pressed',
+                'false'
+            );
+        });
+
+        it('resets the stored zoom on a new layout', async () => {
+            const user = userEvent.setup();
+            mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+            await renderPlot();
+            await user.click(screen.getByRole('button', { name: 'Pan plot' }));
+
+            await commitTextAxes(user);
+
+            expect(get(usePlotViewState('test-collection-id').viewport)).toBeNull();
+        });
+    });
+    describe('while embeddings load', () => {
+        it('keeps the plot on screen while a filter change loads', async () => {
+            vi.mocked(useEmbeddings).mockReturnValue({
+                isError: false,
+                error: null,
+                isLoading: false,
+                isPlaceholderData: true,
+                data: { columns: {}, legend: new Map() }
+            } as unknown as ReturnType<typeof useEmbeddings>);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.queryByText('Loading embeddings data...')).not.toBeInTheDocument();
+            expect(screen.getByTestId('plot-loading-indicator')).toBeInTheDocument();
+        });
+
+        it('ignores a lasso and a pick on the old points', async () => {
+            vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+                () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
+            );
+            const point = new Float32Array([0]);
+            plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+            vi.mocked(useEmbeddings).mockReturnValue({
+                isLoading: false,
+                isPlaceholderData: true,
+                data: { columns: {}, legend: new Map() }
+            } as unknown as ReturnType<typeof useEmbeddings>);
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+            const plot = await screen.findByTestId('plot-viewport');
+
+            rangeSelectionStore.set(SQUARE_POLYGON);
+            selectedSampleIdsStore.set(['sample-1']);
+            await fireEvent.mouseUp(window);
+            plot.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, shiftKey: true }));
+            await fireEvent.click(screen.getByRole('button', { name: 'Pick point' }));
+
+            expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith(
+                'test-collection-id',
+                null
+            );
+            expect(mockUpdatePlotSelection).not.toHaveBeenCalled();
+            expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
+        });
+
+        it('ignores a lasso and a pick that start on the old points and end on the new ones', async () => {
+            vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+                () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
+            );
+            const point = new Float32Array([0]);
+            plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+            const embeddings = {
+                isLoading: false,
+                isPlaceholderData: true,
+                data: { columns: {}, legend: new Map() }
+            };
+            vi.mocked(useEmbeddings).mockReturnValue(
+                embeddings as unknown as ReturnType<typeof useEmbeddings>
+            );
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+            const plot = await screen.findByTestId('plot-viewport');
+
+            plot.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, shiftKey: true }));
+            embeddings.isPlaceholderData = false;
+            rangeSelectionStore.set(SQUARE_POLYGON);
+            selectedSampleIdsStore.set(['sample-1']);
+            await fireEvent.mouseUp(window);
+            await fireEvent.click(screen.getByRole('button', { name: 'Pick point' }));
+
+            expect(mockUpdatePlotSelection).not.toHaveBeenCalled();
+            expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
+        });
+
+        it('shows the full loader when the color-by changes', async () => {
+            vi.mocked(useEmbeddings).mockReturnValue({
+                isError: false,
+                error: null,
+                isLoading: true,
+                isPlaceholderData: false,
+                data: undefined
+            } as unknown as ReturnType<typeof useEmbeddings>);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Loading embeddings data...')).toBeInTheDocument();
+            expect(screen.queryByTestId('plot-loading-indicator')).not.toBeInTheDocument();
+        });
+
+        it('creates the embeddings query once', async () => {
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            imageFilterStore.set({ sample_filter: { tag_ids: ['tag-a'] } });
+            await tick();
+            imageFilterStore.set({ sample_filter: { tag_ids: ['tag-b'] } });
+            await tick();
+
+            expect(useEmbeddings).toHaveBeenCalledTimes(1);
+            expect(lastEmbeddingsParams().filters).toEqual({
+                sample_filter: { tag_ids: ['tag-b'] }
+            });
+        });
+    });
+
+    describe('compute gate', () => {
+        const loadingPlot = {
+            isError: false,
+            error: null,
+            isLoading: true,
+            isFetching: true,
+            data: null
+        };
+        const idlePlot = { isError: false, error: null, isLoading: false, data: null };
+
+        it('shows the prompt and sends no plot request', async () => {
+            const startCompute = vi.fn();
+            setGate({
+                view: 'prompt',
+                embeddingCount: 300_000,
+                startCompute
+            });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(
+                screen.getByText('300,000 images. The first compute can take several minutes.')
+            ).toBeInTheDocument();
+            expect(lastEmbeddingsParams().enabled).toBe(false);
+            await fireEvent.click(screen.getByRole('button', { name: 'Compute plot' }));
+            expect(startCompute).toHaveBeenCalledOnce();
+        });
+
+        it('shows a failed compute above the prompt', () => {
+            setGate({ view: 'prompt', embeddingCount: 300_000 });
+            (useEmbeddings as vi.Mock).mockReturnValue({
+                ...idlePlot,
+                isError: true,
+                error: new Error('Server error')
+            });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(
+                screen.getByText('The last plot request failed: Server error')
+            ).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Compute plot' })).toBeInTheDocument();
+        });
+
+        it('hands a running compute to the gate', () => {
+            const trackCompute = vi.fn();
+            setGate({ view: 'computing', trackCompute });
+            (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            const compute = Promise.resolve();
+            lastEmbeddingsParams().onCompute?.(compute);
+
+            expect(trackCompute).toHaveBeenCalledWith(compute);
+        });
+
+        it('keeps the request off when the filter changes under the prompt', async () => {
+            setGate({ view: 'prompt' });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            imageFilterStore.set({ sample_filter: { sample_ids: [], tag_ids: ['tag-a'] } });
+            await tick();
+
+            expect(lastEmbeddingsParams().filters).toMatchObject({
+                sample_filter: { tag_ids: ['tag-a'] }
+            });
+            expect(lastEmbeddingsParams().enabled).toBe(false);
+            expect(screen.getByRole('button', { name: 'Compute plot' })).toBeInTheDocument();
+        });
+
+        it('shows the computing state while the first compute runs', () => {
+            setGate({ view: 'computing', startedAt: Date.now() });
+            (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Computing plot…')).toBeInTheDocument();
+            expect(screen.queryByText('Loading embeddings data...')).not.toBeInTheDocument();
+            expect(lastEmbeddingsParams().enabled).toBe(true);
+            const getIsComputing = lastEmbeddingsParams().getIsComputing;
+            expect(getIsComputing?.()).toBe(true);
+            setGate({ view: 'plot' });
+            expect(getIsComputing?.()).toBe(false);
+        });
+
+        it('shows the computing state over an outdated cached plot', () => {
+            setGate({ view: 'computing', startedAt: Date.now() });
+            (useEmbeddings as vi.Mock).mockReturnValue({
+                isError: false,
+                error: null,
+                isLoading: false,
+                isFetching: true,
+                data: new Blob()
+            });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Computing plot…')).toBeInTheDocument();
+        });
+
+        it('keeps the plot request on when the first compute finishes', async () => {
+            setGate({ view: 'computing', startedAt: Date.now() });
+            (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            setGate({ view: 'plot', startedAt: null });
+            await tick();
+
+            expect(lastEmbeddingsParams().enabled).toBe(true);
+        });
+
+        it('keeps the normal loading state for a computed plot', () => {
+            (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Loading embeddings data...')).toBeInTheDocument();
+            expect(screen.queryByText('Computing plot…')).not.toBeInTheDocument();
+        });
+
+        it('shows the loading state while the status loads', () => {
+            setGate({ view: 'checking' });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Loading embeddings data...')).toBeInTheDocument();
+            expect(lastEmbeddingsParams().enabled).toBe(false);
+        });
+
+        it('keeps the cached plot on screen while the status loads', () => {
+            setGate({ view: 'checking' });
+            (useEmbeddings as vi.Mock).mockReturnValue({
+                ...idlePlot,
+                isPlaceholderData: true,
+                data: { columns: {}, legend: new Map() }
+            });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.queryByText('Loading embeddings data...')).not.toBeInTheDocument();
+            expect(screen.getByTestId('plot-loading-indicator')).toBeInTheDocument();
+        });
+
+        it('names the items of the collection in the prompt', () => {
+            routeState.id = VIDEOS_ROUTE;
+            setGate({ view: 'prompt', embeddingCount: 300_000 });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(
+                screen.getByText('300,000 videos. The first compute can take several minutes.')
+            ).toBeInTheDocument();
+        });
+
+        it('shows no status error while the gate shows the plot', () => {
+            setGate({ view: 'plot', statusError: 'boom' });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.queryByText('Error loading embeddings: boom')).not.toBeInTheDocument();
+        });
+
+        it('shows the status error', () => {
+            setGate({
+                view: 'error',
+                statusError: 'boom'
+            });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.getByText('Error loading embeddings: boom')).toBeInTheDocument();
+            expect(lastEmbeddingsParams().enabled).toBe(false);
+        });
+    });
+
+    describe('with Excluded hidden', () => {
+        beforeEach(() => {
+            hiddenKeys().set(new Set(['reserved:excluded']));
+        });
+
+        it('keeps Excluded hidden after the selection is committed', async () => {
+            imageFilterStore.set({
+                sample_filter: { embedding_region: { polygon: SQUARE_POLYGON } }
+            });
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+            await tick();
+
+            expect(lastPlotHiddenCategories().has(EXCLUDED_BY_FILTERS_CATEGORY)).toBe(true);
+        });
+
+        it('shows Excluded while the user draws, so the canvas does not go blank', async () => {
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            rangeSelectionStore.set(SQUARE_POLYGON);
+            await tick();
+
+            expect(lastPlotHiddenCategories().has(EXCLUDED_BY_FILTERS_CATEGORY)).toBe(false);
+        });
+
+        it('shows Excluded while points are picked, so the other points stay pickable', async () => {
+            imageFilterStore.set({ sample_filter: { sample_ids: ['sample-1'] } });
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+            await tick();
+
+            expect(lastPlotHiddenCategories().has(EXCLUDED_BY_FILTERS_CATEGORY)).toBe(false);
+        });
     });
 });

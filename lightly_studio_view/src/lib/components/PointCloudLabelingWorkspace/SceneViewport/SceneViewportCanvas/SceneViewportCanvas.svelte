@@ -3,6 +3,7 @@
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '../../CuboidLayer/CuboidLayer.svelte';
     import OriginAxes from '../../OriginAxes/OriginAxes.svelte';
+    import ReleaseWebGLContext from './ReleaseWebGLContext';
     import { useSceneViewportContext } from '../sceneViewportContext';
     import { getAnnotationPointClipping } from '../annotationPointClipping';
     const { getProps, interaction } = useSceneViewportContext();
@@ -30,6 +31,7 @@
 </script>
 
 <Canvas>
+    <ReleaseWebGLContext />
     <PointCloudScene
         batch={props.batch}
         cameraCuboid={props.cameraMode === 'perspective' ? undefined : selectedCuboid}

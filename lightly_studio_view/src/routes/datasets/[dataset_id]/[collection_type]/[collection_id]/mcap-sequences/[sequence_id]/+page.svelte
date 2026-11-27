@@ -5,7 +5,7 @@
     import { useMcapSequenceSummary } from '$lib/hooks';
     import { LayoutCard } from '$lib/components';
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
-    import { getTickNumberFromHash } from './getTickNumberFromHash';
+    import { useSequenceHashState } from './useSequenceHashState.svelte';
     import { routeHelpers } from '$lib/routes';
     import { useAdjacentMcapSequences } from '$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences';
 
@@ -18,7 +18,7 @@
         collectionType,
         sequenceId
     } = $derived(data);
-    const tickNumber = $derived(getTickNumberFromHash(page.url.hash));
+    const hashState = useSequenceHashState({ getSequenceId: () => sequenceId });
     // The workspace loads the same summary, so this query is deduplicated by TanStack.
     const { summary } = useMcapSequenceSummary({
         getDatasetId: () => datasetId,
@@ -73,19 +73,6 @@
             })
         );
     };
-
-    const updateTickNumber = (nextTickNumber: number) => {
-        const url = new URL(page.url);
-        const hash = new URLSearchParams(url.hash.slice(1));
-        hash.set('tick', String(nextTickNumber));
-        url.hash = hash.toString();
-        void goto(url, {
-            replaceState: true,
-            noScroll: true,
-            keepFocus: true,
-            state: page.state
-        });
-    };
 </script>
 
 <div class="flex h-full min-h-0 w-full flex-1 px-4 pb-4" data-testid="point-cloud-labeling-route">
@@ -95,8 +82,10 @@
             {annotationSourceCollectionId}
             {sequenceId}
             {sourcePath}
-            {tickNumber}
-            onTickChange={updateTickNumber}
+            tickNumber={hashState.tick}
+            openCamera={hashState.openCamera}
+            onOpenCameraChange={hashState.setOpenCamera}
+            onTickChange={hashState.setTick}
             onPreviousSequence={previousSequenceId
                 ? () => goToSequence(previousSequenceId)
                 : undefined}

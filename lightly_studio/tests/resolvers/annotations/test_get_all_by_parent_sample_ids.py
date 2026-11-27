@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from sqlalchemy import inspect
 from sqlmodel import Session
 
@@ -338,3 +339,51 @@ def test_get_all_by_parent_sample_ids__no_parent_object_track(
     assert object_track_state is not None
     assert "parent_object_track" not in object_track_state.unloaded
     assert result[0].object_track.parent_object_track is None
+
+
+VIEW_RELATIONSHIPS = {
+    "annotation_label",
+    "object_detection_details",
+    "cuboid_3d_details",
+    "segmentation_details",
+    "polygon_details",
+}
+
+
+@pytest.mark.parametrize("load_view_relationships", [True, False])
+def test_get_all_by_parent_sample_ids__load_view_relationships(
+    db_session: Session, load_view_relationships: bool
+) -> None:
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="label"
+    )
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            cuboid_create(
+                parent_sample_id=image.sample_id, annotation_label_id=label.annotation_label_id
+            )
+        ],
+        collection_name="ground_truth",
+    )
+    db_session.expire_all()
+
+    result = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_session,
+        parent_sample_ids=[image.sample_id],
+        load_view_relationships=load_view_relationships,
+    )
+
+    annotation_state = inspect(result[0])
+    sample_state = inspect(result[0].sample)
+    assert annotation_state is not None
+    assert sample_state is not None
+    unloaded = set(annotation_state.unloaded)
+    if load_view_relationships:
+        assert not VIEW_RELATIONSHIPS & unloaded
+        assert "tags" not in sample_state.unloaded
+    else:
+        assert unloaded >= VIEW_RELATIONSHIPS

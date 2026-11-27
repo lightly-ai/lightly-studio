@@ -7,7 +7,7 @@ from typing import Any, Generic, TypeVar
 from sqlalchemy.orm import Mapped
 
 from lightly_studio.core.dataset_query.annotation_expression import RelationshipMatchExpression
-from lightly_studio.core.dataset_query.field import ComparableField, NumericalField
+from lightly_studio.core.dataset_query.field import ComparableField, NullableNumericalField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 
 T = TypeVar("T")
@@ -46,14 +46,14 @@ class ForeignComparableField(Generic[T]):  # noqa: PLW1641
 class ForeignNumericalField(Generic[T]):  # noqa: PLW1641
     """Numerical field for properties on a related table."""
 
-    def __init__(self, column: Mapped[int | float], relationship: Mapped[T]) -> None:
+    def __init__(self, column: Mapped[int | float | None], relationship: Mapped[T]) -> None:
         """Initialize the numerical foreign field.
 
         Args:
             column: The database column this field represents.
             relationship: The database relationship this field belongs to.
         """
-        self.field = NumericalField(column)
+        self.field = NullableNumericalField(column)
         self.relationship = relationship
 
     def __gt__(self, other: float | int) -> MatchExpression:

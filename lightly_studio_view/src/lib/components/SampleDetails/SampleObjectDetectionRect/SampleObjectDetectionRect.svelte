@@ -373,7 +373,7 @@
 {/each}
 <SampleAnnotationRect
     bind:interactionRect
-    cursor={'crosshair'}
+    cursor="crosshair"
     pointerEvents={interactionPointerEvents}
     {sample}
 />
