@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Segmentation evaluation reports an error for annotation sources with polygons.
-- BREAKING: Python SDK: COCO instance segmentation loads polygons as polygon annotations with their vertices, not as segmentation masks with only a box. Query them with `PolygonQuery` instead of `SegmentationMaskQuery`; the GUI shows them as boxes for now.
+- BREAKING: Python SDK: COCO instance segmentation loads polygons as polygon annotations with their vertices, not as segmentation masks with only a box. Query them with `PolygonQuery` instead of `SegmentationMaskQuery`.
 
 ### Deprecated
 - Python SDK: `annotation_type` in the COCO methods. Use `annotation_task` instead.
