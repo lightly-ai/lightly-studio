@@ -11,14 +11,29 @@ export interface CuboidGeometry {
     keepOutside?: boolean;
 }
 
+/** A circle in the x-y plane. Points outside it are dimmed. */
+export interface RangeHighlight {
+    center: readonly [number, number];
+    radius: number;
+}
+
 interface HighlightCacheEntry {
     baseColors: Float32Array;
     cuboid: CuboidGeometry;
     highlightedColors: Float32Array;
 }
 
+interface RangeCacheEntry {
+    baseColors: Float32Array;
+    range: RangeHighlight;
+    rangeColors: Float32Array;
+}
+
+const OUT_OF_RANGE_WEIGHT = 0.25;
+
 const intensityRanges = new WeakMap<PointBatch, [number, number]>();
 const highlightColors = new WeakMap<PointBatch, HighlightCacheEntry>();
+const rangeColors = new WeakMap<PointBatch, RangeCacheEntry>();
 
 /** Preserves window-wide color normalization while reusing each sensor batch's colors. */
 export function getPointCloudFrameColors(
@@ -26,13 +41,20 @@ export function getPointCloudFrameColors(
     mode: ColorMode,
     intensityRange?: [number, number],
     cameraColors?: Float32Array,
-    highlightCuboid?: CuboidGeometry
+    highlightCuboid?: CuboidGeometry,
+    rangeHighlight?: RangeHighlight
 ): Float32Array[] {
     const segments = batch.segments ?? [batch];
-    const frameColors = getBaseFrameColors(batch, segments, mode, intensityRange, cameraColors);
-    if (!highlightCuboid) return frameColors;
+    const baseColors = getBaseFrameColors(batch, segments, mode, intensityRange, cameraColors);
+    // The range is dimmed first, so a highlighted cuboid beyond the range stays visible.
+    const rangeDimmedColors = rangeHighlight
+        ? segments.map((segment, index) =>
+              getRangeColors(segment, baseColors[index], rangeHighlight)
+          )
+        : baseColors;
+    if (!highlightCuboid) return rangeDimmedColors;
     return segments.map((segment, index) =>
-        getHighlightedColors(segment, frameColors[index], highlightCuboid)
+        getHighlightedColors(segment, rangeDimmedColors[index], highlightCuboid)
     );
 }
 
@@ -139,6 +161,45 @@ function blendPointColor(
         colors[offset + channel] =
             colors[offset + channel] * baseWeight + highlight[channel] * highlightWeight;
     }
+}
+
+function getRangeColors(
+    segment: PointBatch,
+    baseColors: Float32Array,
+    range: RangeHighlight
+): Float32Array {
+    const cached = rangeColors.get(segment);
+    if (cached && cached.baseColors === baseColors && sameRange(cached.range, range)) {
+        return cached.rangeColors;
+    }
+    const dimmedColors = dimPointsOutsideRange(segment, baseColors, range);
+    rangeColors.set(segment, { baseColors, range, rangeColors: dimmedColors });
+    return dimmedColors;
+}
+
+function dimPointsOutsideRange(
+    segment: PointBatch,
+    colors: Float32Array,
+    range: RangeHighlight
+): Float32Array {
+    const dimmed = new Float32Array(colors.subarray(0, segment.count * 3));
+    const [centerX, centerY] = range.center;
+    // Squared distances avoid a square root for each point.
+    const radiusSquared = range.radius * range.radius;
+    for (let point = 0; point < segment.count; point++) {
+        const offset = point * 3;
+        const dx = segment.positions[offset] - centerX;
+        const dy = segment.positions[offset + 1] - centerY;
+        if (dx * dx + dy * dy <= radiusSquared) continue;
+        for (let channel = 0; channel < 3; channel++) {
+            dimmed[offset + channel] *= OUT_OF_RANGE_WEIGHT;
+        }
+    }
+    return dimmed;
+}
+
+function sameRange(a: RangeHighlight, b: RangeHighlight): boolean {
+    return a.center[0] === b.center[0] && a.center[1] === b.center[1] && a.radius === b.radius;
 }
 
 function sameCuboid(a: CuboidGeometry, b: CuboidGeometry): boolean {

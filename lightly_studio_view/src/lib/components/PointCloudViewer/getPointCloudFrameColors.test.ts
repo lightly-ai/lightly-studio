@@ -95,3 +95,49 @@ describe('sensor frame colors', () => {
         expect(Array.from(kept.slice(3))).toEqual([0, 0, 1]);
     });
 });
+
+describe('range highlight', () => {
+    const rangeSegments = [
+        {
+            positions: new Float32Array([0, 0, 0, 50, 0, 0]),
+            intensities: new Float32Array([0, 0]),
+            colors: new Float32Array([1, 1, 1, 1, 1, 1]),
+            count: 2
+        }
+    ];
+
+    it('dims points beyond the range radius', () => {
+        const batch = createSegmentedPointBatch(rangeSegments);
+        const [colors] = getPointCloudFrameColors(batch, 'rgb', undefined, undefined, undefined, {
+            center: [0, 0],
+            radius: 40
+        });
+
+        expect(Array.from(colors.subarray(0, 3))).toEqual([1, 1, 1]);
+        for (const channel of colors.subarray(3, 6)) expect(channel).toBeLessThan(1);
+    });
+
+    it('keeps the full cuboid highlight beyond the range radius', () => {
+        const batch = createSegmentedPointBatch(rangeSegments);
+        const cuboid = {
+            center: [50, 0, 0] as const,
+            size: [2, 2, 2] as const,
+            rotation: [0, 0, 0, 1] as const
+        };
+        const [withRange] = getPointCloudFrameColors(batch, 'rgb', undefined, undefined, cuboid, {
+            center: [0, 0],
+            radius: 40
+        });
+
+        // The highlight color has an 85 % weight; dimming it to 25 % would give at most 0.25.
+        const highlightRed = 0.85;
+        expect(withRange[3]).toBeGreaterThan(highlightRed);
+    });
+
+    it('keeps the colors without a range highlight', () => {
+        const batch = createSegmentedPointBatch(rangeSegments);
+        const [colors] = getPointCloudFrameColors(batch, 'rgb');
+
+        expect(Array.from(colors)).toEqual([1, 1, 1, 1, 1, 1]);
+    });
+});

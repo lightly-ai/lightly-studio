@@ -3,7 +3,7 @@ import { createPointCloudBuffer } from './pointCloudBuffer';
 import { getPointCloudFrameColors } from './getPointCloudFrameColors';
 import type { ColorMode } from './pointCloudUtils';
 import type { PointBatch } from './types';
-import type { CuboidGeometry } from './getPointCloudFrameColors';
+import type { CuboidGeometry, RangeHighlight } from './getPointCloudFrameColors';
 
 interface FrameBuffer {
     buffer: ReturnType<typeof createPointCloudBuffer>;
@@ -34,7 +34,8 @@ export function createPointCloudFrameBuffers() {
         mode: ColorMode,
         intensityRange?: [number, number],
         cameraColors?: Float32Array,
-        highlightCuboid?: CuboidGeometry
+        highlightCuboid?: CuboidGeometry,
+        rangeHighlight?: RangeHighlight
     ) {
         const segments = batch.segments ?? [batch];
         retain(segments);
@@ -43,7 +44,8 @@ export function createPointCloudFrameBuffers() {
             mode,
             intensityRange,
             cameraColors,
-            highlightCuboid
+            highlightCuboid,
+            rangeHighlight
         );
         const bounds = new Box3();
         const geometries = segments.map((segment, index) => {

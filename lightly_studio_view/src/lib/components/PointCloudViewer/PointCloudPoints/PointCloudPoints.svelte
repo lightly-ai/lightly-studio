@@ -5,7 +5,7 @@
     import type { OrthographicCamera, PerspectiveCamera, Plane } from 'three';
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import type { ColorMode } from '../pointCloudUtils';
-    import type { CuboidGeometry } from '../getPointCloudFrameColors';
+    import type { CuboidGeometry, RangeHighlight } from '../getPointCloudFrameColors';
     import type { PointBatch } from '../types';
     import type {
         CuboidAnnotation,
@@ -21,6 +21,8 @@
         pointSize: number;
         intensityRange?: [number, number];
         highlightCuboid?: CuboidGeometry;
+        /** Points outside this circle are dimmed. */
+        rangeHighlight?: RangeHighlight;
         fitKey?: string;
         camera?: PerspectiveCamera | OrthographicCamera;
         controls?: OrbitControls;
@@ -38,6 +40,7 @@
         pointSize,
         intensityRange,
         highlightCuboid,
+        rangeHighlight,
         fitKey = '',
         camera,
         controls,
@@ -66,16 +69,24 @@
         onViewStateChange
     }));
     const getCameraColors = getCameraRgbColors();
-    // Rebuild frame geometries and colors when batch, colorMode, intensityRange, or camera RGB change.
+    // Rebuild frame geometries and colors when batch, colors, highlights, or camera RGB change.
     $effect(() => {
         const currentBatch = batch;
         const mode = colorMode;
         const range = intensityRange;
         const selectedCuboid = highlightCuboid;
+        const egoRange = rangeHighlight;
         const cameraColors = mode === 'camera-rgb' ? (getCameraColors() ?? undefined) : undefined;
         if (!currentBatch.segments) void currentBatch.colors;
         untrack(() => {
-            prepared = frameBuffers.update(currentBatch, mode, range, cameraColors, selectedCuboid);
+            prepared = frameBuffers.update(
+                currentBatch,
+                mode,
+                range,
+                cameraColors,
+                selectedCuboid,
+                egoRange
+            );
             invalidate();
         });
     });
