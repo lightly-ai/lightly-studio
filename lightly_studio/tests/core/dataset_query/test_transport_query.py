@@ -140,9 +140,9 @@ def test_build_export_request(mocker: MockerFixture) -> None:
     request = transport_query.build_export_request(
         sample_type=SampleType.IMAGE,
         match_expression=ImageSampleField.width > 10,
+        order_by=[OrderByField(ImageSampleField.width).desc()],
         filters_sample_ids=False,
-        is_ordered=False,
-        is_sliced=False,
+        offset=2,
     )
 
     assert request == SampleQueryRequest(
@@ -152,18 +152,19 @@ def test_build_export_request(mocker: MockerFixture) -> None:
                 operator=OrdinalComparisonOperator.GT,
                 value=10,
             )
-        )
+        ),
+        sort=[SortKey(field=FieldRef(table="image", name="width"), direction=SortDirection.desc)],
+        offset=2,
     )
 
 
 @pytest.mark.parametrize(
     "unsupported",
     [
-        {"is_ordered": True},
-        {"is_sliced": True},
         {"filters_sample_ids": True},
         {"sample_type": SampleType.VIDEO},
         {"match_expression": VideoFrameSampleField.parent_video.width > 1},
+        {"order_by": [OrderByField(VideoFrameSampleField.frame_number)]},
     ],
 )
 def test_build_export_request__not_supported(
@@ -173,9 +174,9 @@ def test_build_export_request__not_supported(
         supported: dict[str, Any] = {
             "sample_type": SampleType.IMAGE,
             "match_expression": None,
+            "order_by": [],
             "filters_sample_ids": False,
-            "is_ordered": False,
-            "is_sliced": False,
+            "offset": 0,
         }
         return transport_query.build_export_request(**{**supported, **unsupported})
 

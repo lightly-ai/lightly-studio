@@ -6,19 +6,21 @@ from typing import Protocol
 from uuid import UUID
 
 from lightly_studio.models.export_task import ExportTask
-from lightly_studio.models.query_expr import QueryExpr
+from lightly_studio.models.sample_query import SampleQueryRequest
 
 
-# TODO(Iunir, 11/2026): Send the order and the slice of the query.
 class ExportTransport(Protocol):
     """Exports samples and their annotations to files."""
 
-    def export(self, collection_id: UUID, query_expr: QueryExpr | None, task: ExportTask) -> None:
+    def export(
+        self, collection_id: UUID, request: SampleQueryRequest, limit: int | None, task: ExportTask
+    ) -> None:
         """Export samples to a file or folder on the local machine.
 
         Args:
             collection_id: The ID of the collection.
-            query_expr: The samples to export. None exports all samples of the collection.
-                The order and the slice of a query are not sent.
+            request: The filter, the sort and the offset of the samples to export. The
+                `cursor` and the `limit` of the request are not used.
+            limit: The maximum number of samples to export. None exports all.
             task: The export to write.
         """

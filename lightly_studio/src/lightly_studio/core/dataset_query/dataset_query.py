@@ -173,6 +173,15 @@ class DatasetQuery(Generic[T]):
         """The database session of the SQL path."""
         return db_manager.persistent_session() if self._session is None else self._session
 
+    @property
+    def limit(self) -> int | None:
+        """The maximum number of samples of the slice. None means no limit."""
+        if self._slice is None or self._slice.stop is None:
+            return None
+        stop: int = self._slice.stop
+        start: int = self._slice.start or 0
+        return max(stop - start, 0)
+
     def match(self, match_expression: MatchExpression) -> Self:
         """Store a field condition for filtering.
 
@@ -294,7 +303,7 @@ class DatasetQuery(Generic[T]):
         request = self._transport_request()
         if request is not None:
             samples = transport_query.iter_samples(
-                collection_id=self.dataset.collection_id, request=request, limit=self._limit()
+                collection_id=self.dataset.collection_id, request=request, limit=self.limit
             )
             yield from cast(Iterator[T], samples)
             return
@@ -366,9 +375,9 @@ class DatasetQuery(Generic[T]):
         return transport_query.build_export_request(
             sample_type=self.dataset.sample_type,
             match_expression=self.match_expression,
+            order_by=self.order_by_expressions or [],
             filters_sample_ids=self._sample_ids_subquery is not None,
-            is_ordered=bool(self.order_by_expressions),
-            is_sliced=self._slice is not None,
+            offset=0 if self._slice is None else self._slice.start or 0,
         )
 
     def _evaluation_request(self) -> SampleQueryRequest | None:
@@ -379,14 +388,6 @@ class DatasetQuery(Generic[T]):
             filters_sample_ids=self._sample_ids_subquery is not None,
             is_sliced=self._slice is not None,
         )
-
-    def _limit(self) -> int | None:
-        """Get the maximum number of samples of the slice, or None without a limit."""
-        if self._slice is None or self._slice.stop is None:
-            return None
-        stop: int = self._slice.stop
-        start: int = self._slice.start or 0
-        return max(stop - start, 0)
 
     def _compose_query(self, query: SelectOfScalar[Table]) -> SelectOfScalar[Table]:
         """Applies match expressions, slicing, etc., to the query."""
@@ -483,7 +484,7 @@ class DatasetQuery(Generic[T]):
         request = self._transport_request()
         if request is not None:
             return Sampling(
-                dataset_id=self.dataset.collection_id, samples=request, limit=self._limit()
+                dataset_id=self.dataset.collection_id, samples=request, limit=self.limit
             )
         snapshot = SampleIdSnapshot(
             session=self.session, sample_ids=[sample.sample_id for sample in self]

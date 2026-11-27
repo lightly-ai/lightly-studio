@@ -19,6 +19,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     QueryExpr,
 )
+from lightly_studio.models.sample_query import SampleQueryRequest, SortKey
 from lightly_studio.transport.export_transport import ExportTransport
 from lightly_studio.transport.local import local_export_transport
 from lightly_studio.transport.local.local_export_transport import LocalExportTransport
@@ -48,7 +49,8 @@ class TestLocalExportTransport:
 
         transport.export(
             collection_id=collection_id,
-            query_expr=query_expr,
+            request=SampleQueryRequest(query_expr=query_expr),
+            limit=None,
             task=ExportTask(
                 export_format=ExportFormat.OBJECT_DETECTION_COCO,
                 output_path=output_json,
@@ -68,7 +70,8 @@ class TestLocalExportTransport:
 
         LocalExportTransport().export(
             collection_id=collection_id,
-            query_expr=None,
+            request=SampleQueryRequest(),
+            limit=None,
             task=ExportTask(
                 export_format=ExportFormat.OBJECT_DETECTION_COCO,
                 output_path=output_json,
@@ -78,6 +81,31 @@ class TestLocalExportTransport:
 
         coco = json.loads(output_json.read_text())
         assert [image["file_name"] for image in coco["images"]] == ["/a.png", "/b.png"]
+
+    def test_export__sort_and_slice(self, tmp_path: Path) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+        for path, width in [("/a.png", 300), ("/b.png", 100), ("/c.png", 200), ("/d.png", 400)]:
+            create_image(
+                session=session, collection_id=collection_id, file_path_abs=path, width=width
+            )
+        output_json = tmp_path / "coco.json"
+
+        LocalExportTransport().export(
+            collection_id=collection_id,
+            request=SampleQueryRequest(
+                sort=[SortKey(field=FieldRef(table="image", name="width"))], offset=1
+            ),
+            limit=2,
+            task=ExportTask(
+                export_format=ExportFormat.OBJECT_DETECTION_COCO,
+                output_path=output_json,
+                annotation_collection_id=None,
+            ),
+        )
+
+        coco = json.loads(output_json.read_text())
+        assert [image["file_name"] for image in coco["images"]] == ["/c.png", "/a.png"]
 
     def test_export__statement_count(self, mocker: MockerFixture, tmp_path: Path) -> None:
         session = db_manager.persistent_session()
@@ -91,7 +119,8 @@ class TestLocalExportTransport:
             try:
                 LocalExportTransport().export(
                     collection_id=collection_id,
-                    query_expr=None,
+                    request=SampleQueryRequest(),
+                    limit=None,
                     task=ExportTask(
                         export_format=ExportFormat.OBJECT_DETECTION_COCO,
                         output_path=tmp_path / "coco.json",
@@ -121,7 +150,8 @@ class TestLocalExportTransport:
 
         LocalExportTransport().export(
             collection_id=collection_id,
-            query_expr=None,
+            request=SampleQueryRequest(),
+            limit=None,
             task=ExportTask(
                 export_format=ExportFormat.OBJECT_DETECTION_COCO,
                 output_path=tmp_path / "coco.json",
@@ -147,7 +177,8 @@ class TestLocalExportTransport:
         with pytest.raises(QueryExprError, match=r"video.width is not valid here"):
             LocalExportTransport().export(
                 collection_id=collection_id,
-                query_expr=query_expr,
+                request=SampleQueryRequest(query_expr=query_expr),
+                limit=None,
                 task=ExportTask(
                     export_format=ExportFormat.OBJECT_DETECTION_COCO,
                     output_path=tmp_path / "coco.json",
@@ -162,7 +193,8 @@ class TestLocalExportTransport:
         with pytest.raises(ValueError, match=r"'youtube_vis_segmentation' is not supported"):
             LocalExportTransport().export(
                 collection_id=collection_id,
-                query_expr=None,
+                request=SampleQueryRequest(),
+                limit=None,
                 task=ExportTask(
                     export_format=ExportFormat.YOUTUBE_VIS_SEGMENTATION,
                     output_path=tmp_path / "export.json",
@@ -179,7 +211,8 @@ class TestLocalExportTransport:
         with pytest.raises(ValueError, match=r"is not an image collection"):
             LocalExportTransport().export(
                 collection_id=collection_id,
-                query_expr=None,
+                request=SampleQueryRequest(),
+                limit=None,
                 task=ExportTask(
                     export_format=ExportFormat.OBJECT_DETECTION_COCO,
                     output_path=tmp_path / "coco.json",
@@ -191,7 +224,8 @@ class TestLocalExportTransport:
         with pytest.raises(NotFoundError, match=r"does not exist"):
             LocalExportTransport().export(
                 collection_id=uuid4(),
-                query_expr=None,
+                request=SampleQueryRequest(),
+                limit=None,
                 task=ExportTask(
                     export_format=ExportFormat.OBJECT_DETECTION_COCO,
                     output_path=tmp_path / "coco.json",

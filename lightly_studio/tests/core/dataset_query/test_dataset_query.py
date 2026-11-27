@@ -17,7 +17,7 @@ from lightly_studio.models.query_expr import (
     QueryExpr,
 )
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.sample_query import SampleQueryRequest
+from lightly_studio.models.sample_query import SampleQueryRequest, SortKey
 from tests.helpers_resolvers import create_collection, create_image
 
 
@@ -166,7 +166,8 @@ class TestDatasetQuery:
     def test_export_request(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
         query = DatasetQuery(dataset=collection, session=db_session)
-        query.match(ImageSampleField.width > 10)
+        query.match(ImageSampleField.width > 10).order_by(OrderByField(ImageSampleField.width))
+        query.slice(offset=2, limit=10)
 
         assert query._export_request() == SampleQueryRequest(
             query_expr=QueryExpr(
@@ -175,22 +176,16 @@ class TestDatasetQuery:
                     operator=OrdinalComparisonOperator.GT,
                     value=10,
                 )
-            )
+            ),
+            sort=[SortKey(field=FieldRef(table="image", name="width"))],
+            offset=2,
         )
+        assert query.limit == 10
 
-    @pytest.mark.parametrize(
-        "restrict",
-        [
-            lambda query: query.order_by(OrderByField(ImageSampleField.width)),
-            lambda query: query.slice(limit=10),
-            lambda query: query.filter_by_sample_ids(sqlmodel.select(SampleTable.sample_id)),
-        ],
-    )
-    def test_export_request__order_slice_or_sample_ids(
-        self, db_session: Session, restrict: Callable[[DatasetQuery], DatasetQuery]
-    ) -> None:
+    def test_export_request__sample_ids(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
-        query = restrict(DatasetQuery(dataset=collection, session=db_session))
+        query = DatasetQuery(dataset=collection, session=db_session)
+        query.filter_by_sample_ids(sqlmodel.select(SampleTable.sample_id))
 
         assert query._export_request() is None
 
