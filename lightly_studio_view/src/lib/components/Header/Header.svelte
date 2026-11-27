@@ -62,7 +62,7 @@
 
 <header>
     <div
-        class="p mb-panel border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground"
+        class="p mb-panel border-b border-border-hard bg-card px-4 py-3 pl-8 text-diffuse-foreground"
     >
         <div class="flex items-center justify-between">
             <div class="flex w-[320px]">
