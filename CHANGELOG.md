@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Color the embedding plot by float and integer metadata, for example typicality. Low and high values get colors along a gradient.
+
 ### Changed
 
 ### Deprecated

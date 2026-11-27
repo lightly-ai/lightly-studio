@@ -6,7 +6,7 @@
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotSelectionChip from './PlotSelectionChip/PlotSelectionChip.svelte';
     import { getPickHint } from './PlotSelectionChip/PlotSelectionChip.helpers';
-    import { useLingeringValue } from '$lib/hooks';
+    import { useLingeringValue, useMetadataFilters } from '$lib/hooks';
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
@@ -49,7 +49,12 @@
     import { usePlotComputeGate } from './usePlotComputeGate/usePlotComputeGate.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
-    import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
+    import {
+        getCategoryColors,
+        getCategoryCount,
+        getLegendEntries,
+        getPlotColorMode
+    } from './plotColorUtils';
     import {
         EXCLUDED_BY_FILTERS_CATEGORY,
         INCLUDED_BY_FILTERS_CATEGORY,
@@ -158,6 +163,8 @@
             )
         );
     });
+    // Shares the metadata info that the color-by popover loads, so it sends no extra request.
+    const { metadataInfo } = useMetadataFilters(untrack(() => collectionId));
     const { colorBy, selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
         selectedColorByType,
         tags,
@@ -272,12 +279,19 @@
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount(colorLegend));
-    const useLabelColors = $derived($selectedColorByType === 'annotation_label');
+    const colorMode = $derived(
+        getPlotColorMode({
+            colorByType: $selectedColorByType,
+            metadataFieldType: ($metadataInfo ?? []).find(
+                (field) => field.name === $selectedColorByKey
+            )?.type
+        })
+    );
     const categoryColors = $derived.by(() =>
-        getCategoryColors(colorLegend, useLabelColors, $colorBy !== null)
+        getCategoryColors(colorLegend, colorMode, $colorBy !== null)
     );
     const legendEntries = $derived.by(() =>
-        getLegendEntries(colorLegend, $hiddenCategories, useLabelColors)
+        getLegendEntries(colorLegend, $hiddenCategories, colorMode)
     );
     // Videos, images and annotations send the lasso as region geometry rather than a resolved
     // sample-id list. The sidebar chip reads the count from the plot-propagated store, and

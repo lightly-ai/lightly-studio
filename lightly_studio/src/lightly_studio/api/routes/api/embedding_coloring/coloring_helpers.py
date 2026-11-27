@@ -19,6 +19,10 @@ MAX_LEGEND_SLOTS = 256
 FIRST_COLORED_CATEGORY = 3
 # Number of category names listed inside an "Other" bucket label before truncating with an ellipsis.
 MAX_OTHER_NAMES = 5
+# Relative tolerance for float rounding errors when a value is on a bucket edge.
+_BUCKET_EDGE_TOLERANCE = 1e-9
+# Bucket widths are one of these factors times a power of ten, e.g. 0.2, 5 or 100.
+_READABLE_WIDTH_FACTORS = (1, 2, 5, 10)
 
 
 class ColorScale(Protocol[T_contra]):
@@ -172,6 +176,62 @@ class DiscreteColorScale(Generic[T]):
 
         return DiscreteColorScale[int](_lookup=lookup, legend=legend)
 
+    @classmethod
+    def from_floats(
+        cls,
+        values: Iterable[float],
+        start_cat: int = FIRST_COLORED_CATEGORY,
+        max_categories: int = 50,
+    ) -> DiscreteColorScale[float]:
+        """Build a color scale for float values.
+
+        Non-finite values (NaN, infinity) get no category. When the number of
+        unique finite values is at most ``max_categories``, each unique value gets
+        its own category. Otherwise the range [min, max] is split into
+        equal-width buckets. The bucket edges are multiples of the bucket width,
+        so the number of buckets can be ``max_categories + 1``.
+
+        In both cases categories are ordered numerically (smallest value first).
+
+        Args:
+            values: Float values to build the scale from. Need not be unique.
+            start_cat: First category ID to assign. Defaults to 3, reserving
+                0 for hidden samples, 1 for filtered-out samples and 2 for
+                unassigned samples.
+            max_categories: Maximum number of distinct color categories before
+                bucketing is applied. Defaults to 50.
+
+        Returns:
+            A DiscreteColorScale mapping each finite float to a color category.
+        """
+        unique_values = sorted({value for value in values if math.isfinite(value)})
+
+        if len(unique_values) <= max_categories:
+            return DiscreteColorScale.from_values(
+                values=unique_values, start_cat=start_cat, format_fn=_format_float
+            )
+
+        min_val = unique_values[0]
+        max_val = unique_values[-1]
+        bucket_width = _nice_bucket_width(
+            value_range=max_val - min_val, max_categories=max_categories
+        )
+        first_edge = _bucket_index(value=min_val, bucket_width=bucket_width) * bucket_width
+        num_buckets = _bucket_index(value=max_val - first_edge, bucket_width=bucket_width) + 1
+        decimals = max(0, -math.floor(math.log10(bucket_width)))
+
+        def _label(bucket_idx: int) -> str:
+            bucket_start = first_edge + bucket_idx * bucket_width
+            return f"{bucket_start:.{decimals}f} - {bucket_start + bucket_width:.{decimals}f}"
+
+        legend: dict[int, str] = {start_cat + i: _label(i) for i in range(num_buckets)}
+        lookup: dict[float, int] = {
+            value: start_cat + _bucket_index(value=value - first_edge, bucket_width=bucket_width)
+            for value in unique_values
+        }
+
+        return DiscreteColorScale[float](_lookup=lookup, legend=legend)
+
 
 def assign_color_categories(
     sample_ids: Sequence[UUID],
@@ -243,3 +303,34 @@ def _format_other_label(values: Sequence[T], format_fn: Callable[[T], str]) -> s
     if len(values) > MAX_OTHER_NAMES:
         names.append("…")
     return f"Other ({', '.join(names)})"
+
+
+def _format_float(value: float) -> str:
+    """Format a float with at most 6 significant digits, e.g. ``0.1`` not ``0.1000000000000001``."""
+    return f"{value:g}"
+
+
+def _bucket_index(value: float, bucket_width: float) -> int:
+    """Return the index of the bucket of ``bucket_width`` that contains ``value``."""
+    # The tolerance keeps a value on a bucket edge in the upper bucket, e.g. 0.3 / 0.1 = 2.999...
+    return math.floor(value / bucket_width + _BUCKET_EDGE_TOLERANCE)
+
+
+def _nice_bucket_width(value_range: float, max_categories: int) -> float:
+    """Return a readable bucket width that splits ``value_range`` into at most ``max_categories``.
+
+    Args:
+        value_range: Positive difference between the largest and smallest value.
+        max_categories: Maximum number of buckets that ``value_range`` needs.
+
+    Returns:
+        A bucket width of at least ``value_range / max_categories``. Readable widths
+        make readable legend labels, for example ``0.20 - 0.25``.
+    """
+    min_width = value_range / max_categories
+    magnitude = 10.0 ** math.floor(math.log10(min_width))
+    return next(
+        factor * magnitude
+        for factor in _READABLE_WIDTH_FACTORS
+        if factor * magnitude >= min_width * (1 - _BUCKET_EDGE_TOLERANCE)
+    )

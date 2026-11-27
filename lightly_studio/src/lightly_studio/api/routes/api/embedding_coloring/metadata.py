@@ -71,8 +71,8 @@ def _build_metadata_color_scale(
     For string and boolean fields, when there are more values than fit in the
     legend, the values most common among the filter-matching samples each get a
     dedicated color category and the rest are merged into a single "Other"
-    category; values absent from the matching samples are omitted. Integer values
-    use fixed-range bucketing and stay filter-independent.
+    category; values absent from the matching samples are omitted. Integer and
+    float values use fixed-range bucketing and stay filter-independent.
     """
     if metadata_type in ("string", "boolean"):
         format_fn: Callable[[Any], str] = (
@@ -87,8 +87,10 @@ def _build_metadata_color_scale(
         return DiscreteColorScale.from_values(values=ordered_values, format_fn=format_fn)
     if metadata_type == "integer":
         return DiscreteColorScale.from_integers(values=(int(v) for v in sample_to_value.values()))
+    if metadata_type == "float":
+        return DiscreteColorScale.from_floats(values=(float(v) for v in sample_to_value.values()))
 
     raise ValueError(
         f"Metadata field '{key}' has unsupported type {metadata_type!r}. "
-        "Only 'string', 'boolean', and 'integer' fields can be used for coloring."
+        "Only 'string', 'boolean', 'integer', and 'float' fields can be used for coloring."
     )

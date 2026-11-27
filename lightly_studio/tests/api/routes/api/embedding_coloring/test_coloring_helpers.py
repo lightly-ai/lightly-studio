@@ -130,6 +130,54 @@ class TestDiscreteColorScale:
         assert scale.value_to_category(2) == 5
         assert scale.legend == {3: "0", 4: "1", 5: "2"}
 
+    def test_from_floats__few_values(self) -> None:
+        scale = DiscreteColorScale.from_floats(values=[0.75, 0.25, 0.25])
+        assert scale.value_to_category(0.25) == 3
+        assert scale.value_to_category(0.75) == 4
+        assert scale.legend == {3: "0.25", 4: "0.75"}
+
+    def test_from_floats__empty(self) -> None:
+        scale = DiscreteColorScale.from_floats(values=[])
+        assert scale.legend == {}
+
+    def test_from_floats__non_finite_values_skipped(self) -> None:
+        scale = DiscreteColorScale.from_floats(
+            values=[float("nan"), float("inf"), float("-inf"), 1.0]
+        )
+        assert scale.value_to_category(float("inf")) is None
+        assert scale.value_to_category(1.0) == 3
+        assert scale.legend == {3: "1"}
+
+    def test_from_floats__bucketing(self) -> None:
+        # value_range=0.3, max_categories=2 -> bucket_width=0.2
+        # -> 2 buckets: [0.0, 0.2) and [0.2, 0.4)
+        scale = DiscreteColorScale.from_floats(values=[0.0, 0.1, 0.2, 0.3], max_categories=2)
+        assert scale.value_to_category(0.0) == 3
+        assert scale.value_to_category(0.1) == 3
+        assert scale.value_to_category(0.2) == 4
+        assert scale.value_to_category(0.3) == 4
+        assert scale.legend == {3: "0.0 - 0.2", 4: "0.2 - 0.4"}
+
+    def test_from_floats__bucketing_value_on_rounded_edge(self) -> None:
+        # value_range=9.9, max_categories=50 -> bucket_width=0.2. 0.6 / 0.2 is 2.999... in floats.
+        scale = DiscreteColorScale.from_floats(values=[i / 10 for i in range(100)])
+        assert scale.value_to_category(0.6) == 6
+        assert scale.value_to_category(9.9) == 52
+        assert scale.legend[3] == "0.0 - 0.2"
+        assert scale.legend[52] == "9.8 - 10.0"
+        assert len(scale.legend) == 50
+
+    def test_from_floats__bucketing_negative_values(self) -> None:
+        # value_range=2.0, max_categories=2 -> bucket_width=1.0. The max value 1.0 is on an
+        # edge, so it starts a third bucket.
+        scale = DiscreteColorScale.from_floats(values=[-1.0, -0.5, 0.0, 0.5, 1.0], max_categories=2)
+        assert scale.value_to_category(-1.0) == 3
+        assert scale.value_to_category(-0.5) == 3
+        assert scale.value_to_category(0.0) == 4
+        assert scale.value_to_category(0.5) == 4
+        assert scale.value_to_category(1.0) == 5
+        assert scale.legend == {3: "-1 - 0", 4: "0 - 1", 5: "1 - 2"}
+
 
 def test_assign_color_categories() -> None:
     ids = [uuid4(), uuid4()]

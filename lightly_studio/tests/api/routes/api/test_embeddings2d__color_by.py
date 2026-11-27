@@ -265,6 +265,52 @@ def test_get_embeddings2d__with_integer_metadata_color_by__buckets_when_more_tha
     assert sample_id_to_colors[str(samples[99].sample_id)] == [52]  # score=99 -> bucket "98-99"
 
 
+def test_get_embeddings2d__with_float_metadata_color_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 3
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    assert len(samples) == n_samples
+
+    scores = [0.5, 0.75, 0.25]
+    for sample, score in zip(samples, scores):
+        sample.sample["typicality"] = score
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "color_by": {"type": "metadata_field", "key": "typicality"},
+        },
+    )
+
+    assert response.status_code == 200
+
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    color_categories = table.column("color_categories").to_pylist()
+
+    sample_id_to_colors = dict(zip(sample_ids_payload, color_categories))
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [4]  # 0.5
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [5]  # 0.75
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [3]  # 0.25
+
+    legend = json.loads(table.schema.metadata[b"color_legend"])
+    assert legend == {"3": "0.25", "4": "0.5", "5": "0.75"}
+
+
 def test_get_embeddings2d__with_metadata_field_color_by_and_sample_ids_filter(
     test_client: TestClient,
     db_session: Session,
@@ -392,7 +438,6 @@ def test_get_embeddings2d__filter_promotes_metadata_value_out_of_other(
     [
         {"a": 1},
         [1, 2, 3],
-        1.5,
     ],
 )
 def test_get_embeddings2d__with_unsupported_metadata_color_by(

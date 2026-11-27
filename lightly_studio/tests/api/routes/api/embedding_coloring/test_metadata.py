@@ -16,6 +16,7 @@ from tests.helpers_resolvers import create_collection, create_image
         (["b", "a", None], [], [[], [], []], {}),
         ([False, True, None], [1], [[], [3], []], {3: "true"}),
         ([0, 10, None], [0], [[3], [4], []], {3: "0", 4: "10"}),
+        ([0.5, 0.25, None], [0], [[4], [3], []], {3: "0.25", 4: "0.5"}),
     ],
 )
 def test_build_metadata_color_maps(

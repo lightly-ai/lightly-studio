@@ -13,7 +13,7 @@
         withAnnotationLabels: boolean;
     }
 
-    const supportedTypes = new Set(['string', 'boolean']);
+    const supportedTypes = new Set(['string', 'boolean', 'integer', 'float']);
 
     // Sentinel value for the explicit "no coloring" option. Kept distinct from
     // both the numeric option indices and the empty-string deselect signal.
