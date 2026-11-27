@@ -844,7 +844,7 @@
                             />
                         </div>
                     </div>
-                    <Separator class="mb-4 bg-border-hard" />
+                    <Separator class="mb-4 !mt-2 bg-border-hard" />
                 {/if}
 
                 <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
