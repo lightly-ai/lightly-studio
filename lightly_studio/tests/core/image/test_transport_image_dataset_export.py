@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from pytest_mock import MockerFixture
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.core.dataset_query import ImageSampleField, OrderByField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
@@ -22,6 +22,8 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     QueryExpr,
 )
+from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.transport import active_transport
 from lightly_studio.transport.local.local_export_transport import LocalExportTransport
 from tests.helpers_resolvers import create_collection, create_image
@@ -95,13 +97,16 @@ class TestTransportImageDatasetExport:
 
         transport.export.export.assert_called_once_with(
             collection_id=dataset.collection_id,
-            query_expr=QueryExpr(
-                match_expr=IntegerExpr(
-                    field=FieldRef(table="image", name="width"),
-                    operator=OrdinalComparisonOperator.GT,
-                    value=10,
+            request=SampleQueryRequest(
+                query_expr=QueryExpr(
+                    match_expr=IntegerExpr(
+                        field=FieldRef(table="image", name="width"),
+                        operator=OrdinalComparisonOperator.GT,
+                        value=10,
+                    )
                 )
             ),
+            limit=None,
             task=ExportTask(
                 export_format=export_format,
                 output_path=tmp_path / "export",
@@ -163,7 +168,7 @@ class TestTransportImageDatasetExport:
             ),
         ],
     )
-    def test_export__ordered_query(
+    def test_export__unsupported_query(
         self,
         mocker: MockerFixture,
         tmp_path: Path,
@@ -171,7 +176,7 @@ class TestTransportImageDatasetExport:
         local_export_method: str,
     ) -> None:
         dataset = ImageDataset.create(name="test_dataset")
-        query = dataset.query().order_by(OrderByField(ImageSampleField.width))
+        query = dataset.query().filter_by_sample_ids(select(SampleTable.sample_id))
         export_locally = mocker.patch.object(ImageDatasetExport, local_export_method)
         transport_export = mocker.spy(LocalExportTransport, "export")
 
@@ -185,7 +190,7 @@ class TestTransportImageDatasetExport:
         export_locally.assert_called_once_with(tmp_path / "export", None)
         transport_export.assert_not_called()
 
-    def test_export__ordered_query__sample_order(self, tmp_path: Path) -> None:
+    def test_export__ordered_and_sliced_query(self, mocker: MockerFixture, tmp_path: Path) -> None:
         dataset = ImageDataset.create(name="test_dataset")
         create_image(
             session=dataset.session,
@@ -199,14 +204,20 @@ class TestTransportImageDatasetExport:
             file_path_abs="/b.png",
             width=10,
         )
-        query = dataset.query().order_by(OrderByField(ImageSampleField.width))
+        query = dataset.query().order_by(OrderByField(ImageSampleField.width))[1:]
+        ImageDatasetExport(
+            session=dataset.session, dataset_id=dataset.dataset_id, samples=query
+        ).to_coco_object_detections(output_json=tmp_path / "sql.json")
+        transport_export = mocker.spy(LocalExportTransport, "export")
 
         TransportImageDatasetExport(
             session=dataset.session, dataset_id=dataset.dataset_id, query=query
         ).to_coco_object_detections(output_json=tmp_path / "coco.json")
 
         coco = json.loads((tmp_path / "coco.json").read_text())
-        assert [image["file_name"] for image in coco["images"]] == ["/b.png", "/a.png"]
+        assert coco == json.loads((tmp_path / "sql.json").read_text())
+        assert [image["file_name"] for image in coco["images"]] == ["/a.png"]
+        transport_export.assert_called_once()
 
     def test_export__query_with_session(
         self, mocker: MockerFixture, tmp_path: Path, db_session: Session

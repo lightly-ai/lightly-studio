@@ -61,31 +61,29 @@ def build_request(
 def build_export_request(
     sample_type: SampleType,
     match_expression: MatchExpression | None,
+    order_by: Sequence[OrderByExpression],
     filters_sample_ids: bool,
-    is_ordered: bool,
-    is_sliced: bool,
+    offset: int,
 ) -> SampleQueryRequest | None:
     """Build the request of an export. None means the export uses SQL.
 
-    The request has only the filter. The export transport cannot send an order or a slice
-    yet.
+    The export gets all samples in one request, so the request can use each sort.
 
     Raises:
         UnsupportedQueryError: If the transport is remote and cannot send the query.
     """
     try:
-        if is_ordered or is_sliced:
-            raise UnsupportedQueryError("The export transport cannot send an order or a slice.")
         query_expr = _to_image_query_expr(
             sample_type=sample_type,
             match_expression=match_expression,
             filters_sample_ids=filters_sample_ids,
         )
+        sort = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=sample_type)
     except UnsupportedQueryError:
         if active_transport.is_remote():
             raise
         return None
-    return SampleQueryRequest(query_expr=query_expr)
+    return SampleQueryRequest(query_expr=query_expr, sort=sort, offset=offset)
 
 
 def build_evaluation_request(
@@ -108,9 +106,9 @@ def build_evaluation_request(
     return build_export_request(
         sample_type=sample_type,
         match_expression=match_expression,
+        order_by=[],
         filters_sample_ids=filters_sample_ids,
-        is_ordered=False,
-        is_sliced=False,
+        offset=0,
     )
 
 
