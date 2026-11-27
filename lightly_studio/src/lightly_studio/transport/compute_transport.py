@@ -9,7 +9,6 @@ from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
 from lightly_studio.models.evaluation_metrics import EvaluationMetrics
 from lightly_studio.models.evaluation_run import EvaluationRunView
 from lightly_studio.models.evaluation_task import EvaluationResult, EvaluationTask
-from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.sampling.sampling_config import SamplingConfig
 
@@ -71,13 +70,19 @@ class ComputeTransport(Protocol):
         """
 
     def evaluate(
-        self, collection_id: UUID, query_expr: QueryExpr | None, task: EvaluationTask
+        self,
+        collection_id: UUID,
+        request: SampleQueryRequest,
+        limit: int | None,
+        task: EvaluationTask,
     ) -> EvaluationResult:
         """Create an evaluation run on the matching samples and store its metrics.
 
         Args:
             collection_id: The ID of the collection.
-            query_expr: The samples to evaluate. None uses all samples of the collection.
+            request: The filter, the sort and the offset of the samples to evaluate. The
+                `cursor` and the `limit` of the request are not used.
+            limit: The maximum number of samples to evaluate. None uses all.
             task: The evaluation run to create.
 
         Returns:
