@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any, NamedTuple
 from uuid import UUID
 
@@ -144,7 +144,7 @@ def get_by_sample_ids(
 
 def get_embedded_sample_ids(
     session: Session,
-    sample_ids: Sequence[UUID],
+    sample_ids: Iterable[UUID],
     embedding_model_id: UUID,
 ) -> set[UUID]:
     """Get the IDs of the given samples that have an embedding of the model.

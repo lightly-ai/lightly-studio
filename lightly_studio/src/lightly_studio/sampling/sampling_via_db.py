@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter, defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import assert_never
 from uuid import UUID, uuid4
@@ -280,11 +280,13 @@ def sampling_via_database(
     _check_preselection(
         input_sample_ids=input_sample_ids, preselected_sample_ids=preselected_sample_ids
     )
+    embedding_model_names = _get_strategy_embedding_model_names(strategies=config.strategies)
     input_sample_ids = _drop_samples_without_embeddings(
         session=session,
-        config=config,
+        collection_id=config.collection_id,
         input_sample_ids=input_sample_ids,
         preselected_sample_ids=preselected_sample_ids,
+        embedding_model_names=embedding_model_names,
     )
     preselected_indices, n_samples_to_select = _prepare_preselection(
         input_sample_ids=input_sample_ids,
@@ -413,11 +415,12 @@ def _prepare_preselection(
 
 def _drop_samples_without_embeddings(
     session: Session,
-    config: SamplingConfig,
+    collection_id: UUID,
     input_sample_ids: Sequence[UUID],
     preselected_sample_ids: Sequence[UUID],
+    embedding_model_names: Iterable[str | None],
 ) -> list[UUID]:
-    """Return the input sample IDs that have an embedding of each model the strategies use.
+    """Return the input sample IDs that have an embedding of each given model.
 
     The order of ``input_sample_ids`` is kept, because Mundig indices map back to it.
 
@@ -425,12 +428,9 @@ def _drop_samples_without_embeddings(
         ValueError: If a preselected sample, or every input sample, has no embedding of
             such a model.
     """
-    embedding_model_names = _get_embedding_model_names(strategies=config.strategies)
-    if not embedding_model_names:
-        return list(input_sample_ids)
     embedded_sample_ids = sampling_helpers.get_sample_ids_with_embeddings(
         session=session,
-        collection_id=config.collection_id,
+        collection_id=collection_id,
         sample_ids=input_sample_ids,
         embedding_model_names=embedding_model_names,
     )
@@ -456,7 +456,7 @@ def _drop_samples_without_embeddings(
     return kept_sample_ids
 
 
-def _get_embedding_model_names(strategies: Sequence[Strategy]) -> set[str | None]:
+def _get_strategy_embedding_model_names(strategies: Sequence[Strategy]) -> set[str | None]:
     """Return the embedding model names of the strategies that use sample embeddings."""
     return {
         strat.embedding_model_name

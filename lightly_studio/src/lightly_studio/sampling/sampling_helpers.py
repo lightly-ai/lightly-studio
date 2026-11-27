@@ -42,7 +42,7 @@ def get_embeddings_by_sample_ids(
 def get_sample_ids_with_embeddings(
     session: Session,
     collection_id: UUID,
-    sample_ids: Sequence[UUID],
+    sample_ids: Iterable[UUID],
     embedding_model_names: Iterable[str | None],
 ) -> set[UUID]:
     """Return the IDs of the given samples that have an embedding of every given model.
@@ -58,7 +58,7 @@ def get_sample_ids_with_embeddings(
         )
         embedded_sample_ids = sample_embedding_resolver.get_embedded_sample_ids(
             session=session,
-            sample_ids=list(embedded_sample_ids),
+            sample_ids=embedded_sample_ids,
             embedding_model_id=embedding_model_id,
         )
     return embedded_sample_ids
