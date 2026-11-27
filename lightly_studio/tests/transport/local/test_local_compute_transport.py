@@ -165,6 +165,21 @@ class TestLocalComputeTransport:
         assert result.sample_count == sample_count
         assert result.gt_annotation_count == sample_count
 
+    def test_evaluate__empty_name(self) -> None:
+        collection = evaluation_helpers.create_dataset_with_annotations(
+            db_session=db_manager.persistent_session()
+        )
+        transport: ComputeTransport = LocalComputeTransport()
+
+        transport.evaluate(
+            collection_id=collection.collection_id,
+            query_expr=None,
+            task=OBJECT_DETECTION_TASK.model_copy(update={"name": ""}),
+        )
+
+        runs = transport.list_evaluation_runs(collection_id=collection.collection_id)
+        assert [run.name for run in runs] == [""]
+
     def test_evaluate__unknown_collection(self) -> None:
         transport: ComputeTransport = LocalComputeTransport()
 

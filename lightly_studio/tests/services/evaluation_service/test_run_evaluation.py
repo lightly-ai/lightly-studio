@@ -71,6 +71,25 @@ def test_run_evaluation__generates_default_name(db_session: Session) -> None:
     assert runs[0].name.startswith("object_detection ")
 
 
+def test_run_evaluation__empty_name(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+
+    evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(),
+        name="",
+    )
+
+    runs = evaluation_run_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=root.dataset_id
+    )
+    assert runs[0].name == ""
+
+
 def test_run_evaluation__default_names_are_collision_safe(
     db_session: Session, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
 ) -> None:
