@@ -19,6 +19,7 @@ export { default as SampleAnnotation } from '$lib/components/SampleAnnotation/Sa
 export { default as SelectClassDialog } from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
 export { TrackSelect } from '$lib/components/TrackSelect';
 export { default as SampleAnnotationBox } from '$lib/components/SampleAnnotation/SampleAnnotationBox/SampleAnnotationBox.svelte';
+export { default as SampleAnnotationPolygon } from '$lib/components/SampleAnnotation/SampleAnnotationPolygon/SampleAnnotationPolygon.svelte';
 export { default as SampleAnnotationLabel } from '$lib/components/SampleAnnotation/SampleAnnotationLabel/SampleAnnotationLabel.svelte';
 export { default as SampleAnnotationSegmentationRLE } from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/SampleAnnotationSegmentationRLE.svelte';
 export { default as AnnotationCanvas } from '$lib/components/AnnotationCanvas/AnnotationCanvas.svelte';

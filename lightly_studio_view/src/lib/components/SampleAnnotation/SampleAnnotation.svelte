@@ -3,6 +3,7 @@
     import {
         SampleAnnotationBox,
         SampleAnnotationLabel,
+        SampleAnnotationPolygon,
         SampleAnnotationSegmentationRLE
     } from '$lib/components';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
@@ -83,7 +84,9 @@
 
     const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
     // TODO(Michal, 11/2026): Polygons are read-only in the GUI until polygon editing is added.
-    const isPolygon = $derived(isPolygonAnnotation(annotation));
+    const polygons = $derived(
+        isPolygonAnnotation(annotation) ? annotation.polygon_details.polygons : undefined
+    );
 
     const annotationId = $derived(annotation.sample_id);
 
@@ -177,9 +180,17 @@
         />
     {/if}
 
-    {#if showBoundingBox}
-        <!--Disable resizable rectangle for segmentation masks and polygons since we don’t support it yet.-->
-        {#if isResizable && constraintBox && !segmentationMask && !isPolygon}
+    {#if polygons}
+        <SampleAnnotationPolygon
+            {polygons}
+            {label}
+            {colorStroke}
+            {colorFill}
+            opacity={boundingBoxOpacity}
+        />
+    {:else if showBoundingBox}
+        <!--Disable resizable rectangle for segmentation masks since we don’t support it yet.-->
+        {#if isResizable && constraintBox && !segmentationMask}
             <ResizableRectangle
                 bind:bbox={boundingBox}
                 {colorStroke}
