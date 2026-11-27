@@ -139,3 +139,22 @@ Model: `ltdetrv2-s-coco`, fp32 ONNX, 41.8 MB, input 640×640, 300 queries × 80 
 - A very large source image.
 - A server model registered from Python, next to the browser model. Unit tests cover the server path.
 - fp16 export.
+
+## Follow-up: text-prompted model, Grounding DINO tiny (2026-11-27)
+
+A second browser model, `grounding-dino-tiny`, finds the classes the user types in a "What to
+find" box: in the Auto-label popup and, in place of the class checklist, in the batch dialog.
+Annotations save into a `grounding-dino-tiny` source.
+
+- **Why Grounding DINO:** Apache-2.0, 172M params, and an ONNX export already on the Hub
+  (`onnx-community/grounding-dino-tiny-ONNX`). LocateAnything-3B is non-commercial and 3.8B params.
+  OWLv2 also fits; Florence-2 returns no scores, and YOLO-World and YOLOE are GPL or AGPL.
+- **Runtime:** the fp16 file (360 MB) on our own onnxruntime-web 1.31.1. transformers.js only
+  tokenizes. Its bundled onnxruntime returns NaN for the fp16, q4f16 and fp32 files on WebGPU,
+  and transformers.js 4.3.2 fails on this export with an `input_ids` shape error.
+- **Speed (Apple Silicon, WebGPU):** ~0.9 s per image after warm-up, 14 s for the first 360 MB
+  download from the Hub, 6 images in 9.5 s as a batch with saves. WASM fp32 takes ~12.8 s per image.
+- **Quality:** "bear" scores 0.89 on a bear photo. Parts ("bear ear") score 0.25–0.32. The
+  default confidence of 0.50 is high for Grounding DINO, which usually runs at 0.3–0.35.
+
+**Not verified:** the WASM fallback with the fp16 file, and prompts past the 256-token limit.
