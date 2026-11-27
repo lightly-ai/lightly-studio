@@ -81,6 +81,7 @@ export {
 export { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews/useSaveAnnotationPreviews';
 export { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 export { isAssistedLabelingView, useLabelingModels } from '$lib/hooks/useLabelingModels';
+export { useBrowserModels } from '$lib/hooks/useBrowserModels/useBrowserModels';
 export { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
 export {
     useClassColorPicker,
