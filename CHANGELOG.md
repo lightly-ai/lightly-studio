@@ -11,14 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Switch cameras in the enlarged camera view of the point cloud workspace with `[` / `]` (configurable in Settings → Shortcuts), also during playback, and press 1–9 to open a camera. The open camera is kept in the URL.
 - Press `Q` and `C` to choose the select and create cuboid tools in the point cloud workspace (configurable in Settings → Shortcuts). In edit mode, press Delete or Backspace to delete the selected cuboid. Settings → Shortcuts now lists all point cloud shortcuts.
 - Show or hide the panels of the 3D workspace with toggles in its header. Dock the orthographic views and the camera strip below or to the right of the 3D scene with the dock button in their panel header.
+- Python SDK: Add polygon annotations from COCO and YOLO with `annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION`.
 
 ### Changed
+- Segmentation evaluation reports an error for annotation sources with polygons.
+- BREAKING: Python SDK: COCO instance segmentation loads polygons as polygon annotations with their vertices, not as segmentation masks with only a box. Query them with `PolygonQuery` instead of `SegmentationMaskQuery`; the GUI shows them as boxes for now.
 
 ### Deprecated
+- Python SDK: `annotation_type` in the COCO methods. Use `annotation_task` instead.
 
 ### Removed
 
 ### Fixed
+- Segmentation masks exported to COCO and YouTube-VIS are no longer marked as crowd annotations. COCO evaluation tools now use them instead of ignoring them. Crowd annotations from imported COCO files are also exported as non-crowd.
+- COCO import reads RLE segmentation masks that are not marked as crowd annotations.
 
 ### Security
 

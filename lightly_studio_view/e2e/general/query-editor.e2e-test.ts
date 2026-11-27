@@ -2,7 +2,8 @@ import type { Page, Response } from '@playwright/test';
 import { test, expect } from '../utils';
 import { cocoDataset } from './fixtures';
 
-const QUERY = 'segmentation_mask(class_name = "airplane")';
+const QUERY = 'segmentation_mask(class_name = "person")';
+const QUERY_SAMPLE_COUNT = cocoDataset.labels.person.segmentationMaskSampleCount;
 
 function waitForImageListResponse(page: Page): Promise<Response> {
     return page.waitForResponse((r) => r.url().includes('/images/list') && r.status() === 200);
@@ -31,8 +32,8 @@ test.describe('query editor', () => {
 
         await typeAndApply(page, QUERY);
 
-        // Verify the grid shows only airplane samples
-        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
+        // Verify the grid shows only samples with a person mask
+        await expect(samplesPage.getSamples()).toHaveCount(QUERY_SAMPLE_COUNT);
 
         // Apply button stays enabled to allow refreshing data (draft matches applied value)
         await expect(page.getByTestId('query-editor-apply-button')).toBeEnabled();
@@ -64,7 +65,7 @@ test.describe('query editor', () => {
         await page.getByRole('checkbox', { name: 'Enable query filter' }).click();
         await enableRefetch;
 
-        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
+        await expect(samplesPage.getSamples()).toHaveCount(QUERY_SAMPLE_COUNT);
     });
 
     test('reopening editor loads existing query with Re-apply enabled', async ({
@@ -87,7 +88,7 @@ test.describe('query editor', () => {
         await expect(page.getByTestId('query-editor-apply-button')).toHaveText('Re-apply');
 
         // Grid should still show filtered results
-        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
+        await expect(samplesPage.getSamples()).toHaveCount(QUERY_SAMPLE_COUNT);
     });
 
     test('clearing filter removes chip and restores grid', async ({ samplesPage, page }) => {
@@ -143,7 +144,7 @@ test.describe('query editor', () => {
         await expect(applyButton).toBeEnabled();
 
         // Grid should still show the previously filtered results
-        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
+        await expect(samplesPage.getSamples()).toHaveCount(QUERY_SAMPLE_COUNT);
     });
 
     test('query history applies an earlier query after a reload', async ({ samplesPage, page }) => {
@@ -162,6 +163,6 @@ test.describe('query editor', () => {
         await refetchPromise;
 
         await expect(page.locator('.monaco-editor .view-lines')).toContainText(QUERY);
-        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
+        await expect(samplesPage.getSamples()).toHaveCount(QUERY_SAMPLE_COUNT);
     });
 });

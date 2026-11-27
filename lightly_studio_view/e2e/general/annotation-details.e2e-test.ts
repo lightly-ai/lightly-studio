@@ -259,7 +259,10 @@ test('tags are shown and can be removed', async ({ annotationsPage, annotationDe
     await expect(annotationDetailsPage.getTagByText(testTagName)).not.toBeVisible();
 });
 
-test('annotation details keeps zoom stable while dragging bbox', async ({
+// TODO(Michal, 11/2026): The e2e dataset has no annotation with an editable box: COCO
+// polygons load as polygons, and the box of a polygon can't be edited. Enable the test again
+// when the dataset has object detections or polygons can be edited.
+test.fixme('annotation details keeps zoom stable while dragging bbox', async ({
     annotationsPage,
     annotationDetailsPage
 }) => {
@@ -278,7 +281,10 @@ test('annotation details keeps zoom stable while dragging bbox', async ({
     await annotationDetailsPage.undoLastAction();
 });
 
-test('annotation details reset zoom centers to updated bbox target', async ({
+// TODO(Michal, 11/2026): The e2e dataset has no annotation with an editable box: COCO
+// polygons load as polygons, and the box of a polygon can't be edited. Enable the test again
+// when the dataset has object detections or polygons can be edited.
+test.fixme('annotation details reset zoom centers to updated bbox target', async ({
     annotationsPage,
     annotationDetailsPage
 }) => {

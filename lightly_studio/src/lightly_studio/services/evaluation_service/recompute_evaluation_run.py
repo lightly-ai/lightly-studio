@@ -104,6 +104,8 @@ def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> Eval
 
 def _fetch_annotations_for_run(session: Session, run: EvaluationRunTable) -> EvaluationData:
     """Fetch coverage and annotations from the run's stored collection IDs."""
+    # TODO(Michal, 11/2026): Validate the annotation types as a new run does. Recompute
+    # skips annotations of other types without an error, for example polygons.
     annotation_type = validators.get_annotation_type_for_task(run.task_type)
     gt_covered = set(
         annotation_collection_coverage_resolver.list_by_collection_id(
