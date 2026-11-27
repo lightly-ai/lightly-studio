@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { useCustomSourceColors } from '$lib/hooks';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-import { getColorByLabel, getColorBySource } from '$lib/utils';
+import { getColorByLabel, getColorBySource, withAlpha } from '$lib/utils';
 import SampleAnnotation from './SampleAnnotation.svelte';
 import SelectableSampleAnnotationHarness from './SelectableSampleAnnotationHarness.svelte';
 
@@ -49,6 +49,29 @@ const createSegmentationMaskAnnotationWithMask = (): ComponentProps<
             segmentation_mask: [0, 4, 2, 4]
         }
     }) satisfies ComponentProps<typeof SampleAnnotation>['annotation'];
+
+const createPolygonAnnotation = (): ComponentProps<typeof SampleAnnotation>['annotation'] =>
+    ({
+        ...BASE_ANNOTATION_FIELDS,
+        sample_id: 'polygon-1',
+        annotation_type: 'polygon',
+        annotation_label: { annotation_label_name: 'car' },
+        polygon_details: {
+            x: 1,
+            y: 2,
+            width: 10,
+            height: 12,
+            polygons: [
+                [
+                    [1, 2],
+                    [11, 2],
+                    [11, 14]
+                ]
+            ]
+        }
+    }) satisfies ComponentProps<typeof SampleAnnotation>['annotation'];
+
+const polygonProps = { annotation: createPolygonAnnotation(), imageWidth: 100 };
 
 const createObjectDetectionAnnotation = (): ComponentProps<typeof SampleAnnotation>['annotation'] =>
     ({
@@ -165,38 +188,75 @@ describe('SampleAnnotation', () => {
         expect(screen.getByTestId('svg-annotation-text')).not.toHaveTextContent('(');
     });
 
-    it('shows the box of a polygon without resize handles in edit mode', () => {
-        const annotation = {
-            ...BASE_ANNOTATION_FIELDS,
-            sample_id: 'polygon-1',
-            annotation_type: 'polygon',
-            annotation_label: { annotation_label_name: 'car' },
-            polygon_details: {
-                x: 1,
-                y: 2,
-                width: 10,
-                height: 12,
-                polygons: [
-                    [
-                        [1, 2],
-                        [11, 2],
-                        [11, 14]
-                    ]
-                ]
-            }
-        } satisfies ComponentProps<typeof SampleAnnotation>['annotation'];
-
+    it('draws a polygon outline instead of a box, also in edit mode', () => {
         render(SampleAnnotation, {
             props: {
-                annotation,
-                imageWidth: 100,
+                ...polygonProps,
                 isResizable: true,
-                constraintBox: { x: 0, y: 0, width: 100, height: 100 }
+                constraintBox: { x: 0, y: 0, width: 100, height: 100 },
+                showBoundingBox: true
             }
         });
 
-        expect(screen.getByTestId('annotation_box')).toBeInTheDocument();
+        expect(screen.getByTestId('annotation_polygon')).toHaveAttribute('d', 'M1 2L11 2L11 14Z');
+        expect(screen.queryByTestId('annotation_box')).not.toBeInTheDocument();
         expect(screen.queryByTestId('resize-handle-nw')).not.toBeInTheDocument();
+    });
+
+    it('draws the polygon when bounding boxes are hidden', () => {
+        render(SampleAnnotation, {
+            props: {
+                ...polygonProps,
+                showBoundingBox: false
+            }
+        });
+
+        expect(screen.getByTestId('annotation_polygon')).toBeInTheDocument();
+    });
+
+    it('shows the polygon label at the top-left of its box', () => {
+        render(SampleAnnotation, {
+            props: {
+                ...polygonProps,
+                showLabel: true
+            }
+        });
+
+        expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('car');
+    });
+
+    it('dims a disabled polygon and clears the fill of an active one', async () => {
+        const { rerender } = render(SampleAnnotation, {
+            props: { ...polygonProps, highlight: 'disabled' }
+        });
+
+        expect(screen.getByTestId('annotation_polygon')).toHaveAttribute(
+            'stroke',
+            withAlpha(getColorByLabel('car', 1).color, 0.1)
+        );
+
+        await rerender({ ...polygonProps, highlight: 'active' });
+
+        expect(screen.getByTestId('annotation_polygon')).toHaveAttribute(
+            'fill',
+            withAlpha(getColorByLabel('car', 0.4).color, 0)
+        );
+    });
+
+    it('selects a polygon when the user clicks it', async () => {
+        const onSelect = vi.fn();
+        render(SelectableSampleAnnotationHarness, {
+            props: {
+                ...polygonProps,
+                prerenderedDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
+                prerenderedHeight: 12,
+                onSelect
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('annotation_polygon'));
+
+        expect(onSelect).toHaveBeenCalledWith('polygon-1');
     });
 
     it('keeps object-detection label visible when bounding boxes are hidden', () => {

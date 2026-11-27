@@ -6,6 +6,7 @@ import {
     type Annotation
 } from '$lib/services/types';
 import type { BoundingBox } from '$lib/types';
+import { MIN_POLYGON_PART_VERTICES, normalizePolygonWinding } from '$lib/utils';
 
 export function getBoundingBox(annotation: Annotation): BoundingBox {
     let boundingBox: BoundingBox | null | undefined;
@@ -191,6 +192,14 @@ export const rleToSvgPath = (rle: number[], width: number): string => {
     });
     return strips.join('');
 };
+
+// Convert polygon parts to a closed SVG subpath each. All parts get the same winding, so the
+// `nonzero` fill rule fills them all and never cuts a hole.
+export const polygonsToSvgPath = (polygons: Array<Array<[number, number]>>): string =>
+    normalizePolygonWinding(polygons)
+        .filter((part) => part.length >= MIN_POLYGON_PART_VERTICES)
+        .map((part) => `M${part.map(([x, y]) => `${x} ${y}`).join('L')}Z`)
+        .join('');
 
 const getRunStrips = (start: number, count: number, width: number): string[] => {
     const strips: string[] = [];
