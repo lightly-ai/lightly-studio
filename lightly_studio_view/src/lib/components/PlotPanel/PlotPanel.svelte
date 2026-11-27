@@ -606,7 +606,7 @@
     });
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
+<div class="flex min-h-0 flex-1 flex-col rounded-panel bg-card p-4" data-testid="plot-panel">
     <div class="mb-5 mt-2 flex items-start justify-between gap-2">
         <div class="flex flex-wrap items-center gap-3">
             <div class="text-lg font-semibold">Embedding Plot</div>

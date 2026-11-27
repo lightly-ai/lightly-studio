@@ -408,7 +408,7 @@
 {/snippet}
 
 <div
-    class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4"
+    class="flex h-full min-w-0 flex-1 flex-col rounded-panel bg-card p-4"
     data-testid="dataset-distribution-panel"
 >
     <div class="flex items-center justify-between">

@@ -133,7 +133,7 @@
             <PaneGroup direction="horizontal" class="min-w-0 flex-1">
                 <Pane defaultSize={65} minSize={35} class="flex">
                     <div
-                        class="relative flex min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4 pb-2"
+                        class="relative flex min-w-0 flex-1 flex-col rounded-panel bg-card p-4 pb-2"
                     >
                         <div
                             class="flex h-full items-center justify-center text-sm text-muted-foreground"
@@ -143,10 +143,10 @@
                     </div>
                 </Pane>
                 <PaneResizer
-                    class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
+                    class="relative flex w-panel cursor-col-resize items-center justify-center"
                 >
                     <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
-                        <GripVertical class="text-diffuse-foreground" />
+                        <GripVertical class="size-4 text-diffuse-foreground/60" />
                     </div>
                 </PaneResizer>
                 <Pane defaultSize={35} minSize={25} class="flex min-h-0 flex-col">

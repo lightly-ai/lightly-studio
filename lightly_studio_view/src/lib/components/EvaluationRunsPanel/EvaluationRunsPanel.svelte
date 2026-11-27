@@ -58,7 +58,7 @@
 </script>
 
 <div
-    class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4"
+    class="flex min-h-0 flex-1 flex-col rounded-panel bg-card p-4"
     data-testid="evaluation-runs-panel"
 >
     <div class="mb-5 mt-2 flex items-center justify-between">
