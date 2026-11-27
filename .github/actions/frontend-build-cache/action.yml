@@ -1,0 +1,29 @@
+name: Frontend production build cache
+description: Look up a bundle before building it, or restore the prepared bundle for E2E.
+inputs:
+  lookup-only:
+    description: Producers look up the bundle. Consumers require an exact hit and restore it.
+    default: 'true'
+outputs:
+  cache-hit:
+    description: Whether the bundle exists for this checkout.
+    value: ${{ steps.cache.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    # export_version.py embeds the commit and whether its version tag points to HEAD.
+    - name: Hash version tags on the checked-out commit
+      id: version
+      shell: bash
+      run: |
+        tags=$(git tag --points-at HEAD --list 'v*' --sort=refname | sha256sum | cut -d' ' -f1)
+        echo "tags=$tags" >> "$GITHUB_OUTPUT"
+
+    - name: Cache frontend bundle
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: lightly_studio_view/build
+        key: python-build-v2-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ steps.version.outputs.tags }}
+        lookup-only: ${{ inputs.lookup-only }}
+        fail-on-cache-miss: ${{ inputs.lookup-only == 'false' }}

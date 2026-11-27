@@ -5,6 +5,7 @@ on:
     branches:
       - main
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   merge_group:
   workflow_dispatch:
 
@@ -63,6 +64,7 @@ jobs:
               - 'pyproject.toml'
               - 'uv.lock'
             frontend:
+              - '.github/actions/frontend-build-cache/**'
               - '.github/workflows/unit_test.yml'
               - 'lightly_studio_view/**'
             docs:
@@ -160,10 +162,33 @@ jobs:
           make export-schema
           make export-version
 
-      # `make build` installs deps (build: install) before building.
-      - name: Build app to get svelte types
+      # E2E owns the build except on unlabeled drafts or a standalone Unit dispatch.
+      - name: Look up frontend build
+        id: cache-build
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          (github.event.pull_request.draft == true &&
+          !contains(github.event.pull_request.labels.*.name, 'run-e2e') &&
+          !contains(github.event.pull_request.labels.*.name, 'run-e2e-merge-queue'))
+        uses: ./.github/actions/frontend-build-cache
+
+      - name: Install frontend dependencies
         working-directory: lightly_studio_view
-        run:  make build
+        run: npm ci
+
+      - name: Build frontend on cache miss
+        id: build
+        if: steps.cache-build.outcome == 'success' && steps.cache-build.outputs.cache-hit != 'true'
+        working-directory: lightly_studio_view
+        run: npm run build
+
+      # npm run build already runs both generators through prebuild.
+      - name: Generate sources for static checks
+        if: steps.build.outcome == 'skipped'
+        working-directory: lightly_studio_view
+        run: |
+          npm run generate-language
+          npm run generate-api-client
 
       - name: Make static checks
         working-directory: lightly_studio_view
