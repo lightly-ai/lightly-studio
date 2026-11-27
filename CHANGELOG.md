@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Press `Q` and `C` to choose the select and create cuboid tools in the point cloud workspace (configurable in Settings → Shortcuts). In edit mode, press Delete or Backspace to delete the selected cuboid. Settings → Shortcuts now lists all point cloud shortcuts.
 - Show or hide the panels of the 3D workspace with toggles in its header. Dock the orthographic views and the camera strip below or to the right of the 3D scene with the dock button in their panel header.
 - Python SDK: Add polygon annotations from COCO and YOLO with `annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION`.
+- Type the mask brush size in pixels, from 1 px up to 500 px.
 
 ### Changed
 - Segmentation evaluation reports an error for annotation sources with polygons.

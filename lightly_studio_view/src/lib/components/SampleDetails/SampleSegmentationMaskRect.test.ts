@@ -117,7 +117,7 @@ vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
 
 const baseProps = {
     collectionId: 'collection-1',
-    brushRadius: 5,
+    brushSize: 10,
     drawerStrokeColor: 'rgb(0, 0, 255)',
     previewOpacity: 0.4,
     mousePosition: null,
@@ -248,7 +248,7 @@ describe('SampleSegmentationMaskRect', () => {
         const { container } = render(SampleSegmentationMaskRect, {
             props: {
                 ...baseProps,
-                brushRadius: 1,
+                brushSize: 2,
                 mousePosition: { x: 3.7, y: 5.2 },
                 sampleId: 'sample-1',
                 sample: { width: 100, height: 100, annotations: [] }
@@ -258,11 +258,25 @@ describe('SampleSegmentationMaskRect', () => {
         expect(container.querySelector('path')?.getAttribute('d')).toBe('M3 4H5V5H5V6H3V5H3V4Z');
     });
 
+    it('outlines a single pixel for a 1 px brush', () => {
+        const { container } = render(SampleSegmentationMaskRect, {
+            props: {
+                ...baseProps,
+                brushSize: 1,
+                mousePosition: { x: 3.7, y: 5.2 },
+                sampleId: 'sample-1',
+                sample: { width: 100, height: 100, annotations: [] }
+            }
+        });
+
+        expect(container.querySelector('path')?.getAttribute('d')).toBe('M3 5H4V6H3V5Z');
+    });
+
     it('shows a circle around the brush pixels for a size above 3', () => {
         const { container } = render(SampleSegmentationMaskRect, {
             props: {
                 ...baseProps,
-                brushRadius: 2,
+                brushSize: 4,
                 mousePosition: { x: 10.4, y: 19.6 },
                 sampleId: 'sample-1',
                 sample: { width: 100, height: 100, annotations: [] }

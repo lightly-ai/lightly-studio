@@ -52,7 +52,7 @@ describe('SampleEraserRect', () => {
                 sample: { width: 100, height: 100, annotations: [] },
                 mousePosition: null,
                 collectionId: 'collection-1',
-                brushRadius: 5,
+                brushSize: 10,
                 drawerStrokeColor: 'rgb(0, 0, 255)',
                 previewOpacity: 0.3,
                 refetch: vi.fn()
@@ -70,7 +70,7 @@ describe('SampleEraserRect', () => {
                 sample: { width: 100, height: 100, annotations: [] },
                 mousePosition: { x: 3.7, y: 5.2 },
                 collectionId: 'collection-1',
-                brushRadius: 1,
+                brushSize: 2,
                 drawerStrokeColor: 'rgb(0, 0, 255)',
                 previewOpacity: 0.3,
                 refetch: vi.fn()
@@ -88,7 +88,7 @@ describe('SampleEraserRect', () => {
                 sample: { width: 100, height: 100, annotations: [] },
                 mousePosition: { x: 10.4, y: 19.6 },
                 collectionId: 'collection-1',
-                brushRadius: 2,
+                brushSize: 4,
                 drawerStrokeColor: 'rgb(0, 0, 255)',
                 previewOpacity: 0.3,
                 refetch: vi.fn()

@@ -35,7 +35,7 @@
         mousePosition: { x: number; y: number } | null;
         sampleId: string;
         collectionId: string;
-        brushRadius: number;
+        brushSize: number;
         drawerStrokeColor: string;
         previewOpacity: number;
         annotationLabel?: string | null | undefined;
@@ -49,7 +49,7 @@
         interactionRect = $bindable<SVGRectElement>(),
         sampleId,
         collectionId,
-        brushRadius,
+        brushSize,
         drawerStrokeColor,
         previewOpacity,
         mousePosition,
@@ -121,8 +121,6 @@
     let previewCanvas = $state<HTMLCanvasElement | null>(null);
     let isPreviewVisible = $state(false);
 
-    // The slider sets a radius; the brush paints a disc of 2 * radius pixels.
-    const brushSize = $derived(brushRadius * 2);
     const brushCursor = $derived(mousePosition ? getBrushCursor(mousePosition, brushSize) : null);
 
     // Parse the color once and cache it for direct mask rendering.

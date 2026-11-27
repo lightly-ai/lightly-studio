@@ -62,7 +62,7 @@ const defaultProps = {
     isResizable: false,
     isEraser: false,
     selectedAnnotationId: null,
-    brushRadius: 10,
+    brushSize: 20,
     annotationType: 'object_detection',
     refetch: vi.fn(),
     toggleAnnotationSelection: vi.fn()

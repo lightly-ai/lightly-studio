@@ -28,6 +28,7 @@
     import { createAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import {
         createSampleDetailsToolbarContext,
+        DEFAULT_BRUSH_SIZE,
         isAssistedLabelingStatus,
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
@@ -77,7 +78,7 @@
     const {
         toggleSampleSelection,
         clearReversibleActions,
-        lastAnnotationBrushSize,
+        lastAnnotationBrushDiameter,
         toggleSampleAnnotationCropSelection,
         isSampleDetailsSidePanelCollapsed,
         openSampleDetailsSidePanel
@@ -99,7 +100,11 @@
     });
     createSampleDetailsToolbarContext();
 
-    const { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
+    const {
+        context: sampleDetailsToolbarContext,
+        setStatus,
+        setBrushSize
+    } = useSampleDetailsToolbarContext();
 
     const { selectAnnotation } = useAnnotationSelection();
 
@@ -256,9 +261,12 @@
         sampleDetailsToolbarContext.brush.mode === 'eraser' &&
             annotationType === AnnotationType.SEGMENTATION_MASK
     );
-    let brushRadius = $derived(
-        $lastAnnotationBrushSize[collectionId] ?? sampleDetailsToolbarContext.brush.size
-    );
+    // Restore the brush size saved for the collection, or the default when none is saved.
+    // Later saves must not re-run this.
+    $effect(() => {
+        const savedBrushSize = untrack(() => $lastAnnotationBrushDiameter)[collectionId];
+        setBrushSize(savedBrushSize ?? DEFAULT_BRUSH_SIZE);
+    });
 
     $effect(() => {
         if (!isEditingMode) {
@@ -332,7 +340,7 @@
                                     {isEraser}
                                     selectedAnnotationId={annotationLabelContext?.annotationId}
                                     annotationLabel={annotationLabelContext.annotationLabel}
-                                    {brushRadius}
+                                    brushSize={sampleDetailsToolbarContext.brush.size}
                                     {refetch}
                                     {annotationType}
                                     {toggleAnnotationSelection}

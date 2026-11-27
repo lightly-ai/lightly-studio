@@ -49,7 +49,7 @@
         isEraser: boolean;
         selectedAnnotationId: string | null | undefined;
         annotationLabel?: string | null | undefined;
-        brushRadius: number;
+        brushSize: number;
         annotationType: string | null | undefined;
         refetch: () => void;
         toggleAnnotationSelection: (sampleId: string) => void;
@@ -66,7 +66,7 @@
         annotationLabel,
         isEraser,
         refetch,
-        brushRadius,
+        brushSize,
         annotationType
     }: SampleDetailsImageContainerProps = $props();
 
@@ -280,7 +280,7 @@
     {/snippet}
     {#snippet zoomPanelContent()}
         {#if shouldShowBrushToolPopup}
-            <BrushToolPopUp />
+            <BrushToolPopUp {collectionId} />
         {/if}
         {#if shouldShowSlicToolPopup}
             <SlicToolPopUp isPending={$isPending} />
@@ -376,7 +376,7 @@
                 <SampleEraserRect
                     bind:interactionRect
                     {collectionId}
-                    {brushRadius}
+                    {brushSize}
                     {refetch}
                     {sample}
                     {mousePosition}
@@ -390,7 +390,7 @@
                     {mousePosition}
                     {sampleId}
                     {collectionId}
-                    {brushRadius}
+                    {brushSize}
                     {refetch}
                     {drawerStrokeColor}
                     previewOpacity={previewMaskOpacity}

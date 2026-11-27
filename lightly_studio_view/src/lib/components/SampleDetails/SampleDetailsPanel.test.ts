@@ -3,7 +3,8 @@ import { createRawSnippet } from 'svelte';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockToolbarContext = { status: 'cursor', brush: { mode: 'brush', size: 50 } };
+const mockToolbarContext = { status: 'cursor', brush: { mode: 'brush', size: 100 } };
+const lastAnnotationBrushDiameter = writable<Record<string, number>>({});
 
 const mockAnnotationLabelContext: Record<string, unknown> = {};
 const isEditingMode = writable(false);
@@ -19,6 +20,9 @@ vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => (
         context: mockToolbarContext,
         setStatus: (status: string) => {
             mockToolbarContext.status = status;
+        },
+        setBrushSize: (size: number) => {
+            mockToolbarContext.brush.size = size;
         }
     })
 }));
@@ -39,7 +43,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         addReversibleAction: vi.fn(),
         reversibleActions: writable([]),
         executeReversibleAction: vi.fn(),
-        lastAnnotationBrushSize: writable({}),
+        lastAnnotationBrushDiameter,
         imageBrightness: writable(0),
         imageContrast: writable(0),
         maskOpacity: writable(0),
@@ -123,11 +127,34 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockToolbarContext.status = 'cursor';
+        mockToolbarContext.brush.size = 100;
+        lastAnnotationBrushDiameter.set({});
         mockAnnotationLabelContext.annotationType = null;
         mockAnnotationLabelContext.annotationId = null;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
         isEditingMode.set(false);
         userRole = 'labeler';
+    });
+
+    it('uses the brush size saved for the collection', () => {
+        lastAnnotationBrushDiameter.set({ 'collection-1': 37, 'collection-2': 5 });
+        render(SampleDetailsPanel, { props: defaultProps });
+        expect(mockToolbarContext.brush.size).toBe(37);
+    });
+
+    it('uses the default brush size when nothing is saved for the collection', () => {
+        mockToolbarContext.brush.size = 37;
+        render(SampleDetailsPanel, { props: defaultProps });
+        expect(mockToolbarContext.brush.size).toBe(100);
+    });
+
+    it('resets the brush size when switching to a collection with no saved size', async () => {
+        lastAnnotationBrushDiameter.set({ 'collection-1': 37 });
+        const { rerender } = render(SampleDetailsPanel, { props: defaultProps });
+        expect(mockToolbarContext.brush.size).toBe(37);
+
+        await rerender({ ...defaultProps, collectionId: 'collection-2' });
+        expect(mockToolbarContext.brush.size).toBe(100);
     });
 
     it('selects on space and goes back on escape', async () => {

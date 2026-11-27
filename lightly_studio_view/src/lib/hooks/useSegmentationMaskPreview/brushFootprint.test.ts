@@ -62,6 +62,15 @@ describe('getBrushSpans', () => {
     it('paints one pixel for a size below 1', () => {
         expect(getBrushSpans({ x: 3, y: 5 }, 0.4)).toEqual([{ y: 5, xStart: 3, width: 1 }]);
     });
+
+    it('covers a disc 37 pixels wide and tall for size 37', () => {
+        const spans = getBrushSpans({ x: 100, y: 100 }, 37);
+
+        expect(spans).toHaveLength(37);
+        expect(spans[0].y).toBe(82);
+        expect(spans[36].y).toBe(118);
+        expect(spans.find((span) => span.y === 100)).toEqual({ y: 100, xStart: 82, width: 37 });
+    });
 });
 
 describe('getStrokeAnchors', () => {

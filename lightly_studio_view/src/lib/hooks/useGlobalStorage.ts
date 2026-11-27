@@ -88,9 +88,9 @@ const lastAnnotationSource = useSessionStorage<Record<string, string>>(
     {}
 );
 
-// Store the most recently selected annotation brush size.
-const lastAnnotationBrushSize = useSessionStorage<Record<string, number>>(
-    'lightlyStudio_last_annotation_brush_size',
+// Store the most recently selected mask brush diameter in pixels, per collection.
+const lastAnnotationBrushDiameter = useSessionStorage<Record<string, number>>(
+    'lightlyStudio_last_annotation_brush_diameter',
     {}
 );
 
@@ -476,10 +476,10 @@ export const useGlobalStorage = () => {
         // Follows a delete of the source that new annotations go to.
         removeLastAnnotationSource: (collectionId: string, name: string) =>
             lastAnnotationSource.update((value) => removeForCollection(value, collectionId, name)),
-        lastAnnotationBrushSize,
-        updateLastAnnotationBrushSize: (collectionId: string, size: number) => {
-            lastAnnotationBrushSize.update((value) => {
-                value[collectionId] = size;
+        lastAnnotationBrushDiameter,
+        updateLastAnnotationBrushDiameter: (collectionId: string, diameter: number) => {
+            lastAnnotationBrushDiameter.update((value) => {
+                value[collectionId] = diameter;
                 return value;
             });
         },
