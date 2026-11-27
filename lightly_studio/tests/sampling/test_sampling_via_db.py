@@ -166,7 +166,59 @@ def test_sampling_via_database__preselected_sample_without_embedding(
         strategies=[EmbeddingDiversityStrategy(embedding_model_name="model")],
     )
 
-    with pytest.raises(ValueError, match=r"1 preselected samples have no embedding"):
+    with pytest.raises(ValueError, match=r"Preselected samples without an embedding: 1\."):
+        sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+
+def test_sampling_via_database__preselected_sample_after_samples_without_embedding(
+    db_session: Session,
+) -> None:
+    # The embeddings are [0, 0], [2, 2] and [4, 4], so the sample farthest from the
+    # preselected sample 4 is sample 0.
+    collection_id, sample_ids = helpers_sampling.create_images_with_embeddings(
+        session=db_session,
+        embedding_models_per_image=[["model"], [], ["model"], [], ["model"]],
+    )
+    preselected_tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="preselected"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=preselected_tag.tag_id, sample_ids=[sample_ids[4]]
+    )
+    config = SamplingConfig(
+        collection_id=collection_id,
+        n_samples_to_select=1,
+        sampling_result_tag_name="result",
+        preselected_tag_name="preselected",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="model")],
+    )
+
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    assert set(_sample_ids_by_tag_name(db_session, collection_id, "result")) == {
+        sample_ids[0],
+        sample_ids[4],
+    }
+
+
+def test_sampling_via_database__no_sample_has_embedding(
+    db_session: Session,
+) -> None:
+    collection_id, sample_ids = helpers_sampling.create_images_with_embeddings(
+        session=db_session,
+        embedding_models_per_image=[[], []],
+    )
+    create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_model_name="model"
+    )
+    config = SamplingConfig(
+        collection_id=collection_id,
+        n_samples_to_select=1,
+        sampling_result_tag_name="result",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="model")],
+    )
+
+    with pytest.raises(ValueError, match=r"None of the 2 samples has an embedding\."):
         sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
 

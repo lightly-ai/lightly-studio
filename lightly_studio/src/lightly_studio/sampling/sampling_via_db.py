@@ -256,9 +256,9 @@ def sampling_via_database(
 
     Raises:
         ValueError: If the preselected tag does not exist, if its sample IDs are
-            not a subset of the input sample IDs, if a preselected sample has no
-            embedding of a model that a strategy uses, or if the result tag name is
-            taken by a tag other than the preselected one.
+            not a subset of the input sample IDs, if no input sample or a preselected
+            sample has no embedding of a model that a strategy uses, or if the result
+            tag name is taken by a tag other than the preselected one.
     """
     preselected_sample_ids = _get_preselected_sample_ids(
         session=session,
@@ -409,7 +409,8 @@ def _drop_samples_without_embeddings(
     The order of ``input_sample_ids`` is kept, because Mundig indices map back to it.
 
     Raises:
-        ValueError: If a preselected input sample has no embedding of such a model.
+        ValueError: If a preselected input sample, or every input sample, has no
+            embedding of such a model.
     """
     embedding_model_names = _get_embedding_model_names(strategies=config.strategies)
     if not embedding_model_names:
@@ -425,19 +426,22 @@ def _drop_samples_without_embeddings(
     )
     if preselected_without_embedding:
         raise ValueError(
-            f"{len(preselected_without_embedding)} preselected samples have no embedding. "
-            "Remove them from the preselected tag."
+            "Preselected samples without an embedding: "
+            f"{len(preselected_without_embedding)}. Remove them from the preselected tag."
         )
     kept_sample_ids = [
         sample_id for sample_id in input_sample_ids if sample_id in embedded_sample_ids
     ]
     n_left_out = len(input_sample_ids) - len(kept_sample_ids)
-    if n_left_out > 0:
-        logger.warning(
-            "%d of %d samples have no embedding and were left out of sampling.",
-            n_left_out,
-            len(input_sample_ids),
-        )
+    if n_left_out == 0:
+        return kept_sample_ids
+    if not kept_sample_ids:
+        raise ValueError(f"None of the {n_left_out} samples has an embedding.")
+    logger.warning(
+        "%d of %d samples have no embedding and were left out of sampling.",
+        n_left_out,
+        len(input_sample_ids),
+    )
     return kept_sample_ids
 
 
