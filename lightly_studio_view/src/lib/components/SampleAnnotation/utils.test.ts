@@ -7,6 +7,7 @@ import {
     decodeRLEToBinaryMask,
     maskToDataUrl,
     interpolateLineBetweenPoints,
+    polygonsToSvgPath,
     rleToSvgPath
 } from '$lib/components/SampleAnnotation/utils';
 
@@ -89,6 +90,53 @@ describe('SampleAnnotationUtils', () => {
         const path = rleToSvgPath([2, 4, 3, 1], 4);
 
         expect(path).toBe('M2 0h2v1h-2zM0 1h2v1h-2zM1 2h1v1h-1z');
+    });
+
+    it('converts each polygon part into a closed subpath', () => {
+        expect(
+            polygonsToSvgPath([
+                [
+                    [1, 2],
+                    [11, 2],
+                    [11, 14]
+                ],
+                [
+                    [20, 20],
+                    [30, 20],
+                    [30, 30]
+                ]
+            ])
+        ).toBe('M1 2L11 2L11 14ZM20 20L30 20L30 30Z');
+    });
+
+    it('skips parts with fewer than three vertices', () => {
+        expect(
+            polygonsToSvgPath([
+                [
+                    [1, 2],
+                    [3, 4]
+                ]
+            ])
+        ).toBe('');
+    });
+
+    it('writes parts of opposite winding in the same direction', () => {
+        expect(
+            polygonsToSvgPath([
+                [
+                    [0, 0],
+                    [4, 0],
+                    [4, 4],
+                    [0, 4]
+                ],
+                [
+                    [2, 2],
+                    [2, 6],
+                    [6, 6],
+                    [6, 2]
+                ]
+            ])
+        ).toBe('M0 0L4 0L4 4L0 4ZM6 2L6 6L2 6L2 2Z');
     });
 
     it('interpolates points along a line', () => {

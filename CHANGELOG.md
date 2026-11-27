@@ -13,10 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show or hide the panels of the 3D workspace with toggles in its header. Dock the orthographic views and the camera strip below or to the right of the 3D scene with the dock button in their panel header.
 - Lock or unlock all annotations of a sample at once in edit mode, from the Annotations panel header or from the header of each annotation source.
 - Python SDK: Add polygon annotations from COCO and YOLO with `annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION`.
+- The GUI shows the outline and fill of polygon annotations instead of their bounding boxes.
 
 ### Changed
 - Segmentation evaluation reports an error for annotation sources with polygons.
-- BREAKING: Python SDK: COCO instance segmentation loads polygons as polygon annotations with their vertices, not as segmentation masks with only a box. Query them with `PolygonQuery` instead of `SegmentationMaskQuery`; the GUI shows them as boxes for now.
+- BREAKING: Python SDK: COCO instance segmentation loads polygons as polygon annotations with their vertices, not as segmentation masks with only a box. Query them with `PolygonQuery` instead of `SegmentationMaskQuery`.
 
 ### Deprecated
 - Python SDK: `annotation_type` in the COCO methods. Use `annotation_task` instead.
