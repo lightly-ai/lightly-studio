@@ -34,6 +34,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
+from lightly_studio.core.image.transport_image_dataset_evaluate import TransportImageDatasetEvaluate
 from lightly_studio.core.image.transport_image_dataset_export import TransportImageDatasetExport
 from lightly_studio.dataset import fsspec_lister
 from lightly_studio.embed import embed_samples
@@ -791,11 +792,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         """
         if query is None:
             query = self.query()
-        return ImageDatasetEvaluate(
-            session=self.session,
-            collection_id=self.collection_id,
-            # A generator, so the dataset scan runs only when a write method reads sample_ids.
-            sample_ids=(sample.sample_id for sample in query),
+        return TransportImageDatasetEvaluate(
+            session=self.session, collection_id=self.collection_id, query=query
         )
 
 

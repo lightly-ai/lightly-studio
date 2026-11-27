@@ -859,7 +859,8 @@ def test_readback_does_not_materialize_sample_ids(
             annotation_label_id=label.annotation_label_id,
             annotation_collection_name=source_name,
         )
-    evaluator = dataset.evaluate()
+    # A sliced query uses the SQL path, which reads the sample IDs.
+    evaluator = dataset.evaluate(query=dataset.query()[:1])
 
     evaluator.list_runs()
     # The cached property is absent until read, so readback did not scan the dataset.
@@ -898,7 +899,7 @@ def test_write_method_does_not_shrink_cached_sample_ids(
             annotation_label_id=label.annotation_label_id,
             annotation_collection_name=source_name,
         )
-    evaluator = dataset.evaluate()
+    evaluator = dataset.evaluate(query=dataset.query()[:2])
 
     evaluator.object_detection(
         name="run-1", gt_annotation_source="gt", pred_annotation_source="pred"
