@@ -63,7 +63,7 @@
     };
 </script>
 
-<div class="flex h-full min-w-0 flex-1 flex-col rounded-[1vw] bg-card p-4">
+<div class="flex h-full min-w-0 flex-1 flex-col rounded-panel bg-card p-4">
     <QueryEditorPanelHeader {sampleType} {onClose} />
     {#key editorKey}
         <QueryEditor

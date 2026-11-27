@@ -57,7 +57,7 @@
     });
 </script>
 
-<div class="mt-3 border-t border-border-hard bg-card px-6 py-1.5 text-sm">
+<div class="mt-panel border-t border-border-hard bg-card px-6 py-1.5 text-sm">
     <div class="mx-auto flex items-center justify-between gap-5">
         <div class="flex items-center gap-2">
             {#if statsText}

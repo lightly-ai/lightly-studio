@@ -25,7 +25,7 @@ describe('LayoutCard', () => {
         expect(card).toHaveClass('h-full');
         expect(card).toHaveClass('w-full');
         expect(card).toHaveClass('space-y-6');
-        expect(card).toHaveClass('rounded-[1vw]');
+        expect(card).toHaveClass('rounded-panel');
         expect(card).toHaveClass('bg-card');
     });
 

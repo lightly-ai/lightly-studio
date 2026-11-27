@@ -33,7 +33,7 @@
     <div
         class={cn(
             'flex min-h-0 min-w-0 flex-1 flex-col',
-            isFullscreen && 'mx-4 mb-4 rounded-[1vw] bg-card px-4 py-2'
+            isFullscreen && 'mx-4 mb-4 rounded-panel bg-card px-4 py-2'
         )}
     >
         <WorkspaceChrome />

@@ -25,7 +25,7 @@
     const { activePanel, toggle } = useSidePanelTabs({ getCollectionId: () => collectionId });
 </script>
 
-<div class="flex w-14 flex-col gap-2 rounded-xl bg-card p-1.5">
+<div class="flex w-14 flex-col gap-2 rounded-panel bg-card p-1.5">
     {#if hasMediaWithEmbeddings}
         <Tooltip
             content="Explore the embedding space"

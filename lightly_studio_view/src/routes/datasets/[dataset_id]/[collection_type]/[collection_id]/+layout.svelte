@@ -8,6 +8,7 @@
         Footer,
         LabelsMenu,
         Onboarding,
+        PanelTitleBar,
         SelectionPill,
         ShowFiltersButton,
         TagsMenu
@@ -700,7 +701,7 @@
     {#if isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails || isPointCloudLabeling}
         {@render children()}
     {:else}
-        <div class="flex min-h-0 flex-1 gap-4 px-4" data-testid="workspace-body">
+        <div class="flex min-h-0 flex-1 gap-panel px-panel" data-testid="workspace-body">
             {#if hasFilterPanel}
                 <!--
                     Keep the panel mounted while collapsed (only visually hidden). Its children
@@ -713,15 +714,12 @@
                     data-onboarding-filter-panel
                     aria-hidden={$filterPanelCollapsed}
                 >
-                    <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <h2
-                            class="flex items-center justify-between px-4 py-2 text-lg font-semibold"
-                        >
-                            <span class="flex items-center space-x-2">
+                    <div class="flex min-h-0 flex-1 flex-col rounded-panel bg-card py-4">
+                        <PanelTitleBar title="Filters" class="px-4 pb-2">
+                            {#snippet leading()}
                                 <Filter class="size-5" />
-                                <span>Filters</span>
-                            </span>
-                            <span class="flex items-center gap-1">
+                            {/snippet}
+                            {#snippet actions()}
                                 <ClearAllFiltersButton
                                     collectionId={metadataCollectionId}
                                     {isCaptions}
@@ -742,8 +740,8 @@
                                         }}
                                     />
                                 </Tooltip>
-                            </span>
-                        </h2>
+                            {/snippet}
+                        </PanelTitleBar>
                         <div
                             class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 [scrollbar-gutter:stable] dark:[color-scheme:dark]"
                         >
@@ -846,7 +844,7 @@
                             />
                         </div>
                     </div>
-                    <Separator class="mb-4 bg-border-hard" />
+                    <Separator class="mb-4 !mt-2 bg-border-hard" />
                 {/if}
 
                 <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -859,10 +857,10 @@
 
             {#snippet paneResizer()}
                 <PaneResizer
-                    class="relative mx-2 flex w-1 cursor-col-resize items-center justify-center"
+                    class="relative flex w-panel cursor-col-resize items-center justify-center"
                 >
                     <div class="bg-brand z-10 flex h-7 min-w-5 items-center justify-center">
-                        <GripVertical class="text-diffuse-foreground" />
+                        <GripVertical class="size-4 text-diffuse-foreground/60" />
                     </div>
                 </PaneResizer>
             {/snippet}
@@ -872,7 +870,7 @@
                     <PaneGroup direction="horizontal" class="min-w-0 flex-1">
                         <Pane defaultSize={65} minSize={35} class="flex">
                             <div
-                                class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                                class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-panel bg-card p-4 pb-2"
                             >
                                 {@render mainContent()}
                             </div>
@@ -954,7 +952,7 @@
             {:else}
                 <!-- Normal layout (no side panel) -->
                 <div
-                    class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-[1vw] bg-card p-4 pb-2"
+                    class="relative flex min-w-0 flex-1 flex-col space-y-4 rounded-panel bg-card p-4 pb-2"
                 >
                     {@render mainContent()}
                 </div>

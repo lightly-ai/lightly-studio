@@ -51,7 +51,7 @@
 
 <div
     bind:this={barEl}
-    class="my-2 flex min-h-10 min-w-0 items-center gap-x-4 gap-y-2"
+    class="mb-2 flex min-h-10 min-w-0 items-center gap-x-4 gap-y-2"
     class:flex-nowrap={!compact}
     class:flex-wrap={compact}
 >

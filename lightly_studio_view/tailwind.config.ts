@@ -66,7 +66,11 @@ const config: Config = {
 					ring: "hsl(var(--sidebar-ring))",
         		},
 			},
+			spacing: {
+				panel: "var(--panel-gap)"
+			},
 			borderRadius: {
+				panel: "var(--panel-gap)",
 				xl: "calc(var(--radius) + 4px)",
 				lg: "var(--radius)",
 				md: "calc(var(--radius) - 2px)",

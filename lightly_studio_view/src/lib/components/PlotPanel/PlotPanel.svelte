@@ -1,8 +1,9 @@
 <script lang="ts">
     import { untrack } from 'svelte';
     import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+    import X from '@lucide/svelte/icons/x';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { Button } from '$lib/components';
+    import { Button, PanelTitleBar } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotSelectionChip from './PlotSelectionChip/PlotSelectionChip.svelte';
     import { getPickHint } from './PlotSelectionChip/PlotSelectionChip.helpers';
@@ -606,30 +607,29 @@
     });
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
-    <div class="mb-5 mt-2 flex items-start justify-between gap-2">
-        <div class="flex flex-wrap items-center gap-3">
-            <div class="text-lg font-semibold">Embedding Plot</div>
-            <PlotAxesEditor
-                bind:draft={$textAxesDraft}
-                active={$plotLayout === 'text'}
-                isPending={$isEmbeddingAxes}
-                onCommit={commitPlotAxes}
-                onReset={() => selectPlotLayout('pacmap')}
+<div class="flex min-h-0 flex-1 flex-col rounded-panel bg-card p-4" data-testid="plot-panel">
+    <PanelTitleBar title="Embedding Plot" class="mb-5">
+        <PlotAxesEditor
+            bind:draft={$textAxesDraft}
+            active={$plotLayout === 'text'}
+            isPending={$isEmbeddingAxes}
+            onCommit={commitPlotAxes}
+            onReset={() => selectPlotLayout('pacmap')}
+        />
+        {#snippet actions()}
+            <Button
+                variant="ghost"
+                icon={X}
+                ariaLabel="Close embedding plot"
+                buttonProps={{
+                    size: 'icon',
+                    onclick: handleClose,
+                    class: 'h-8 w-8',
+                    'data-testid': 'plot-close-button'
+                }}
             />
-        </div>
-        <Button
-            variant="ghost"
-            buttonProps={{
-                size: 'icon',
-                onclick: handleClose,
-                class: 'h-8 w-8',
-                'data-testid': 'plot-close-button'
-            }}
-        >
-            ✕
-        </Button>
-    </div>
+        {/snippet}
+    </PanelTitleBar>
     <div class="relative flex min-h-0 flex-1 flex-col">
         {#if plotComputeGate.view === 'prompt'}
             <PlotComputePrompt

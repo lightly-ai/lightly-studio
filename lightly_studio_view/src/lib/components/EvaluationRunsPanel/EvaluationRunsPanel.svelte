@@ -2,7 +2,7 @@
     import ArrowLeft from '@lucide/svelte/icons/arrow-left';
     import Plus from '@lucide/svelte/icons/plus';
     import X from '@lucide/svelte/icons/x';
-    import { Button, Spinner, Typography } from '$lib/components';
+    import { Button, PanelTitleBar, Spinner, Typography } from '$lib/components';
     import { usePostHog } from '$lib/hooks';
 
     import EvaluationRunItem from './EvaluationRunItem/EvaluationRunItem.svelte';
@@ -58,11 +58,11 @@
 </script>
 
 <div
-    class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4"
+    class="flex min-h-0 flex-1 flex-col rounded-panel bg-card p-4"
     data-testid="evaluation-runs-panel"
 >
-    <div class="mb-5 mt-2 flex items-center justify-between">
-        <div class="flex min-w-0 items-center gap-1">
+    <PanelTitleBar title="Evaluations" class="mb-5">
+        {#snippet leading()}
             {#if expandedRun}
                 <Button
                     variant="ghost"
@@ -76,11 +76,8 @@
                     }}
                 />
             {/if}
-            <Typography variant="h5" component="h2" className="text-foreground">
-                Evaluations
-            </Typography>
-        </div>
-        <div class="flex items-center gap-1">
+        {/snippet}
+        {#snippet actions()}
             <Button
                 variant="ghost"
                 icon={X}
@@ -92,8 +89,8 @@
                     'data-testid': 'evaluation-runs-close-button'
                 }}
             />
-        </div>
-    </div>
+        {/snippet}
+    </PanelTitleBar>
 
     {#if canTrigger}
         <div class="mb-4">
