@@ -5,8 +5,11 @@
     import { AnnotationTargetHint } from '$lib/components/SampleDetails/AnnotationTargetHint';
     import { AnnotationTargetRadio } from '$lib/components/AnnotationSource';
     import type { useAnnotationPanelVisibility } from '../useAnnotationPanelVisibility.svelte';
+    import type { useAnnotationLocks } from '../useAnnotationLocks';
+    import { listLockableIds } from '$lib/utils';
 
     type Visibility = ReturnType<typeof useAnnotationPanelVisibility>;
+    type Locks = ReturnType<typeof useAnnotationLocks>;
 
     // The annotations of a sample, one group per annotation source.
     interface Props {
@@ -21,6 +24,9 @@
             Visibility,
             'isGroupHidden' | 'isGroupInitiallyOpen' | 'setGroupOpen' | 'toggleGroup'
         >;
+        /** Whether the user can lock annotations here: in edit mode, like the row lock. */
+        canLock: boolean;
+        locks: Pick<Locks, 'areAllLocked' | 'toggle'>;
         colorBySource: boolean;
         row: Snippet<[AnnotationView]>;
     }
@@ -32,6 +38,8 @@
         canPickTarget,
         onSetTarget,
         visibility,
+        canLock,
+        locks,
         colorBySource,
         row
     }: Props = $props();
@@ -44,6 +52,7 @@
     {#each groups as group (group.id)}
         {@const isTarget = group.name === targetSource}
         {@const isHidden = visibility.isGroupHidden(group)}
+        {@const lockableIds = listLockableIds(group.annotations)}
         <SampleDetailsAnnotationSourceGroup
             name={group.name}
             count={group.annotations.length}
@@ -58,6 +67,10 @@
                       e.stopPropagation();
                       visibility.toggleGroup(group);
                   }
+                : undefined}
+            allLocked={locks.areAllLocked(lockableIds)}
+            onToggleLock={canLock && lockableIds.length > 0
+                ? () => locks.toggle(lockableIds, 'source')
                 : undefined}
             onOpenChange={(open) => visibility.setGroupOpen(group.id, open)}
         >

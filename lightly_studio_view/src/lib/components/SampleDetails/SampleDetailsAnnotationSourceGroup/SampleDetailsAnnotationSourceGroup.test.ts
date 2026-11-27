@@ -171,4 +171,37 @@ describe('SampleDetailsAnnotationSourceGroup', () => {
         await rerender({ ...defaultProps, initiallyOpen: false, sampleId: 'sample-1' });
         expect(screen.getByTestId('group-content')).toBeInTheDocument();
     });
+
+    it('hides the lock when onToggleLock is omitted', () => {
+        render(SampleDetailsAnnotationSourceGroup, { props: defaultProps });
+
+        expect(
+            screen.queryByRole('button', { name: /lock all annotations in this source/i })
+        ).not.toBeInTheDocument();
+    });
+
+    it('calls onToggleLock when clicking the lock without collapsing the group', async () => {
+        const user = userEvent.setup();
+        const onToggleLock = vi.fn();
+        render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, allLocked: false, onToggleLock }
+        });
+
+        await user.click(
+            screen.getByRole('button', { name: 'Lock all annotations in this source' })
+        );
+
+        expect(onToggleLock).toHaveBeenCalledOnce();
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
+    });
+
+    it('shows the unlock action when all annotations of the source are locked', () => {
+        render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, allLocked: true, onToggleLock: vi.fn() }
+        });
+
+        expect(
+            screen.getByRole('button', { name: 'Unlock all annotations in this source' })
+        ).toBeInTheDocument();
+    });
 });

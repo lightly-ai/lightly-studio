@@ -20,6 +20,7 @@
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useAnnotationCollectionsFilter } from '$lib/hooks';
+    import { isAnnotationLockable } from '$lib/utils';
 
     const {
         annotation,
@@ -219,7 +220,7 @@
                     class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-3"
                 >
                     <div class="pointer-events-auto flex shrink-0 items-center gap-3">
-                        {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
+                        {#if $isEditingMode && isAnnotationLockable(annotation)}
                             {#if isLocked}
                                 <Tooltip
                                     content="Unlock annotation. Allows new brush strokes to paint over this mask again."

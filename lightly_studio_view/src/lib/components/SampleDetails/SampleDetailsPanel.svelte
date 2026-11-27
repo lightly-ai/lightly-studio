@@ -97,6 +97,11 @@
     $effect(() => {
         annotationLabelContext.isOnAnnotationDetailsView = isOnAnnotationDetailsView;
     });
+    // Locks apply to one sample. The panel stays mounted when the next sample is in the cache.
+    $effect(() => {
+        void sampleId;
+        annotationLabelContext.lockedAnnotationIds = new Set();
+    });
     createSampleDetailsToolbarContext();
 
     const { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();

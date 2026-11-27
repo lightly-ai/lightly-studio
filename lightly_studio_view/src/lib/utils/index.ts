@@ -2,6 +2,7 @@ export * from './triggerDownloadBlob';
 export * from './resolveEffectiveColorBySource';
 export * from './groupAnnotationLabels';
 export * from './countVisibleSources';
+export * from './annotationLocks';
 export * from './getColorByLabel';
 export * from './getColorBySource';
 export * from './namePerCollection';
