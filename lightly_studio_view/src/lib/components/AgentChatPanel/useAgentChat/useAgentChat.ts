@@ -2,149 +2,228 @@ import { client } from '$lib/api/lightly_studio_local/client.gen';
 import type {
     AgentChatRequest,
     AgentMessage,
+    AgentStreamLine,
     TurnDoneEvent
-} from '$lib/api/lightly_studio_local/types.gen';
-import { derived, get, readonly, writable } from 'svelte/store';
-import { applyEvent, dropIncompleteStep, EMPTY_LIVE_TURN } from './liveTurn';
+} from '$lib/api/lightly_studio_local';
+import { derived, get, writable } from 'svelte/store';
+import { v4 as uuid } from 'uuid';
+import {
+    chatHistory,
+    createChatHistory,
+    INTERRUPTED,
+    NEW_CHAT,
+    STOPPED,
+    type ChatHistory,
+    type ChatTurn,
+    type Conversation
+} from './chatHistory';
+import { dropIncompleteStep } from './liveTurn';
 import { readAgentStream } from './readAgentStream';
 
 type UiActions = TurnDoneEvent['ui_actions'];
 
-interface UseAgentChatParams {
+/** The text of the step that the model writes now. The next message replaces it. */
+interface LiveReply {
+    id: string;
+    text: string;
+    reasoning: string;
+}
+
+interface ChatOptions {
     collectionId: string;
-    /** Reads the samples that the user selected in the grid, at send time. */
     getSelectedSampleIds: () => string[];
-    /** Applies the GUI actions of a finished turn. */
     onUiActions: (actions: UiActions) => Promise<void>;
 }
 
-// The transcripts outlive the panel, so closing and opening it keeps the conversation.
-const transcriptsByCollection = writable<Record<string, AgentMessage[]>>({});
+const sessions = new Map<string, ReturnType<typeof createAgentChat>>();
 
-export function useAgentChat({
-    collectionId,
-    getSelectedSampleIds,
-    onUiActions
-}: UseAgentChatParams) {
-    const isSending = writable(false);
-    const error = writable<string | null>(null);
-    const liveTurn = writable(EMPTY_LIVE_TURN);
-    const transcript = derived(
-        transcriptsByCollection,
-        ($transcripts) => $transcripts[collectionId] ?? []
-    );
-    // The transcript, then the complete messages of the turn that streams now.
-    const messages = derived([transcript, liveTurn], ([$transcript, $liveTurn]) => [
-        ...$transcript,
-        ...$liveTurn.messages
-    ]);
-    const draft = derived(liveTurn, ($liveTurn) => $liveTurn.draft);
-    // The user picks a task after the greeting, until the first user message.
-    const isPickingTask = derived(
-        [transcript, isSending],
-        ([$transcript, $isSending]) =>
-            $transcript.length > 0 &&
-            !$isSending &&
-            $transcript.every((message) => message.role !== 'user')
-    );
-
-    const setTranscript = (value: AgentMessage[]) => {
-        transcriptsByCollection.update((all) => ({ ...all, [collectionId]: value }));
-    };
-
-    /** Reads the events of one turn. Returns the GUI actions if the turn is complete. */
-    const readTurn = async (response: Response): Promise<UiActions | null> => {
-        for await (const event of readAgentStream(response.body!)) {
-            if (event.type === 'turn_done') return event.ui_actions;
-            if (event.type === 'turn_error') {
-                error.set(event.detail);
-                return null;
-            }
-            liveTurn.update((turn) => applyEvent(turn, event));
-        }
-        error.set('The agent stopped before it finished.');
-        return null;
-    };
-
-    /** Runs one turn and appends its messages to the transcript that the turn starts from. */
-    const runTurn = async (startTranscript: AgentMessage[], request: () => Promise<Response>) => {
-        setTranscript(startTranscript);
-        isSending.set(true);
-        error.set(null);
-        let uiActions: UiActions | null = null;
-        try {
-            const response = await request();
-            if (response.ok && response.body) {
-                uiActions = await readTurn(response);
-            } else {
-                error.set(await readErrorDetail(response));
-            }
-        } catch (err) {
-            error.set(err instanceof Error ? err.message : String(err));
-        } finally {
-            setTranscript([...startTranscript, ...dropIncompleteStep(get(liveTurn).messages)]);
-            liveTurn.set(EMPTY_LIVE_TURN);
-            isSending.set(false);
-        }
-        if (uiActions) await onUiActions(uiActions);
-    };
-
-    const send = async (text: string) => {
-        const content = text.trim();
-        if (!content || get(isSending)) return;
-        const withQuestion = [...get(transcript), { role: 'user' as const, content }];
-        await runTurn(withQuestion, () =>
-            postAgent(collectionId, 'chat', {
-                messages: withQuestion,
-                selected_sample_ids: getSelectedSampleIds()
-            })
-        );
-    };
-
-    /** Starts a new conversation with the greeting of the agent. Does nothing in a conversation. */
-    const greet = async () => {
-        if (get(transcript).length > 0 || get(isSending)) return;
-        await runTurn([], () => postAgent(collectionId, 'greeting'));
-    };
-
-    const reset = () => {
-        setTranscript([]);
-        error.set(null);
-    };
+export function useAgentChat({ collectionId, getSelectedSampleIds, onUiActions }: ChatOptions) {
+    const session = sessions.get(collectionId) ?? createAgentChat(collectionId);
+    sessions.set(collectionId, session);
 
     return {
-        messages,
-        draft,
-        isSending: readonly(isSending),
-        isPickingTask,
-        error: readonly(error),
-        send,
-        greet,
-        reset
+        ...session,
+        send: (text: string) => session.send(text, getSelectedSampleIds, onUiActions)
     };
 }
 
-function postAgent(
+export function createAgentChat(collectionId: string, storage: ChatHistory = chatHistory) {
+    const { conversations, activeId, storageError, ready, select, update } = createChatHistory(
+        collectionId,
+        storage
+    );
+    const isLoading = writable(true);
+    const isSending = writable(false);
+    const liveReply = writable<LiveReply | null>(null);
+    let turnAbort: AbortController | undefined;
+    const active = derived([conversations, activeId], ([$all, $id]) => $all[$id]);
+    const history = derived(conversations, ($all) =>
+        Object.values($all)
+            .filter((conversation) => conversation.turns.length)
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+    );
+
+    void ready.then(() => isLoading.set(false));
+
+    function setDraft(draft: string) {
+        const conversation = get(active) ?? newConversation(NEW_CHAT);
+        update({ ...conversation, draft });
+    }
+
+    function newChat() {
+        select(NEW_CHAT);
+    }
+
+    function stop() {
+        turnAbort?.abort();
+    }
+
+    async function send(
+        text: string,
+        getSelectedSampleIds: () => string[],
+        onUiActions: (actions: UiActions) => Promise<void>
+    ) {
+        const prompt = text.trim();
+        if (!prompt || get(isSending) || get(isLoading)) return;
+
+        const current = get(active);
+        const starting = !current || current.id === NEW_CHAT;
+        const conversation = starting ? newConversation(uuid()) : current;
+        const { id, turns } = conversation;
+        const draft = current?.draft.trim() === prompt ? '' : (current?.draft ?? '');
+        const messages = [
+            ...turns.flatMap(toRequestMessages),
+            { role: 'user' as const, content: prompt }
+        ];
+        let turn: ChatTurn = { prompt, messages: [], status: 'running', startedAt: Date.now() };
+
+        function saveTurn() {
+            const saved = get(conversations)[id] ?? { ...conversation, draft };
+            update({ ...saved, updatedAt: Date.now(), turns: [...turns, turn] });
+        }
+
+        const abort = new AbortController();
+        turnAbort = abort;
+        isSending.set(true);
+        update({ ...conversation, draft, updatedAt: Date.now(), turns: [...turns, turn] });
+        if (starting) {
+            if (current?.draft) update({ ...current, draft: '' });
+            select(id);
+        }
+        try {
+            const actions = await streamTurn(
+                collectionId,
+                {
+                    messages,
+                    selected_sample_ids: getSelectedSampleIds()
+                },
+                (event) => {
+                    if (event.type === 'content_delta') {
+                        liveReply.update((reply) => ({
+                            id,
+                            text: (reply?.text ?? '') + event.text,
+                            reasoning: reply?.reasoning ?? ''
+                        }));
+                    } else if (event.type === 'reasoning_delta') {
+                        liveReply.update((reply) => ({
+                            id,
+                            text: reply?.text ?? '',
+                            reasoning: (reply?.reasoning ?? '') + event.text
+                        }));
+                    } else if (event.type === 'message') {
+                        turn = { ...turn, messages: [...turn.messages, event.message] };
+                        saveTurn();
+                        liveReply.set(null);
+                    }
+                },
+                abort.signal
+            );
+            turn = { ...turn, status: 'done', finishedAt: Date.now() };
+            saveTurn();
+            try {
+                await onUiActions(actions);
+            } catch {
+                turn = { ...turn, error: 'The reply finished, but the grid could not be updated.' };
+                saveTurn();
+            }
+        } catch (error) {
+            turn = {
+                ...turn,
+                status: 'failed',
+                finishedAt: Date.now(),
+                error: describeFailure(error, abort.signal)
+            };
+            saveTurn();
+        } finally {
+            turnAbort = undefined;
+            liveReply.set(null);
+            isSending.set(false);
+        }
+    }
+
+    return {
+        active,
+        activeId,
+        history,
+        isLoading,
+        isSending,
+        liveReply,
+        storageError,
+        ready,
+        newChat,
+        select,
+        setDraft,
+        send,
+        stop
+    };
+}
+
+function newConversation(id: string): Conversation {
+    return { id, updatedAt: Date.now(), draft: '', turns: [] };
+}
+
+/**
+ * Gets the messages of an earlier turn for the next request. A turn that failed before the
+ * agent answered is left out, because two user messages in a row confuse the model.
+ */
+function toRequestMessages(turn: ChatTurn): AgentMessage[] {
+    const answered = dropIncompleteStep(turn.messages);
+    return answered.length ? [{ role: 'user', content: turn.prompt }, ...answered] : [];
+}
+
+function describeFailure(error: unknown, signal: AbortSignal): string {
+    if (signal.aborted) return STOPPED;
+    return error instanceof Error ? error.message : INTERRUPTED;
+}
+
+async function streamTurn(
     collectionId: string,
-    endpoint: 'chat' | 'greeting',
-    body?: AgentChatRequest
-): Promise<Response> {
-    const url = `${client.getConfig().baseUrl}/api/collections/${collectionId}/agent/${endpoint}`;
-    if (!body) return fetch(url, { method: 'POST' });
-    return fetch(url, {
+    body: AgentChatRequest,
+    onEvent: (event: AgentStreamLine) => void,
+    signal: AbortSignal
+): Promise<UiActions> {
+    const url = `${client.getConfig().baseUrl}/api/collections/${collectionId}/agent/chat`;
+    const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal
     });
+    if (!response.ok || !response.body) throw new Error(await readErrorDetail(response));
+    for await (const event of readAgentStream(response.body)) {
+        if (event.type === 'turn_done') return event.ui_actions;
+        if (event.type === 'turn_error') throw new Error(event.detail);
+        onEvent(event);
+    }
+    throw new Error(INTERRUPTED);
 }
 
 async function readErrorDetail(response: Response): Promise<string> {
-    try {
-        const body: unknown = await response.json();
-        const detail = (body as { detail?: unknown }).detail;
-        if (typeof detail === 'string') return detail;
-    } catch {
-        // The body is not JSON. The generic message below describes the failure.
-    }
-    return 'The agent request failed.';
+    const body: { detail?: unknown; error?: unknown } | null = await response
+        .json()
+        .catch(() => null);
+    const detail = body?.detail ?? body?.error;
+    return typeof detail === 'string'
+        ? detail
+        : 'The agent could not answer. Try sending your message again.';
 }

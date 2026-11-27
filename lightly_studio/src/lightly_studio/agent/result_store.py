@@ -1,7 +1,7 @@
-"""Keeps the sample IDs that the agent tools find, behind short handles.
+"""Keeps the sample IDs that the agent tools find, behind unique handles.
 
 A tool that finds samples does not send their IDs to the model. It stores them here and
-gives the model a handle such as ``result_3``. A later tool reads the IDs back by that
+gives the model an opaque result handle. A later tool reads the IDs back by that
 handle. This keeps the prompt small and stops the model from copying UUIDs wrongly.
 
 The store lives in the memory of the process. A restart of the server forgets every
@@ -10,8 +10,8 @@ handle, and the model then has to search again.
 
 from __future__ import annotations
 
-import itertools
 import threading
+import uuid
 from collections import OrderedDict
 from collections.abc import Sequence
 from uuid import UUID
@@ -31,7 +31,6 @@ class ResultStore:
         """
         self._max_result_sets = max_result_sets
         self._result_sets: OrderedDict[str, tuple[UUID, list[UUID]]] = OrderedDict()
-        self._counter = itertools.count(start=1)
         self._lock = threading.Lock()
 
     def put(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> str:
@@ -42,10 +41,10 @@ class ResultStore:
             sample_ids: The sample IDs, in their result order.
 
         Returns:
-            A handle such as ``result_3``.
+            A unique handle for the result.
         """
+        handle = f"result_{uuid.uuid4().hex}"
         with self._lock:
-            handle = f"result_{next(self._counter)}"
             self._result_sets[handle] = (collection_id, list(sample_ids))
             while len(self._result_sets) > self._max_result_sets:
                 self._result_sets.popitem(last=False)
@@ -67,7 +66,10 @@ class ResultStore:
         with self._lock:
             entry = self._result_sets.get(handle)
         if entry is None or entry[0] != collection_id:
-            raise ValueError(f"Unknown result handle {handle!r}. Search again to get a new handle.")
+            raise ValueError(
+                f"Unknown result handle {handle!r}. "
+                "Find the samples again before using this result."
+            )
         return list(entry[1])
 
 

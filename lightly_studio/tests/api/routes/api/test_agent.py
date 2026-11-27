@@ -71,6 +71,88 @@ def test_agent_chat(db_session: Session, test_client: TestClient) -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "Give me a brief overview of this collection. Highlight what is worth exploring.",
+        "Give me the dataset statistics",
+    ],
+)
+def test_agent_chat__answers_overview_without_model(
+    db_session: Session, test_client: TestClient, prompt: str
+) -> None:
+    collection, ids = helpers_agent.create_collection_with_embeddings(
+        session=db_session, embeddings_by_file={"a.jpg": [1.0, 0.0], "b.jpg": [0.0, 1.0]}
+    )
+    chat_model = helpers_agent.ScriptedChatModel(replies=[])
+    _override_chat_model(chat_model)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/agent/chat",
+        json={
+            "messages": [{"role": "user", "content": prompt}],
+            "selected_sample_ids": [str(ids["a.jpg"])],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert chat_model.received_messages == []
+    events = _read_events(text=response.text)
+    assert [event["type"] for event in events] == ["message", "message", "message", "turn_done"]
+    call = events[0]["message"]["tool_calls"][0]
+    result = events[1]["message"]
+    assert call["function"]["name"] == "get_collection_overview"
+    assert result["tool_call_id"] == call["id"]
+    overview = json.loads(result["content"])
+    assert overview["sample_count"] == 2
+    assert overview["selected_sample_count"] == 1
+    assert events[2]["message"]["content"] == "The collection has 2 images."
+    assert events[-1]["ui_actions"] == []
+
+
+def test_agent_chat__writes_answer_after_suggestion_only_step(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection, _ = helpers_agent.create_collection_with_embeddings(
+        session=db_session, embeddings_by_file={"a.jpg": [1.0, 0.0], "b.jpg": [0.0, 1.0]}
+    )
+    steps = {"steps": [{"label": "Select samples", "prompt": "Select two samples."}]}
+    chat_model = helpers_agent.ScriptedChatModel(
+        replies=[
+            helpers_agent.tool_call_message(calls=[("overview", "get_collection_overview", {})]),
+            helpers_agent.tool_call_message(calls=[("suggestions", "suggest_next_steps", steps)]),
+            AgentMessage(role="assistant", content="The collection has 2 samples."),
+        ]
+    )
+    _override_chat_model(chat_model)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/agent/chat",
+        json={
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Give me the dataset statistics and compare them with my selection.",
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    events = _read_events(text=response.text)
+    assert [event["type"] for event in events[-3:]] == ["content_delta", "message", "turn_done"]
+    assert events[-3]["text"] == "The collection has 2 samples."
+    assert events[-2]["message"]["content"] == "The collection has 2 samples."
+    assert len(chat_model.received_messages) == 3
+    assert chat_model.received_tools[-1] == []
+    overview = next(
+        message
+        for message in chat_model.received_messages[-1]
+        if message.tool_call_id == "overview"
+    )
+    assert json.loads(overview.content or "")["sample_count"] == 2
+
+
 def test_agent_chat__not_found(test_client: TestClient) -> None:
     _override_chat_model(helpers_agent.ScriptedChatModel(replies=[]))
 
@@ -97,7 +179,7 @@ def test_agent_chat__video_collection(db_session: Session, test_client: TestClie
 
 def test_agent_chat__llm_error(db_session: Session, test_client: TestClient) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
-    _override_chat_model(_FailingChatModel())
+    _override_chat_model(_FailingChatModel(error=AgentLLMError("OpenRouter answered 401: bad key")))
 
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/agent/chat",
@@ -126,32 +208,22 @@ def test_agent_chat__no_api_key(
     assert "LIGHTLY_STUDIO_OPENROUTER_API_KEY" in response.json()["detail"]
 
 
-def test_agent_greeting(db_session: Session, test_client: TestClient) -> None:
+def test_agent_chat__unexpected_error(db_session: Session, test_client: TestClient) -> None:
     collection = helpers_resolvers.create_collection(session=db_session)
-    _override_chat_model(
-        helpers_agent.ScriptedChatModel(
-            replies=[AgentMessage(role="assistant", content="Hi. What do you want to do?")]
-        )
-    )
+    _override_chat_model(_FailingChatModel(error=RuntimeError("database is locked")))
 
-    response = test_client.post(f"/api/collections/{collection.collection_id}/agent/greeting")
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/agent/chat",
+        json={"messages": [_USER_MESSAGE]},
+    )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.headers["content-type"] == "application/x-ndjson"
-    events = _read_events(text=response.text)
-    assert [event["type"] for event in events] == ["content_delta", "message", "turn_done"]
-    assert events[1]["message"]["content"] == "Hi. What do you want to do?"
-
-
-def test_agent_greeting__video_collection(db_session: Session, test_client: TestClient) -> None:
-    collection = helpers_resolvers.create_collection(
-        session=db_session, sample_type=SampleType.VIDEO
-    )
-    _override_chat_model(helpers_agent.ScriptedChatModel(replies=[]))
-
-    response = test_client.post(f"/api/collections/{collection.collection_id}/agent/greeting")
-
-    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert _read_events(text=response.text) == [
+        {
+            "type": "turn_error",
+            "detail": "The agent stopped because of an internal error. See the server log.",
+        }
+    ]
 
 
 @pytest.fixture(autouse=True)
@@ -161,9 +233,12 @@ def _clear_chat_model_override() -> Generator[None, None, None]:
 
 
 class _FailingChatModel:
+    def __init__(self, error: Exception) -> None:
+        self._error = error
+
     def stream(self, messages: Any, tools: Any) -> Iterator[AgentMessage]:
         del messages, tools
-        raise AgentLLMError("OpenRouter answered 401: bad key")
+        raise self._error
         yield  # Makes this function a generator.
 
 

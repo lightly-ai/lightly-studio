@@ -28,8 +28,11 @@ def test_find_samples__metadata(db_session: Session) -> None:
         FindSamplesArgs(metadata=[MetadataFilter(key="weather", op="==", value="rain")]),
     )
 
-    assert result == {"result": "result_1", "count": 2}
-    assert set(_result_ids(context=context, handle="result_1")) == {ids["a.jpg"], ids["b.jpg"]}
+    assert result["count"] == 2
+    assert set(_result_ids(context=context, handle=result["result"])) == {
+        ids["a.jpg"],
+        ids["b.jpg"],
+    }
 
 
 def test_find_samples__annotation_classes_any_of(db_session: Session) -> None:

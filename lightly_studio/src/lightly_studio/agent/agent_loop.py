@@ -6,7 +6,6 @@ import json
 from collections.abc import Generator, Iterator, Sequence
 from typing import Any
 
-from lightly_studio.agent import overview_tool
 from lightly_studio.agent.agent_events import (
     AgentEvent,
     ContentDeltaEvent,
@@ -21,7 +20,7 @@ from lightly_studio.agent.docs_tools import DOCS_TOOLS
 from lightly_studio.agent.filter_tools import FILTER_TOOLS
 from lightly_studio.agent.openrouter_client import AgentLLMError, ChatModel
 from lightly_studio.agent.operator_tools import OPERATOR_TOOLS
-from lightly_studio.agent.overview_tool import OVERVIEW_TOOLS, GetCollectionOverviewArgs
+from lightly_studio.agent.overview_tool import OVERVIEW_TOOLS
 from lightly_studio.agent.search_tools import SEARCH_TOOLS
 from lightly_studio.agent.selection_tools import SELECTION_TOOLS
 from lightly_studio.agent.suggestion_tools import SUGGEST_NEXT_STEPS, SUGGESTION_TOOLS
@@ -51,8 +50,9 @@ Rules:
 - When the user picks a task without its details, for example "I want to select samples", \
 ask one short question for the missing details. Suggest a default that fits the collection.
 - Before you call tools, write one short sentence that tells the user your next step.
-- Tools that find samples return a result handle such as "result_3". Pass the handle to \
+- Tools that find samples return an opaque result handle. Pass it to \
 other tools. Never invent sample IDs or handles.
+- If a result handle is unavailable, explain that the sample set needs to be found again.
 - When the user asks for samples and a tag, first find the samples, then tag the handle.
 - When the user asks for samples but no tag, show them with show_samples.
 - When a request depends on the data, for example to choose selection strategies, call \
@@ -86,33 +86,16 @@ LightlyStudio assistant, developed by Lightly AI. Do not name the language model
 provider.
 - Answer in one to three short sentences. Name the tag and the number of samples. An \
 answer from the docs can have up to six short sentences or steps.
-- Send each final answer together with a call of suggest_next_steps, in the same message. \
-Suggest two or three steps that follow from the result and that your tools can do. After a \
+- Put the facts and results that answer the request in the final message text. Use plans and \
+progress updates before tool calls. Include a call to suggest_next_steps with the written \
+answer when it adds useful options. Avoid a separate step to generate suggestions. Suggest \
+two or three steps that follow from the result and that your tools can do. After a \
 search: tag the samples, find similar samples, or select diverse samples from them. After a \
 tag: select from the tag, or show the class distribution of the tag. After a selection: tag \
 it, or compare it with the target. After a docs answer: the task that the answer explains. \
 When your answer is a question, the steps are the answer options, for example "Annotated \
 clocks (12)" and "Text search for clocks". Each prompt is a complete request with real names \
 and counts. Do not suggest the request that the user just made."""
-
-# The user message of the greeting turn. The GUI does not show it and does not store it, so
-# the server adds it again before a transcript that starts with the greeting.
-GREETING_REQUEST = "Start the conversation."
-
-_GREETING_PROMPT = """\
-You are the assistant of LightlyStudio, a tool to curate image datasets. The user opened \
-the chat on the collection "{collection_name}". Greet the user in at most 90 words of plain \
-text, without markdown headings or bold text:
-- First, a brief analysis of the collection in two to four lines that start with "- ": its \
-size, its annotation classes and their balance, its metadata, and its tags and embeddings.
-- Name the most useful fact for curation, for example a strong class imbalance, or that \
-text search and similarity selection do not work because there is no embedding model.
-- Then ask what the user wants to do: select samples, find and tag samples, analyze the \
-collection further, ask a question about the docs, or something else.
-- Do not invent facts that are not in the overview.
-
-The overview of the collection, as JSON:
-{overview}"""
 
 # How to turn a selection request into strategies and their strengths. The model reads it
 # together with the JSON schema of each strategy in run_selection.
@@ -162,64 +145,35 @@ def stream_agent_turn(
     definitions = [tool.definition() for tool in tools]
     conversation = [message for message in history if message.role != "system"]
     transcript = [_system_message(context=context)]
-    # Some models reject a transcript that starts with an assistant message.
-    if conversation and conversation[0].role == "assistant":
-        transcript.append(AgentMessage(role="user", content=GREETING_REQUEST))
     transcript.extend(conversation)
     for _ in range(MAX_STEPS):
         reply = yield from _stream_reply(
             chat_model=chat_model, transcript=transcript, definitions=definitions
         )
-        transcript.append(reply)
-        yield MessageEvent(message=reply)
         if not reply.tool_calls:
+            _require_answer(reply=reply)
+            yield MessageEvent(message=reply)
             yield TurnDoneEvent(ui_actions=context.ui_actions)
             return
+        transcript.append(reply)
+        yield MessageEvent(message=reply)
         for call in reply.tool_calls:
             tool_message = _run_tool_call(context=context, tools_by_name=tools_by_name, call=call)
             transcript.append(tool_message)
             yield MessageEvent(message=tool_message)
-        if _is_final_step(reply=reply):
+        if _uses_only_suggestions(reply=reply):
+            if not (reply.content or "").strip():
+                answer = yield from _stream_reply(
+                    chat_model=chat_model, transcript=transcript, definitions=[]
+                )
+                _require_answer(reply=answer)
+                yield MessageEvent(message=answer)
             yield TurnDoneEvent(ui_actions=context.ui_actions)
             return
     stop_message = AgentMessage(
         role="assistant", content=f"I stopped after {MAX_STEPS} steps without a final answer."
     )
     yield MessageEvent(message=stop_message)
-    yield TurnDoneEvent(ui_actions=context.ui_actions)
-
-
-def stream_greeting_turn(chat_model: ChatModel, context: AgentContext) -> Iterator[AgentEvent]:
-    """Write the first message of a conversation: a brief analysis of the collection.
-
-    The server reads the overview itself, and the model gets no tools. The greeting therefore
-    takes one model call.
-
-    Args:
-        chat_model: The language model.
-        context: The context of the turn.
-
-    Returns:
-        An iterator over the events of the turn: the pieces of text while the model writes,
-        the greeting message, and a ``TurnDoneEvent`` without GUI actions.
-
-    Raises:
-        AgentLLMError: If the model gives no usable answer.
-    """
-    overview = overview_tool.get_collection_overview(
-        context=context, args=GetCollectionOverviewArgs()
-    )
-    prompt = _GREETING_PROMPT.format(
-        collection_name=context.collection.name, overview=json.dumps(overview)
-    )
-    transcript = [
-        AgentMessage(role="system", content=prompt),
-        AgentMessage(role="user", content=GREETING_REQUEST),
-    ]
-    greeting = yield from _stream_reply(
-        chat_model=chat_model, transcript=transcript, definitions=[]
-    )
-    yield MessageEvent(message=greeting)
     yield TurnDoneEvent(ui_actions=context.ui_actions)
 
 
@@ -231,14 +185,17 @@ def _system_message(context: AgentContext) -> AgentMessage:
     return AgentMessage(role="system", content=f"{rules}\n\n{_SELECTION_PLAYBOOK}")
 
 
-def _is_final_step(reply: AgentMessage) -> bool:
-    """Check whether a step only suggests the next steps, so the model has nothing left to do.
-
-    The tool results of the step stay in the transcript, because the model rejects a tool call
-    without a result on the next turn.
-    """
+def _uses_only_suggestions(reply: AgentMessage) -> bool:
+    """Check whether all calls in this step suggest follow-up actions."""
     calls = reply.tool_calls or []
     return bool(calls) and all(call.function.name == SUGGEST_NEXT_STEPS for call in calls)
+
+
+def _require_answer(reply: AgentMessage) -> None:
+    if reply.tool_calls or not (reply.content or "").strip():
+        raise AgentLLMError(
+            "The agent finished without a written answer. Check the activity before sending again."
+        )
 
 
 def _stream_reply(

@@ -1,34 +1,45 @@
-import type { AgentMessage } from '$lib/api/lightly_studio_local/types.gen';
+import type { AgentMessage } from '$lib/api/lightly_studio_local';
 import type { Suggestion } from './AgentChatSuggestions/suggestions';
+import { completedToolCalls, parseObject } from './completedToolCalls';
+import { suggestFromToolResult } from './suggestFromToolResult';
 
-/** The name of the agent tool that suggests the next steps. Its call ends the turn. */
 export const SUGGEST_NEXT_STEPS = 'suggest_next_steps';
+const MAX_SUGGESTIONS = 3;
 
-/**
- * Gets the next steps that the agent suggested at the end of the last turn. The suggestion
- * ends the turn, so only a transcript that ends with its tool result has current steps.
- */
+/** Gets follow-ups from the current turn, with a fallback based on completed tools. */
 export function getNextStepSuggestions(messages: AgentMessage[]): Suggestion[] {
-    if (messages.at(-1)?.role !== 'tool') return [];
-    const lastStep = messages.findLast((message) => message.role === 'assistant');
-    const call = lastStep?.tool_calls?.find(
-        (toolCall) => toolCall.function.name === SUGGEST_NEXT_STEPS
-    );
-    return call ? parseSteps(call.function.arguments) : [];
+    const turnStart = messages.findLastIndex((message) => message.role === 'user') + 1;
+    const turn = messages.slice(turnStart);
+    const calls = completedToolCalls(turn);
+    for (const { call } of calls) {
+        if (call.function.name !== SUGGEST_NEXT_STEPS) continue;
+        const steps = parseSteps(call.function.arguments);
+        if (steps.length) return steps;
+    }
+
+    const answer = turn.findLast((message) => message.role === 'assistant');
+    const answerText = answer?.content?.trim();
+    if (!answerText) return [];
+    if (answer?.tool_calls?.some((call) => call.function.name !== SUGGEST_NEXT_STEPS)) return [];
+    // Only the model knows the options of its own question. A guessed step would contradict it.
+    if (answerText.endsWith('?')) return [];
+    const latestWork = calls.find(({ call }) => call.function.name !== SUGGEST_NEXT_STEPS);
+    return latestWork
+        ? suggestFromToolResult(latestWork.call.function.name, latestWork.result)
+        : [];
 }
 
 function parseSteps(argumentsJson: string): Suggestion[] {
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(argumentsJson);
-    } catch {
-        return [];
-    }
-    const steps = (parsed as { steps?: unknown } | null)?.steps;
-    return Array.isArray(steps) ? steps.filter(isSuggestion) : [];
+    const steps = parseObject(argumentsJson)?.steps;
+    return Array.isArray(steps) ? steps.filter(isSuggestion).slice(0, MAX_SUGGESTIONS) : [];
 }
 
 function isSuggestion(value: unknown): value is Suggestion {
     const candidate = value as Partial<Suggestion> | null;
-    return typeof candidate?.label === 'string' && typeof candidate.prompt === 'string';
+    return (
+        typeof candidate?.label === 'string' &&
+        Boolean(candidate.label.trim()) &&
+        typeof candidate.prompt === 'string' &&
+        Boolean(candidate.prompt.trim())
+    );
 }

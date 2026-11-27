@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any
 from uuid import UUID
 
@@ -104,8 +104,8 @@ class ScriptedChatModel:
     A reply streams its reasoning and its content as one piece each, then the message.
     """
 
-    def __init__(self, replies: Sequence[AgentMessage]) -> None:
-        self._replies = list(replies)
+    def __init__(self, replies: Iterable[AgentMessage]) -> None:
+        self._replies = iter(replies)
         self.received_messages: list[list[AgentMessage]] = []
         self.received_tools: list[list[dict[str, Any]]] = []
 
@@ -114,7 +114,7 @@ class ScriptedChatModel:
     ) -> Iterator[ModelDelta | AgentMessage]:
         self.received_messages.append(list(messages))
         self.received_tools.append(list(tools))
-        reply = self._replies.pop(0)
+        reply = next(self._replies)
         if reply.reasoning:
             yield ReasoningDelta(text=reply.reasoning)
         if reply.content:

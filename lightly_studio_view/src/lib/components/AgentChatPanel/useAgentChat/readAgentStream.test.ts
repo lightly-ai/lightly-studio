@@ -31,6 +31,17 @@ describe('readAgentStream', () => {
         ]);
     });
 
+    it('yields a completed tool result before reporting a malformed event in the same chunk', async () => {
+        const result = {
+            type: 'message',
+            message: { role: 'tool', tool_call_id: 'call', content: '{}' }
+        };
+        const events = readAgentStream(streamOf([JSON.stringify(result) + '\ninvalid\n']));
+
+        await expect(events.next()).resolves.toMatchObject({ value: result });
+        await expect(events.next()).rejects.toThrow(SyntaxError);
+    });
+
     it('reads a multi-byte character that spans chunks', async () => {
         const bytes = new TextEncoder().encode('{"type":"content_delta","text":"é"}\n');
         const stream = new ReadableStream<Uint8Array>({

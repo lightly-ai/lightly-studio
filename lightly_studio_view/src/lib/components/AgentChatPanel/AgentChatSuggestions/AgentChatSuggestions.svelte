@@ -4,10 +4,11 @@
 
     interface Props {
         suggestions: Suggestion[];
+        disabled?: boolean;
         onPick: (prompt: string) => void;
     }
 
-    const { suggestions, onPick }: Props = $props();
+    const { suggestions, disabled = false, onPick }: Props = $props();
 </script>
 
 <div class="flex flex-wrap gap-2" data-testid="agent-chat-suggestions">
@@ -16,7 +17,8 @@
         <Button
             variant="outline"
             size="sm"
-            class="h-auto rounded-full px-3 py-1 text-xs"
+            {disabled}
+            class="h-auto max-w-full whitespace-normal break-words rounded-full px-3 py-1 text-left text-xs"
             onclick={() => onPick(suggestion.prompt)}
         >
             {suggestion.label}

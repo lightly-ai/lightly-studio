@@ -5,7 +5,7 @@ Several tools work on "some samples". The model names them with one string:
 - ``all``: every sample of the collection.
 - ``selection``: the samples that the user selected in the GUI.
 - ``tag:<name>``: the samples of a tag.
-- ``result_<n>``: the samples of an earlier result handle.
+- ``result_<id>``: the samples of an earlier result handle.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from lightly_studio.resolvers import image_resolver, tag_resolver
 SOURCE_DESCRIPTION = (
     "Which samples to use: 'all' for the whole collection, 'selection' for the samples that "
     "the user selected in the GUI, 'tag:<name>' for the samples of a tag, or a result handle "
-    "such as 'result_3' from an earlier tool call."
+    "from an earlier tool call."
 )
 
 _TAG_PREFIX = "tag:"

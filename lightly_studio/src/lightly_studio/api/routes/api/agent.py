@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Generator, Iterator
 from typing import Annotated
 from uuid import UUID
@@ -11,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from lightly_studio.agent import agent_loop
+from lightly_studio.agent import agent_loop, overview_request
 from lightly_studio.agent.agent_events import AgentEvent, AgentStreamLine, TurnErrorEvent
 from lightly_studio.agent.agent_tool import AgentContext
 from lightly_studio.agent.chat_messages import AgentMessage
@@ -30,6 +31,11 @@ from lightly_studio.plugins.operator_registry import operator_registry
 # How long one call of the language model may take. A model that calls tools can think for a
 # while before it answers.
 _LLM_TIMEOUT_SECONDS = 120.0
+
+# The text of a turn error that has no known cause. The server log has the details.
+_UNEXPECTED_ERROR = "The agent stopped because of an internal error. See the server log."
+
+logger = logging.getLogger(__name__)
 
 agent_router = APIRouter()
 
@@ -112,44 +118,12 @@ def agent_chat(
         result_store=default_result_store,
         operator_registry=operator_registry,
     )
-    events = agent_loop.stream_agent_turn(
-        chat_model=chat_model, context=context, history=request.messages
-    )
-    return NdjsonStreamingResponse(_to_lines(events=events))
-
-
-@agent_router.post(
-    "/collections/{collection_id}/agent/greeting",
-    response_class=NdjsonStreamingResponse,
-    responses={
-        200: {
-            "model": AgentStreamLine,
-            "description": "The events of the greeting turn, one JSON object per line.",
-        }
-    },
-)
-def agent_greeting(
-    session: SessionDep,
-    collection: Annotated[CollectionTable, Depends(get_and_validate_collection_id)],
-    chat_model: Annotated[ChatModel, Depends(get_chat_model)],
-) -> NdjsonStreamingResponse:
-    """Start a conversation: the agent writes a brief analysis of the collection.
-
-    The greeting asks the user what to do next. The GUI keeps the greeting as the first
-    message of the transcript.
-
-    Raises:
-        HTTPException: 400 if the collection is not an image collection.
-    """
-    _require_image_collection(collection=collection)
-    context = AgentContext(
-        session=session,
-        collection=collection,
-        selected_sample_ids=[],
-        result_store=default_result_store,
-        operator_registry=operator_registry,
-    )
-    events = agent_loop.stream_greeting_turn(chat_model=chat_model, context=context)
+    if overview_request.is_overview_request(history=request.messages):
+        events = overview_request.stream_overview(context=context)
+    else:
+        events = agent_loop.stream_agent_turn(
+            chat_model=chat_model, context=context, history=request.messages
+        )
     return NdjsonStreamingResponse(_to_lines(events=events))
 
 
@@ -162,9 +136,16 @@ def _require_image_collection(collection: CollectionTable) -> None:
 
 
 def _to_lines(events: Iterator[AgentEvent]) -> Iterator[str]:
-    """Write each event as one line of JSON. A model failure becomes the last event."""
+    """Write each event as one line of JSON. A failure becomes the last event.
+
+    The response status is already sent when the stream starts, so the stream must report
+    every failure itself. Otherwise the GUI sees only a connection that stops.
+    """
     try:
         for event in events:
             yield event.model_dump_json() + "\n"
     except AgentLLMError as exc:
         yield TurnErrorEvent(detail=str(exc)).model_dump_json() + "\n"
+    except Exception:
+        logger.exception("The agent turn failed.")
+        yield TurnErrorEvent(detail=_UNEXPECTED_ERROR).model_dump_json() + "\n"

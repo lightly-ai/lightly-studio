@@ -32,20 +32,20 @@ describe('toChatEntries', () => {
                 callId: 'call_1',
                 name: 'search_by_text',
                 status: 'done',
-                summary: '10 found'
+                summary: 'Found 10 samples'
             },
             {
                 kind: 'tool',
                 callId: 'call_2',
                 name: 'tag_samples',
                 status: 'done',
-                summary: '10 tagged, tag "tiger"'
+                summary: 'Tagged 10 samples, tag "tiger"'
             },
             { kind: 'assistant', text: 'Tagged 10 images.' }
         ]);
     });
 
-    it('shows the reasoning and the text of a step, and a tool without result as running', () => {
+    it('shows the thought and text of a step and a tool without a result as running', () => {
         const entries = toChatEntries([
             {
                 ...toolCall('call_1', 'get_collection_overview'),
@@ -103,7 +103,7 @@ describe('toChatEntries', () => {
 
         expect(entries.map((entry) => entry.kind === 'tool' && entry.summary)).toEqual([
             'typicality stored as "typicality"',
-            '200 selected, tag "picked", diversity x2 + weights(typicality) x1'
+            'Selected 200 samples, tag "picked", diversity x2 + weights(typicality) x1'
         ]);
     });
 

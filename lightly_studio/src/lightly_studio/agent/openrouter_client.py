@@ -129,8 +129,41 @@ def _raise_for_status(response: httpx.Response) -> None:
         return
     response.read()
     raise AgentLLMError(
-        f"OpenRouter answered {response.status_code}: {response.text[:_MAX_DETAIL_CHARS]}"
+        _describe_status(
+            status_code=response.status_code, provider_message=_error_message(response=response)
+        )
     )
+
+
+def _error_message(response: httpx.Response) -> str:
+    """Get the error text of a failed response, without the headers and metadata around it."""
+    try:
+        message = response.json()["error"]["message"]
+    except (ValueError, KeyError, TypeError):
+        return response.text[:_MAX_DETAIL_CHARS]
+    return str(message)[:_MAX_DETAIL_CHARS]
+
+
+def _describe_status(status_code: int, provider_message: str) -> str:
+    """Tell the GUI user why OpenRouter rejected the request and what they can do.
+
+    Args:
+        status_code: The HTTP status of the OpenRouter response, never 200.
+        provider_message: The error text from OpenRouter, for example ``API key expired.``
+
+    Returns:
+        A short message for the chat panel.
+    """
+    if status_code in (httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN):
+        return (
+            f"OpenRouter rejected the API key: {provider_message} Set a valid key in "
+            "LIGHTLY_STUDIO_OPENROUTER_API_KEY and restart LightlyStudio."
+        )
+    if status_code == httpx.codes.PAYMENT_REQUIRED:
+        return f"The OpenRouter account has no credits left: {provider_message}"
+    if status_code == httpx.codes.TOO_MANY_REQUESTS:
+        return "OpenRouter received too many requests. Wait a moment, then try again."
+    return f"OpenRouter answered {status_code}: {provider_message}"
 
 
 def _iter_chunks(response: httpx.Response) -> Iterator[dict[str, Any]]:

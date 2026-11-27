@@ -920,6 +920,7 @@
                                     {#key collectionId}
                                         <AgentChatPanel
                                             {collectionId}
+                                            collectionName={collection.name}
                                             onClose={() => setActivePanel('none')}
                                         />
                                     {/key}

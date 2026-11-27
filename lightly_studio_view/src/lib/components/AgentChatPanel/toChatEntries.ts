@@ -3,22 +3,28 @@ import { SUGGEST_NEXT_STEPS } from './nextStepSuggestions';
 
 type ToolStatus = 'running' | 'done' | 'error';
 
-type ChatEntry =
-    | { kind: 'user' | 'assistant' | 'step' | 'thinking'; text: string }
+/** An entry of the activity log: a thought, a step sentence, or a tool call. */
+export type ActivityEntry =
+    | { kind: 'step' | 'thinking'; text: string }
     | { kind: 'tool'; callId: string; name: string; status: ToolStatus; summary: string };
+
+type ChatEntry = { kind: 'user' | 'assistant'; text: string } | ActivityEntry;
+
+export function isActivityEntry(entry: ChatEntry): entry is ActivityEntry {
+    return entry.kind !== 'user' && entry.kind !== 'assistant';
+}
 
 // The result keys of the agent tools that count samples, with the word that describes them.
 const COUNT_KEYS: [string, string][] = [
-    ['count', 'found'],
-    ['tagged_count', 'tagged'],
-    ['selected_count', 'selected'],
-    ['shown_count', 'shown']
+    ['count', 'Found'],
+    ['tagged_count', 'Tagged'],
+    ['selected_count', 'Selected'],
+    ['shown_count', 'Showed']
 ];
 
 /**
- * Turns the agent transcript into the entries that the chat shows. The reasoning of a step
- * becomes a thinking entry, and its text a step entry. A tool call becomes a running tool
- * entry, which its result completes. The call that suggests the next steps gets no entry.
+ * Builds the visible entries from the transcript. A tool entry is complete once it has a result.
+ * The suggestion tool supplies follow-up buttons beside the written answer.
  */
 export function toChatEntries(messages: AgentMessage[]): ChatEntry[] {
     const entries: ChatEntry[] = [];
@@ -45,8 +51,8 @@ function assistantEntries(
         (call) => call.function.name !== SUGGEST_NEXT_STEPS
     );
     const entries: ChatEntry[] = [];
-    if (message.reasoning) entries.push({ kind: 'thinking', text: message.reasoning });
-    if (message.content) {
+    if (message.reasoning?.trim()) entries.push({ kind: 'thinking', text: message.reasoning });
+    if (message.content?.trim()) {
         entries.push({ kind: calls.length ? 'step' : 'assistant', text: message.content });
     }
     for (const call of calls) {
@@ -70,6 +76,7 @@ function summarizeToolResult(content: string): { status: ToolStatus; summary: st
     } catch {
         return { status: 'done', summary: content };
     }
+    if (!result || typeof result !== 'object') return { status: 'done', summary: content };
     if (typeof result.error === 'string') {
         return { status: 'error', summary: result.error };
     }
@@ -77,9 +84,11 @@ function summarizeToolResult(content: string): { status: ToolStatus; summary: st
     if (typeof result.success === 'boolean') {
         return { status: result.success ? 'done' : 'error', summary: String(result.message) };
     }
-    const parts = COUNT_KEYS.filter(([key]) => typeof result[key] === 'number').map(
-        ([key, word]) => `${result[key]} ${word}`
-    );
+    const parts = COUNT_KEYS.flatMap(([key, verb]) => {
+        const count = result[key];
+        if (typeof count !== 'number') return [];
+        return [`${verb} ${count} ${count === 1 ? 'sample' : 'samples'}`];
+    });
     if (typeof result.tag_name === 'string') {
         parts.push(`tag "${result.tag_name}"`);
     }

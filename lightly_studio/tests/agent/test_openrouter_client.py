@@ -114,9 +114,28 @@ class TestOpenRouterChatModel:
 
     def test_stream__error_status(self) -> None:
         model = _create_model(
-            handler=lambda _request: httpx.Response(status_code=401, text="bad key")
+            handler=lambda _request: httpx.Response(status_code=500, text="server down")
         )
-        with pytest.raises(AgentLLMError, match="OpenRouter answered 401: bad key"):
+        with pytest.raises(AgentLLMError, match=r"500.*server down"):
+            list(model.stream(messages=[AgentMessage(role="user", content="hi")], tools=[]))
+
+    def test_stream__error_status_json(self) -> None:
+        body = {
+            "error": {
+                "message": "Provider overloaded.",
+                "code": 503,
+                "metadata": {"headers": {"WWW-Authenticate": "Bearer"}},
+            }
+        }
+        model = _create_model(handler=lambda _request: httpx.Response(status_code=503, json=body))
+        with pytest.raises(AgentLLMError, match=r"503.*Provider overloaded") as error:
+            list(model.stream(messages=[AgentMessage(role="user", content="hi")], tools=[]))
+        assert "WWW-Authenticate" not in str(error.value)
+
+    def test_stream__invalid_api_key(self) -> None:
+        body = {"error": {"message": "API key expired.", "code": 401}}
+        model = _create_model(handler=lambda _request: httpx.Response(status_code=401, json=body))
+        with pytest.raises(AgentLLMError, match="LIGHTLY_STUDIO_OPENROUTER_API_KEY"):
             list(model.stream(messages=[AgentMessage(role="user", content="hi")], tools=[]))
 
     def test_stream__error_in_stream(self) -> None:

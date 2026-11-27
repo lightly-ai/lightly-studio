@@ -15,12 +15,12 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 from lightly_studio.agent.agent_tool import AgentContext, AgentTool
-from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.metadata import CATEGORICAL_TYPE_NAMES
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     embedding_model_resolver,
     image_resolver,
+    sample_resolver,
     tag_resolver,
 )
 from lightly_studio.resolvers.image_resolver.annotation_count_types import AnnotationCountMode
@@ -28,6 +28,8 @@ from lightly_studio.resolvers.metadata_resolver.sample import (
     categorical_value_counts,
     get_metadata_info,
 )
+
+GET_COLLECTION_OVERVIEW = "get_collection_overview"
 
 # The largest number of tags, metadata keys and annotation classes that the overview lists.
 _MAX_LISTED_NAMES = 100
@@ -51,11 +53,14 @@ def get_collection_overview(
     del args
     session = context.session
     collection_id = context.collection.collection_id
-    sample_count = image_resolver.get_all_by_collection_id(
-        session=session, collection_id=collection_id, pagination=Paginated(offset=0, limit=1)
-    ).total_count
+    sample_count = sample_resolver.count_by_collection_id(
+        session=session, collection_id=collection_id
+    )
     tags = tag_resolver.get_all_by_collection_id(
         session=session, collection_id=collection_id, limit=_MAX_LISTED_NAMES
+    )
+    class_count, annotation_classes = _get_annotation_classes(
+        session=session, collection_id=collection_id
     )
     return {
         "collection_name": context.collection.name,
@@ -65,7 +70,8 @@ def get_collection_overview(
         "tags": [tag.name for tag in tags],
         "embedding_models": _get_embedding_models(session=session, collection_id=collection_id),
         "metadata": _get_metadata_facts(session=session, collection_id=collection_id),
-        "annotation_classes": _get_annotation_classes(session=session, collection_id=collection_id),
+        "annotation_class_count": class_count,
+        "annotation_classes": annotation_classes,
     }
 
 
@@ -74,16 +80,15 @@ def list_annotation_classes(
 ) -> dict[str, Any]:
     """List the annotation classes with the number of samples that have them."""
     del args
-    return {
-        "annotation_classes": _get_annotation_classes(
-            session=context.session, collection_id=context.collection.collection_id
-        )
-    }
+    _, classes = _get_annotation_classes(
+        session=context.session, collection_id=context.collection.collection_id
+    )
+    return {"annotation_classes": classes}
 
 
 OVERVIEW_TOOLS: list[AgentTool[Any]] = [
     AgentTool(
-        name="get_collection_overview",
+        name=GET_COLLECTION_OVERVIEW,
         description=(
             "Get the facts about the collection: its size, the number of samples that the "
             "user selected in the GUI, its tags, its embedding models, its metadata keys "
@@ -129,11 +134,16 @@ def _get_metadata_facts(session: Session, collection_id: UUID) -> list[dict[str,
     """List each metadata key with its type, its range or its most frequent values."""
     infos = get_metadata_info.get_metadata_info(session=session, collection_id=collection_id)
     infos = infos[:_MAX_LISTED_NAMES]
-    value_counts = categorical_value_counts.get_metadata_value_counts(
-        session=session,
-        collection_id=collection_id,
-        fields=[info.name for info in infos if info.type in CATEGORICAL_TYPE_NAMES],
-        limit=_MAX_LISTED_VALUES,
+    categorical_keys = [info.name for info in infos if info.type in CATEGORICAL_TYPE_NAMES]
+    value_counts = (
+        categorical_value_counts.get_metadata_value_counts(
+            session=session,
+            collection_id=collection_id,
+            fields=categorical_keys,
+            limit=_MAX_LISTED_VALUES,
+        )
+        if categorical_keys
+        else {}
     )
     facts = []
     for info in infos:
@@ -149,10 +159,12 @@ def _get_metadata_facts(session: Session, collection_id: UUID) -> list[dict[str,
     return facts
 
 
-def _get_annotation_classes(session: Session, collection_id: UUID) -> list[dict[str, Any]]:
+def _get_annotation_classes(
+    session: Session, collection_id: UUID
+) -> tuple[int, list[dict[str, Any]]]:
     """List the annotation classes, the most frequent first."""
     counts = image_resolver.count_image_annotations_by_collection(
         session=session, collection_id=collection_id, count_mode=AnnotationCountMode.SAMPLES
     )
-    counts = sorted(counts, key=lambda count: count[2], reverse=True)[:_MAX_LISTED_NAMES]
-    return [{"name": name, "sample_count": total} for name, _, total in counts]
+    top_counts = sorted(counts, key=lambda count: count[2], reverse=True)[:_MAX_LISTED_NAMES]
+    return len(counts), [{"name": name, "sample_count": total} for name, _, total in top_counts]

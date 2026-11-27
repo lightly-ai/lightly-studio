@@ -1,111 +1,103 @@
 <script lang="ts">
-    import { onMount, untrack } from 'svelte';
+    import { tick, untrack } from 'svelte';
     import { get } from 'svelte/store';
-    import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
-    import X from '@lucide/svelte/icons/x';
-    import { useQueryClient } from '@tanstack/svelte-query';
-    import { Button } from '$lib/components';
-    import Typography from '$lib/components/Typography/Typography.svelte';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useTags } from '$lib/hooks/useTags/useTags';
-    import AgentChatInput from './AgentChatInput/AgentChatInput.svelte';
-    import AgentChatMessages from './AgentChatMessages/AgentChatMessages.svelte';
-    import AgentChatSuggestions from './AgentChatSuggestions/AgentChatSuggestions.svelte';
-    import { TASK_SUGGESTIONS } from './AgentChatSuggestions/suggestions';
-    import { applyUiActions } from './applyUiActions';
-    import { getNextStepSuggestions } from './nextStepSuggestions';
-    import { toChatEntries } from './toChatEntries';
+    import AgentChatHeader from './AgentChatHeader/AgentChatHeader.svelte';
+    import AgentChatHistory from './AgentChatHistory/AgentChatHistory.svelte';
+    import AgentChatConversation from './AgentChatConversation/AgentChatConversation.svelte';
     import { useAgentChat } from './useAgentChat/useAgentChat';
+    import { useAgentGrid } from './useAgentGrid';
 
     interface Props {
         collectionId: string;
+        collectionName: string;
         onClose: () => void;
     }
 
-    const { collectionId: collectionIdProp, onClose }: Props = $props();
-
-    // The layout remounts the panel when the collection changes, so the first value is final.
+    const { collectionId: collectionIdProp, collectionName, onClose }: Props = $props();
+    // The layout remounts the panel when the collection changes.
     const collectionId = untrack(() => collectionIdProp);
-
-    const queryClient = useQueryClient();
-    const { getSelectedSampleIds } = useGlobalStorage();
-    const { updateSampleIds } = useImageFilters();
-    const { loadTags, clearTagsSelected, setTagSelected } = useTags({
-        collection_id: collectionId
-    });
-
-    const { messages, draft, isSending, isPickingTask, error, send, greet, reset } = useAgentChat({
+    const { selectedSamples, onUiActions } = useAgentGrid(collectionId);
+    const {
+        active,
+        activeId,
+        history,
+        isLoading,
+        isSending,
+        liveReply,
+        storageError,
+        newChat,
+        select,
+        setDraft,
+        send,
+        stop
+    } = useAgentChat({
         collectionId,
-        getSelectedSampleIds: () => Array.from(get(getSelectedSampleIds(collectionId))),
-        onUiActions: (actions) =>
-            applyUiActions(actions, {
-                showTag: async (tagId) => {
-                    await loadTags();
-                    clearTagsSelected();
-                    setTagSelected(tagId, true);
-                    updateSampleIds([]);
-                    await queryClient.invalidateQueries();
-                },
-                showSamples: (sampleIds) => {
-                    clearTagsSelected();
-                    updateSampleIds(sampleIds);
-                },
-                refreshData: async () => {
-                    await loadTags();
-                    await queryClient.invalidateQueries();
-                }
-            })
+        getSelectedSampleIds: () => Array.from(get(selectedSamples)),
+        onUiActions
     });
 
-    const entries = $derived(toChatEntries($messages));
-    const suggestions = $derived.by(() => {
-        if ($isSending) return [];
-        return $isPickingTask ? TASK_SUGGESTIONS : getNextStepSuggestions($messages);
-    });
-    const startNewConversation = () => {
-        reset();
-        void greet();
-    };
+    let showHistory = $state(false);
+    let conversation: ReturnType<typeof AgentChatConversation> | undefined = $state();
 
-    onMount(() => void greet());
+    async function focusComposer() {
+        showHistory = false;
+        await tick();
+        conversation?.focus();
+    }
+
+    function toggleHistory() {
+        if (showHistory) void focusComposer();
+        else showHistory = true;
+    }
+
+    function startConversation() {
+        if (!$isLoading) newChat();
+        void focusComposer();
+    }
+
+    function openConversation(id: string) {
+        select(id);
+        void focusComposer();
+    }
 </script>
 
-<div class="flex h-full min-w-0 flex-1 flex-col gap-3 rounded-[1vw] bg-card p-4">
-    <div class="flex items-center justify-between">
-        <Typography variant="h5" component="h2" className="text-foreground">AI Agent</Typography>
-        <div class="flex items-center gap-1">
-            <Button
-                icon={RotateCcw}
-                variant="ghost"
-                ariaLabel="Start a new conversation"
-                buttonProps={{
-                    size: 'icon',
-                    onclick: startNewConversation,
-                    disabled: $isSending,
-                    class: 'h-8 w-8',
-                    'data-testid': 'agent-chat-reset'
-                }}
-            />
-            <Button
-                icon={X}
-                variant="ghost"
-                ariaLabel="Close agent panel"
-                buttonProps={{
-                    size: 'icon',
-                    onclick: onClose,
-                    class: 'h-8 w-8',
-                    'data-testid': 'agent-chat-close'
-                }}
-            />
-        </div>
-    </div>
-    <AgentChatMessages {entries} draft={$draft} isSending={$isSending} />
-    {#if $error}
-        <p class="text-sm text-destructive" data-testid="agent-chat-error">{$error}</p>
+<aside
+    class="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-card text-card-foreground"
+    aria-label="AI Agent"
+>
+    <AgentChatHeader
+        {collectionName}
+        {showHistory}
+        onToggleHistory={toggleHistory}
+        onNewChat={startConversation}
+        {onClose}
+    />
+    {#if $storageError}
+        <p class="border-b border-border/70 px-4 py-2 text-xs text-destructive" role="status">
+            {$storageError}
+        </p>
     {/if}
-    {#if suggestions.length > 0}
-        <AgentChatSuggestions {suggestions} onPick={send} />
+    {#if $isLoading}
+        <p class="p-4 text-sm text-muted-foreground" role="status">Opening chat…</p>
+    {:else if showHistory}
+        <AgentChatHistory
+            conversations={$history}
+            activeId={$activeId}
+            onSelect={openConversation}
+        />
+    {:else}
+        {#key $activeId}
+            <AgentChatConversation
+                bind:this={conversation}
+                active={$active}
+                liveText={$liveReply?.id === $activeId ? $liveReply.text : ''}
+                liveReasoning={$liveReply?.id === $activeId ? $liveReply.reasoning : ''}
+                isSending={$isSending}
+                selectedCount={$selectedSamples.size}
+                {setDraft}
+                {send}
+                {stop}
+            />
+        {/key}
     {/if}
-    <AgentChatInput disabled={$isSending} onSend={send} />
-</div>
+</aside>

@@ -1,82 +1,90 @@
 <script lang="ts">
+    import ArrowDown from '@lucide/svelte/icons/arrow-down';
+    import { Button } from '$lib/components/ui/button';
     import { tick } from 'svelte';
-    import { cn } from '$lib/utils/shadcn';
-    import type { toChatEntries } from '../toChatEntries';
-    import AgentThinkingBlock from './AgentThinkingBlock/AgentThinkingBlock.svelte';
-    import AgentToolEntry from './AgentToolEntry/AgentToolEntry.svelte';
+    import { getNextStepSuggestions } from '../nextStepSuggestions';
+    import type { ChatTurn } from '../useAgentChat/chatHistory';
+    import AgentTurn from './AgentTurn/AgentTurn.svelte';
 
     interface Props {
-        entries: ReturnType<typeof toChatEntries>;
-        /** The text of the step that the model writes now. */
-        draft: { reasoning: string; content: string };
+        turns: ChatTurn[];
+        liveText: string;
+        liveReasoning: string;
         isSending: boolean;
+        onPick: (prompt: string) => void;
+        onEdit: (prompt: string) => void;
     }
 
-    const { entries, draft, isSending }: Props = $props();
+    const { turns, liveText, liveReasoning, isSending, onPick, onEdit }: Props = $props();
 
+    const BOTTOM_THRESHOLD_PX = 24;
     let container: HTMLDivElement | undefined = $state();
+    let follow = $state(true);
+    let hasNewOutput = $state(false);
 
-    const isToolRunning = $derived(
-        entries.some((entry) => entry.kind === 'tool' && entry.status === 'running')
-    );
-    const isWaiting = $derived(isSending && !draft.reasoning && !draft.content && !isToolRunning);
+    function jumpToLatest() {
+        if (!container) return;
+        follow = true;
+        hasNewOutput = false;
+        container.scrollTop = container.scrollHeight;
+    }
 
-    // Keep the newest text in view.
+    function onScroll() {
+        if (!container) return;
+        follow =
+            container.scrollHeight - container.clientHeight - container.scrollTop <=
+            BOTTOM_THRESHOLD_PX;
+        if (follow) hasNewOutput = false;
+    }
+
     $effect(() => {
-        void entries.length;
-        void draft.reasoning;
-        void draft.content;
+        void turns;
+        void liveText;
+        void liveReasoning;
         void isSending;
-        void tick().then(() => container?.scrollTo({ top: container.scrollHeight }));
+        void tick().then(() => {
+            if (follow) jumpToLatest();
+            else hasNewOutput = true;
+        });
     });
 </script>
 
-{#snippet bubble(kind: 'user' | 'assistant', text: string)}
+<div class="relative flex min-h-0 flex-1 flex-col">
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex (Keyboard users must be able to scroll the transcript.) -->
     <div
-        class={cn(
-            'max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm',
-            kind === 'user'
-                ? 'self-end bg-primary text-primary-foreground'
-                : 'self-start bg-muted text-foreground'
-        )}
-        data-testid={`agent-chat-${kind}`}
+        bind:this={container}
+        onscroll={onScroll}
+        class="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        role="region"
+        aria-label="Conversation"
+        tabindex="0"
     >
-        {text}
+        <div class="mx-auto flex w-full max-w-2xl flex-col gap-7 px-4 py-5">
+            {#each turns as turn, index (index)}
+                {@const isLatest = index === turns.length - 1}
+                <AgentTurn
+                    {turn}
+                    liveText={isLatest ? liveText : ''}
+                    liveReasoning={isLatest ? liveReasoning : ''}
+                    suggestions={isLatest && turn.status === 'done'
+                        ? getNextStepSuggestions(turn.messages)
+                        : []}
+                    {onPick}
+                    suggestionsDisabled={isSending}
+                    {onEdit}
+                />
+            {/each}
+        </div>
     </div>
-{/snippet}
-
-<div bind:this={container} class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
-    {#if entries.length === 0 && !isSending}
-        <p class="text-sm text-muted-foreground" data-testid="agent-chat-empty">
-            Try: "Select 200 diverse but representative images" or "Find the 10 images most similar
-            to a tiger and tag them tiger".
-        </p>
-    {/if}
-    {#each entries as entry, index (index)}
-        {#if entry.kind === 'tool'}
-            <AgentToolEntry name={entry.name} status={entry.status} summary={entry.summary} />
-        {:else if entry.kind === 'thinking'}
-            <AgentThinkingBlock text={entry.text} isLive={false} />
-        {:else if entry.kind === 'step'}
-            <p
-                class="self-start text-sm italic text-muted-foreground"
-                data-testid="agent-chat-step"
-            >
-                {entry.text}
-            </p>
-        {:else}
-            {@render bubble(entry.kind, entry.text)}
-        {/if}
-    {/each}
-    {#if draft.reasoning}
-        <AgentThinkingBlock text={draft.reasoning} isLive={true} />
-    {/if}
-    {#if draft.content}
-        {@render bubble('assistant', draft.content)}
-    {/if}
-    {#if isWaiting}
-        <p class="animate-pulse text-sm text-muted-foreground" data-testid="agent-chat-thinking">
-            Thinking…
-        </p>
+    {#if hasNewOutput}
+        <Button
+            variant="outline"
+            size="sm"
+            class="absolute bottom-3 left-1/2 -translate-x-1/2 gap-1.5 rounded-full bg-background shadow"
+            onclick={jumpToLatest}
+        >
+            <ArrowDown class="size-3.5" />
+            Jump to latest
+        </Button>
     {/if}
 </div>

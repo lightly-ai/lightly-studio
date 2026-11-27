@@ -99,9 +99,17 @@ def test_run_selection__combined_strategies(db_session: Session) -> None:
     assert result == {
         "tag_name": "picked",
         "selected_count": 2,
-        "result": "result_1",
+        "result": result["result"],
         "strategies": ["diversity x1", "weights(score) x2"],
     }
+    assert (
+        set(
+            context.result_store.get(
+                collection_id=collection.collection_id, handle=result["result"]
+            )
+        )
+        == selected
+    )
     assert context.ui_actions == [SelectTagAction(tag_id=tag.tag_id, tag_name="picked")]
 
 

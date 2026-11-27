@@ -32,6 +32,7 @@ def test_get_collection_overview(db_session: Session) -> None:
         "tags": ["cats"],
         "embedding_models": [{"name": "example_embedding_model", "is_default": True}],
         "metadata": [],
+        "annotation_class_count": 0,
         "annotation_classes": [],
     }
 
@@ -88,6 +89,7 @@ def test_get_collection_overview__annotation_classes(db_session: Session) -> Non
 
     overview = overview_tool.get_collection_overview(context, GetCollectionOverviewArgs())
 
+    assert overview["annotation_class_count"] == 2
     assert overview["annotation_classes"] == [
         {"name": "car", "sample_count": 2},
         {"name": "bus", "sample_count": 1},

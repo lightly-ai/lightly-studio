@@ -65,7 +65,7 @@ def list_operators(context: AgentContext, args: ListOperatorsArgs) -> dict[str, 
                 "status": operator.status.value,
                 "parameters": [
                     operator_service.to_parameter_view(parameter=parameter).model_dump(
-                        exclude_none=True
+                        mode="json", exclude_none=True
                     )
                     for parameter in operator.parameters
                 ],

@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from lightly_studio.agent.agent_tool import AgentContext, AgentTool
 
-# The name of the tool. The agent loop ends the turn on a step that calls only this tool.
+# The name of the tool. The agent loop uses it to detect when tool work is complete.
 SUGGEST_NEXT_STEPS = "suggest_next_steps"
 
 # The largest number of characters in the text of one button.
@@ -56,7 +56,7 @@ SUGGESTION_TOOLS: list[AgentTool[Any]] = [
         name=SUGGEST_NEXT_STEPS,
         description=(
             f"Suggest 1 to {_MAX_STEPS} next steps to the user as buttons. Call it in the same "
-            "message as your final answer. It ends the turn."
+            "message as your written answer."
         ),
         args_model=SuggestNextStepsArgs,
         run=suggest_next_steps,
