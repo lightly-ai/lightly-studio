@@ -26,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - COCO import reads RLE segmentation masks that are not marked as crowd annotations.
 
 ### Security
-
 - The GUI server no longer has an endpoint that sets cloud storage credentials without authentication.
 
 ## \[1.5.0\] - 2026-11-26
