@@ -150,6 +150,27 @@ describe('useReversibleActions', () => {
         expect(get(storage.reversibleActions)).toHaveLength(0);
     });
 
+    it('removes the executed action when an action is added while it runs', async () => {
+        const createAction = (id: string, execute = vi.fn()) => ({
+            id,
+            description: id,
+            execute,
+            timestamp: new Date(),
+            groupId: 'test-group'
+        });
+        storage.addReversibleAction(createAction('older-action'));
+        storage.addReversibleAction(
+            createAction(
+                'running-action',
+                vi.fn(() => storage.addReversibleAction(createAction('newer-action')))
+            )
+        );
+
+        await storage.executeReversibleAction('running-action');
+
+        expect(get(storage.reversibleActions).map((action) => action.id)).toEqual(['older-action']);
+    });
+
     it('should do nothing when executing non-existent action', async () => {
         const mockExecute = vi.fn();
         const action = {

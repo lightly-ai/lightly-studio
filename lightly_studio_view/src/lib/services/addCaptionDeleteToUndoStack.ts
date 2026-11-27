@@ -23,7 +23,7 @@ export const addCaptionDeleteToUndoStack = ({
 
     addReversibleAction({
         id: `caption-delete-${parentSampleId}-${Date.now()}`,
-        description: 'Undo delete caption',
+        description: 'Delete caption',
         execute,
         timestamp: new Date(),
         groupId: CAPTION_DELETE_GROUP_ID

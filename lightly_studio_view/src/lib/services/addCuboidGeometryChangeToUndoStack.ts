@@ -17,7 +17,7 @@ export const addCuboidGeometryChangeToUndoStack = ({
 }) => {
     addReversibleAction({
         id: `cuboid-geometry-change-${annotationId}-${Date.now()}`,
-        description: 'Undo cuboid geometry change',
+        description: 'Edit cuboid',
         execute: async () => {
             const restored = await restoreGeometry(annotationId, previousCuboid);
             // A rejected undo stays in the undo history, so the user can try again.

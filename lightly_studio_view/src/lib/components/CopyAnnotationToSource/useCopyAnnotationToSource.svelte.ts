@@ -42,7 +42,8 @@ export const useCopyAnnotationToSource = (getParams: () => Params) => {
                 annotation: created,
                 addReversibleAction,
                 deleteAnnotation: (id, type) => deleteAnnotation(id, type, collectionId),
-                refetch: onCopied
+                refetch: onCopied,
+                description: 'Duplicate annotation to another annotation source'
             });
             onCopied();
             return true;

@@ -29,7 +29,9 @@
             onclick: () => undo('click'),
             disabled: $isUndoing || $reversibleActions.length === 0,
             'aria-busy': $isUndoing,
-            title: $reversibleActions[0]?.description ?? 'No action to undo',
+            title: $reversibleActions[0]
+                ? `Undo: ${$reversibleActions[0].description}`
+                : 'No action to undo',
             'data-testid': `${testIdPrefix}-reverse-action-button`,
             class: 'nav-button'
         }}

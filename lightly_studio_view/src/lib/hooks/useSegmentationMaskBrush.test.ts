@@ -636,7 +636,7 @@ describe('useSegmentationMaskBrush', () => {
         const actions = get(reversibleActions);
         expect(actions).toHaveLength(1);
         expect(actions[0].groupId).toBe('annotation-create');
-        expect(actions[0].description).toBe('Undo create annotation');
+        expect(actions[0].description).toBe('Create annotation');
     });
 
     it('places create-annotation undo below stroke-update undo after a second stroke on the newly created annotation', async () => {

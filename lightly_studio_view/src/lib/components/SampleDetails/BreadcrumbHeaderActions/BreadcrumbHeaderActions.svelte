@@ -1,7 +1,8 @@
 <script lang="ts">
     import { Button } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { useGlobalStorage, useOperatorsDialog, useSettings, usePostHog } from '$lib/hooks';
+    import { useEditModeControls } from '$lib/components/EditModeControls';
+    import { useOperatorsDialog, useSettings } from '$lib/hooks';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -19,39 +20,16 @@
 
     let { collectionId }: Props = $props();
 
-    const { isEditingMode, setIsEditingMode, reversibleActions, executeReversibleAction } =
-        useGlobalStorage();
+    const { isEditingMode, reversibleActions, isUndoing, setEditMode, undo } = useEditModeControls(
+        () => collectionId
+    );
     const { openOperatorsDialog } = useOperatorsDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { settingsStore } = useSettings();
     const { user } = useAuth();
-    const { trackEvent } = usePostHog();
 
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
     const isEditor = $derived(hasMinimumRole(user?.role, 'editor'));
-
-    type TriggeredBy = 'click' | 'keyboard_shortcut';
-
-    const setEditMode = (active: boolean, triggeredBy: TriggeredBy) => {
-        if (active) {
-            trackEvent('edit_mode_started', {
-                collection_id: collectionId,
-                triggered_by: triggeredBy
-            });
-        }
-        setIsEditingMode(active);
-    };
-
-    const executeUndoAction = async (triggeredBy: TriggeredBy) => {
-        const latestAction = $reversibleActions[0];
-        if (latestAction) {
-            trackEvent('edit_undo', {
-                collection_id: collectionId,
-                triggered_by: triggeredBy
-            });
-            await executeReversibleAction(latestAction.id);
-        }
-    };
 
     const handleKeyDown = (event: KeyboardEvent) => {
         if (isInputElement(event.target)) return;
@@ -60,7 +38,7 @@
         if (event.key === get(settingsStore).key_toggle_edit_mode) {
             setEditMode(!$isEditingMode, 'keyboard_shortcut');
         } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-            void executeUndoAction('keyboard_shortcut');
+            void undo('keyboard_shortcut');
         }
     };
 
@@ -83,8 +61,9 @@
                     variant="ghost"
                     ariaLabel="Undo"
                     disabledReason={undoDisabledReason}
+                    isPending={$isUndoing}
                     buttonProps={{
-                        onclick: () => executeUndoAction('click'),
+                        onclick: () => undo('click'),
                         'data-testid': 'breadcrumb-undo-button',
                         class: 'h-8 px-2'
                     }}

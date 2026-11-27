@@ -55,6 +55,9 @@ it.each(['classification', 'object_detection', 'segmentation_mask'] as const)(
             ...original.object_detection_details,
             ...original.segmentation_details
         });
+        expect(mocks.undo.mock.lastCall![0].description).toBe(
+            'Duplicate annotation to another annotation source'
+        );
         current.collectionId = 'another-collection';
         await mocks.undo.mock.lastCall![0].execute();
         expect(mocks.remove).toHaveBeenLastCalledWith('copy', annotation_type, 'images');

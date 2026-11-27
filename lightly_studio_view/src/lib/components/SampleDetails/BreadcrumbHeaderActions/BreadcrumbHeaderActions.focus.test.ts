@@ -7,14 +7,18 @@ import BreadcrumbHeaderActions from './BreadcrumbHeaderActions.svelte';
 const isEditingMode = writable(false);
 
 vi.mock('$lib/hooks', () => ({
+    useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn() }),
+    useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) })
+}));
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => ({
         isEditingMode,
         setIsEditingMode: vi.fn(),
         reversibleActions: writable([]),
         executeReversibleAction: vi.fn()
-    }),
-    useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn() }),
-    useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) }),
+    })
+}));
+vi.mock('$lib/hooks/usePostHog', () => ({
     usePostHog: () => ({ trackEvent: vi.fn() })
 }));
 vi.mock('$lib/hooks/useSettingsDialog/useSettingsDialog', () => ({

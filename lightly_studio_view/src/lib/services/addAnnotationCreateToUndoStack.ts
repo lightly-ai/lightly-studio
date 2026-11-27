@@ -9,7 +9,8 @@ export const addAnnotationCreateToUndoStack = ({
     deleteAnnotation,
     refetch,
     onUndo,
-    onDelete
+    onDelete,
+    description = 'Create annotation'
 }: {
     annotation: AnnotationView;
     addReversibleAction: (action: ReversibleAction) => void;
@@ -19,6 +20,8 @@ export const addAnnotationCreateToUndoStack = ({
     /** Called after deletion succeeds, before refetch. Use to clean up UI state
      *  (e.g. clear the selected annotation ID from context). */
     onDelete?: ReversibleActionCallback;
+    /** The name of the action that the undo reverts. */
+    description?: string;
 }) => {
     const execute = async () => {
         await deleteAnnotation(annotation.sample_id, annotation.annotation_type);
@@ -29,7 +32,7 @@ export const addAnnotationCreateToUndoStack = ({
 
     addReversibleAction({
         id: `annotation-create-${annotation.sample_id}-${Date.now()}`,
-        description: `Undo create annotation`,
+        description,
         execute,
         timestamp: new Date(),
         groupId: ANNOTATION_CREATE_GROUP_ID

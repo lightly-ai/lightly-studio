@@ -125,6 +125,7 @@
         deletingAnnotationIds = [...deletingAnnotationIds, annotationId];
 
         try {
+            await deleteAnnotation(annotationId, annotation.annotation_type);
             addAnnotationDeleteToUndoStack({
                 annotation,
                 labels: annotationLabels.data!,
@@ -133,8 +134,6 @@
                 createAnnotation,
                 refetch
             });
-
-            await deleteAnnotation(annotationId, annotation.annotation_type);
             toast.success('Classification deleted successfully');
             refetch();
         } catch (error) {
@@ -198,21 +197,6 @@
     };
 
     const updateClassificationLabel = async (annotation: AnnotationView, labelName: string) => {
-        addAnnotationLabelChangeToUndoStack({
-            annotations: [
-                {
-                    sample_id: annotation.sample_id,
-                    annotation_label: {
-                        annotation_label_name: annotation.annotation_label.annotation_label_name
-                    }
-                }
-            ],
-            collectionId,
-            addReversibleAction,
-            updateAnnotations,
-            refresh: refetch
-        });
-
         try {
             await updateAnnotations([
                 {
@@ -221,6 +205,20 @@
                     label_name: labelName
                 }
             ]);
+            addAnnotationLabelChangeToUndoStack({
+                annotations: [
+                    {
+                        sample_id: annotation.sample_id,
+                        annotation_label: {
+                            annotation_label_name: annotation.annotation_label.annotation_label_name
+                        }
+                    }
+                ],
+                collectionId,
+                addReversibleAction,
+                updateAnnotations,
+                refresh: refetch
+            });
             refetch();
         } catch (error) {
             toast.error('Failed to update classification label. Please try again.');

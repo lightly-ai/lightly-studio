@@ -66,7 +66,7 @@ describe('addAnnotationDeleteToUndoStack', () => {
         expect(addReversibleAction).toHaveBeenCalledTimes(1);
         const action = addReversibleAction.mock.calls[0][0] as ReversibleAction;
         expect(action.id).toContain('annotation-delete-annotation-123');
-        expect(action.description).toBe('Undo delete annotation');
+        expect(action.description).toBe('Delete annotation');
         expect(action.groupId).toBe('annotation-delete');
     });
 

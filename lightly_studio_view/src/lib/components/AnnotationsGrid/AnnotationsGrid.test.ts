@@ -375,7 +375,7 @@ describe('AnnotationsGrid', () => {
 
         expect(mocks.addReversibleAction).toHaveBeenCalledWith(
             expect.objectContaining({
-                description: 'Undo label change for 2 annotations',
+                description: 'Change annotation class of 2 annotations',
                 groupId: 'annotation-label-change'
             })
         );

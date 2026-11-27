@@ -219,7 +219,7 @@ describe('Header', () => {
             const undoButton = screen.getByTestId('header-reverse-action-button');
             expect(undoButton).toBeInTheDocument();
             expect(undoButton).not.toBeDisabled();
-            expect(undoButton).toHaveAttribute('title', 'Test reversible action');
+            expect(undoButton).toHaveAttribute('title', 'Undo: Test reversible action');
         });
 
         it('should call executeReversibleAction when undo button is clicked', async () => {
@@ -269,7 +269,7 @@ describe('Header', () => {
             render(Header, { props: { collection } });
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
-            expect(undoButton).toHaveAttribute('title', 'Most recent action');
+            expect(undoButton).toHaveAttribute('title', 'Undo: Most recent action');
         });
 
         it('should handle async executeReversibleAction calls', async () => {

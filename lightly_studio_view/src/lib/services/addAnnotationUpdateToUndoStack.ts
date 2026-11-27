@@ -33,7 +33,7 @@ export const addAnnotationUpdateToUndoStack = ({
 
     addReversibleAction({
         id: `bbox-change-${annotation.sample_id}-${Date.now()}`,
-        description: `Revert bounding box change for annotation ${annotation.sample_id}`,
+        description: 'Edit annotation',
         execute,
         timestamp: new Date(),
         groupId: BBOX_CHANGE_ANNOTATION_DETAILS
