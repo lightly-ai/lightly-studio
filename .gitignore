@@ -33,3 +33,6 @@ coverage.json
 .local.gitignore
 # Superpowers brainstorming artifacts
 .superpowers/
+
+# Browser auto-labeling prototype: exported ONNX models
+lightly_studio_view/static/models/
