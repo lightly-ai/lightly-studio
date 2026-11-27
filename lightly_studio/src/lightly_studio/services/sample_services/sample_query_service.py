@@ -14,7 +14,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import ColumnElement, and_, or_
+from sqlalchemy import ColumnElement, and_, or_, orm
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
@@ -102,12 +102,28 @@ def get_sample_ids(
     Raises:
         QueryExprError: If the filter or the sort uses an unknown field.
     """
+    images = get_images(session=session, collection_id=collection_id, request=request, limit=limit)
+    return [image.sample_id for image in images]
+
+
+def get_images(
+    session: Session, collection_id: UUID, request: SampleQueryRequest, limit: int | None
+) -> Sequence[ImageTable]:
+    """Get the image samples of a collection that match a request, in sort order.
+
+    The images start after `request.offset` samples and have their sample loaded. `limit` sets
+    the maximum number of images, and None gets all. The `cursor` and the `limit` of the
+    request are not used.
+
+    Raises:
+        QueryExprError: If the filter or the sort uses an unknown field.
+    """
     query = _filtered_query(collection_id=collection_id, request=request)
+    query = query.options(orm.contains_eager(ImageTable.sample))
     for key in request.sort or [_DEFAULT_SORT_KEY]:
         query = _to_order_by(key=key).apply(query=query)
     query = query.order_by(col(SampleTable.sample_id))
-    images = session.exec(query.offset(request.offset).limit(limit)).all()
-    return [image.sample_id for image in images]
+    return session.exec(query.offset(request.offset).limit(limit)).all()
 
 
 def _keyset_page(

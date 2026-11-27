@@ -13,6 +13,7 @@ from lightly_studio.errors import NotFoundError
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.export_format import ExportFormat
+from lightly_studio.models.export_task import ExportTask
 from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.resolvers import collection_resolver
 from lightly_studio.services.sample_services import sample_query_service
@@ -30,14 +31,7 @@ _IMAGE_EXPORTS: dict[ExportFormat, Callable[[ImageDatasetExport, Path, UUID | No
 class LocalExportTransport:
     """Implements `ExportTransport` with the persistent database session."""
 
-    def export(
-        self,
-        collection_id: UUID,
-        query_expr: QueryExpr | None,
-        export_format: ExportFormat,
-        output_path: Path,
-        annotation_collection_id: UUID | None,
-    ) -> None:
+    def export(self, collection_id: UUID, query_expr: QueryExpr | None, task: ExportTask) -> None:
         """Export the image samples of a collection to a file or folder.
 
         Raises:
@@ -46,9 +40,11 @@ class LocalExportTransport:
                 supported for images.
             QueryExprError: If the query uses a field that is not valid for images.
         """
-        export_samples = _IMAGE_EXPORTS.get(export_format)
+        export_samples = _IMAGE_EXPORTS.get(task.export_format)
         if export_samples is None:
-            raise ValueError(f"Export format '{export_format.value}' is not supported for images.")
+            raise ValueError(
+                f"Export format '{task.export_format.value}' is not supported for images."
+            )
         session = db_manager.persistent_session()
         collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
         if collection is None:
@@ -61,4 +57,4 @@ class LocalExportTransport:
         exporter = ImageDatasetExport(
             session=session, dataset_id=collection.dataset_id, samples=query
         )
-        export_samples(exporter, output_path, annotation_collection_id)
+        export_samples(exporter, task.output_path, task.annotation_collection_id)

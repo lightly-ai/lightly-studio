@@ -15,6 +15,7 @@ from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.core.image.transport_image_dataset_export import TransportImageDatasetExport
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.export_format import ExportFormat
+from lightly_studio.models.export_task import ExportTask
 from lightly_studio.models.query_expr import (
     FieldRef,
     IntegerExpr,
@@ -101,9 +102,11 @@ class TestTransportImageDatasetExport:
                     value=10,
                 )
             ),
-            export_format=export_format,
-            output_path=tmp_path / "export",
-            annotation_collection_id=annotation_collection_id,
+            task=ExportTask(
+                export_format=export_format,
+                output_path=tmp_path / "export",
+                annotation_collection_id=annotation_collection_id,
+            ),
         )
 
     @pytest.mark.parametrize(
@@ -129,7 +132,7 @@ class TestTransportImageDatasetExport:
             )
         )
 
-        assert transport.export.export.call_args.kwargs["output_path"] == output_path
+        assert transport.export.export.call_args.kwargs["task"].output_path == output_path
 
     @pytest.mark.parametrize(
         ("export_samples", "local_export_method"),
