@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Self
+from typing import Any, Self
 from uuid import UUID
 
 import pydantic
@@ -83,6 +83,19 @@ class SampleQueryRequest(BaseModel):
         return self
 
 
+class MetadataRecord(BaseModel):
+    """The metadata of a sample, as stored in JSON.
+
+    Attributes:
+        data: The metadata values. A value of a complex type, for example a GPS coordinate, is
+            in its JSON form.
+        metadata_schema: The type name of each metadata key, for example `"gps_coordinate"`.
+    """
+
+    data: dict[str, Any] = {}
+    metadata_schema: dict[str, str] = {}
+
+
 class ImageSampleRecord(BaseModel):
     """The fields of an image sample, without a database session.
 
@@ -96,6 +109,7 @@ class ImageSampleRecord(BaseModel):
         width: The image width in pixels.
         height: The image height in pixels.
         tags: The sorted tag names. None if the query did not include tags.
+        metadata: The metadata. None if the query did not include metadata.
     """
 
     sample_id: UUID
@@ -107,6 +121,7 @@ class ImageSampleRecord(BaseModel):
     width: int
     height: int
     tags: list[str] | None = None
+    metadata: MetadataRecord | None = None
 
 
 class SamplePage(BaseModel):

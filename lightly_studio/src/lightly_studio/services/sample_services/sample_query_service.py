@@ -7,7 +7,7 @@ or repeat samples if samples change between the requests.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -35,13 +35,14 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_query import (
     EvaluationMetricSortKey,
     ImageSampleRecord,
+    MetadataRecord,
     SampleInclude,
     SamplePage,
     SampleQueryRequest,
     SortKey,
 )
 from lightly_studio.models.sort_direction import SortDirection
-from lightly_studio.resolvers import tag_resolver
+from lightly_studio.resolvers import metadata_resolver, tag_resolver
 from lightly_studio.services.sample_services import sample_query_cursor
 
 # Only annotation match expressions correlate their table with the image.
@@ -52,8 +53,8 @@ _ANNOTATION_SCOPES: dict[type[BaseModel], str] = {
     PolygonMatchExpr: "polygon",
 }
 _SORT_FIELDS = {"file_name", "file_path_abs", "created_at", "width", "height"}
-_SUPPORTED_INCLUDES = {SampleInclude.TAGS}
 _DEFAULT_SORT_KEY = SortKey(field=FieldRef(table="image", name="created_at"))
+_IncludeLoader = Callable[[Session, Sequence[UUID]], Mapping[UUID, object]]
 
 
 @dataclass(frozen=True)
@@ -86,8 +87,13 @@ def query_samples(session: Session, collection_id: UUID, request: SampleQueryReq
             session=session, query=query, request=request, query_hash=hash_
         )
     sample_ids = [image.sample_id for image in page]
-    tags = _tag_names(session=session, sample_ids=sample_ids, include=request.include)
-    records = [_to_record(image=image, collection_id=collection_id, tags=tags) for image in page]
+    included = _included_fields(session=session, sample_ids=sample_ids, include=request.include)
+    records = [
+        ImageSampleRecord(
+            **image.model_dump(), collection_id=collection_id, **included[image.sample_id]
+        )
+        for image in page
+    ]
     return SamplePage(samples=records, next_cursor=next_cursor)
 
 
@@ -177,7 +183,7 @@ def _filtered_query(collection_id: UUID, request: SampleQueryRequest) -> SelectO
 
 def _check_includes(includes: Sequence[SampleInclude]) -> None:
     for include in includes:
-        if include not in _SUPPORTED_INCLUDES:
+        if include not in _INCLUDE_LOADERS:
             raise ValueError(f"The include value '{include.value}' is not supported yet.")
 
 
@@ -251,19 +257,33 @@ def _after(sort_columns: Sequence[_SortColumn], values: Sequence[Any]) -> Column
     return or_(*clauses)
 
 
-def _tag_names(
+def _included_fields(
     session: Session, sample_ids: Sequence[UUID], include: Sequence[SampleInclude]
-) -> dict[UUID, list[str]] | None:
-    if SampleInclude.TAGS not in include:
-        return None
-    return tag_resolver.get_names_by_sample_ids(session=session, sample_ids=sample_ids)
+) -> dict[UUID, dict[str, Any]]:
+    """Get the record fields of the included data, for each sample ID."""
+    fields: dict[UUID, dict[str, Any]] = {sample_id: {} for sample_id in sample_ids}
+    for item in set(include):
+        values = _INCLUDE_LOADERS[item](session, sample_ids)
+        for sample_id in sample_ids:
+            fields[sample_id][item.value] = values[sample_id]
+    return fields
 
 
-def _to_record(
-    image: ImageTable, collection_id: UUID, tags: dict[UUID, list[str]] | None
-) -> ImageSampleRecord:
-    sample_tags = None if tags is None else tags.get(image.sample_id, [])
-    return ImageSampleRecord(**image.model_dump(), collection_id=collection_id, tags=sample_tags)
+def _tag_names(session: Session, sample_ids: Sequence[UUID]) -> dict[UUID, list[str]]:
+    names = tag_resolver.get_names_by_sample_ids(session=session, sample_ids=sample_ids)
+    return {sample_id: names.get(sample_id, []) for sample_id in sample_ids}
+
+
+def _metadata(session: Session, sample_ids: Sequence[UUID]) -> dict[UUID, MetadataRecord]:
+    rows = metadata_resolver.get_by_sample_ids(session=session, sample_ids=sample_ids)
+    metadata_by_sample_id = {
+        row.sample_id: MetadataRecord(data=row.data, metadata_schema=row.metadata_schema)
+        for row in rows
+    }
+    return {
+        sample_id: metadata_by_sample_id.get(sample_id, MetadataRecord())
+        for sample_id in sample_ids
+    }
 
 
 def _parse_int(value: Any) -> int:
@@ -282,6 +302,11 @@ def _parse_uuid(value: Any) -> UUID:
     return UUID(_parse_str(value=value))
 
 
+# The include value is the record field name. Each loader gets the data of a whole page at once.
+_INCLUDE_LOADERS: dict[SampleInclude, _IncludeLoader] = {
+    SampleInclude.TAGS: _tag_names,
+    SampleInclude.METADATA: _metadata,
+}
 _CURSOR_PARSERS: dict[str, Callable[[Any], Any]] = {
     "file_name": _parse_str,
     "file_path_abs": _parse_str,
