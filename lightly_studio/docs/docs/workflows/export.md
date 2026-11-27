@@ -13,7 +13,7 @@ The following export formats are supported:
 | COCO Object Detection | Bounding box annotations | JSON |
 | YOLO Object Detection | Bounding box annotations | TXT labels + `data.yaml` (zipped) |
 | COCO Instance Segmentation | Polygons and segmentation masks with bounding boxes | JSON |
-| YOLO Instance Segmentation | Polygons with bounding boxes | TXT labels + `data.yaml` (zipped) |
+| YOLO Instance Segmentation | Polygons | TXT labels + `data.yaml` (zipped) |
 | COCO Captions | Image captions | JSON |
 | Pascal VOC Semantic Segmentation | Per-pixel class masks | PNG masks + class map |
 | YouTube-VIS Segmentation Mask | Video segmentation mask tracks | JSON |
@@ -76,7 +76,7 @@ dataset.export().to_youtube_vis_segmentation_mask("youtube_vis.json")
 
 !!! note "Crowd regions in COCO"
     COCO export writes polygons and masks with `iscrowd=0`. LightlyStudio does not store the
-    crowd flag, so crowd annotations from an imported COCO file export as normal objects.
+    crowd flag, so crowd annotations from an ingested COCO file export as normal objects.
 
 ### Export a filtered subset
 
