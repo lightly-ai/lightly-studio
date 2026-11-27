@@ -3,7 +3,7 @@
 Adds ``user_account``, one row per user id.
 
 Revision ID: 2bf3ded763b0
-Revises: 5d1c7e9a3b42
+Revises: 8b4f2d6e1a07
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "2bf3ded763b0"
-down_revision: str | Sequence[str] | None = "5d1c7e9a3b42"
+down_revision: str | Sequence[str] | None = "8b4f2d6e1a07"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
