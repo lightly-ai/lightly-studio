@@ -6,6 +6,7 @@ import {
     type PolygonInput,
     drawBoxesOnContext,
     drawPolygonsOnContext,
+    getVisibleCanvasRect,
     renderMasks,
     transformBoxes,
     transformPolygons,
@@ -66,6 +67,7 @@ const handleRender = ({
     const pixelData = renderMasks(geometry, masks);
     const transformedBoxes = transformBoxes(geometry, boxes);
     const transformedPolygons = transformPolygons(geometry, polygons);
+    const polygonClipRect = getVisibleCanvasRect(geometry);
     const ctx = contexts.get(canvasId);
 
     if (ctx) {
@@ -75,7 +77,7 @@ const handleRender = ({
         ctx.canvas.height = outputHeight;
         ctx.clearRect(0, 0, outputWidth, outputHeight);
         ctx.putImageData(imageData, 0, 0);
-        drawPolygonsOnContext(ctx, transformedPolygons);
+        drawPolygonsOnContext(ctx, transformedPolygons, polygonClipRect);
         drawBoxesOnContext(ctx, transformedBoxes);
     } else {
         // Fallback path when no OffscreenCanvas context was registered for this canvas id.
@@ -89,7 +91,8 @@ const handleRender = ({
                 height: outputHeight,
                 data: pixelData,
                 boxes: transformedBoxes,
-                polygons: transformedPolygons
+                polygons: transformedPolygons,
+                polygonClipRect
             },
             [pixelData.buffer]
         );

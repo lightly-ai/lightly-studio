@@ -3,6 +3,7 @@ import {
     drawBoxesOnContext,
     drawPolygonsOnContext,
     getRenderTransform,
+    getVisibleCanvasRect,
     renderMasks,
     transformBoxes,
     transformPolygons,
@@ -10,6 +11,8 @@ import {
 } from './maskRendererUtils';
 import { rgbaFromBytes } from '$lib/utils/colorConvert';
 import { createRenderGeometry as geometry } from './maskRenderer.testFixtures';
+
+const CLIP_RECT = { x: 0, y: 0, width: 200, height: 200 };
 
 const createPolygonContext = () => {
     const ctx = {
@@ -19,6 +22,8 @@ const createPolygonContext = () => {
         moveTo: vi.fn(),
         lineTo: vi.fn(),
         closePath: vi.fn(),
+        rect: vi.fn(),
+        clip: vi.fn(),
         lineWidth: 0,
         strokeStyle: '',
         fillStyle: '',
@@ -189,26 +194,30 @@ describe('maskRendererUtils', () => {
         const strokeColor: [number, number, number, number] = [255, 0, 0, 255];
         const fillColor: [number, number, number, number] = [255, 0, 0, 102];
 
-        drawPolygonsOnContext(ctx, [
-            {
-                parts: [
-                    [
-                        [0, 0],
-                        [4, 0],
-                        [4, 4]
+        drawPolygonsOnContext(
+            ctx,
+            [
+                {
+                    parts: [
+                        [
+                            [0, 0],
+                            [4, 0],
+                            [4, 4]
+                        ],
+                        [
+                            [2, 2],
+                            [6, 2],
+                            [6, 6]
+                        ]
                     ],
-                    [
-                        [2, 2],
-                        [6, 2],
-                        [6, 6]
-                    ]
-                ],
-                strokeColor,
-                fillColor
-            }
-        ]);
+                    strokeColor,
+                    fillColor
+                }
+            ],
+            CLIP_RECT
+        );
 
-        expect(ctx.beginPath).toHaveBeenCalledTimes(1);
+        expect(ctx.beginPath).toHaveBeenCalledTimes(2);
         expect(ctx.moveTo.mock.calls).toEqual([
             [0, 0],
             [2, 2]
@@ -233,26 +242,30 @@ describe('maskRendererUtils', () => {
     it('draws parts of opposite winding in the same direction', () => {
         const ctx = createPolygonContext();
 
-        drawPolygonsOnContext(ctx, [
-            {
-                parts: [
-                    [
-                        [0, 0],
-                        [4, 0],
-                        [4, 4],
-                        [0, 4]
+        drawPolygonsOnContext(
+            ctx,
+            [
+                {
+                    parts: [
+                        [
+                            [0, 0],
+                            [4, 0],
+                            [4, 4],
+                            [0, 4]
+                        ],
+                        [
+                            [2, 2],
+                            [2, 6],
+                            [6, 6],
+                            [6, 2]
+                        ]
                     ],
-                    [
-                        [2, 2],
-                        [2, 6],
-                        [6, 6],
-                        [6, 2]
-                    ]
-                ],
-                strokeColor: [255, 0, 0, 255],
-                fillColor: [255, 0, 0, 102]
-            }
-        ]);
+                    strokeColor: [255, 0, 0, 255],
+                    fillColor: [255, 0, 0, 102]
+                }
+            ],
+            CLIP_RECT
+        );
 
         expect(ctx.moveTo.mock.calls).toEqual([
             [0, 0],
@@ -263,26 +276,74 @@ describe('maskRendererUtils', () => {
     it('skips parts with fewer than three vertices', () => {
         const ctx = createPolygonContext();
 
-        drawPolygonsOnContext(ctx, [
-            {
-                parts: [
-                    [
-                        [0, 0],
-                        [4, 4]
-                    ]
-                ],
-                strokeColor: [255, 0, 0, 255],
-                fillColor: [255, 0, 0, 102]
-            }
-        ]);
+        drawPolygonsOnContext(
+            ctx,
+            [
+                {
+                    parts: [
+                        [
+                            [0, 0],
+                            [4, 4]
+                        ]
+                    ],
+                    strokeColor: [255, 0, 0, 255],
+                    fillColor: [255, 0, 0, 102]
+                }
+            ],
+            CLIP_RECT
+        );
 
         expect(ctx.moveTo).not.toHaveBeenCalled();
+    });
+
+    it('gives the canvas area of a letterboxed image', () => {
+        // contain 200x100 into 200x200: scale 1, offsetY 50
+        expect(getVisibleCanvasRect(geometry({ sourceWidth: 200, sourceHeight: 100 }))).toEqual({
+            x: 0,
+            y: 50,
+            width: 200,
+            height: 100
+        });
+    });
+
+    it('gives the canvas area of the image inside a source crop that passes the image edge', () => {
+        // crop {x:-10,y:0,w:50,h:50} into 200x200: scale 4, offsetX 40
+        expect(
+            getVisibleCanvasRect(geometry({ sourceCrop: { x: -10, y: 0, width: 50, height: 50 } }))
+        ).toEqual({ x: 40, y: 0, width: 160, height: 200 });
+    });
+
+    it('clips polygons to the given canvas area before it draws them', () => {
+        const ctx = createPolygonContext();
+
+        drawPolygonsOnContext(
+            ctx,
+            [
+                {
+                    parts: [
+                        [
+                            [0, 0],
+                            [4, 0],
+                            [4, 4]
+                        ]
+                    ],
+                    strokeColor: [255, 0, 0, 255],
+                    fillColor: [255, 0, 0, 102]
+                }
+            ],
+            { x: 0, y: 50, width: 200, height: 100 }
+        );
+
+        expect(ctx.rect).toHaveBeenCalledExactlyOnceWith(0, 50, 200, 100);
+        expect(ctx.clip.mock.invocationCallOrder[0]).toBeLessThan(
+            ctx.fill.mock.invocationCallOrder[0]
+        );
     });
 
     it('draws nothing for an empty polygon list', () => {
         const ctx = createPolygonContext();
 
-        drawPolygonsOnContext(ctx, []);
+        drawPolygonsOnContext(ctx, [], CLIP_RECT);
 
         expect(ctx.save).not.toHaveBeenCalled();
     });

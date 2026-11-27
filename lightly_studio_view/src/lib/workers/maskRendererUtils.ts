@@ -31,6 +31,8 @@ export interface SourceCrop {
     height: number;
 }
 
+export type CanvasRect = SourceCrop;
+
 /** Describes how source-image coordinates map onto the output canvas. */
 export interface RenderGeometry {
     sourceWidth: number;
@@ -200,6 +202,21 @@ export const transformPolygons = (
     }));
 };
 
+/** Gives the canvas area that shows the image inside the source crop. */
+export const getVisibleCanvasRect = (geometry: RenderGeometry): CanvasRect => {
+    const { sourceWidth, sourceHeight, outputWidth, outputHeight } = geometry;
+    const { scale, offsetX, offsetY, viewport } = getRenderTransform(geometry);
+    const sourceLeft = Math.max(0, viewport.x);
+    const sourceTop = Math.max(0, viewport.y);
+    const sourceRight = Math.min(sourceWidth, viewport.x + viewport.width);
+    const sourceBottom = Math.min(sourceHeight, viewport.y + viewport.height);
+    const left = Math.max(0, sourceLeft * scale + offsetX);
+    const top = Math.max(0, sourceTop * scale + offsetY);
+    const right = Math.min(outputWidth, sourceRight * scale + offsetX);
+    const bottom = Math.min(outputHeight, sourceBottom * scale + offsetY);
+    return { x: left, y: top, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
+};
+
 type PolygonContext = Pick<
     CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
     | 'save'
@@ -213,15 +230,22 @@ type PolygonContext = Pick<
     | 'closePath'
     | 'fill'
     | 'stroke'
+    | 'rect'
+    | 'clip'
 >;
 
 export const drawPolygonsOnContext = (
     ctx: PolygonContext,
     polygons: PolygonInput[],
+    clipRect: CanvasRect,
     stroke = 2
 ) => {
     if (!polygons.length) return;
     ctx.save();
+    // Vertices can lie outside the image. Like boxes and masks, polygons stay on the image.
+    ctx.beginPath();
+    ctx.rect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
+    ctx.clip();
     ctx.lineWidth = stroke;
     for (const polygon of polygons) {
         // One path per polygon: with the nonzero rule, parts of equal winding merge.

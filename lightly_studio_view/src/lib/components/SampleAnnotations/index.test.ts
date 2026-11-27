@@ -99,6 +99,8 @@ type Mock2dContext = {
     moveTo: ReturnType<typeof vi.fn>;
     lineTo: ReturnType<typeof vi.fn>;
     closePath: ReturnType<typeof vi.fn>;
+    rect: ReturnType<typeof vi.fn>;
+    clip: ReturnType<typeof vi.fn>;
     fill: ReturnType<typeof vi.fn>;
     stroke: ReturnType<typeof vi.fn>;
 };
@@ -188,6 +190,8 @@ describe('SampleAnnotations', () => {
             moveTo: vi.fn(),
             lineTo: vi.fn(),
             closePath: vi.fn(),
+            rect: vi.fn(),
+            clip: vi.fn(),
             fill: vi.fn(),
             stroke: vi.fn()
         };
