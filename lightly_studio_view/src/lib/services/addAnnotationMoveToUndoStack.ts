@@ -52,7 +52,7 @@ export const addAnnotationMoveToUndoStack = ({
 
     addReversibleAction({
         id: `annotation-move-${copy.sample_id}-${Date.now()}`,
-        description: 'Undo move annotation',
+        description: 'Move annotation',
         execute,
         timestamp: new Date(),
         groupId: ANNOTATION_MOVE_GROUP_ID

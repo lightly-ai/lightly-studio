@@ -30,7 +30,7 @@ describe('addAnnotationLabelChangeToUndoStack', () => {
         expect(addReversibleAction).toHaveBeenCalledTimes(1);
         const action = addReversibleAction.mock.calls[0][0] as ReversibleAction;
         expect(action.id).toContain('annotation-label-change');
-        expect(action.description).toBe('Undo label change for 2 annotations');
+        expect(action.description).toBe('Change annotation class of 2 annotations');
         expect(action.groupId).toBe('annotation-label-change');
     });
 
@@ -48,7 +48,7 @@ describe('addAnnotationLabelChangeToUndoStack', () => {
         });
 
         const action = addReversibleAction.mock.calls[0][0] as ReversibleAction;
-        expect(action.description).toBe('Undo label change for 1 annotation');
+        expect(action.description).toBe('Change annotation class of 1 annotation');
     });
 
     it('should call updateAnnotations with previous labels and refresh when executed', async () => {

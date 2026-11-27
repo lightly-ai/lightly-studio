@@ -80,7 +80,7 @@ export const addAnnotationDeleteToUndoStack = ({
 
     addReversibleAction({
         id: `annotation-delete-${annotation.sample_id}-${Date.now()}`,
-        description: `Undo delete annotation`,
+        description: 'Delete annotation',
         execute,
         timestamp: new Date(),
         groupId: ANNOTATION_DELETE_GROUP_ID

@@ -29,7 +29,7 @@ export const addAnnotationCreateToUndoStack = ({
 
     addReversibleAction({
         id: `annotation-create-${annotation.sample_id}-${Date.now()}`,
-        description: `Undo create annotation`,
+        description: 'Create annotation',
         execute,
         timestamp: new Date(),
         groupId: ANNOTATION_CREATE_GROUP_ID

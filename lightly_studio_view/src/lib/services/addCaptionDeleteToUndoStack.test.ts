@@ -23,7 +23,7 @@ describe('addCaptionDeleteToUndoStack', () => {
         expect(addReversibleAction).toHaveBeenCalledTimes(1);
         const action = addReversibleAction.mock.calls[0][0] as ReversibleAction;
         expect(action.id).toContain('caption-delete-sample-123');
-        expect(action.description).toBe('Undo delete caption');
+        expect(action.description).toBe('Delete caption');
         expect(action.groupId).toBe(CAPTION_DELETE_GROUP_ID);
     });
 

@@ -32,6 +32,8 @@ export function useEditModeControls(getCollectionId: () => string) {
         isUndoing.set(true);
         try {
             await executeReversibleAction(latestAction.id);
+            // Some undos change nothing visible, so name the reverted action.
+            toast(`Undone: ${latestAction.description}`);
         } catch {
             toast.error('Failed to undo. Please try again.');
         } finally {
