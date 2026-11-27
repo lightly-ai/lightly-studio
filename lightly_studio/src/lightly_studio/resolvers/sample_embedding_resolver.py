@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import Any, NamedTuple
 from uuid import UUID
 
@@ -140,6 +140,34 @@ def get_by_sample_ids(
     # Return embeddings in the same order as the input IDs
     embedding_map = {embedding.sample_id: embedding for embedding in results}
     return [embedding_map[id_] for id_ in sample_ids if id_ in embedding_map]
+
+
+def get_embedded_sample_ids(
+    session: Session,
+    sample_ids: Iterable[UUID],
+    embedding_model_id: UUID,
+) -> set[UUID]:
+    """Get the IDs of the given samples that have an embedding of the model.
+
+    Reads only the sample IDs, not the embedding vectors.
+
+    Args:
+        session: The database session.
+        sample_ids: Sample IDs to check.
+        embedding_model_id: The embedding model ID to filter by.
+
+    Returns:
+        The subset of ``sample_ids`` with an embedding of the model.
+    """
+    embedded_sample_ids: set[UUID] = set()
+    for batch in batching.batched(items=sample_ids):
+        statement = (
+            select(col(SampleEmbeddingTable.sample_id))
+            .where(col(SampleEmbeddingTable.sample_id).in_(batch))
+            .where(col(SampleEmbeddingTable.embedding_model_id) == embedding_model_id)
+        )
+        embedded_sample_ids.update(session.exec(statement).all())
+    return embedded_sample_ids
 
 
 def get_all_by_collection_id(

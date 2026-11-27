@@ -231,6 +231,36 @@ def test_get_sample_embeddings_by_sample_ids(db_session: Session) -> None:
     assert len(embeddings) == 0
 
 
+def test_get_embedded_sample_ids(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    model_a = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_model_name="model_a"
+    )
+    model_b = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_model_name="model_b"
+    )
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="a0.jpg"), ImageStub(path="a1.jpg"), ImageStub(path="b.jpg")],
+    )
+    for image, model in zip(images, [model_a, model_a, model_b]):
+        create_sample_embedding(
+            session=db_session,
+            sample_id=image.sample_id,
+            embedding_model_id=model.embedding_model_id,
+            embedding=[1.0, 2.0],
+        )
+
+    embedded_sample_ids = sample_embedding_resolver.get_embedded_sample_ids(
+        session=db_session,
+        sample_ids=[image.sample_id for image in images],
+        embedding_model_id=model_a.embedding_model_id,
+    )
+
+    assert embedded_sample_ids == {images[0].sample_id, images[1].sample_id}
+
+
 def test_get_all_by_collection_id_with_filter(db_session: Session) -> None:
     # Create a collection with 3 samples and their embeddings.
     collection_id = create_collection(session=db_session).collection_id
