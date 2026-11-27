@@ -33,6 +33,9 @@ MetadataComputation = Annotated[
     TypicalityComputation | SimilarityComputation, Field(discriminator="kind")
 ]
 
+# Every computation reads the default embedding model of the collection.
+_COMPUTATION_EMBEDDING_MODEL_NAME: str | None = None
+
 
 def compute_metadata(
     session: Session,
@@ -64,9 +67,9 @@ def compute_metadata(
 def get_embedding_model_names(computations: Sequence[MetadataComputation]) -> list[str | None]:
     """Return the names of the embedding models that the computations read.
 
-    All computations read the default embedding model, which the name ``None`` stands for.
+    The name ``None`` stands for the default embedding model.
     """
-    return [None] if computations else []
+    return [_COMPUTATION_EMBEDDING_MODEL_NAME] if computations else []
 
 
 def _compute_metadata(
@@ -86,7 +89,7 @@ def _compute_metadata(
         embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
             session=session,
             collection_id=collection.collection_id,
-            embedding_model_name=None,
+            embedding_model_name=_COMPUTATION_EMBEDDING_MODEL_NAME,
         )
         if isinstance(computation, TypicalityComputation):
             compute_typicality.compute_typicality_metadata(
