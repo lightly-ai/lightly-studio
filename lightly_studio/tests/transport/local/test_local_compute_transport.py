@@ -135,22 +135,29 @@ class TestLocalComputeTransport:
             )
 
     @pytest.mark.parametrize(
-        ("query_expr", "sample_count"),
+        ("sample_query", "limit", "sample_count"),
         [
-            (None, 2),
+            (SampleQueryRequest(), None, 2),
             (
-                QueryExpr(
-                    match_expr=IntegerExpr(
-                        field=FieldRef(table="image", name="width"),
-                        operator=OrdinalComparisonOperator.LT,
-                        value=15,
+                SampleQueryRequest(
+                    query_expr=QueryExpr(
+                        match_expr=IntegerExpr(
+                            field=FieldRef(table="image", name="width"),
+                            operator=OrdinalComparisonOperator.LT,
+                            value=15,
+                        )
                     )
                 ),
+                None,
                 1,
             ),
+            (SampleQueryRequest(offset=1), None, 1),
+            (SampleQueryRequest(), 0, 0),
         ],
     )
-    def test_evaluate(self, query_expr: QueryExpr | None, sample_count: int) -> None:
+    def test_evaluate(
+        self, sample_query: SampleQueryRequest, limit: int | None, sample_count: int
+    ) -> None:
         collection = evaluation_helpers.create_dataset_with_annotations(
             db_session=db_manager.persistent_session(), image_widths=(10, 20)
         )
@@ -158,18 +165,40 @@ class TestLocalComputeTransport:
 
         result = transport.evaluate(
             collection_id=collection.collection_id,
-            query_expr=query_expr,
+            request=sample_query,
+            limit=limit,
             task=OBJECT_DETECTION_TASK,
         )
 
         assert result.sample_count == sample_count
         assert result.gt_annotation_count == sample_count
 
+    def test_evaluate__empty_name(self) -> None:
+        collection = evaluation_helpers.create_dataset_with_annotations(
+            db_session=db_manager.persistent_session()
+        )
+        transport: ComputeTransport = LocalComputeTransport()
+
+        transport.evaluate(
+            collection_id=collection.collection_id,
+            request=SampleQueryRequest(),
+            limit=None,
+            task=OBJECT_DETECTION_TASK.model_copy(update={"name": ""}),
+        )
+
+        runs = transport.list_evaluation_runs(collection_id=collection.collection_id)
+        assert [run.name for run in runs] == [""]
+
     def test_evaluate__unknown_collection(self) -> None:
         transport: ComputeTransport = LocalComputeTransport()
 
-        with pytest.raises(ValueError, match=r"not found"):
-            transport.evaluate(collection_id=uuid4(), query_expr=None, task=OBJECT_DETECTION_TASK)
+        with pytest.raises(ValueError, match=r"is not an image collection"):
+            transport.evaluate(
+                collection_id=uuid4(),
+                request=SampleQueryRequest(),
+                limit=None,
+                task=OBJECT_DETECTION_TASK,
+            )
 
     def test_evaluate__video_collection(self) -> None:
         session = db_manager.persistent_session()
@@ -178,9 +207,12 @@ class TestLocalComputeTransport:
         ).collection_id
         transport: ComputeTransport = LocalComputeTransport()
 
-        with pytest.raises(ValueError, match=r"only be triggered on image collections"):
+        with pytest.raises(ValueError, match=r"is not an image collection"):
             transport.evaluate(
-                collection_id=collection_id, query_expr=None, task=OBJECT_DETECTION_TASK
+                collection_id=collection_id,
+                request=SampleQueryRequest(),
+                limit=None,
+                task=OBJECT_DETECTION_TASK,
             )
 
     def test_list_evaluation_runs(self) -> None:
@@ -234,6 +266,9 @@ def _create_evaluation_run(image_widths: tuple[int, ...], label_name: str) -> tu
         db_session=db_manager.persistent_session(), image_widths=image_widths, label_name=label_name
     )
     result = LocalComputeTransport().evaluate(
-        collection_id=collection.collection_id, query_expr=None, task=OBJECT_DETECTION_TASK
+        collection_id=collection.collection_id,
+        request=SampleQueryRequest(),
+        limit=None,
+        task=OBJECT_DETECTION_TASK,
     )
     return collection.collection_id, result.evaluation_run_id

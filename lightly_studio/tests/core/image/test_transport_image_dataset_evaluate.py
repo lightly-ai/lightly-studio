@@ -26,6 +26,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     QueryExpr,
 )
+from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.transport import active_transport
 from lightly_studio.transport.local.local_compute_transport import LocalComputeTransport
 
@@ -51,13 +52,16 @@ class TestTransportImageDatasetEvaluate:
 
         transport.compute.evaluate.assert_called_once_with(
             collection_id=dataset.collection_id,
-            query_expr=QueryExpr(
-                match_expr=IntegerExpr(
-                    field=FieldRef(table="image", name="width"),
-                    operator=OrdinalComparisonOperator.GT,
-                    value=10,
+            request=SampleQueryRequest(
+                query_expr=QueryExpr(
+                    match_expr=IntegerExpr(
+                        field=FieldRef(table="image", name="width"),
+                        operator=OrdinalComparisonOperator.GT,
+                        value=10,
+                    )
                 )
             ),
+            limit=None,
             task=EvaluationTask(
                 task_type=EvaluationTaskType.OBJECT_DETECTION,
                 name="run",

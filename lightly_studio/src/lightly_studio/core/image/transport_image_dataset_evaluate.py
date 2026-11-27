@@ -159,6 +159,7 @@ class TransportImageDatasetEvaluate(ImageDatasetEvaluate):
         )
         return active_transport.get_transport().compute.evaluate(
             collection_id=self._query.dataset.collection_id,
-            query_expr=request.query_expr,
+            request=request,
+            limit=self._query.limit,
             task=task,
         )
