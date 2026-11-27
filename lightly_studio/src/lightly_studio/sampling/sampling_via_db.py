@@ -46,6 +46,12 @@ from lightly_studio.utils import batching
 
 EPSILON = 1e-6
 
+_SAMPLE_EMBEDDING_STRATEGIES = (
+    EmbeddingDiversityStrategy,
+    EmbeddingDeduplicationStrategy,
+    EmbeddingSimilarityStrategy,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -240,6 +246,8 @@ def sampling_via_database(
 
     When ``config.selected_sequence_length`` is set, sampling runs over mean-pooled
     sequence proxies and the tag contains every frame of each selected sequence.
+    Otherwise, candidates without an embedding of a model that a strategy uses are
+    left out, and a warning gives their count.
 
     Args:
         session: Database session used to resolve and store sampling data.
@@ -248,7 +256,8 @@ def sampling_via_database(
 
     Raises:
         ValueError: If the preselected tag does not exist, if its sample IDs are
-            not a subset of the input sample IDs, or if the result tag name is
+            not a subset of the input sample IDs, if a preselected sample has no
+            embedding of a model that a strategy uses, or if the result tag name is
             taken by a tag other than the preselected one.
     """
     preselected_sample_ids = _get_preselected_sample_ids(
@@ -268,6 +277,12 @@ def sampling_via_database(
         )
         return
 
+    input_sample_ids = _drop_samples_without_embeddings(
+        session=session,
+        config=config,
+        input_sample_ids=input_sample_ids,
+        preselected_sample_ids=preselected_sample_ids,
+    )
     preselected_indices, n_samples_to_select = _prepare_preselection(
         input_sample_ids=input_sample_ids,
         preselected_sample_ids=preselected_sample_ids,
@@ -381,6 +396,58 @@ def _prepare_preselection(
     preselected_indices = [sample_id_to_index[sample_id] for sample_id in preselected_sample_ids]
     n_available_samples = len(input_sample_ids) - len(preselected_indices)
     return preselected_indices, min(n_samples_to_select, n_available_samples)
+
+
+def _drop_samples_without_embeddings(
+    session: Session,
+    config: SamplingConfig,
+    input_sample_ids: Sequence[UUID],
+    preselected_sample_ids: Sequence[UUID],
+) -> list[UUID]:
+    """Return the input sample IDs that have an embedding of each model the strategies use.
+
+    The order of ``input_sample_ids`` is kept, because Mundig indices map back to it.
+
+    Raises:
+        ValueError: If a preselected input sample has no embedding of such a model.
+    """
+    embedding_model_names = _get_embedding_model_names(strategies=config.strategies)
+    if not embedding_model_names:
+        return list(input_sample_ids)
+    embedded_sample_ids = sampling_helpers.get_sample_ids_with_embeddings(
+        session=session,
+        collection_id=config.collection_id,
+        sample_ids=input_sample_ids,
+        embedding_model_names=embedding_model_names,
+    )
+    preselected_without_embedding = (
+        set(preselected_sample_ids).intersection(input_sample_ids) - embedded_sample_ids
+    )
+    if preselected_without_embedding:
+        raise ValueError(
+            f"{len(preselected_without_embedding)} preselected samples have no embedding. "
+            "Remove them from the preselected tag."
+        )
+    kept_sample_ids = [
+        sample_id for sample_id in input_sample_ids if sample_id in embedded_sample_ids
+    ]
+    n_left_out = len(input_sample_ids) - len(kept_sample_ids)
+    if n_left_out > 0:
+        logger.warning(
+            "%d of %d samples have no embedding and were left out of sampling.",
+            n_left_out,
+            len(input_sample_ids),
+        )
+    return kept_sample_ids
+
+
+def _get_embedding_model_names(strategies: Sequence[Strategy]) -> set[str | None]:
+    """Return the embedding model names of the strategies that use sample embeddings."""
+    return {
+        strat.embedding_model_name
+        for strat in strategies
+        if isinstance(strat, _SAMPLE_EMBEDDING_STRATEGIES)
+    }
 
 
 def _get_annotations_for_class_balancing(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from uuid import UUID, uuid4
 
@@ -87,6 +88,86 @@ def test_sampling_via_database__embedding_diversity(
     expected_sample_paths = {"sample_0.jpg", "sample_19.jpg"}
     actual_sample_paths = {sample.file_path_abs for sample in samples_in_tag}
     assert actual_sample_paths == expected_sample_paths
+
+
+def test_sampling_via_database__samples_without_embedding_left_out(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    collection_id, sample_ids = helpers_sampling.create_images_with_embeddings(
+        session=db_session,
+        embedding_models_per_image=[["model"], [], ["model"], [], ["model"]],
+    )
+    config = SamplingConfig(
+        collection_id=collection_id,
+        n_samples_to_select=3,
+        sampling_result_tag_name="result",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="model")],
+    )
+
+    with caplog.at_level(logging.WARNING):
+        sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    assert set(_sample_ids_by_tag_name(db_session, collection_id, "result")) == {
+        sample_ids[0],
+        sample_ids[2],
+        sample_ids[4],
+    }
+    assert "2 of 5 samples have no embedding and were left out of sampling." in caplog.text
+
+
+def test_sampling_via_database__similarity__samples_without_embedding_left_out(
+    db_session: Session,
+) -> None:
+    collection_id, sample_ids = helpers_sampling.create_images_with_embeddings(
+        session=db_session,
+        embedding_models_per_image=[["model"], [], ["model"], [], ["model"]],
+    )
+    query_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="query")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=query_tag.tag_id, sample_ids=[sample_ids[0]]
+    )
+    config = SamplingConfig(
+        collection_id=collection_id,
+        n_samples_to_select=3,
+        sampling_result_tag_name="result",
+        strategies=[
+            EmbeddingSimilarityStrategy(query_tag_name="query", embedding_model_name="model")
+        ],
+    )
+
+    sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+
+    assert set(_sample_ids_by_tag_name(db_session, collection_id, "result")) == {
+        sample_ids[0],
+        sample_ids[2],
+        sample_ids[4],
+    }
+
+
+def test_sampling_via_database__preselected_sample_without_embedding(
+    db_session: Session,
+) -> None:
+    collection_id, sample_ids = helpers_sampling.create_images_with_embeddings(
+        session=db_session,
+        embedding_models_per_image=[["model"], [], ["model"]],
+    )
+    preselected_tag = create_tag(
+        session=db_session, collection_id=collection_id, tag_name="preselected"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=preselected_tag.tag_id, sample_ids=[sample_ids[1]]
+    )
+    config = SamplingConfig(
+        collection_id=collection_id,
+        n_samples_to_select=2,
+        sampling_result_tag_name="result",
+        preselected_tag_name="preselected",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="model")],
+    )
+
+    with pytest.raises(ValueError, match=r"1 preselected samples have no embedding"):
+        sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
 
 
 def test_sampling_via_database__embedding_deduplication(
@@ -2029,6 +2110,12 @@ def _all_sample_ids(session: Session, collection_id: UUID) -> list[UUID]:
         session=session, collection_id=collection_id, pagination=None
     ).samples
     return [sample.sample_id for sample in samples]
+
+
+def _sample_ids_by_tag_name(session: Session, collection_id: UUID, tag_name: str) -> list[UUID]:
+    tag = tag_resolver.get_by_name(session=session, tag_name=tag_name, collection_id=collection_id)
+    assert tag is not None
+    return _sample_ids_by_tag(session=session, collection_id=collection_id, tag_id=tag.tag_id)
 
 
 def _sample_ids_by_tag(session: Session, collection_id: UUID, tag_id: UUID) -> list[UUID]:
