@@ -19,5 +19,6 @@ export const createWorkerRenderMessage = (overrides: Record<string, unknown> = {
     objectFit: 'contain',
     masks: [],
     boxes: [],
+    polygons: [],
     ...overrides
 });

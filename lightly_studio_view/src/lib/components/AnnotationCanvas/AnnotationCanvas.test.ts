@@ -26,6 +26,13 @@ type Mock2dContext = {
     save: ReturnType<typeof vi.fn>;
     restore: ReturnType<typeof vi.fn>;
     strokeRect: ReturnType<typeof vi.fn>;
+    beginPath: ReturnType<typeof vi.fn>;
+    moveTo: ReturnType<typeof vi.fn>;
+    lineTo: ReturnType<typeof vi.fn>;
+    closePath: ReturnType<typeof vi.fn>;
+    fill: ReturnType<typeof vi.fn>;
+    stroke: ReturnType<typeof vi.fn>;
+    strokeStylesAtStroke: string[];
 };
 
 class MockWorker {
@@ -90,7 +97,14 @@ describe('AnnotationCanvas', () => {
             putImageData: vi.fn(),
             save: vi.fn(),
             restore: vi.fn(),
-            strokeRect: vi.fn()
+            strokeRect: vi.fn(),
+            beginPath: vi.fn(),
+            moveTo: vi.fn(),
+            lineTo: vi.fn(),
+            closePath: vi.fn(),
+            fill: vi.fn(),
+            stroke: vi.fn(() => context.strokeStylesAtStroke.push(context.strokeStyle)),
+            strokeStylesAtStroke: []
         };
         return context;
     };
@@ -629,5 +643,83 @@ describe('AnnotationCanvas', () => {
         const firstImageData = firstContext?.putImageData.mock.calls[0][0] as ImageData;
         const secondImageData = secondContext?.putImageData.mock.calls[0][0] as ImageData;
         expect(firstImageData.data).not.toEqual(secondImageData.data);
+    });
+
+    describe('polygons', () => {
+        const polygonAnnotation = {
+            annotation_type: 'polygon' as const,
+            annotation_label_name: 'car',
+            polygons: [
+                [
+                    [10, 10],
+                    [50, 10],
+                    [50, 40]
+                ] as Array<[number, number]>
+            ]
+        };
+
+        it('draws a polygon on the main-thread canvas when there are no masks', async () => {
+            const { container } = render(AnnotationCanvas, {
+                props: {
+                    sampleId: 'sample-polygon',
+                    sourceWidth: 100,
+                    sourceHeight: 100,
+                    outputWidth: 200,
+                    outputHeight: 200,
+                    annotations: [polygonAnnotation]
+                }
+            });
+            await tick();
+
+            const context = canvasContexts.get(container.querySelector('canvas')!);
+            expect(MockWorker.instances).toHaveLength(0);
+            expect(context?.moveTo).toHaveBeenCalledWith(20, 20);
+            expect(context?.lineTo).toHaveBeenCalledWith(100, 20);
+            expect(context?.lineTo).toHaveBeenCalledWith(100, 80);
+            expect(context?.fill).toHaveBeenCalledWith('nonzero');
+            expect(context?.strokeRect).not.toHaveBeenCalled();
+        });
+
+        it('colors a polygon stroke by its source name', async () => {
+            const { container } = render(AnnotationCanvas, {
+                props: {
+                    sampleId: 'sample-polygon-source',
+                    sourceWidth: 100,
+                    sourceHeight: 100,
+                    annotations: [{ ...polygonAnnotation, sourceName: 'Predictions' }]
+                }
+            });
+            await tick();
+
+            const context = canvasContexts.get(container.querySelector('canvas')!);
+            expect(context?.strokeStylesAtStroke[0]).toMatch(/^rgba\(200, 100, 50,/);
+        });
+
+        it('sends polygons to the worker when masks are present', async () => {
+            render(AnnotationCanvas, {
+                props: {
+                    sampleId: 'sample-polygon-mask',
+                    sourceWidth: 16,
+                    sourceHeight: 8,
+                    outputWidth: 8,
+                    outputHeight: 4,
+                    annotations: [
+                        {
+                            annotation_type: 'segmentation_mask',
+                            annotation_label_name: 'road',
+                            segmentation_mask: [0, 3, 2]
+                        },
+                        polygonAnnotation
+                    ]
+                }
+            });
+            await tick();
+
+            const renderMessage = MockWorker.instances
+                .flatMap((instance) => instance.postMessage.mock.calls.map(([message]) => message))
+                .find((message) => message?.type === 'render');
+            expect(renderMessage.polygons).toHaveLength(1);
+            expect(renderMessage.polygons[0].parts).toEqual(polygonAnnotation.polygons);
+        });
     });
 });
