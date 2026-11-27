@@ -24,10 +24,13 @@ def create_dataset_with_annotations(
     annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
     image_widths: tuple[int, ...] = (1920,),
     annotation_data: dict[str, Any] | None = None,
+    label_name: str = "cat",
 ) -> CollectionTable:
     """Create a root image collection with 'gt'/'pred' annotation sources."""
     root = create_collection(session=db_session)
-    label = create_annotation_label(session=db_session, root_collection_id=root.collection_id)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=root.collection_id, label_name=label_name
+    )
     for source_name in ("gt", "pred"):
         create_collection(
             session=db_session,

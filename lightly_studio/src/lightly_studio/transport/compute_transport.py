@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID
 
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
+from lightly_studio.models.evaluation_metrics import EvaluationMetrics
+from lightly_studio.models.evaluation_run import EvaluationRunView
 from lightly_studio.models.evaluation_task import EvaluationResult, EvaluationTask
 from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample_query import SampleQueryRequest
@@ -83,4 +86,27 @@ class ComputeTransport(Protocol):
         Raises:
             ValueError: If the collection does not exist or is not an image collection, or an
                 annotation source is not valid for the task.
+        """
+
+    def list_evaluation_runs(self, collection_id: UUID) -> list[EvaluationRunView]:
+        """List the evaluation runs of the dataset of a collection, newest first.
+
+        Raises:
+            ValueError: If the collection does not exist.
+        """
+
+    def get_evaluation_confusion_matrix(self, collection_id: UUID, run_id: UUID) -> ConfusionMatrix:
+        """Get the confusion matrix of an evaluation run of the dataset of a collection.
+
+        Raises:
+            ValueError: If the collection does not exist, or the run does not exist in its dataset.
+            NotImplementedError: If the task type of the run has no confusion matrix.
+        """
+
+    def get_evaluation_metrics(self, collection_id: UUID, run_id: UUID) -> EvaluationMetrics:
+        """Get the aggregate metrics of an evaluation run of the dataset of a collection.
+
+        Raises:
+            ValueError: If the collection does not exist, or the run does not exist in its dataset.
+            NotImplementedError: If the task type of the run has no confusion matrix.
         """

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from collections.abc import Callable
+from uuid import UUID, uuid4
 
 import pytest
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_confusion_matrix import NO_GROUND_TRUTH_ROW_LABEL
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.models.evaluation_task import EvaluationTask, ObjectDetectionEvaluationConfig
 from lightly_studio.models.query_expr import (
@@ -180,3 +182,58 @@ class TestLocalComputeTransport:
             transport.evaluate(
                 collection_id=collection_id, query_expr=None, task=OBJECT_DETECTION_TASK
             )
+
+    def test_list_evaluation_runs(self) -> None:
+        collection_id, run_id = _create_evaluation_run(image_widths=(10,), label_name="dog")
+        transport: ComputeTransport = LocalComputeTransport()
+
+        runs = transport.list_evaluation_runs(collection_id=collection_id)
+
+        assert [(run.id, run.name) for run in runs] == [(run_id, "run")]
+
+    def test_get_evaluation_confusion_matrix(self) -> None:
+        collection_id, run_id = _create_evaluation_run(image_widths=(10, 20), label_name="dog")
+        transport: ComputeTransport = LocalComputeTransport()
+
+        matrix = transport.get_evaluation_confusion_matrix(
+            collection_id=collection_id, run_id=run_id
+        )
+
+        assert matrix.row_labels == ["dog", NO_GROUND_TRUTH_ROW_LABEL]
+        assert matrix.counts == [[2, 0], [0, 0]]
+
+    def test_get_evaluation_metrics(self) -> None:
+        collection_id, run_id = _create_evaluation_run(image_widths=(10,), label_name="dog")
+        transport: ComputeTransport = LocalComputeTransport()
+
+        metrics = transport.get_evaluation_metrics(collection_id=collection_id, run_id=run_id)
+
+        assert metrics.precision == 1.0
+        assert metrics.recall == 1.0
+
+    @pytest.mark.parametrize(
+        "read_run",
+        [
+            LocalComputeTransport.get_evaluation_confusion_matrix,
+            LocalComputeTransport.get_evaluation_metrics,
+        ],
+    )
+    def test_get_evaluation__run_of_other_dataset(self, read_run: Callable[..., object]) -> None:
+        _, run_id = _create_evaluation_run(image_widths=(10,), label_name="dog")
+        other_collection_id = create_collection(
+            session=db_manager.persistent_session()
+        ).collection_id
+
+        with pytest.raises(ValueError, match=r"not found in this dataset"):
+            read_run(LocalComputeTransport(), collection_id=other_collection_id, run_id=run_id)
+
+
+def _create_evaluation_run(image_widths: tuple[int, ...], label_name: str) -> tuple[UUID, UUID]:
+    """Create an object detection run. The GT and the prediction of each image have the same box."""
+    collection = evaluation_helpers.create_dataset_with_annotations(
+        db_session=db_manager.persistent_session(), image_widths=image_widths, label_name=label_name
+    )
+    result = LocalComputeTransport().evaluate(
+        collection_id=collection.collection_id, query_expr=None, task=OBJECT_DETECTION_TASK
+    )
+    return collection.collection_id, result.evaluation_run_id
