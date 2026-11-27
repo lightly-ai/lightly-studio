@@ -90,6 +90,7 @@
         max={SLIDER_STEPS}
         step="1"
         aria-label="Brush size"
+        aria-valuetext={`${size} px`}
         value={sliderPosition}
         oninput={onSliderInput}
         class="w-full accent-primary"

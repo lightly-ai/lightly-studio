@@ -11,6 +11,17 @@ describe('BrushSizeInput', () => {
         expect(screen.getByRole('slider', { name: 'Brush size' })).toHaveValue('581');
     });
 
+    it('reports the brush size in px as the slider value text', async () => {
+        const { rerender } = render(BrushSizeInput, { props: { size: 22, onChange: vi.fn() } });
+        const slider = screen.getByRole('slider', { name: 'Brush size' });
+
+        expect(slider).toHaveAttribute('aria-valuetext', '22 px');
+
+        await rerender({ size: 37, onChange: vi.fn() });
+
+        expect(slider).toHaveAttribute('aria-valuetext', '37 px');
+    });
+
     it('applies a typed size on Enter', async () => {
         const onChange = vi.fn();
         render(BrushSizeInput, { props: { size: 100, onChange } });
