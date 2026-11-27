@@ -262,8 +262,8 @@ def sampling_via_database(
     Raises:
         ValueError: If the preselected tag does not exist, if its sample IDs are
             not a subset of the input sample IDs, if no input sample or a preselected
-            sample has no embedding of a model that a strategy uses, or if the result
-            tag name is taken by a tag other than the preselected one.
+            sample has no embedding of a needed model, or if the result tag name is
+            taken by a tag other than the preselected one.
     """
     preselected_sample_ids = _get_preselected_sample_ids(
         session=session,
