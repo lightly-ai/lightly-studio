@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from uuid import UUID
 
 from sqlmodel import Session
@@ -37,6 +37,31 @@ def get_embeddings_by_sample_ids(
         embedding_model_id=embedding_model_id,
     )
     return [embedding.embedding for embedding in embedding_tables]
+
+
+def get_sample_ids_with_embeddings(
+    session: Session,
+    collection_id: UUID,
+    sample_ids: Sequence[UUID],
+    embedding_model_names: Iterable[str | None],
+) -> set[UUID]:
+    """Return the IDs of the given samples that have an embedding of every given model.
+
+    The model name ``None`` stands for the default embedding model of the collection.
+    """
+    embedded_sample_ids = set(sample_ids)
+    for embedding_model_name in embedding_model_names:
+        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_name=embedding_model_name,
+        )
+        embedded_sample_ids = sample_embedding_resolver.get_embedded_sample_ids(
+            session=session,
+            sample_ids=list(embedded_sample_ids),
+            embedding_model_id=embedding_model_id,
+        )
+    return embedded_sample_ids
 
 
 def get_embeddings_by_tag_id(

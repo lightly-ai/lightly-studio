@@ -142,6 +142,34 @@ def get_by_sample_ids(
     return [embedding_map[id_] for id_ in sample_ids if id_ in embedding_map]
 
 
+def get_embedded_sample_ids(
+    session: Session,
+    sample_ids: Sequence[UUID],
+    embedding_model_id: UUID,
+) -> set[UUID]:
+    """Get the IDs of the given samples that have an embedding of the model.
+
+    Reads only the sample IDs, not the embedding vectors.
+
+    Args:
+        session: The database session.
+        sample_ids: Sample IDs to check.
+        embedding_model_id: The embedding model ID to filter by.
+
+    Returns:
+        The subset of ``sample_ids`` with an embedding of the model.
+    """
+    embedded_sample_ids: set[UUID] = set()
+    for batch in batching.batched(items=sample_ids):
+        statement = (
+            select(col(SampleEmbeddingTable.sample_id))
+            .where(col(SampleEmbeddingTable.sample_id).in_(batch))
+            .where(col(SampleEmbeddingTable.embedding_model_id) == embedding_model_id)
+        )
+        embedded_sample_ids.update(session.exec(statement).all())
+    return embedded_sample_ids
+
+
 def get_all_by_collection_id(
     session: Session,
     collection_id: UUID,
