@@ -27,7 +27,7 @@ interface SubmitParams {
     preselectedTagId?: string;
 }
 
-function showSelectionCreatedToast(nSamplesWithoutEmbedding: number): void {
+function showSamplingCreatedToast(nSamplesWithoutEmbedding: number): void {
     if (nSamplesWithoutEmbedding === 0) {
         toast.success('Sampling created successfully');
         return;
@@ -44,7 +44,7 @@ async function handleSelectionSuccess(
     samplingResponse: SamplingResponse | undefined,
     params: UseSubmitCombinationSelectionParams
 ): Promise<void> {
-    showSelectionCreatedToast(samplingResponse?.n_samples_without_embedding ?? 0);
+    showSamplingCreatedToast(samplingResponse?.n_samples_without_embedding ?? 0);
     await params.loadTags();
     const newTag = get(params.tags).find((tag) => tag.name === selectionResultTagName);
     if (newTag) params.setTagSelected(newTag.tag_id, true);
