@@ -5,6 +5,7 @@
     import * as Popover from '$lib/components/ui/popover';
     import type { ComponentProps } from 'svelte';
     import AccumulationSettings from './AccumulationSettings.svelte';
+    import EgoRangeSettings from './EgoRangeSettings.svelte';
     import PointSizeSettings from './PointSizeSettings.svelte';
 
     interface Props {
@@ -13,6 +14,7 @@
         showNavigationHelpers: boolean;
         disabled?: boolean;
         accumulation?: ComponentProps<typeof AccumulationSettings>;
+        egoRange?: ComponentProps<typeof EgoRangeSettings>;
         onOrthographicViewsEnabledChange: (enabled: boolean) => void;
         onPointSizeChange: (pointSize: number) => void;
         onToggleNavigationHelpers: (show: boolean) => void;
@@ -24,6 +26,7 @@
         showNavigationHelpers,
         disabled = false,
         accumulation,
+        egoRange,
         onOrthographicViewsEnabledChange,
         onPointSizeChange,
         onToggleNavigationHelpers
@@ -77,6 +80,9 @@
                 setAccumulatePointClouds={accumulation.setAccumulatePointClouds}
                 setAccumulationRadius={accumulation.setAccumulationRadius}
             />
+        {/if}
+        {#if egoRange}
+            <EgoRangeSettings {...egoRange} />
         {/if}
     </Popover.Content>
 </Popover.Root>

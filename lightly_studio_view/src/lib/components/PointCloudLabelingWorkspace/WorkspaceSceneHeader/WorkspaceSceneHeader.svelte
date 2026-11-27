@@ -7,6 +7,17 @@
     const getLayout = usePointCloudWorkspaceLayoutContext();
     const layout = $derived(getLayout());
     const scene = useWorkspaceSceneLayout();
+    const egoRange = $derived(
+        layout.egoRange && {
+            enabled: layout.egoRange.enabled,
+            radius: layout.egoRange.radius,
+            egoFrame: layout.egoRange.egoFrame,
+            egoFrameOptions: layout.egoRange.egoFrameOptions,
+            onEnabledChange: layout.egoRange.setEnabled,
+            onRadiusChange: layout.egoRange.setRadius,
+            onEgoFrameChange: layout.egoRange.setEgoFrame
+        }
+    );
 </script>
 
 <WorkspacePanelHeader title="3D scene">
@@ -20,6 +31,7 @@
         {/if}
         <SceneViewSettings
             accumulation={layout.accumulation}
+            {egoRange}
             orthographicViewsEnabled={layout.orthographicViewsEnabled}
             pointSize={layout.pointSize}
             showNavigationHelpers={layout.showNavigationHelpers}
