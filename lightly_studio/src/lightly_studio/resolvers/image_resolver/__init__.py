@@ -26,9 +26,6 @@ from lightly_studio.resolvers.image_resolver.get_for_export import (
     get_for_export,
 )
 from lightly_studio.resolvers.image_resolver.get_many_by_id import get_many_by_id
-from lightly_studio.resolvers.image_resolver.get_ordered_sample_ids import (
-    get_ordered_sample_ids,
-)
 from lightly_studio.resolvers.image_resolver.get_sample_ids import (
     build_sample_ids_query,
     get_sample_ids,
@@ -57,7 +54,6 @@ __all__ = [
     "get_field_histograms",
     "get_for_export",
     "get_many_by_id",
-    "get_ordered_sample_ids",
     "get_sample_ids",
     "get_sample_ids_by_paths",
     "get_samples_excluding",
