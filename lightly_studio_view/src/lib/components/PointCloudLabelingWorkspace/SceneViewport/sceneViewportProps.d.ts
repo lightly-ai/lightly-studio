@@ -12,6 +12,7 @@ import type {
 } from '../domain';
 import type { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
 import type { CuboidLayerProps } from '../CuboidLayer/cuboidLayerProps';
+import type { EgoRange } from '../EgoRange';
 /** Rendering inputs and interaction callbacks for a reusable scene viewport. */
 export interface SceneViewportProps {
     /** Optional header rendered inside the viewport focus boundary. */
@@ -72,6 +73,8 @@ export interface SceneViewportProps {
     onPreviousTick?: () => void;
     /** Fires on the right arrow key. */
     onNextTick?: () => void;
+    /** Range around the ego; draws a ring and dims the points outside it. */
+    egoRange?: EgoRange | null;
     /** Shared camera target and world-units-per-pixel scale. */
     viewState?: SceneViewState | null;
     /** Publishes camera navigation and scale changes to sibling views. */

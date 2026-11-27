@@ -27,6 +27,12 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/GroundPlane/GroundPlane.sve
 vi.mock('$lib/components/PointCloudLabelingWorkspace/OriginAxes/OriginAxes.svelte', () => ({
     default: () => {}
 }));
+vi.mock('$lib/components/PointCloudLabelingWorkspace/EgoRange/EgoRangeRing.svelte', () => ({
+    default: () => {}
+}));
+vi.mock('$lib/components/PointCloudLabelingWorkspace/EgoRange/EgoDistanceLine.svelte', () => ({
+    default: () => {}
+}));
 
 function press(target: Element | Window, key: string, init: KeyboardEventInit = {}) {
     const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });

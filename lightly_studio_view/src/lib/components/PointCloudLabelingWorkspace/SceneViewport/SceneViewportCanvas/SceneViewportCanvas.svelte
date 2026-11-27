@@ -3,6 +3,9 @@
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '../../CuboidLayer/CuboidLayer.svelte';
     import OriginAxes from '../../OriginAxes/OriginAxes.svelte';
+    import EgoRangeRing from '../../EgoRange/EgoRangeRing.svelte';
+    import EgoDistanceLine from '../../EgoRange/EgoDistanceLine.svelte';
+    import { showsEgoRangeOverlay } from '../../EgoRange/showsEgoRangeOverlay';
     import ReleaseWebGLContext from './ReleaseWebGLContext';
     import { useSceneViewportContext } from '../sceneViewportContext';
     import { getAnnotationPointClipping } from '../annotationPointClipping';
@@ -12,6 +15,14 @@
         props.cuboids.find((annotation) => annotation.id === props.selectedAnnotationId)
     );
     const clippingPlanes = $derived(getAnnotationPointClipping(props.cameraMode, selectedCuboid));
+    const rangeHighlight = $derived(
+        props.egoRange
+            ? {
+                  center: [props.egoRange.position[0], props.egoRange.position[1]] as const,
+                  radius: props.egoRange.radius
+              }
+            : undefined
+    );
     // While a cuboid is drawn, the points that it takes in are highlighted in every viewport.
     const draftHighlight = $derived(
         props.draftCuboid
@@ -37,6 +48,7 @@
         cameraCuboid={props.cameraMode === 'perspective' ? undefined : selectedCuboid}
         {clippingPlanes}
         highlightCuboid={draftHighlight ?? selectedCuboid}
+        {rangeHighlight}
         colorMode={props.colorMode}
         pointSize={props.pointSize}
         intensityRange={props.intensityRange}
@@ -51,6 +63,12 @@
     />
     {#if props.cameraMode === 'perspective'}
         <OriginAxes />
+    {/if}
+    {#if props.egoRange && showsEgoRangeOverlay(props.cameraMode)}
+        <EgoRangeRing range={props.egoRange} />
+        {#if selectedCuboid}
+            <EgoDistanceLine egoPosition={props.egoRange.position} target={selectedCuboid.center} />
+        {/if}
     {/if}
     <CuboidLayer
         cameraMode={props.cameraMode}

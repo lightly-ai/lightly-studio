@@ -47,12 +47,21 @@
     onCreateCuboid={(box) => layout.onCreateCuboid(box, cameraMode !== 'perspective')}
     draftCuboid={layout.draftCuboid}
     onCuboidDraftChange={layout.onCuboidDraftChange}
+    egoRange={layout.egoRange?.range}
     onPreviousTick={cameraMode === 'perspective' ? layout.onPreviousFrame : undefined}
     onNextTick={cameraMode === 'perspective' ? layout.onNextFrame : undefined}
 >
     {#snippet header()}
         {#if cameraMode === 'perspective'}
             <WorkspaceSceneHeader />
+            {#if layout.egoRange?.unavailableReason}
+                <div class="pointer-events-none flex justify-center pt-2">
+                    <span
+                        class="rounded bg-background/80 px-2 py-0.5 text-xs text-muted-foreground"
+                        data-testid="ego-range-notice">{layout.egoRange.unavailableReason}</span
+                    >
+                </div>
+            {/if}
             {#if layout.effectiveTool === 'create-cuboid'}
                 <div class="pointer-events-none flex justify-center pt-2">
                     <CuboidTargetChip

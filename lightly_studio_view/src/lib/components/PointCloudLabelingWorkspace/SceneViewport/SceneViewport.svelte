@@ -44,6 +44,7 @@
         onCuboidTransform?: Parameters<typeof resolveSceneViewportProps>[0]['onCuboidTransform'];
         onPreviousTick?: () => void;
         onNextTick?: () => void;
+        egoRange?: Parameters<typeof resolveSceneViewportProps>[0]['egoRange'];
         viewState?: SceneViewState | null;
         onViewStateChange?: (viewState: SceneViewState) => void;
     }
