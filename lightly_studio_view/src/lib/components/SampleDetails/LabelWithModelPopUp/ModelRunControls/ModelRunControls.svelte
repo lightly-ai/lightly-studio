@@ -9,10 +9,22 @@
         isGenerating: boolean;
         isEmptyResult: boolean;
         canGenerate: boolean;
+        // Set while a browser model downloads, on its first run only.
+        downloadProgress: { loaded: number; total: number } | null;
         onRun: () => void;
     }
 
-    let { predictionCount, isGenerating, isEmptyResult, canGenerate, onRun }: Props = $props();
+    let {
+        predictionCount,
+        isGenerating,
+        isEmptyResult,
+        canGenerate,
+        downloadProgress,
+        onRun
+    }: Props = $props();
+
+    const BYTES_PER_MB = 1_000_000;
+    const toMegabytes = (bytes: number) => Math.round(bytes / BYTES_PER_MB);
 
     const annotationsLabel = $derived(
         predictionCount === 1 ? 'suggested annotation' : 'suggested annotations'
@@ -40,7 +52,12 @@
     <p class="text-xs text-muted-foreground">Delete the wrong ones, then save.</p>
 {:else}
     <Button class="h-8 gap-1.5" disabled={!canGenerate} onclick={onRun}>
-        {#if isGenerating}
+        {#if downloadProgress}
+            <Loader2 class="size-4 animate-spin" />
+            Downloading model… {toMegabytes(downloadProgress.loaded)} of {toMegabytes(
+                downloadProgress.total
+            )} MB
+        {:else if isGenerating}
             <Loader2 class="size-4 animate-spin" />
             Running…
         {:else}

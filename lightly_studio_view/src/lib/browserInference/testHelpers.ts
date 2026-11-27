@@ -30,7 +30,7 @@ const encodeBytesField = (field: number, bytes: Uint8Array | number[]): number[]
 
 // Builds a minimal ONNX ModelProto: an IR version, a junk graph field that readers must skip,
 // and one metadata_props entry per key.
-export const encodeModel = (metadata: Record<string, string>): Uint8Array => {
+export const encodeModel = (metadata: Record<string, string>): Uint8Array<ArrayBuffer> => {
     const entries = Object.entries(metadata).flatMap(([key, value]) =>
         encodeBytesField(METADATA_PROPS_FIELD, [
             ...encodeBytesField(ENTRY_KEY_FIELD, textEncoder.encode(key)),

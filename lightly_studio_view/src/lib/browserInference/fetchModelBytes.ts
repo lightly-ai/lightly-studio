@@ -5,7 +5,7 @@ const MODEL_CACHE_NAME = 'lightly-browser-models';
 export const fetchModelBytes = async (
     url: string,
     onProgress: (loaded: number, total: number) => void
-): Promise<Uint8Array> => {
+): Promise<Uint8Array<ArrayBuffer>> => {
     // Cache Storage only exists in secure contexts, such as localhost or HTTPS.
     const cache = 'caches' in globalThis ? await caches.open(MODEL_CACHE_NAME) : null;
     const cached = await cache?.match(url);
@@ -29,12 +29,13 @@ const readWithProgress = async ({
     body: ReadableStream<Uint8Array>;
     total: number;
     onProgress: (loaded: number, total: number) => void;
-}): Promise<Uint8Array> => {
+}): Promise<Uint8Array<ArrayBuffer>> => {
     const chunks: Uint8Array[] = [];
     let loaded = 0;
-    for await (const chunk of body) {
-        chunks.push(chunk);
-        loaded += chunk.length;
+    const reader = body.getReader();
+    for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+        chunks.push(chunk.value);
+        loaded += chunk.value.length;
         onProgress(loaded, total);
     }
     const bytes = new Uint8Array(loaded);

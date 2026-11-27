@@ -1,9 +1,8 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import Box from '@lucide/svelte/icons/box';
-    import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import type { LabelingModelView } from '$lib/api/lightly_studio_local';
     import { Select } from '$lib/components/Select';
+    import { useBrowserModels } from '$lib/hooks';
     import {
         AnnotationToolPopUp,
         SaveAsToggle,
@@ -12,12 +11,14 @@
     import type { useLabelWithModel } from '$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte';
     import ModelRunControls from './ModelRunControls/ModelRunControls.svelte';
     import ThresholdInput from './ThresholdInput/ThresholdInput.svelte';
+    import { LOAD_MODEL_FILE_VALUE, toModelSelectItems } from './modelSelectItems';
 
     type SaveAs = ComponentProps<typeof SaveAsToggle>['saveAs'];
+    type AutoLabelModel = LabelingModelView & { runsIn: 'browser' | 'server' };
 
     interface Props {
-        models: LabelingModelView[];
-        model: LabelingModelView | null;
+        models: AutoLabelModel[];
+        model: AutoLabelModel | null;
         onModelChange: (modelId: string) => void;
         threshold: number;
         onThresholdChange: (value: number) => void;
@@ -38,15 +39,24 @@
         labelWithModel
     }: Props = $props();
 
-    const TASKS = {
-        object_detection: { group: 'Object detection', icon: Box },
-        instance_segmentation: { group: 'Instance segmentation', icon: SquareDashed }
-    } as const;
+    const { loadProgress, addModelFile } = useBrowserModels();
+    let fileInput: HTMLInputElement;
 
-    const items = $derived(
-        models.map((item) => ({ value: item.id, label: item.id, ...TASKS[item.task] }))
-    );
+    const items = $derived(toModelSelectItems(models));
     const predictionCount = $derived(labelWithModel.predictions.length);
+    // Only the selected model's first run downloads anything.
+    const downloadProgress = $derived($loadProgress?.modelId === model?.id ? $loadProgress : null);
+
+    const selectModel = (value: string) => {
+        if (value === LOAD_MODEL_FILE_VALUE) fileInput.click();
+        else onModelChange(value);
+    };
+
+    const loadModelFile = async () => {
+        const file = fileInput.files?.[0];
+        fileInput.value = '';
+        if (file) onModelChange(await addModelFile(file));
+    };
 </script>
 
 {#snippet saveControls()}
@@ -73,7 +83,15 @@
         placeholder="Select a model"
         testId="label-with-model-select"
         disabled={labelWithModel.isSaving}
-        onValueChange={onModelChange}
+        onValueChange={selectModel}
+    />
+    <input
+        bind:this={fileInput}
+        type="file"
+        accept=".onnx"
+        class="hidden"
+        data-testid="load-model-file-input"
+        onchange={() => void loadModelFile()}
     />
     <ThresholdInput value={threshold} onChange={onThresholdChange} />
     <ModelRunControls
@@ -81,6 +99,7 @@
         isGenerating={labelWithModel.isGenerating}
         isEmptyResult={labelWithModel.isEmptyResult}
         canGenerate={labelWithModel.canGenerate}
+        {downloadProgress}
         onRun={() => void labelWithModel.generate()}
     />
 </AnnotationToolPopUp>

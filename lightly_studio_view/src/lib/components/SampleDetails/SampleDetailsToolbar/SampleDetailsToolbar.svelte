@@ -19,7 +19,7 @@
     import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
-    import { isAssistedLabelingView, useLabelingModels } from '$lib/hooks';
+    import { isAssistedLabelingView } from '$lib/hooks';
     import { page } from '$app/state';
 
     import { getSlicEngine } from '@lightly-ai/slic';
@@ -73,11 +73,11 @@
             routeId: page.route.id
         })
     );
-    const labelingModels = useLabelingModels(() => isOnAssistedLabelingView);
     const showAssistedLabelingTools = $derived(
         isOnAssistedLabelingView && assistedLabelingStatus.disabledReason === null
     );
-    const showLabelWithModelTool = $derived(isOnAssistedLabelingView && labelingModels.isAvailable);
+    // The browser model is always there, so the tool needs no labeling model on the server.
+    const showLabelWithModelTool = $derived(isOnAssistedLabelingView);
 
     // The tools that create annotations stay off while the target source is unknown, so nothing
     // is drawn only to be refused. The annotation details view only edits and needs no target.

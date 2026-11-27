@@ -3,7 +3,8 @@ import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
 import type { ModelAnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createModelAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { isAnnotationSourceBlocked, useSaveAnnotationPreviews } from '$lib/hooks';
+import { isAnnotationSourceBlocked, useBrowserModels, useSaveAnnotationPreviews } from '$lib/hooks';
+import { loadImageBitmap } from '$lib/browserInference';
 import { getAnnotationPreviewErrorMessage } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
 import { page } from '$app/state';
 
@@ -15,6 +16,8 @@ interface UseLabelWithModelParams {
     collectionId: string;
     sampleId: string;
     modelId: string | null;
+    // Browser models run on the user's GPU, server models through the labeling model endpoint.
+    modelRunsIn: 'browser' | 'server' | null;
     threshold: number;
     saveAs: SaveAs;
     annotationSource: string | null | undefined;
@@ -54,6 +57,7 @@ export const useLabelWithModel = (
     let previousThreshold = untrack(() => getParams().threshold);
 
     const mutation = createMutation(() => createModelAnnotationPreviewMutation());
+    const { getDetector } = useBrowserModels();
     const { saveAnnotationPreviews } = useSaveAnnotationPreviews({
         getCollectionId: () => getParams().collectionId,
         getDatasetId: () => page.params.dataset_id!
@@ -101,23 +105,39 @@ export const useLabelWithModel = (
         isDisposed = true;
     });
 
+    const predictInBrowser = async (modelId: string): Promise<ModelAnnotationPreview[]> => {
+        const { sampleId, threshold } = getParams();
+        const detector = await getDetector(modelId);
+        const { bitmap, original } = await loadImageBitmap(sampleId, detector.inputSize);
+        return detector.detect(bitmap, original, threshold);
+    };
+
+    const predictOnServer = async (modelId: string): Promise<ModelAnnotationPreview[]> => {
+        const { collectionId, sampleId, threshold } = getParams();
+        const result = await mutation.mutateAsync({
+            body: {
+                collection_id: collectionId,
+                sample_id: sampleId,
+                model_id: modelId,
+                threshold
+            }
+        });
+        return result.predictions;
+    };
+
     const generate = async () => {
-        const { collectionId, sampleId, modelId, threshold } = getParams();
+        const { modelId, modelRunsIn } = getParams();
         if (!modelId || !canGenerate()) return;
         const requestSequence = ++sequence;
         isGenerating = true;
         isEmptyResult = false;
         try {
-            const result = await mutation.mutateAsync({
-                body: {
-                    collection_id: collectionId,
-                    sample_id: sampleId,
-                    model_id: modelId,
-                    threshold
-                }
-            });
+            const result =
+                modelRunsIn === 'browser'
+                    ? await predictInBrowser(modelId)
+                    : await predictOnServer(modelId);
             if (requestSequence !== sequence) return;
-            predictions = result.predictions;
+            predictions = result;
             isEmptyResult = predictions.length === 0;
         } catch (error) {
             if (requestSequence !== sequence) return;

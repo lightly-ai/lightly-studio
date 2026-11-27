@@ -201,15 +201,14 @@ describe('useAssistedLabelingTools', () => {
         expect(tools.blocksPan).toBe(true);
     });
 
-    it('falls back to the cursor tool when the labeling models are unavailable', () => {
+    it('keeps the auto-label tool without labeling models on the server', () => {
         const { context, status, models } = setup('label-with-model');
         status.disabledReason = 'Set the FAL_KEY environment variable.';
-        flushSync();
-        expect(context.status).toBe('label-with-model');
-
         models.isAvailable = false;
+        models.models = [];
         flushSync();
-        expect(context.status).toBe('cursor');
+
+        expect(context.status).toBe('label-with-model');
     });
 
     it('drops the model results when the auto-label tool is left', () => {
@@ -222,12 +221,17 @@ describe('useAssistedLabelingTools', () => {
         expect(mocks.clearLabelWithModel).toHaveBeenCalled();
     });
 
-    it('selects the first model and saves detections as boxes', () => {
+    it('selects the browser model first and saves detections as boxes', () => {
         const { tools } = setup('label-with-model');
         tools.state.saveAs = 'mask';
         flushSync();
 
-        expect(tools.selectedModel?.id).toBe('detector');
+        expect(tools.selectedModel).toMatchObject({ id: 'ltdetrv2-s-coco', runsIn: 'browser' });
+        expect(tools.modelSaveAs).toBe('box');
+
+        tools.state.modelId = 'detector';
+        flushSync();
+        expect(tools.selectedModel).toMatchObject({ id: 'detector', runsIn: 'server' });
         expect(tools.modelSaveAs).toBe('box');
 
         tools.state.modelId = 'segmenter';

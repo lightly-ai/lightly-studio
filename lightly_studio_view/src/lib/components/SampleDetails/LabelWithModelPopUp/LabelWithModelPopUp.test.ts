@@ -6,16 +6,18 @@ import LabelWithModelPopUp from './LabelWithModelPopUp.svelte';
 
 type LabelWithModel = ComponentProps<typeof LabelWithModelPopUp>['labelWithModel'];
 
-const DETECTION_MODEL: LabelingModelView = {
+const DETECTION_MODEL = {
     id: 'ltdetrv2-s-coco',
     task: 'object_detection',
-    class_names: ['cat']
-};
-const SEGMENTATION_MODEL: LabelingModelView = {
+    class_names: ['cat'],
+    runsIn: 'browser' as const
+} satisfies LabelingModelView & { runsIn: string };
+const SEGMENTATION_MODEL = {
     id: 'ltdetrv2-seg-s-coco',
     task: 'instance_segmentation',
-    class_names: ['cat']
-};
+    class_names: ['cat'],
+    runsIn: 'server' as const
+} satisfies LabelingModelView & { runsIn: string };
 const PREVIEW: ModelAnnotationPreview = {
     class_name: 'cat',
     bbox: { x: 0, y: 0, width: 1, height: 1 },

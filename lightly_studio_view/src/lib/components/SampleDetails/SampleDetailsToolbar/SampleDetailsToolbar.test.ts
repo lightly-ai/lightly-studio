@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor, cleanup } from '@testing-library/svelte';
+import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SampleDetailsToolbar from './SampleDetailsToolbar.svelte';
@@ -323,10 +323,8 @@ describe('SampleDetailsToolbar', () => {
         );
     });
 
-    it('shows and activates the auto-label tool when models are available', async () => {
-        expect(render(SampleDetailsToolbar).queryByLabelText('Auto-label')).toBeNull();
-        cleanup();
-        labelingModels.isAvailable = true;
+    it('shows and activates the auto-label tool without a model on the server', async () => {
+        labelingModels.isAvailable = false;
         const { getByLabelText } = render(SampleDetailsToolbar);
 
         await fireEvent.click(getByLabelText('Auto-label'));

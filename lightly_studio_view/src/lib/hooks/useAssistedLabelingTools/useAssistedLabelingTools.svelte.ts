@@ -6,7 +6,7 @@ import {
     useSampleDetailsToolbarContext
 } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
-import { isAssistedLabelingView, useLabelingModels } from '$lib/hooks';
+import { isAssistedLabelingView, useBrowserModels, useLabelingModels } from '$lib/hooks';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { page } from '$app/state';
 import { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
@@ -48,6 +48,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             routeId: page.route.id
         })
     );
+    const browserModels = fromStore(useBrowserModels().models);
     const isEditingMode = fromStore(useGlobalStorage().isEditingMode);
     const state = new AssistedLabelingToolState();
     const stickyClass = useStickyClassName(() => getParams().collectionId);
@@ -64,10 +65,13 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     // A class picked in the tool's pop-up wins, else new annotations get the sticky class.
     const smartSelectClass = $derived(state.smartSelectClass ?? stickyClass.current ?? null);
     const instancesClass = $derived(state.instancesClass ?? stickyClass.current ?? null);
+    // Browser models come first, so a dataset without a Python model can still auto-label.
+    const models = $derived([
+        ...browserModels.current,
+        ...labelingModels.models.map((model) => ({ ...model, runsIn: 'server' as const }))
+    ]);
     const selectedModel = $derived(
-        labelingModels.models.find((model) => model.id === state.modelId) ??
-            labelingModels.models[0] ??
-            null
+        models.find((model) => model.id === state.modelId) ?? models[0] ?? null
     );
     // Object detection models return no masks.
     const modelSaveAs = $derived(
@@ -109,6 +113,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             collectionId,
             sampleId,
             modelId: selectedModel?.id ?? null,
+            modelRunsIn: selectedModel?.runsIn ?? null,
             threshold: state.modelThreshold,
             saveAs: modelSaveAs,
             annotationSource: annotationLabelContext.annotationSource,
@@ -130,11 +135,9 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     $effect(() => {
         const status = context.status;
         if (!isAssistedLabelingStatus(status)) return;
-        // The model tool uses its own server, the other tools use fal.ai.
+        // The model tool always has the browser model, the other tools use fal.ai.
         const isToolAvailable =
-            status === 'label-with-model'
-                ? labelingModels.isAvailable
-                : assistedLabelingStatus.disabledReason === null;
+            status === 'label-with-model' || assistedLabelingStatus.disabledReason === null;
         if (!isEditingMode.current || !isToolAvailable) setStatus('cursor');
     });
 
@@ -172,7 +175,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             return instancesClass;
         },
         get labelingModels() {
-            return labelingModels.models;
+            return models;
         },
         get selectedModel() {
             return selectedModel;

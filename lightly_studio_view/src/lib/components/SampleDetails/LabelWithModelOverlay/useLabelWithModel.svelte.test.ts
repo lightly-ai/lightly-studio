@@ -5,7 +5,9 @@ import { useLabelWithModel } from './useLabelWithModel.svelte';
 const mocks = vi.hoisted(() => ({
     mutateAsync: vi.fn(),
     saveAnnotationPreviews: vi.fn(),
-    toastError: vi.fn()
+    toastError: vi.fn(),
+    getDetector: vi.fn(),
+    loadImageBitmap: vi.fn()
 }));
 
 vi.mock('@tanstack/svelte-query', () => ({
@@ -15,8 +17,10 @@ vi.mock('$lib/hooks', async () => ({
     isAnnotationSourceBlocked: (
         await import('$lib/hooks/useAnnotationTarget/annotationSourceGuard')
     ).isAnnotationSourceBlocked,
-    useSaveAnnotationPreviews: () => ({ saveAnnotationPreviews: mocks.saveAnnotationPreviews })
+    useSaveAnnotationPreviews: () => ({ saveAnnotationPreviews: mocks.saveAnnotationPreviews }),
+    useBrowserModels: () => ({ getDetector: mocks.getDetector })
 }));
+vi.mock('$lib/browserInference', () => ({ loadImageBitmap: mocks.loadImageBitmap }));
 vi.mock('svelte-sonner', () => ({ toast: { error: mocks.toastError } }));
 vi.mock('$app/state', () => ({ page: { params: { dataset_id: 'dataset-1' } } }));
 
@@ -31,9 +35,15 @@ const dog = { ...cat, class_name: 'dog', bbox: { x: 5, y: 0, width: 2, height: 2
 let cleanup = () => {};
 
 const setup = (blockedReason: string | null = null) => {
-    const params = $state<{ sampleId: string; modelId: string | null; threshold: number }>({
+    const params = $state<{
+        sampleId: string;
+        modelId: string | null;
+        modelRunsIn: 'browser' | 'server' | null;
+        threshold: number;
+    }>({
         sampleId: 'sample-1',
         modelId: 'ltdetrv2-s-coco',
+        modelRunsIn: 'server',
         threshold: 0.4
     });
     const onSaved = vi.fn();
@@ -43,6 +53,7 @@ const setup = (blockedReason: string | null = null) => {
             collectionId: 'collection-1',
             sampleId: params.sampleId,
             modelId: params.modelId,
+            modelRunsIn: params.modelRunsIn,
             threshold: params.threshold,
             saveAs: 'box',
             annotationSource: 'source',
@@ -81,6 +92,25 @@ describe('useLabelWithModel', () => {
             }
         });
         expect(labelWithModel.isGenerating).toBe(false);
+    });
+
+    it('runs a browser model in the browser, not on the server', async () => {
+        const { labelWithModel, params } = setup();
+        params.modelRunsIn = 'browser';
+        flushSync();
+        const bitmap = {};
+        const original = { width: 640, height: 480 };
+        const detect = vi.fn().mockResolvedValue([cat]);
+        mocks.getDetector.mockResolvedValue({ inputSize: { width: 640, height: 640 }, detect });
+        mocks.loadImageBitmap.mockResolvedValue({ bitmap, original });
+
+        await labelWithModel.generate();
+
+        expect(labelWithModel.predictions).toEqual([cat]);
+        expect(mocks.getDetector).toHaveBeenCalledWith('ltdetrv2-s-coco');
+        expect(mocks.loadImageBitmap).toHaveBeenCalledWith('sample-1', { width: 640, height: 640 });
+        expect(detect).toHaveBeenCalledWith(bitmap, original, 0.4);
+        expect(mocks.mutateAsync).not.toHaveBeenCalled();
     });
 
     it('does not run without a model', async () => {
