@@ -44,7 +44,7 @@ def run_evaluation(  # noqa: PLR0913
     omitted the whole collection is evaluated. ``name`` defaults to
     ``"<task_type> <UTC timestamp>"`` (with microsecond precision so concurrent
     triggers don't collide on the ``(name, dataset_id)`` uniqueness constraint)
-    when not provided.
+    when it is None.
 
     Args:
         session: Database session.
@@ -54,7 +54,7 @@ def run_evaluation(  # noqa: PLR0913
         pred_annotation_source: Name of the prediction annotation source.
         config: Task-specific config; its type selects the evaluation task.
         filters: Optional active-view filter; evaluates all samples if omitted.
-        name: Optional run name; auto-generated when omitted.
+        name: Optional run name; auto-generated when None.
 
     Returns:
         Summary of the created run, including its ID and input counts.
@@ -81,7 +81,11 @@ def run_evaluation(  # noqa: PLR0913
         collection_id=root_collection.collection_id,
         sample_ids=sample_ids,
     )
-    run_name = name or f"{task_type.value} {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S.%f}"
+    run_name = (
+        name
+        if name is not None
+        else f"{task_type.value} {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S.%f}"
+    )
 
     if isinstance(config, ObjectDetectionEvaluationConfig):
         return evaluator.object_detection(

@@ -75,6 +75,35 @@ def test_create_evaluation_run__delegates_to_service_and_propagates_result(
     assert kwargs["config"].classwise is False
 
 
+def test_create_evaluation_run__empty_name(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+    run_evaluation = mocker.patch(
+        _RUN_EVALUATION,
+        return_value=EvaluationResult(
+            evaluation_run_id=uuid4(),
+            sample_count=1,
+            gt_annotation_count=1,
+            pred_annotation_count=1,
+        ),
+    )
+
+    response = test_client.post(
+        f"/api/datasets/{root.dataset_id}/evaluation/runs",
+        json={
+            "task_type": "object_detection",
+            "gt_annotation_source": "gt",
+            "pred_annotation_source": "pred",
+            "collection_id": str(root.collection_id),
+            "name": "",
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_CREATED
+    assert run_evaluation.call_args.kwargs["name"] is None
+
+
 def test_create_evaluation_run__collection_not_found_returns_404(
     test_client: TestClient, db_session: Session, mocker: MockerFixture
 ) -> None:

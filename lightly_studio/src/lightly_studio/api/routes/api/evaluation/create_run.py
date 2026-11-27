@@ -133,5 +133,6 @@ def create_evaluation_run(
         pred_annotation_source=request.pred_annotation_source,
         config=request.config,
         filters=request.filter,
-        name=request.name,
+        # An empty name gets a generated name.
+        name=request.name or None,
     )
