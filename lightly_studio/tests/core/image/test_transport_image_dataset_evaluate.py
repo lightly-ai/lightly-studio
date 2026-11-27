@@ -5,11 +5,13 @@ from uuid import UUID, uuid4
 
 import pytest
 from pytest_mock import MockerFixture
+from sqlmodel import select
 
-from lightly_studio.core.dataset_query import ImageSampleField
+from lightly_studio.core.dataset_query import ImageSampleField, OrderByField
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.core.image.transport_image_dataset_evaluate import TransportImageDatasetEvaluate
+from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.models.evaluation_task import (
@@ -26,9 +28,12 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     QueryExpr,
 )
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_query import SampleQueryRequest
+from lightly_studio.resolvers import evaluation_sample_metric_resolver
 from lightly_studio.transport import active_transport
 from lightly_studio.transport.local.local_compute_transport import LocalComputeTransport
+from tests.api.routes.api.evaluation import helpers as evaluation_helpers
 
 RUN_ID = uuid4()
 
@@ -73,6 +78,26 @@ class TestTransportImageDatasetEvaluate:
         assert result == transport.compute.evaluate.return_value
         assert "sample_ids" not in vars(evaluate)
 
+    def test_object_detection__ordered_and_sliced_query(self, mocker: MockerFixture) -> None:
+        session = db_manager.persistent_session()
+        collection = evaluation_helpers.create_dataset_with_annotations(
+            db_session=session, image_widths=(30, 10, 20, 40)
+        )
+        query = DatasetQuery(dataset=collection).order_by(OrderByField(ImageSampleField.width))[1:3]
+        sql_sample_ids = {sample.sample_id for sample in query}
+        transport_evaluate = mocker.spy(LocalComputeTransport, "evaluate")
+
+        result = TransportImageDatasetEvaluate(
+            session=session, collection_id=collection.collection_id, query=query
+        ).object_detection(name="run", gt_annotation_source="gt", pred_annotation_source="pred")
+
+        metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
+            session=session, evaluation_run_id=result.evaluation_run_id
+        )
+        assert {metric.sample_id for metric in metrics} == sql_sample_ids
+        assert {sample.width for sample in query} == {20, 30}
+        transport_evaluate.assert_called_once()
+
     @pytest.mark.parametrize(
         ("method_name", "default_config"),
         [
@@ -85,11 +110,11 @@ class TestTransportImageDatasetEvaluate:
     @pytest.mark.parametrize(
         "make_query",
         [
-            lambda dataset: dataset.query()[:1],
+            lambda dataset: dataset.query().filter_by_sample_ids(select(SampleTable.sample_id)),
             lambda dataset: DatasetQuery(dataset=dataset._inner, session=dataset.session),
         ],
     )
-    def test_evaluate__sliced_query_or_query_with_session(
+    def test_evaluate__unsupported_query_or_query_with_session(
         self,
         mocker: MockerFixture,
         make_query: Callable[[ImageDataset], DatasetQuery],

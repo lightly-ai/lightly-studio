@@ -86,32 +86,6 @@ def build_export_request(
     return SampleQueryRequest(query_expr=query_expr, sort=sort, offset=offset)
 
 
-def build_evaluation_request(
-    sample_type: SampleType,
-    match_expression: MatchExpression | None,
-    filters_sample_ids: bool,
-    is_sliced: bool,
-) -> SampleQueryRequest | None:
-    """Build the request of an evaluation. None means the evaluation uses SQL.
-
-    The order does not change the evaluated samples, so the request has only the filter.
-
-    Raises:
-        UnsupportedQueryError: If the transport is remote and cannot send the query.
-    """
-    if is_sliced:
-        if active_transport.is_remote():
-            raise UnsupportedQueryError("The transport cannot send the slice of an evaluation.")
-        return None
-    return build_export_request(
-        sample_type=sample_type,
-        match_expression=match_expression,
-        order_by=[],
-        filters_sample_ids=filters_sample_ids,
-        offset=0,
-    )
-
-
 def iter_samples(
     collection_id: UUID, request: SampleQueryRequest, limit: int | None
 ) -> Iterator[RecordImageSample]:

@@ -381,12 +381,17 @@ class DatasetQuery(Generic[T]):
         )
 
     def _evaluation_request(self) -> SampleQueryRequest | None:
-        """Get the request for an evaluation through the transport, or None to use SQL."""
-        return transport_query.build_evaluation_request(
+        """Get the request for an evaluation through the transport, or None to use SQL.
+
+        The order changes only the samples of a slice, so only the request of a slice has it.
+        """
+        order_by = self.order_by_expressions if self._slice is not None else None
+        return transport_query.build_export_request(
             sample_type=self.dataset.sample_type,
             match_expression=self.match_expression,
+            order_by=order_by or [],
             filters_sample_ids=self._sample_ids_subquery is not None,
-            is_sliced=self._slice is not None,
+            offset=0 if self._slice is None else self._slice.start or 0,
         )
 
     def _compose_query(self, query: SelectOfScalar[Table]) -> SelectOfScalar[Table]:

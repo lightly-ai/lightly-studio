@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import datetime, timezone
 
 import pytest
@@ -189,32 +188,18 @@ class TestDatasetQuery:
 
         assert query._export_request() is None
 
-    def test_evaluation_request__ordered(self, db_session: Session) -> None:
+    def test_evaluation_request(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
         query = DatasetQuery(dataset=collection, session=db_session)
-        query.match(ImageSampleField.width > 10).order_by(OrderByField(ImageSampleField.width))
+        query.order_by(OrderByField(ImageSampleField.width)).slice(offset=2, limit=10)
 
         assert query._evaluation_request() == SampleQueryRequest(
-            query_expr=QueryExpr(
-                match_expr=IntegerExpr(
-                    field=FieldRef(table="image", name="width"),
-                    operator=OrdinalComparisonOperator.GT,
-                    value=10,
-                )
-            )
+            sort=[SortKey(field=FieldRef(table="image", name="width"))], offset=2
         )
 
-    @pytest.mark.parametrize(
-        "restrict",
-        [
-            lambda query: query.slice(limit=10),
-            lambda query: query.filter_by_sample_ids(sqlmodel.select(SampleTable.sample_id)),
-        ],
-    )
-    def test_evaluation_request__slice_or_sample_ids(
-        self, db_session: Session, restrict: Callable[[DatasetQuery], DatasetQuery]
-    ) -> None:
+    def test_evaluation_request__no_slice(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
-        query = restrict(DatasetQuery(dataset=collection, session=db_session))
+        query = DatasetQuery(dataset=collection, session=db_session)
+        query.order_by(OrderByField(ImageSampleField.width))
 
-        assert query._evaluation_request() is None
+        assert query._evaluation_request() == SampleQueryRequest()
