@@ -58,36 +58,6 @@ def build_request(
     )
 
 
-def build_sampling_request(
-    sample_type: SampleType,
-    match_expression: MatchExpression | None,
-    filters_sample_ids: bool,
-    is_ordered: bool,
-    is_sliced: bool,
-) -> SampleQueryRequest | None:
-    """Build the request of a sampling. None means the sampling uses SQL.
-
-    The order of the candidates changes the selection. The transport cannot send an order
-    or a slice yet, so the request uses the default order.
-
-    Raises:
-        UnsupportedQueryError: If the transport is remote and cannot send the query.
-    """
-    if is_ordered or is_sliced:
-        if active_transport.is_remote():
-            raise UnsupportedQueryError(
-                "The transport cannot send the order or the slice of a sampling yet."
-            )
-        return None
-    return build_request(
-        sample_type=sample_type,
-        match_expression=match_expression,
-        order_by=[],
-        filters_sample_ids=filters_sample_ids,
-        offset=0,
-    )
-
-
 def build_export_request(
     sample_type: SampleType,
     match_expression: MatchExpression | None,

@@ -6,13 +6,12 @@ from uuid import UUID
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.query_expr import QueryExpr
-from lightly_studio.resolvers import collection_resolver, image_resolver, tag_resolver
-from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.models.sample_query import SampleQueryRequest
+from lightly_studio.resolvers import collection_resolver, tag_resolver
 from lightly_studio.sampling import sampling_via_db
 from lightly_studio.sampling.sampling_config import SamplingConfig
 from lightly_studio.services import compute_metadata_service
+from lightly_studio.services.sample_services import sample_query_service
 
 
 class LocalComputeTransport:
@@ -51,11 +50,10 @@ class LocalComputeTransport:
             metadata_name=metadata_name,
         )
 
-    def sampling(self, config: SamplingConfig, query_expr: QueryExpr | None) -> None:
+    def sampling(
+        self, config: SamplingConfig, request: SampleQueryRequest, limit: int | None
+    ) -> None:
         """Sample from the matching image samples and tag the result with the tag of `config`.
-
-        The candidates have the default order of a dataset query, because the order changes
-        the selection.
 
         Raises:
             ValueError: If the collection is not an image collection.
@@ -66,10 +64,8 @@ class LocalComputeTransport:
         )
         if collection is None or collection.sample_type != SampleType.IMAGE:
             raise ValueError(f"Collection {config.collection_id} is not an image collection.")
-        input_sample_ids = image_resolver.get_ordered_sample_ids(
-            session=session,
-            collection_id=config.collection_id,
-            filters=ImageFilter(sample_filter=SampleFilter(query_expr=query_expr)),
+        input_sample_ids = sample_query_service.get_sample_ids(
+            session=session, collection_id=config.collection_id, request=request, limit=limit
         )
         sampling_via_db.sampling_via_database(
             session=session, config=config, input_sample_ids=input_sample_ids

@@ -34,7 +34,7 @@ from lightly_studio.models.sample_query import (
     SortKey,
 )
 from lightly_studio.models.sort_direction import SortDirection
-from lightly_studio.resolvers import metadata_resolver, tag_resolver
+from lightly_studio.resolvers import metadata_resolver
 from lightly_studio.transport import active_transport
 from lightly_studio.transport.local.local_compute_transport import LocalComputeTransport
 from tests.helpers_resolvers import (
@@ -131,42 +131,6 @@ def test_build_request__not_supported(mocker: MockerFixture) -> None:
     assert build() is None
     mocker.patch.object(active_transport, "is_remote", return_value=True)
     with pytest.raises(UnsupportedQueryError):
-        build()
-
-
-@pytest.mark.usefixtures("_transport_queries")
-def test_build_sampling_request() -> None:
-    request = transport_query.build_sampling_request(
-        sample_type=SampleType.IMAGE,
-        match_expression=AND(ImageSampleField.width > 15),
-        filters_sample_ids=False,
-        is_ordered=False,
-        is_sliced=False,
-    )
-
-    assert request is not None
-    assert request.query_expr is not None
-    assert request.sort == []
-    assert request.offset == 0
-
-
-@pytest.mark.usefixtures("_transport_queries")
-@pytest.mark.parametrize(("is_ordered", "is_sliced"), [(True, False), (False, True)])
-def test_build_sampling_request__ordered_or_sliced(
-    mocker: MockerFixture, is_ordered: bool, is_sliced: bool
-) -> None:
-    def build() -> object:
-        return transport_query.build_sampling_request(
-            sample_type=SampleType.IMAGE,
-            match_expression=None,
-            filters_sample_ids=False,
-            is_ordered=is_ordered,
-            is_sliced=is_sliced,
-        )
-
-    assert build() is None
-    mocker.patch.object(active_transport, "is_remote", return_value=True)
-    with pytest.raises(UnsupportedQueryError, match=r"order or the slice"):
         build()
 
 
@@ -275,36 +239,38 @@ def test_dataset_query__metadata_sort_through_transport(
     assert [sample.file_name for sample in samples] == sql_file_names
 
 
-@pytest.mark.usefixtures("patch_collection", "_transport_queries")
+@pytest.mark.usefixtures("patch_collection")
 def test_dataset_query__sampling_through_transport(mocker: MockerFixture) -> None:
     session = db_manager.persistent_session()
     collection = create_collection(session=session)
     embedding_model = create_embedding_model(
         session=session, collection_id=collection.collection_id, set_as_default=True
     )
-    images = create_samples_with_embeddings(
+    create_samples_with_embeddings(
         session=session,
         collection_id=collection.collection_id,
         embedding_model_id=embedding_model.embedding_model_id,
         images_and_embeddings=[
-            (ImageStub(path="a.png", width=10), [1.0, 0.0]),
-            (ImageStub(path="b.png", width=20), [0.0, 1.0]),
-            (ImageStub(path="c.png", width=30), [1.0, 1.0]),
+            (ImageStub(path="d.png", width=20), [0.4, 0.0]),
+            (ImageStub(path="c.png", width=30), [1.0, 0.0]),
+            (ImageStub(path="b.png", width=40), [0.0, 0.0]),
+            (ImageStub(path="e.png", width=10), [0.0, 1.5]),
+            (ImageStub(path="a.png", width=50), [0.0, 1.0]),
         ],
     )
     query = DatasetQuery(dataset=collection, session=session)
+    query.order_by(OrderByField(ImageSampleField.width).desc())[1:4]
+    mocker.patch.object(env, "LIGHTLY_STUDIO_TRANSPORT_QUERIES", False)
+    query.sampling().diverse(n_samples_to_select=2, sampling_result_tag_name="sql")
+    mocker.patch.object(env, "LIGHTLY_STUDIO_TRANSPORT_QUERIES", True)
     transport_sampling = mocker.spy(LocalComputeTransport, "sampling")
 
-    query.match(AND(ImageSampleField.width > 15)).sampling().diverse(
-        n_samples_to_select=2, sampling_result_tag_name="picked"
-    )
+    query.sampling().diverse(n_samples_to_select=2, sampling_result_tag_name="transport")
 
-    tag = tag_resolver.get_by_name(
-        session=session, tag_name="picked", collection_id=collection.collection_id
-    )
-    assert tag is not None
-    assert {sample.sample_id for sample in tag.samples} == {
-        images[1].sample_id,
-        images[2].sample_id,
-    }
+    def tagged_file_names(tag_name: str) -> set[str]:
+        tagged = DatasetQuery(dataset=collection, session=session)
+        tagged.match(ImageSampleField.tags.contains(tag_name))
+        return {sample.file_name for sample in tagged}
+
+    assert tagged_file_names("sql") == tagged_file_names("transport") == {"b.png", "c.png"}
     transport_sampling.assert_called_once()

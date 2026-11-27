@@ -12,6 +12,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     QueryExpr,
 )
+from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -70,7 +71,8 @@ class TestLocalComputeTransport:
                 sampling_result_tag_name="selected",
                 strategies=[EmbeddingDiversityStrategy()],
             ),
-            query_expr=QueryExpr(match_expr=narrow),
+            request=SampleQueryRequest(query_expr=QueryExpr(match_expr=narrow)),
+            limit=None,
         )
 
         tag = tag_resolver.get_by_name(
@@ -99,7 +101,8 @@ class TestLocalComputeTransport:
                     sampling_result_tag_name="selected",
                     strategies=[EmbeddingDiversityStrategy()],
                 ),
-                query_expr=None,
+                request=SampleQueryRequest(),
+                limit=None,
             )
 
     def test_sampling__unknown_collection(self) -> None:
@@ -114,5 +117,6 @@ class TestLocalComputeTransport:
                     sampling_result_tag_name="selected",
                     strategies=[EmbeddingDiversityStrategy()],
                 ),
-                query_expr=None,
+                request=SampleQueryRequest(),
+                limit=None,
             )

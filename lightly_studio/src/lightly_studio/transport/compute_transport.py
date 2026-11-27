@@ -5,12 +5,11 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID
 
-from lightly_studio.models.query_expr import QueryExpr
+from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.sampling.sampling_config import SamplingConfig
 
 
 # TODO(Iunir, 11/2026): Add evaluation when its config and result models have no DB imports.
-# TODO(Iunir, 11/2026): Send the order and the slice of the query.
 class ComputeTransport(Protocol):
     """Runs metadata computations and sampling.
 
@@ -53,13 +52,16 @@ class ComputeTransport(Protocol):
             ValueError: If the query tag or the embedding model does not exist.
         """
 
-    def sampling(self, config: SamplingConfig, query_expr: QueryExpr | None) -> None:
+    def sampling(
+        self, config: SamplingConfig, request: SampleQueryRequest, limit: int | None
+    ) -> None:
         """Sample from the matching samples and tag the result with the tag of `config`.
 
         Only image collections are supported.
 
         Args:
             config: The sampling config. It also sets the collection.
-            query_expr: The samples to sample from. None uses all samples of the collection.
-                The order and the slice of a query are not sent.
+            request: The filter, the sort and the offset of the samples to sample from. The
+                `cursor` and the `limit` of the request are not used.
+            limit: The maximum number of samples to sample from. None uses all.
         """

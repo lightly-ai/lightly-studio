@@ -471,16 +471,12 @@ class DatasetQuery(Generic[T]):
         Returns:
             Sampling interface for the samples that match the current query.
         """
-        request = transport_query.build_sampling_request(
-            sample_type=self.dataset.sample_type,
-            match_expression=self.match_expression,
-            filters_sample_ids=self._sample_ids_subquery is not None,
-            is_ordered=bool(self.order_by_expressions),
-            is_sliced=self._slice is not None,
-        )
+        request = self._transport_request()
         if request is not None:
-            return Sampling(dataset_id=self.dataset.collection_id, samples=request.query_expr)
+            return Sampling(
+                dataset_id=self.dataset.collection_id, samples=request, limit=self._limit()
+            )
         snapshot = SampleIdSnapshot(
             session=self.session, sample_ids=[sample.sample_id for sample in self]
         )
-        return Sampling(dataset_id=self.dataset.collection_id, samples=snapshot)
+        return Sampling(dataset_id=self.dataset.collection_id, samples=snapshot, limit=None)
