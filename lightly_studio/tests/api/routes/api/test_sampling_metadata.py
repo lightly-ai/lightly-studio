@@ -32,7 +32,7 @@ def test_sampling_metadata__typicality_creates_result_tag(
         },
     )
 
-    assert response.status_code == 204, response.text
+    assert response.status_code == 200, response.text
     tag = tag_resolver.get_by_name(
         session=db_session, collection_id=collection_id, tag_name="result"
     )
@@ -71,7 +71,7 @@ def test_sampling_metadata__similarity_creates_result_tag(
         },
     )
 
-    assert response.status_code == 204, response.text
+    assert response.status_code == 200, response.text
     tag = tag_resolver.get_by_name(
         session=db_session, collection_id=collection_id, tag_name="result"
     )
@@ -113,7 +113,7 @@ def test_sampling_metadata__similarity_leaves_out_samples_without_embedding(
         },
     )
 
-    assert response.status_code == 204, response.text
+    assert response.status_code == 200, response.text
     tag = tag_resolver.get_by_name(
         session=db_session, collection_id=collection_id, tag_name="result"
     )
