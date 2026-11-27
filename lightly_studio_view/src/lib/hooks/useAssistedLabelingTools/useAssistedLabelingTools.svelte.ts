@@ -115,6 +115,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             sampleId,
             modelId: selectedModel?.id ?? null,
             modelRunsIn: selectedModel?.runsIn ?? null,
+            promptClassNames: selectedModel?.class_names ?? [],
             threshold: state.modelThreshold,
             saveAs: modelSaveAs,
             annotationSource: annotationLabelContext.annotationSource,

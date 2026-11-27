@@ -1,6 +1,7 @@
 import { get, writable } from 'svelte/store';
 import {
     createDetector,
+    createTextPromptedDetector,
     fetchModelBytes,
     parseClassNames,
     readOnnxMetadata
@@ -12,8 +13,11 @@ type ExecutionProvider = Detector['executionProvider'];
 interface BrowserModel {
     id: string;
     task: 'object_detection';
+    // For a text-prompted model, the classes the user typed.
     class_names: string[];
     runsIn: 'browser';
+    // Finds the objects that its class names describe, instead of a fixed set of classes.
+    isTextPrompted: boolean;
 }
 
 interface LoadProgress {
@@ -24,18 +28,37 @@ interface LoadProgress {
 
 const DEFAULT_MODEL_ID = 'ltdetrv2-s-coco';
 const DEFAULT_MODEL_URL = `/models/${DEFAULT_MODEL_ID}.onnx`;
+const TEXT_PROMPTED_MODEL_ID = 'grounding-dino-tiny';
 const ONNX_EXTENSION = /\.onnx$/i;
 // `?ep=wasm` forces the CPU runtime, to try the fallback on a machine with WebGPU.
 const EXECUTION_PROVIDER_PARAM = 'ep';
 
-const models = writable<BrowserModel[]>([toModel(DEFAULT_MODEL_ID, [])]);
+const models = writable<BrowserModel[]>([
+    toModel(DEFAULT_MODEL_ID, []),
+    { ...toModel(TEXT_PROMPTED_MODEL_ID, []), isTextPrompted: true }
+]);
 const loadProgress = writable<LoadProgress | null>(null);
 // A file the user loaded stays in memory until the tab closes.
 const modelFiles = new Map<string, File>();
 const detectors = new Map<string, Promise<Detector>>();
 
-// The models that run in the browser: the default COCO model and the ONNX files the user loaded.
-export const useBrowserModels = () => ({ models, loadProgress, getDetector, addModelFile });
+// The models that run in the browser: the default COCO model, Grounding DINO for classes the
+// user types, and the ONNX files the user loaded.
+export const useBrowserModels = () => ({
+    models,
+    loadProgress,
+    getDetector,
+    addModelFile,
+    setPromptClassNames
+});
+
+// Sets the classes that a text-prompted model looks for.
+const setPromptClassNames = (modelId: string, classNames: string[]) =>
+    models.update((current) =>
+        current.map((model) =>
+            model.id === modelId ? { ...model, class_names: classNames } : model
+        )
+    );
 
 // Loads each model once. Concurrent callers share the same detector.
 const getDetector = (modelId: string): Promise<Detector> => {
@@ -61,6 +84,7 @@ const addModelFile = async (file: File): Promise<string> => {
 };
 
 const loadDetector = async (modelId: string): Promise<Detector> => {
+    if (modelId === TEXT_PROMPTED_MODEL_ID) return loadTextPromptedDetector(modelId);
     const bytes = await readModelBytes(modelId);
     const detector = await createDetector(bytes, {
         executionProvider: getExecutionProviderOverride()
@@ -71,6 +95,17 @@ const loadDetector = async (modelId: string): Promise<Detector> => {
         )
     );
     return detector;
+};
+
+const loadTextPromptedDetector = async (modelId: string): Promise<Detector> => {
+    try {
+        return await createTextPromptedDetector({
+            executionProvider: getExecutionProviderOverride(),
+            onProgress: (loaded, total) => loadProgress.set({ modelId, loaded, total })
+        });
+    } finally {
+        loadProgress.set(null);
+    }
 };
 
 const readModelBytes = async (modelId: string): Promise<Uint8Array> => {
@@ -98,5 +133,11 @@ const getExecutionProviderOverride = (): ExecutionProvider | undefined => {
 };
 
 function toModel(id: string, classNames: string[]): BrowserModel {
-    return { id, task: 'object_detection', class_names: classNames, runsIn: 'browser' };
+    return {
+        id,
+        task: 'object_detection',
+        class_names: classNames,
+        runsIn: 'browser',
+        isTextPrompted: false
+    };
 }

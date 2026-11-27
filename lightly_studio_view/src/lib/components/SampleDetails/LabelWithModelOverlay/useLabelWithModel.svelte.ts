@@ -18,6 +18,8 @@ interface UseLabelWithModelParams {
     modelId: string | null;
     // Browser models run on the user's GPU, server models through the labeling model endpoint.
     modelRunsIn: 'browser' | 'server' | null;
+    // The classes a text-prompted browser model looks for. Other models ignore them.
+    promptClassNames: string[];
     threshold: number;
     saveAs: SaveAs;
     annotationSource: string | null | undefined;
@@ -106,10 +108,10 @@ export const useLabelWithModel = (
     });
 
     const predictInBrowser = async (modelId: string): Promise<ModelAnnotationPreview[]> => {
-        const { sampleId, threshold } = getParams();
+        const { sampleId, threshold, promptClassNames } = getParams();
         const detector = await getDetector(modelId);
         const { bitmap, original } = await loadImageBitmap(sampleId, detector.inputSize);
-        return detector.detect(bitmap, original, threshold);
+        return detector.detect(bitmap, original, threshold, promptClassNames);
     };
 
     const predictOnServer = async (modelId: string): Promise<ModelAnnotationPreview[]> => {

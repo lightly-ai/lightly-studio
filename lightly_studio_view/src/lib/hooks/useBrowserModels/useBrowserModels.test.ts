@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { encodeModel } from '$lib/browserInference/testHelpers';
 
 const createDetector = vi.fn();
+const createTextPromptedDetector = vi.fn();
 const fetchModelBytes = vi.fn();
 
 vi.mock('$lib/browserInference', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/browserInference')>()),
     createDetector,
+    createTextPromptedDetector,
     fetchModelBytes
 }));
 
@@ -27,18 +29,43 @@ describe('useBrowserModels', () => {
     beforeEach(() => {
         vi.resetModules();
         createDetector.mockReset().mockResolvedValue({ classNames: ['person', 'car'] });
+        createTextPromptedDetector.mockReset().mockResolvedValue({ classNames: [] });
         fetchModelBytes.mockReset().mockImplementation(async (_url, onProgress) => {
             onProgress(5, 10);
             return new Uint8Array();
         });
     });
 
-    it('lists the default model before anything loads', async () => {
+    it('lists the default models before anything loads', async () => {
         const { models } = await loadHook();
 
         expect(get(models)).toEqual([
-            { id: 'ltdetrv2-s-coco', task: 'object_detection', class_names: [], runsIn: 'browser' }
+            {
+                id: 'ltdetrv2-s-coco',
+                task: 'object_detection',
+                class_names: [],
+                runsIn: 'browser',
+                isTextPrompted: false
+            },
+            {
+                id: 'grounding-dino-tiny',
+                task: 'object_detection',
+                class_names: [],
+                runsIn: 'browser',
+                isTextPrompted: true
+            }
         ]);
+    });
+
+    it('loads the text-prompted model and keeps the classes the user typed', async () => {
+        const { getDetector, models, setPromptClassNames } = await loadHook();
+        setPromptClassNames('grounding-dino-tiny', ['forklift']);
+
+        await getDetector('grounding-dino-tiny');
+
+        expect(createTextPromptedDetector).toHaveBeenCalledTimes(1);
+        expect(createDetector).not.toHaveBeenCalled();
+        expect(get(models)[1].class_names).toEqual(['forklift']);
     });
 
     it('creates one detector per model and fills its classes', async () => {

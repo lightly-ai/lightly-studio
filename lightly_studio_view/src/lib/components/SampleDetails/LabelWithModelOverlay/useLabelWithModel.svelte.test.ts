@@ -39,11 +39,13 @@ const setup = (blockedReason: string | null = null) => {
         sampleId: string;
         modelId: string | null;
         modelRunsIn: 'browser' | 'server' | null;
+        promptClassNames: string[];
         threshold: number;
     }>({
         sampleId: 'sample-1',
         modelId: 'ltdetrv2-s-coco',
         modelRunsIn: 'server',
+        promptClassNames: [],
         threshold: 0.4
     });
     const onSaved = vi.fn();
@@ -54,6 +56,7 @@ const setup = (blockedReason: string | null = null) => {
             sampleId: params.sampleId,
             modelId: params.modelId,
             modelRunsIn: params.modelRunsIn,
+            promptClassNames: params.promptClassNames,
             threshold: params.threshold,
             saveAs: 'box',
             annotationSource: 'source',
@@ -97,6 +100,7 @@ describe('useLabelWithModel', () => {
     it('runs a browser model in the browser, not on the server', async () => {
         const { labelWithModel, params } = setup();
         params.modelRunsIn = 'browser';
+        params.promptClassNames = ['forklift'];
         flushSync();
         const bitmap = {};
         const original = { width: 640, height: 480 };
@@ -109,7 +113,7 @@ describe('useLabelWithModel', () => {
         expect(labelWithModel.predictions).toEqual([cat]);
         expect(mocks.getDetector).toHaveBeenCalledWith('ltdetrv2-s-coco');
         expect(mocks.loadImageBitmap).toHaveBeenCalledWith('sample-1', { width: 640, height: 640 });
-        expect(detect).toHaveBeenCalledWith(bitmap, original, 0.4);
+        expect(detect).toHaveBeenCalledWith(bitmap, original, 0.4, ['forklift']);
         expect(mocks.mutateAsync).not.toHaveBeenCalled();
     });
 

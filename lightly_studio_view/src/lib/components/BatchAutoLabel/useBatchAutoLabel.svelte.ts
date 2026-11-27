@@ -66,7 +66,7 @@ export const useBatchAutoLabel = (params: {
                 signal: controller.signal,
                 detect: async (sampleId) => {
                     const image = await loadImageBitmap(sampleId, detector.inputSize);
-                    return detector.detect(image.bitmap, image.original, threshold);
+                    return detector.detect(image.bitmap, image.original, threshold, classNames);
                 },
                 save: (sampleId, previews) =>
                     saveAnnotationPreviews({
