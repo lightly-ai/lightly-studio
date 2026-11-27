@@ -5,7 +5,11 @@ from __future__ import annotations
 from uuid import UUID
 
 from lightly_studio.database import db_manager
+from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
+from lightly_studio.models.evaluation_metrics import EvaluationMetrics
+from lightly_studio.models.evaluation_run import EvaluationRunView
 from lightly_studio.models.evaluation_task import EvaluationResult, EvaluationTask
 from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample_query import SampleQueryRequest
@@ -93,3 +97,22 @@ class LocalComputeTransport:
             filters=ImageFilter(sample_filter=SampleFilter(query_expr=query_expr)),
             name=task.name,
         )
+
+    def list_evaluation_runs(self, collection_id: UUID) -> list[EvaluationRunView]:
+        """List the evaluation runs of the dataset of a collection, newest first."""
+        return _evaluation_of_dataset(collection_id=collection_id).list_runs()
+
+    def get_evaluation_confusion_matrix(self, collection_id: UUID, run_id: UUID) -> ConfusionMatrix:
+        """Get the confusion matrix of an evaluation run of the dataset of a collection."""
+        return _evaluation_of_dataset(collection_id=collection_id).confusion_matrix(run_id=run_id)
+
+    def get_evaluation_metrics(self, collection_id: UUID, run_id: UUID) -> EvaluationMetrics:
+        """Get the aggregate metrics of an evaluation run of the dataset of a collection."""
+        return _evaluation_of_dataset(collection_id=collection_id).metrics(run_id=run_id)
+
+
+def _evaluation_of_dataset(collection_id: UUID) -> ImageDatasetEvaluate:
+    """Get the evaluation of the dataset of a collection, without samples to evaluate."""
+    return ImageDatasetEvaluate(
+        session=db_manager.persistent_session(), collection_id=collection_id, sample_ids=()
+    )
