@@ -29,6 +29,7 @@ from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter 
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.sampling.sampling_config import EmbeddingDiversityStrategy
+from lightly_studio.sampling.sampling_via_db import SamplingResult
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 from tests.resolvers.video import helpers as video_helpers
@@ -254,7 +255,11 @@ def test_create_sampling__passes_request_to_sampling(
         session=db_session,
         collection_name="legacy-selection-test",
     )
-    spy = mocker.patch.object(sampling_api, "sampling_via_database")
+    spy = mocker.patch.object(
+        sampling_api,
+        "sampling_via_database",
+        return_value=SamplingResult(n_samples_without_embedding=0),
+    )
     mocker.patch.object(image_resolver, "get_sample_ids", return_value=["a", "b", "c"])
 
     sampling_api.create_sampling(
@@ -1156,6 +1161,7 @@ def test_create_combination_sampling__sequence_collection(
     )
 
     assert response.status_code == 200
+    assert response.json() == {"n_samples_without_embedding": 0}
     created_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="sequence_sampling", collection_id=collection.collection_id
     )
