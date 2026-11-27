@@ -25,12 +25,15 @@
     import {
         drawBoxesOnContext,
         drawPolygonsOnContext,
+        getVisibleCanvasRect,
         transformBoxes,
         transformPolygons,
+        type CanvasRect,
         type PolygonInput,
         type RenderGeometry,
         type SourceCrop
     } from '$lib/workers/maskRendererUtils';
+    import { toPolygonInput, type PolygonAnnotation } from './AnnotationCanvas.helpers';
 
     interface InstanceAnnotation {
         annotation_type: 'segmentation_mask';
@@ -54,25 +57,10 @@
         sourceName?: string;
     }
 
-    interface PolygonAnnotation {
-        annotation_type: 'polygon';
-        annotation_label_name: string;
-        polygons: Array<Array<[number, number]>>;
-        segmentation_mask?: undefined;
-        object_detection_details?: undefined;
-        color?: undefined;
-        opacity?: undefined;
-        // If set, color by this source instead of by class.
-        sourceName?: string;
-    }
-
     type AnnotationCanvasAnnotation =
         | InstanceAnnotation
         | ObjectDetectionAnnotation
         | PolygonAnnotation;
-
-    const POLYGON_FILL_ALPHA = 0.4;
-    const OPAQUE_ALPHA_BYTE = 255;
 
     interface Props {
         sampleId: string;
@@ -241,18 +229,9 @@
 
         for (const annotation of annotations) {
             if (annotation.annotation_type === 'polygon') {
-                // The custom alpha applies only to the fill, as in the detail view.
-                const [r, g, b] = resolveAnnotationColor(annotation, 1, customColorMaps);
-                polygons.push({
-                    // Plain arrays, so postMessage never receives reactive proxies.
-                    parts: annotation.polygons.map((part) => part.map(([x, y]) => [x, y])),
-                    strokeColor: [r, g, b, OPAQUE_ALPHA_BYTE],
-                    fillColor: resolveAnnotationColor(
-                        annotation,
-                        POLYGON_FILL_ALPHA,
-                        customColorMaps
-                    )
-                });
+                const resolveColor = (colorAlpha: number) =>
+                    resolveAnnotationColor(annotation, colorAlpha, customColorMaps);
+                polygons.push(toPolygonInput(annotation.polygons, resolveColor));
                 continue;
             }
 
@@ -318,7 +297,8 @@
                 return;
             }
 
-            drawPolygonsOnContext(ctx, transformPolygons(geometry, payload.polygons));
+            const polygons = transformPolygons(geometry, payload.polygons);
+            drawPolygonsOnContext(ctx, polygons, getVisibleCanvasRect(geometry));
             drawBoxesOnContext(ctx, transformBoxes(geometry, payload.boxes));
             return;
         }
@@ -357,6 +337,7 @@
             data,
             boxes = [],
             polygons = [],
+            polygonClipRect,
             stroke = 2
         } = event.data as {
             canvasId: string;
@@ -365,6 +346,7 @@
             data: Uint8ClampedArray;
             boxes?: BoxPayload[];
             polygons?: PolygonInput[];
+            polygonClipRect: CanvasRect;
             stroke?: number;
         };
 
@@ -377,7 +359,7 @@
         const imageData = new ImageData(new Uint8ClampedArray(data), w, h);
         ctx.putImageData(imageData, 0, 0);
 
-        drawPolygonsOnContext(ctx, polygons, stroke);
+        drawPolygonsOnContext(ctx, polygons, polygonClipRect, stroke);
         drawBoxesOnContext(ctx, boxes, stroke);
     };
 

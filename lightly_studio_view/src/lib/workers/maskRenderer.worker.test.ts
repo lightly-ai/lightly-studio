@@ -32,6 +32,8 @@ describe('maskRenderer worker', () => {
             moveTo: vi.fn(),
             lineTo: vi.fn(),
             closePath: vi.fn(),
+            rect: vi.fn(),
+            clip: vi.fn(),
             fill: vi.fn(),
             stroke: vi.fn()
         };
@@ -78,6 +80,8 @@ describe('maskRenderer worker', () => {
             moveTo: vi.fn(),
             lineTo: vi.fn(),
             closePath: vi.fn(),
+            rect: vi.fn(),
+            clip: vi.fn(),
             fill: vi.fn(),
             stroke: vi.fn()
         };
@@ -149,6 +153,7 @@ describe('maskRenderer worker', () => {
         expect(postMessage).toHaveBeenCalledWith(
             expect.objectContaining({
                 type: 'image',
+                polygonClipRect: { x: 0, y: 0, width: 8, height: 4 },
                 polygons: [
                     expect.objectContaining({
                         parts: [
