@@ -6,6 +6,9 @@ from lightly_studio.services.recording_service.extend_sequence_track import exte
 from lightly_studio.services.recording_service.get_sequence_tracks import get_sequence_tracks
 from lightly_studio.services.recording_service.get_summary import get_mcap_sequence_summary
 from lightly_studio.services.recording_service.get_tick_details import get_tick_details
+from lightly_studio.services.recording_service.get_tick_ego_position import (
+    get_tick_ego_position,
+)
 from lightly_studio.services.recording_service.get_tick_tags import get_tick_tags
 from lightly_studio.services.recording_service.get_ticks import (
     get_ticks,
@@ -19,6 +22,7 @@ __all__ = [
     "get_sequence_tracks",
     "get_tick_data",
     "get_tick_details",
+    "get_tick_ego_position",
     "get_tick_tags",
     "get_ticks",
     "start_sequence_track",

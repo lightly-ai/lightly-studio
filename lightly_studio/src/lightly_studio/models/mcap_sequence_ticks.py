@@ -29,6 +29,28 @@ class TickListView(BaseModel):
     ticks: list[TickView]
 
 
+class EgoPositionFrames(BaseModel):
+    """The two coordinate frames that define the ego position."""
+
+    target_frame_id: str = Field(
+        description="The coordinate frame the scene is shown in, e.g. `map`."
+    )
+    ego_frame_id: str = Field(
+        description="The coordinate frame attached to the ego vehicle or robot, e.g. `CABIN`."
+    )
+
+
+class TickEgoPositionView(BaseModel):
+    """Position of the ego at one tick, in the frame the scene is shown in."""
+
+    position: list[float] | None = Field(
+        description=(
+            "Origin of the ego frame in the target frame, as `[x, y, z]` in meters. "
+            "`None` if no transform connects the frames or the tick has no timestamp."
+        )
+    )
+
+
 class TickTagView(BaseModel):
     """A tag on the ticks of a sequence, with the positions of the tagged ticks."""
 
