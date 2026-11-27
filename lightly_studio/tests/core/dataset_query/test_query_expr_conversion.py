@@ -84,6 +84,7 @@ def test_to_query_expr() -> None:
         match_expression=match, sample_type=SampleType.IMAGE
     )
 
+    assert query_expr is not None
     assert query_expr.model_dump(mode="json") == {
         "match_expr": {
             "type": "and",
@@ -177,6 +178,7 @@ def test_to_query_expr__video_frame_fields(
         match_expression=match, sample_type=SampleType.VIDEO_FRAME
     )
 
+    assert query_expr is not None
     match_expr = query_expr.model_dump(mode="json")["match_expr"]
     assert match_expr["type"] == expr_type
     assert match_expr["field"] == {"table": table, "name": name}
@@ -277,11 +279,43 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
         match_expression=match, sample_type=sample_type
     )
 
+    assert query_expr is not None
     translated = query_translation.to_match_expression(
         expr=query_expr.match_expr, sample_type=sample_type
     )
 
     assert _sql(match=translated) == _sql(match=match)
+
+
+# SQL compiles an empty AND to true, so the test compares with the conversion of the match
+# without the empty AND terms.
+@pytest.mark.parametrize(
+    ("match", "match_without_empty_and"),
+    [
+        (AND(ImageSampleField.width > 1, AND()), AND(ImageSampleField.width > 1)),
+        (AND(AND(), ImageSampleField.width > 1, AND(AND())), AND(ImageSampleField.width > 1)),
+        (ObjectDetectionQuery(AND()), ObjectDetectionQuery()),
+        (
+            ObjectDetectionQuery(AND(), ObjectDetectionField.x > 1),
+            ObjectDetectionQuery(ObjectDetectionField.x > 1),
+        ),
+        (SampleEvaluationQuery("run", AND()), SampleEvaluationQuery("run")),
+        (
+            SampleEvaluationQuery("run", AND(EvaluationMetricField("miou") < 0.3, AND())),
+            SampleEvaluationQuery("run", AND(EvaluationMetricField("miou") < 0.3)),
+        ),
+    ],
+)
+def test_to_query_expr__empty_and(
+    match: MatchExpression, match_without_empty_and: MatchExpression
+) -> None:
+    query_expr = query_expr_conversion.to_query_expr(
+        match_expression=match, sample_type=SampleType.IMAGE
+    )
+
+    assert query_expr == query_expr_conversion.to_query_expr(
+        match_expression=match_without_empty_and, sample_type=SampleType.IMAGE
+    )
 
 
 @pytest.mark.parametrize(
@@ -301,7 +335,8 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
         ),
         (SampleType.IMAGE, VideoSampleField.width > 100),
         (SampleType.VIDEO, ImageSampleField.width > 100),
-        (SampleType.IMAGE, AND()),
+        (SampleType.IMAGE, OR()),
+        (SampleType.IMAGE, NOT(AND())),
         (SampleType.IMAGE, ClassificationField.class_name == "cat"),
         (SampleType.IMAGE, ClassificationQuery(ObjectDetectionField.x > 1)),
         (SampleType.IMAGE, ClassificationQuery(ImageSampleField.width > 1)),
@@ -318,7 +353,6 @@ def test_to_query_expr__same_sql(sample_type: SampleType, match: MatchExpression
             SampleType.IMAGE,
             SampleEvaluationQuery("run", AnnotationEvaluationMetricField("iou") > 1),
         ),
-        (SampleType.IMAGE, SampleEvaluationQuery("run", AND())),
         (
             SampleType.IMAGE,
             AnnotationMetricQuery(

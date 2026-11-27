@@ -20,6 +20,8 @@ interface SettingsDialogShortcutState {
     keyToolbarEraser: string;
     keyPreviousCamera: string;
     keyNextCamera: string;
+    keyPointCloudSelect: string;
+    keyPointCloudCreateCuboid: string;
 }
 
 interface SettingsDialogFormState {
@@ -51,7 +53,9 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
             keyToolbarBrush: settings.key_toolbar_brush,
             keyToolbarEraser: settings.key_toolbar_eraser,
             keyPreviousCamera: settings.key_previous_camera,
-            keyNextCamera: settings.key_next_camera
+            keyNextCamera: settings.key_next_camera,
+            keyPointCloudSelect: settings.key_point_cloud_select,
+            keyPointCloudCreateCuboid: settings.key_point_cloud_create_cuboid
         },
         gridViewRendering: settings.grid_view_sample_rendering,
         gridViewThumbnailQuality: settings.grid_view_thumbnail_quality,
@@ -84,14 +88,35 @@ export function createSettingsSavePayload(
         key_toolbar_brush: formState.shortcutSettings.keyToolbarBrush,
         key_toolbar_eraser: formState.shortcutSettings.keyToolbarEraser,
         key_previous_camera: formState.shortcutSettings.keyPreviousCamera,
-        key_next_camera: formState.shortcutSettings.keyNextCamera
+        key_next_camera: formState.shortcutSettings.keyNextCamera,
+        key_point_cloud_select: formState.shortcutSettings.keyPointCloudSelect,
+        key_point_cloud_create_cuboid: formState.shortcutSettings.keyPointCloudCreateCuboid
     };
 }
 
 // A modifier alone is never a shortcut: AltGr and Shift come before the character they type.
 const MODIFIER_KEYS = new Set(['Alt', 'AltGraph', 'Control', 'Meta', 'Shift']);
-// Space toggles playback in the camera dialog, so it can never switch cameras.
-const CAMERA_SHORTCUTS = new Set<ShortcutSettingKey>(['keyPreviousCamera', 'keyNextCamera']);
+const POINT_CLOUD_SHORTCUTS = new Set<ShortcutSettingKey>([
+    'keyPreviousCamera',
+    'keyNextCamera',
+    'keyPointCloudSelect',
+    'keyPointCloudCreateCuboid'
+]);
+// Fixed keys of the point cloud workspace: playback, ticks, camera movement, confirm, delete,
+// and open camera 1–9. A point cloud shortcut on one of them would fire both actions.
+const RESERVED_POINT_CLOUD_KEYS = new Set([
+    ' ',
+    'ArrowLeft',
+    'ArrowRight',
+    'w',
+    'a',
+    's',
+    'd',
+    'Enter',
+    'Delete',
+    'Backspace',
+    ...'123456789'
+]);
 
 export function normalizeShortcutKey(event: ShortcutKeyboardEvent): string {
     if (event.key === ' ') {
@@ -127,7 +152,9 @@ export class SettingsDialogState {
         keyToolbarBrush: 'r',
         keyToolbarEraser: 'x',
         keyPreviousCamera: '[',
-        keyNextCamera: ']'
+        keyNextCamera: ']',
+        keyPointCloudSelect: 'q',
+        keyPointCloudCreateCuboid: 'c'
     });
     gridViewRendering: RenderingMode = $state('contain');
     gridViewThumbnailQuality: ThumbnailQualityMode = $state('raw');
@@ -175,14 +202,35 @@ export class SettingsDialogState {
 
         // Keep recording until the key that the modifier changes.
         if (MODIFIER_KEYS.has(event.key)) return;
-        // Keep recording until a key that can switch cameras.
-        if (event.key === ' ' && CAMERA_SHORTCUTS.has(this.recordingShortcut)) return;
+        // Keep recording until a key that the point cloud workspace does not use already.
+        if (this.isKeyTakenInPointCloud(this.recordingShortcut, event.key)) return;
 
         // Escape cancels recording. Stopping it also keeps the dialog open.
         if (event.key !== 'Escape') {
             this.shortcuts[this.recordingShortcut] = normalizeShortcutKey(event);
         }
         this.recordingShortcut = null;
+    }
+
+    /**
+     * Whether the point cloud workspace already uses the key for another action: a fixed key,
+     * the edit mode key, or another point cloud shortcut.
+     */
+    private isKeyTakenInPointCloud(shortcut: ShortcutSettingKey, key: string): boolean {
+        const lowerKey = key.toLowerCase();
+        if (shortcut === 'toggleEditMode') return this.isPointCloudShortcutKey(lowerKey, shortcut);
+        if (!POINT_CLOUD_SHORTCUTS.has(shortcut)) return false;
+        const isFixedKey =
+            RESERVED_POINT_CLOUD_KEYS.has(key) || RESERVED_POINT_CLOUD_KEYS.has(lowerKey);
+        const isEditModeKey = lowerKey === this.shortcuts.toggleEditMode.toLowerCase();
+        return isFixedKey || isEditModeKey || this.isPointCloudShortcutKey(lowerKey, shortcut);
+    }
+
+    private isPointCloudShortcutKey(lowerKey: string, recording: ShortcutSettingKey): boolean {
+        return [...POINT_CLOUD_SHORTCUTS].some(
+            (shortcut) =>
+                shortcut !== recording && this.shortcuts[shortcut].toLowerCase() === lowerKey
+        );
     }
 
     clearRecording(): void {

@@ -7,13 +7,13 @@ from functools import cached_property
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.evaluation import (
     aggregate_metrics,
     average_precision,
     classification_metric,
+    evaluation_data,
     instance_segmentation_metric,
     semantic_segmentation_metric,
     validators,
@@ -28,6 +28,13 @@ from lightly_studio.models.evaluation_run import (
     EvaluationRunView,
     EvaluationTaskType,
 )
+from lightly_studio.models.evaluation_task import (
+    ClassificationEvaluationConfig,
+    EvaluationResult,
+    InstanceSegmentationEvaluationConfig,
+    ObjectDetectionEvaluationConfig,
+    SemanticSegmentationEvaluationConfig,
+)
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_label_resolver,
@@ -38,81 +45,14 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
 )
 
-
-class ObjectDetectionEvaluationConfig(BaseModel):
-    """Configuration for object-detection evaluation runs.
-
-    Attributes:
-        iou_threshold: IoU threshold used by object-detection evaluators.
-            Stored in the run config for reproducibility.
-        classwise: If True, match predictions and ground truths only within the
-            same annotation class. If False, match globally across all annotation classes.
-        compute_average_precision: If True, also store the per-class average
-            precision at the COCO IoU thresholds. Off by default, because it matches
-            the annotations once per threshold. Average precision always matches
-            predictions within their own class, even if ``classwise`` is False.
-    """
-
-    iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
-    classwise: bool = True
-    compute_average_precision: bool = False
-
-
-class EvaluationResult(BaseModel):
-    """Summary of the inputs used by an evaluation run.
-
-    Returned by every task method on ``ImageDatasetEvaluate``. The field set is
-    shared across tasks (object detection, classification, segmentation).
-
-    Attributes:
-        evaluation_run_id: ID of the persisted evaluation run.
-        sample_count: Number of samples included in the evaluation.
-        gt_annotation_count: Number of ground truth annotations used.
-        pred_annotation_count: Number of prediction annotations used.
-    """
-
-    evaluation_run_id: UUID
-    sample_count: int
-    gt_annotation_count: int
-    pred_annotation_count: int
-
-    @classmethod
-    def from_evaluation_data(cls, data: EvaluationData) -> EvaluationResult:
-        """Build a result from the prepared evaluation data."""
-        return cls(
-            evaluation_run_id=data.evaluation_run_id,
-            sample_count=len(data.selected_sample_ids),
-            gt_annotation_count=sum(len(v) for v in data.gt_per_sample.values()),
-            pred_annotation_count=sum(len(v) for v in data.pred_per_sample.values()),
-        )
-
-
-class ClassificationEvaluationConfig(BaseModel):
-    """Configuration for classification evaluation runs.
-
-    Currently has no fields. Placeholder for future task-specific options.
-    """
-
-
-class SemanticSegmentationEvaluationConfig(BaseModel):
-    """Configuration for semantic-segmentation evaluation runs.
-
-    Currently has no fields. Placeholder for future task-specific options.
-    """
-
-
-class InstanceSegmentationEvaluationConfig(BaseModel):
-    """Configuration for instance-segmentation evaluation runs.
-
-    Attributes:
-        iou_threshold: Mask IoU threshold used to match predictions to ground
-            truths. Stored in the run config for reproducibility.
-        classwise: If True, match predictions and ground truths only within the
-            same annotation class. If False, match across all annotation classes.
-    """
-
-    iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
-    classwise: bool = True
+__all__ = [
+    "ClassificationEvaluationConfig",
+    "EvaluationResult",
+    "ImageDatasetEvaluate",
+    "InstanceSegmentationEvaluationConfig",
+    "ObjectDetectionEvaluationConfig",
+    "SemanticSegmentationEvaluationConfig",
+]
 
 
 class ImageDatasetEvaluate:
@@ -178,7 +118,7 @@ class ImageDatasetEvaluate:
             classwise=config.classwise,
             compute_average_precision=config.compute_average_precision,
         )
-        return EvaluationResult.from_evaluation_data(data)
+        return evaluation_data.to_evaluation_result(data=data)
 
     def classification(
         self,
@@ -211,7 +151,7 @@ class ImageDatasetEvaluate:
             session=self.session,
             data=data,
         )
-        return EvaluationResult.from_evaluation_data(data)
+        return evaluation_data.to_evaluation_result(data=data)
 
     def semantic_segmentation(
         self,
@@ -244,7 +184,7 @@ class ImageDatasetEvaluate:
             session=self.session,
             data=data,
         )
-        return EvaluationResult.from_evaluation_data(data)
+        return evaluation_data.to_evaluation_result(data=data)
 
     def instance_segmentation(
         self,
@@ -279,7 +219,7 @@ class ImageDatasetEvaluate:
             iou_threshold=config.iou_threshold,
             classwise=config.classwise,
         )
-        return EvaluationResult.from_evaluation_data(data)
+        return evaluation_data.to_evaluation_result(data=data)
 
     def list_runs(self) -> list[EvaluationRunView]:
         """List the evaluation runs stored for this dataset, newest first.

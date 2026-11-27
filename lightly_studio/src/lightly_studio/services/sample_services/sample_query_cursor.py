@@ -1,6 +1,8 @@
-"""Opaque cursor for keyset paging of the sample query.
+"""Opaque cursor for paging of the sample query.
 
-The cursor is base64url JSON: `{"v": 1, "q": <query hash>, "after": [<sort values>]}`.
+The cursor is base64url JSON. Keyset paging uses
+`{"v": 1, "q": <query hash>, "after": [<sort values>]}`. Offset paging uses
+`{"v": 1, "q": <query hash>, "offset": <number of samples>}`.
 """
 
 from __future__ import annotations
@@ -18,6 +20,8 @@ from lightly_studio.models.sample_query import SampleQueryRequest
 
 _VERSION = 1
 _HASH_LENGTH = 16
+# SQL OFFSET accepts at most a signed 64-bit integer.
+_MAX_OFFSET = 2**63 - 1
 
 
 def query_hash(collection_id: UUID, request: SampleQueryRequest) -> str:
@@ -48,9 +52,20 @@ def encode(query_hash: str, after: Sequence[Any]) -> str:
     Returns:
         The cursor as unpadded base64url text.
     """
-    payload = {"v": _VERSION, "q": query_hash, "after": list(after)}
-    text = json.dumps(payload, separators=(",", ":"), default=_to_json)
-    return base64.urlsafe_b64encode(text.encode()).decode().rstrip("=")
+    return _encode(payload={"v": _VERSION, "q": query_hash, "after": list(after)})
+
+
+def encode_offset(query_hash: str, offset: int) -> str:
+    """Encode the offset of the next page as a cursor.
+
+    Args:
+        query_hash: The hash of the query, from `query_hash`.
+        offset: The number of samples before the next page.
+
+    Returns:
+        The cursor as unpadded base64url text.
+    """
+    return _encode(payload={"v": _VERSION, "q": query_hash, "offset": offset})
 
 
 def decode(cursor: str, query_hash: str) -> list[Any]:
@@ -66,6 +81,37 @@ def decode(cursor: str, query_hash: str) -> list[Any]:
     Raises:
         ValueError: If the cursor is not valid or belongs to a different query.
     """
+    after = _decode(cursor=cursor, query_hash=query_hash).get("after")
+    if not isinstance(after, list):
+        raise ValueError("The cursor is not valid.")
+    return after
+
+
+def decode_offset(cursor: str, query_hash: str) -> int:
+    """Decode the offset of a cursor.
+
+    Args:
+        cursor: The cursor from `encode_offset`.
+        query_hash: The hash of the current query. It must match the hash in the cursor.
+
+    Returns:
+        The number of samples before the page.
+
+    Raises:
+        ValueError: If the cursor is not valid or belongs to a different query.
+    """
+    offset = _decode(cursor=cursor, query_hash=query_hash).get("offset")
+    if type(offset) is not int or not 0 <= offset <= _MAX_OFFSET:
+        raise ValueError("The cursor is not valid.")
+    return offset
+
+
+def _encode(payload: dict[str, Any]) -> str:
+    text = json.dumps(payload, separators=(",", ":"), default=_to_json)
+    return base64.urlsafe_b64encode(text.encode()).decode().rstrip("=")
+
+
+def _decode(cursor: str, query_hash: str) -> dict[str, Any]:
     try:
         padded = cursor + "=" * (-len(cursor) % 4)
         payload = json.loads(base64.b64decode(padded, altchars=b"-_", validate=True))
@@ -75,10 +121,7 @@ def decode(cursor: str, query_hash: str) -> list[Any]:
         raise ValueError("The cursor is not valid.")
     if payload.get("q") != query_hash:
         raise ValueError("The cursor belongs to a different query.")
-    after = payload.get("after")
-    if not isinstance(after, list):
-        raise ValueError("The cursor is not valid.")
-    return after
+    return payload
 
 
 def _to_json(value: Any) -> str:

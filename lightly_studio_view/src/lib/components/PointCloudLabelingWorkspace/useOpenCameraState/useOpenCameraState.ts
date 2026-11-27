@@ -1,3 +1,4 @@
+import { fromStore, writable } from 'svelte/store';
 import type { HistoryMode, WorkspaceOptions } from '../workspaceOptions';
 
 type OpenCameraOptions = Pick<WorkspaceOptions, 'openCamera' | 'onOpenCameraChange'>;
@@ -9,17 +10,17 @@ type OpenCameraOptions = Pick<WorkspaceOptions, 'openCamera' | 'onOpenCameraChan
  * it, the workspace keeps the open camera itself, so the dialog works in every configuration.
  */
 export function useOpenCameraState(getOptions: () => OpenCameraOptions) {
-    let localOpenCamera = $state<string | undefined>();
+    const localOpenCamera = fromStore(writable<string | undefined>(undefined));
 
     return {
         get openCamera() {
             const { openCamera, onOpenCameraChange } = getOptions();
-            return onOpenCameraChange ? openCamera : localOpenCamera;
+            return onOpenCameraChange ? openCamera : localOpenCamera.current;
         },
         setOpenCamera(camera: string | undefined, historyMode: HistoryMode) {
             const { onOpenCameraChange } = getOptions();
             if (onOpenCameraChange) onOpenCameraChange(camera, historyMode);
-            else localOpenCamera = camera;
+            else localOpenCamera.current = camera;
         }
     };
 }

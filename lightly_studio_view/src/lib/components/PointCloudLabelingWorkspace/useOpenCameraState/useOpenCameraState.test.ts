@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { useOpenCameraState } from './useOpenCameraState.svelte';
+import { useOpenCameraState } from './useOpenCameraState';
 
 describe('useOpenCameraState', () => {
     it('reports the open camera to a host that controls it', () => {

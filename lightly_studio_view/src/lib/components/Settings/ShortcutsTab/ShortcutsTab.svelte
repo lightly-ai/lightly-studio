@@ -50,7 +50,7 @@
         {@render recordableRows(generalShortcuts)}
         {@render staticRows(staticGeneralShortcuts)}
     </SettingsGroup>
-    <SettingsGroup title="Annotation tools" columns={2}>
+    <SettingsGroup title="Image annotation" columns={2}>
         {@render recordableRows(toolShortcuts)}
         {@render staticRows(staticToolShortcuts)}
     </SettingsGroup>

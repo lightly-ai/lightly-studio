@@ -197,10 +197,16 @@ export function useWorkspaceEditing(
     async function handleDeleteCuboid(cuboidId: string): Promise<void> {
         // The undo of the delete restores the cuboid with the geometry of its last save.
         await waitForSaves(cuboidId);
-        const deleted = await deleteCuboidAnnotation(cuboidId);
-        if (deleted && selectedCuboidId === cuboidId) {
-            selectCuboid(null);
-        }
+        // The delete rejects only when the refresh after a successful delete throws.
+        const deleted = await deleteCuboidAnnotation(cuboidId).catch((error: unknown) => {
+            deselectCuboid(cuboidId);
+            throw error;
+        });
+        if (deleted) deselectCuboid(cuboidId);
+    }
+
+    function deselectCuboid(cuboidId: string): void {
+        if (selectedCuboidId === cuboidId) selectCuboid(null);
     }
 
     async function handleCreateCuboid(box: CuboidBox, selectClass = false): Promise<void> {

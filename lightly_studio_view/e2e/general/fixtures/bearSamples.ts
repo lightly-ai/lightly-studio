@@ -9,8 +9,8 @@ export const bearSamples: SampleFixture[] = [
                 coordinates: {
                     x: 237,
                     y: 194,
-                    width: 130,
-                    height: 102
+                    width: 131,
+                    height: 103
                 }
             }
         ]
@@ -23,8 +23,8 @@ export const bearSamples: SampleFixture[] = [
                 coordinates: {
                     x: 155,
                     y: 235,
-                    width: 339,
-                    height: 404
+                    width: 340,
+                    height: 405
                 }
             },
             {
@@ -32,8 +32,8 @@ export const bearSamples: SampleFixture[] = [
                 coordinates: {
                     x: 1,
                     y: 0,
-                    width: 493,
-                    height: 589
+                    width: 494,
+                    height: 590
                 }
             }
         ]

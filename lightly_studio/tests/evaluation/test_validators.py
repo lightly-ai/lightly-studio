@@ -8,11 +8,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.image.image_dataset import ImageDataset
-from lightly_studio.evaluation.validators import (
-    _validate_annotation_collection,
-    _validate_collection_annotation_type,
-    resolve_and_validate_collection,
-)
+from lightly_studio.evaluation import validators
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationTaskType
@@ -20,78 +16,52 @@ from lightly_studio.resolvers import collection_resolver
 from tests.helpers_resolvers import create_annotation, create_annotation_label, create_image
 
 
-def test_assert_collection_annotation_type__passes_for_empty_collection(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    dataset = ImageDataset.create(name="test_dataset")
-    collection_id = collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
+def test_validate_no_polygons__passes_without_polygons() -> None:
+    validators._validate_no_polygons(
+        annotation_types=[AnnotationType.SEGMENTATION_MASK.value],
+        task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
     )
-    _validate_collection_annotation_type(
-        session=dataset.session,
-        collection_id=collection_id,
+
+
+def test_validate_no_polygons__passes_for_task_with_polygon_support() -> None:
+    validators._validate_no_polygons(
+        annotation_types=[AnnotationType.POLYGON.value],
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+    )
+
+
+def test_validate_no_polygons__raises_for_segmentation_task() -> None:
+    with pytest.raises(ValueError, match="semantic segmentation"):
+        validators._validate_no_polygons(
+            annotation_types=[AnnotationType.POLYGON.value],
+            task_type=EvaluationTaskType.SEMANTIC_SEGMENTATION,
+        )
+
+
+def test_validate_annotation_types__passes_for_empty_collection() -> None:
+    validators._validate_annotation_types(
+        annotation_types=[],
+        collection_id=uuid.uuid4(),
         expected_type=AnnotationType.OBJECT_DETECTION,
     )
 
 
-def test_assert_collection_annotation_type__passes_when_all_annotations_match(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    dataset = ImageDataset.create(name="test_dataset")
-    label = create_annotation_label(
-        session=dataset.session, root_collection_id=dataset.collection_id
-    )
-    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
-    collection_id = collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
-    )
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.OBJECT_DETECTION,
-        annotation_collection_name="gt",
-    )
-    _validate_collection_annotation_type(
-        session=dataset.session,
-        collection_id=collection_id,
+def test_validate_annotation_types__passes_when_all_annotations_match() -> None:
+    validators._validate_annotation_types(
+        annotation_types=[AnnotationType.OBJECT_DETECTION.value],
+        collection_id=uuid.uuid4(),
         expected_type=AnnotationType.OBJECT_DETECTION,
     )
 
 
-def test_assert_collection_annotation_type__raises_on_type_mismatch(
-    patch_collection: None,  # noqa: ARG001
-) -> None:
-    dataset = ImageDataset.create(name="test_dataset")
-    label = create_annotation_label(
-        session=dataset.session, root_collection_id=dataset.collection_id
-    )
-    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
-    collection_id = collection_resolver.get_or_create_child_collection(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_type=SampleType.ANNOTATION,
-        name="gt",
-    )
-    create_annotation(
-        session=dataset.session,
-        collection_id=dataset.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-        annotation_type=AnnotationType.CLASSIFICATION,
-        annotation_collection_name="gt",
-    )
+def test_validate_annotation_types__raises_on_type_mismatch() -> None:
     with pytest.raises(ValueError, match="object_detection"):
-        _validate_collection_annotation_type(
-            session=dataset.session,
-            collection_id=collection_id,
+        validators._validate_annotation_types(
+            annotation_types=[
+                AnnotationType.CLASSIFICATION.value,
+                AnnotationType.OBJECT_DETECTION.value,
+            ],
+            collection_id=uuid.uuid4(),
             expected_type=AnnotationType.OBJECT_DETECTION,
         )
 
@@ -102,7 +72,9 @@ def test__validate_annotation_collection__raises_when_collection_not_found(
     dataset = ImageDataset.create(name="test_dataset")
     missing_id = uuid.uuid4()
     with pytest.raises(ValueError, match=str(missing_id)):
-        _validate_annotation_collection(session=dataset.session, collection_id=missing_id)
+        validators._validate_annotation_collection(
+            session=dataset.session, collection_id=missing_id
+        )
 
 
 def test__validate_annotation_collection__raises_on_wrong_sample_type(
@@ -116,7 +88,9 @@ def test__validate_annotation_collection__raises_on_wrong_sample_type(
         name="images",
     )
     with pytest.raises(ValueError, match="annotation"):
-        _validate_annotation_collection(session=dataset.session, collection_id=image_collection_id)
+        validators._validate_annotation_collection(
+            session=dataset.session, collection_id=image_collection_id
+        )
 
 
 def test__validate_annotation_collection__passes_for_annotation_collection(
@@ -129,7 +103,9 @@ def test__validate_annotation_collection__passes_for_annotation_collection(
         sample_type=SampleType.ANNOTATION,
         name="gt",
     )
-    _validate_annotation_collection(session=dataset.session, collection_id=annotation_collection_id)
+    validators._validate_annotation_collection(
+        session=dataset.session, collection_id=annotation_collection_id
+    )
 
 
 def test_resolve_and_validate_collection__passes(
@@ -142,7 +118,7 @@ def test_resolve_and_validate_collection__passes(
         sample_type=SampleType.ANNOTATION,
         name="gt",
     )
-    collection_id = resolve_and_validate_collection(
+    collection_id = validators.resolve_and_validate_collection(
         session=dataset.session,
         collection_id=dataset.collection_id,
         collection_name="gt",
@@ -151,12 +127,37 @@ def test_resolve_and_validate_collection__passes(
     assert collection_id is not None
 
 
+def test_resolve_and_validate_collection__raises_on_type_mismatch(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+        annotation_collection_name="gt",
+    )
+    with pytest.raises(ValueError, match="object_detection"):
+        validators.resolve_and_validate_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            collection_name="gt",
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        )
+
+
 def test_resolve_and_validate_collection__raises_when_not_found(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
     dataset = ImageDataset.create(name="test_dataset")
     with pytest.raises(ValueError, match="'gt'"):
-        resolve_and_validate_collection(
+        validators.resolve_and_validate_collection(
             session=dataset.session,
             collection_id=dataset.collection_id,
             collection_name="gt",
@@ -175,7 +176,7 @@ def test_resolve_and_validate_collection__raises_when_wrong_sample_type(
         name="gt",
     )
     with pytest.raises(ValueError, match="annotation"):
-        resolve_and_validate_collection(
+        validators.resolve_and_validate_collection(
             session=dataset.session,
             collection_id=dataset.collection_id,
             collection_name="gt",
@@ -190,9 +191,82 @@ def test_resolve_and_validate_collection__raises_on_unsupported_task_type(
     dataset = ImageDataset.create(name="test_dataset")
     unsupported_task_type = mocker.MagicMock(spec=EvaluationTaskType)
     with pytest.raises(ValueError, match="Unsupported evaluation task type"):
-        resolve_and_validate_collection(
+        validators.resolve_and_validate_collection(
             session=dataset.session,
             collection_id=dataset.collection_id,
             collection_name="gt",
             task_type=unsupported_task_type,
         )
+
+
+@pytest.mark.parametrize(
+    ("task_type", "task_label"),
+    [
+        (EvaluationTaskType.INSTANCE_SEGMENTATION, "instance segmentation"),
+        (EvaluationTaskType.SEMANTIC_SEGMENTATION, "semantic segmentation"),
+    ],
+)
+def test_resolve_and_validate_collection__polygon_source(
+    patch_collection: None,  # noqa: ARG001
+    task_type: EvaluationTaskType,
+    task_label: str,
+) -> None:
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        annotation_collection_name="gt",
+        polygons=[[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)]],
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_collection_name="gt",
+        annotation_data={"segmentation_mask": [0, 1, 1, 0]},
+    )
+    with pytest.raises(
+        ValueError,
+        match=f"Polygon annotations are not yet supported for {task_label} evaluation.",
+    ):
+        validators.resolve_and_validate_collection(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            collection_name="gt",
+            task_type=task_type,
+        )
+
+
+def test_resolve_and_validate_collection__masks_only_still_ok(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.SEGMENTATION_MASK,
+        annotation_collection_name="gt",
+        annotation_data={"segmentation_mask": [0, 1, 1, 0]},
+    )
+    collection_id = validators.resolve_and_validate_collection(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        collection_name="gt",
+        task_type=EvaluationTaskType.INSTANCE_SEGMENTATION,
+    )
+    assert collection_id is not None

@@ -46,15 +46,48 @@ def build_request(
             )
         )
         sort = query_expr_conversion.to_sort_keys(order_by=order_by, sample_type=sample_type)
-        # TODO(iunir, 11/2026): Remove when the server pages metadata and metric sorts.
-        if not all(_is_field_sort(key=key, table=sample_type.value) for key in sort):
-            raise UnsupportedQueryError("The server cannot page this sort yet.")
+        needs_offset_paging = not all(
+            _is_field_sort(key=key, table=sample_type.value) for key in sort
+        )
+        # Offset paging can skip samples that a loop changes, so local mode uses SQL.
+        if needs_offset_paging and not active_transport.is_remote():
+            return None
     except UnsupportedQueryError:
         if active_transport.is_remote():
             raise
         return None
     return SampleQueryRequest(
         query_expr=query_expr, sort=sort, offset=offset, include=[SampleInclude.TAGS]
+    )
+
+
+def build_sampling_request(
+    sample_type: SampleType,
+    match_expression: MatchExpression | None,
+    filters_sample_ids: bool,
+    is_ordered: bool,
+    is_sliced: bool,
+) -> SampleQueryRequest | None:
+    """Build the request of a sampling. None means the sampling uses SQL.
+
+    The order of the candidates changes the selection. The transport cannot send an order
+    or a slice yet, so the request uses the default order.
+
+    Raises:
+        UnsupportedQueryError: If the transport is remote and cannot send the query.
+    """
+    if is_ordered or is_sliced:
+        if active_transport.is_remote():
+            raise UnsupportedQueryError(
+                "The transport cannot send the order or the slice of a sampling yet."
+            )
+        return None
+    return build_request(
+        sample_type=sample_type,
+        match_expression=match_expression,
+        order_by=[],
+        filters_sample_ids=filters_sample_ids,
+        offset=0,
     )
 
 

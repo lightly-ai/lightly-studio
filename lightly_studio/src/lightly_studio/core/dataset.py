@@ -15,15 +15,10 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.sample import Sample
 from lightly_studio.database import db_manager
-from lightly_studio.metadata import compute_similarity, compute_typicality
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionWithoutChildrenView,
     SampleType,
-)
-from lightly_studio.resolvers import (
-    collection_embedding_model_resolver,
-    tag_resolver,
 )
 from lightly_studio.transport import active_transport
 
@@ -157,15 +152,9 @@ class Dataset(Generic[T], ABC):
                 The name of the metadata to store the typicality values in. If not give, the default
                 name "typicality" is used.
         """
-        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
-            session=self.session,
+        active_transport.get_transport().compute.compute_typicality(
             collection_id=self.collection_id,
             embedding_model_name=embedding_model_name,
-        )
-        compute_typicality.compute_typicality_metadata(
-            session=self.session,
-            collection_id=self.collection_id,
-            embedding_model_id=embedding_model_id,
             metadata_name=metadata_name,
         )
 
@@ -190,21 +179,10 @@ class Dataset(Generic[T], ABC):
         Returns:
             The name of the metadata storing the similarity values.
         """
-        embedding_model_id = collection_embedding_model_resolver.get_model_id_by_name(
-            session=self.session,
+        return active_transport.get_transport().compute.compute_similarity(
             collection_id=self.collection_id,
+            query_tag_name=query_tag_name,
             embedding_model_name=embedding_model_name,
-        )
-        query_tag = tag_resolver.get_by_name(
-            session=self.session, tag_name=query_tag_name, collection_id=self.collection_id
-        )
-        if query_tag is None:
-            raise ValueError("Query tag not found")
-        return compute_similarity.compute_similarity_metadata(
-            session=self.session,
-            key_collection_id=self.collection_id,
-            embedding_model_id=embedding_model_id,
-            query_tag_id=query_tag.tag_id,
             metadata_name=metadata_name,
         )
 

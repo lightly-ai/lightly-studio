@@ -11,6 +11,7 @@ from sqlmodel import Session
 from lightly_studio.evaluation import (
     average_precision,
     classification_metric,
+    evaluation_data,
     instance_segmentation_metric,
     semantic_segmentation_metric,
     validators,
@@ -99,11 +100,13 @@ def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> Eval
         evaluation_run_id=run.id,
         expected_stale_since=observed_stale_since,
     )
-    return EvaluationResult.from_evaluation_data(data)
+    return evaluation_data.to_evaluation_result(data=data)
 
 
 def _fetch_annotations_for_run(session: Session, run: EvaluationRunTable) -> EvaluationData:
     """Fetch coverage and annotations from the run's stored collection IDs."""
+    # TODO(Michal, 11/2026): Validate the annotation types as a new run does. Recompute
+    # skips annotations of other types without an error, for example polygons.
     annotation_type = validators.get_annotation_type_for_task(run.task_type)
     gt_covered = set(
         annotation_collection_coverage_resolver.list_by_collection_id(

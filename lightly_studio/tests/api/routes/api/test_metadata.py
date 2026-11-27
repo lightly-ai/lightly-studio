@@ -413,3 +413,29 @@ def test_compute_similarity_metadata_missing_embedding_model(
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
     assert "Embedding model not found" in response.text
+
+
+def test_compute_similarity_metadata__type_mismatch(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=2, embedding_model_names=["test_embedding_model"]
+    )
+    query_tag = create_tag(session=db_session, collection_id=collection_id, tag_name="query_tag")
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    ).samples
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=query_tag.tag_id, sample_ids=[samples[0].sample_id]
+    )
+    metadata_resolver.bulk_update_metadata(
+        session=db_session, sample_metadata=[(samples[0].sample_id, {"score": "high"})]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/metadata/similarity/{query_tag.tag_id}",
+        json={"metadata_name": "score"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert "Value type mismatch" in response.json()["error"]

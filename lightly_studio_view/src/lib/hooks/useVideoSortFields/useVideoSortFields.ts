@@ -16,7 +16,7 @@ interface UseVideoSortFieldsReturn {
 
 // Videos have no evaluation metrics, so the field list is the plain columns plus
 // every sortable metadata key. The `value`s are the backend sort field names
-// (see query_translation._SORT_FIELDS).
+// (see sort_translation._SORT_FIELDS).
 export const VIDEO_SORT_FIELDS: ColumnSortField[] = [
     { source: 'video', value: 'file_name', label: 'file name' },
     { source: 'video', value: 'file_path_abs', label: 'file path' },

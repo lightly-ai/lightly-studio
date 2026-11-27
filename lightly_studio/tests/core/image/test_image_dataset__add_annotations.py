@@ -12,7 +12,8 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from lightly_studio import ImageDataset
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.core.annotation.polygon import PolygonAnnotation
+from lightly_studio.core.annotation_file_task import AnnotationFileTask
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
@@ -214,28 +215,31 @@ class TestDataset:
             is None
         )
 
-    def test_add_annotations_from_coco__segmentation_mask_annotation_type(
+    def test_add_annotations_from_coco__instance_segmentation(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
     ) -> None:
         dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
+        coco_dict = _coco_dict_with(["image1.jpg"])
+        coco_dict["annotations"][0]["segmentation"] = [[1, 1, 5, 1, 5, 5], [6, 6, 9, 6, 9, 9]]
         annotations_path = tmp_path / "annotations.json"
-        annotations_path.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
+        annotations_path.write_text(json.dumps(coco_dict))
 
         dataset.add_annotations_from_coco(
             annotations_json=annotations_path,
             images_root=images_path,
             annotation_source="seg",
-            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
         )
 
-        result = annotation_resolver.get_all_by_collection_name(
-            session=dataset.session,
-            collection_name="seg",
-            parent_collection_id=dataset.collection_id,
-        )
-        assert len(result.annotations) == 1
+        (sample,) = list(dataset)
+        (annotation,) = sample.annotations
+        assert isinstance(annotation, PolygonAnnotation)
+        assert annotation.polygons == [
+            [(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)],
+            [(6.0, 6.0), (9.0, 6.0), (9.0, 9.0)],
+        ]
 
     def test_add_annotations_from_yolo__loads_split_annotations(
         self,
@@ -267,6 +271,34 @@ class TestDataset:
             parent_collection_id=dataset.collection_id,
         )
         assert len(result.annotations) == 2
+
+    def test_add_annotations_from_yolo__instance_segmentation(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        yaml_path = tmp_path / "data.yaml"
+        yaml_path.write_text(yaml.dump({"train": "../train/images", "nc": 1, "names": ["class_0"]}))
+        images_path = tmp_path / "train" / "images"
+        labels_path = tmp_path / "train" / "labels"
+        labels_path.mkdir(parents=True, exist_ok=True)
+        images_path.mkdir(parents=True, exist_ok=True)
+        Image.new("RGB", (100, 50)).save(images_path / "image1.jpg")
+        (labels_path / "image1.txt").write_text("0 0.1 0.1 0.5 0.1 0.5 0.5\n")
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_images_from_path(path=images_path, embed=False)
+        dataset.add_annotations_from_yolo(
+            data_yaml=yaml_path,
+            annotation_source="model_A",
+            input_split="train",
+            annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION,
+        )
+
+        (sample,) = list(dataset)
+        (annotation,) = sample.annotations
+        assert isinstance(annotation, PolygonAnnotation)
+        assert annotation.polygons == [[(10.0, 5.0), (50.0, 5.0), (50.0, 25.0)]]
 
     def test_add_annotations_from_yolo__skips_broken_image(
         self,

@@ -8,8 +8,8 @@ export const multipleAnnotationsSample: SampleFixture = {
             coordinates: {
                 x: 288,
                 y: 144,
-                width: 19,
-                height: 20
+                width: 20,
+                height: 21
             }
         },
         {
@@ -17,8 +17,8 @@ export const multipleAnnotationsSample: SampleFixture = {
             coordinates: {
                 x: 209,
                 y: 105,
-                width: 133,
-                height: 300
+                width: 135,
+                height: 302
             }
         },
         {
@@ -26,8 +26,8 @@ export const multipleAnnotationsSample: SampleFixture = {
             coordinates: {
                 x: 199,
                 y: 241,
-                width: 42,
-                height: 74
+                width: 43,
+                height: 75
             }
         }
     ]

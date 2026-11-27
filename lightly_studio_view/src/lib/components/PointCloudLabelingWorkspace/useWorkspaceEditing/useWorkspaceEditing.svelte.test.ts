@@ -150,6 +150,17 @@ describe('useWorkspaceEditing', () => {
         expect(editing.selectedCuboidId).toBeNull();
     });
 
+    it('clears the selection when the refresh after a delete fails', async () => {
+        waitForSaves.mockResolvedValue(undefined);
+        deleteCuboid.mockRejectedValue(new Error('refresh failed'));
+        const editing = setup();
+        editing.selectedCuboidId = 'cuboid-1';
+
+        await expect(editing.handleDeleteCuboid('cuboid-1')).rejects.toThrow('refresh failed');
+
+        expect(editing.selectedCuboidId).toBeNull();
+    });
+
     it('completes the delete refresh after the tracks and ticks are refetched', async () => {
         let finishTicks!: () => void;
         invalidateQueries.mockClear();
