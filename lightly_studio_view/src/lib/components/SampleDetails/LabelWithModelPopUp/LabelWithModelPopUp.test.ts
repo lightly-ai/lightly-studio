@@ -1,5 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
+import { get } from 'svelte/store';
+import { useBrowserModels } from '$lib/hooks';
 import type { ComponentProps } from 'svelte';
 import type { LabelingModelView, ModelAnnotationPreview } from '$lib/api/lightly_studio_local';
 import LabelWithModelPopUp from './LabelWithModelPopUp.svelte';
@@ -18,6 +20,13 @@ const SEGMENTATION_MODEL = {
     class_names: ['cat'],
     runsIn: 'server' as const
 } satisfies LabelingModelView & { runsIn: string };
+const TEXT_PROMPTED_MODEL = {
+    id: 'grounding-dino-tiny',
+    task: 'object_detection',
+    class_names: [],
+    runsIn: 'browser' as const,
+    isTextPrompted: true
+} satisfies LabelingModelView & { runsIn: string; isTextPrompted: boolean };
 const PREVIEW: ModelAnnotationPreview = {
     class_name: 'cat',
     bbox: { x: 0, y: 0, width: 1, height: 1 },
@@ -101,5 +110,36 @@ describe('LabelWithModelPopUp', () => {
         await rerender({ ...defaultProps, model: SEGMENTATION_MODEL, labelWithModel });
 
         expect(screen.getByRole('group', { name: 'Save as' })).toBeInTheDocument();
+    });
+
+    it('asks a text-prompted model what to find and runs only once there is a class', async () => {
+        const labelWithModel = makeLabelWithModel();
+        const { rerender } = render(LabelWithModelPopUp, {
+            props: { ...defaultProps, model: TEXT_PROMPTED_MODEL, labelWithModel }
+        });
+        expect(screen.getByRole('button', { name: 'Run model' })).toBeDisabled();
+
+        await fireEvent.input(screen.getByLabelText('What to find'), {
+            target: { value: 'Forklift, pallet , ,' }
+        });
+        const typed = get(useBrowserModels().models).find(
+            (model) => model.id === TEXT_PROMPTED_MODEL.id
+        );
+        expect(typed?.class_names).toEqual(['Forklift', 'pallet']);
+
+        await rerender({
+            ...defaultProps,
+            model: { ...TEXT_PROMPTED_MODEL, class_names: ['Forklift', 'pallet'] },
+            labelWithModel
+        });
+        expect(screen.getByRole('button', { name: 'Run model' })).toBeEnabled();
+    });
+
+    it('does not ask a model with fixed classes what to find', () => {
+        render(LabelWithModelPopUp, {
+            props: { ...defaultProps, labelWithModel: makeLabelWithModel() }
+        });
+
+        expect(screen.queryByLabelText('What to find')).not.toBeInTheDocument();
     });
 });

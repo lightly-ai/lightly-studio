@@ -11,11 +11,15 @@
     import type { useLabelWithModel } from '$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte';
     import ModelRunControls from './ModelRunControls/ModelRunControls.svelte';
     import ThresholdInput from './ThresholdInput/ThresholdInput.svelte';
+    import PromptClassesInput from './PromptClassesInput/PromptClassesInput.svelte';
     import { toModelKey } from '$lib/hooks/useAssistedLabelingTools/toModelKey';
     import { LOAD_MODEL_FILE_VALUE, toModelSelectItems } from './modelSelectItems';
 
     type SaveAs = ComponentProps<typeof SaveAsToggle>['saveAs'];
-    type AutoLabelModel = LabelingModelView & { runsIn: 'browser' | 'server' };
+    type AutoLabelModel = LabelingModelView & {
+        runsIn: 'browser' | 'server';
+        isTextPrompted?: boolean;
+    };
 
     interface Props {
         models: AutoLabelModel[];
@@ -41,11 +45,13 @@
         labelWithModel
     }: Props = $props();
 
-    const { loadProgress, addModelFile } = useBrowserModels();
+    const { loadProgress, addModelFile, setPromptClassNames } = useBrowserModels();
     let fileInput: HTMLInputElement;
 
     const items = $derived(toModelSelectItems(models));
     const predictionCount = $derived(labelWithModel.predictions.length);
+    // A text-prompted model needs at least one class to look for.
+    const hasClassesToFind = $derived(!model?.isTextPrompted || model.class_names.length > 0);
     // Only the selected model's first run downloads anything.
     const downloadProgress = $derived($loadProgress?.modelId === model?.id ? $loadProgress : null);
 
@@ -95,12 +101,20 @@
         data-testid="load-model-file-input"
         onchange={() => void loadModelFile()}
     />
+    {#if model?.isTextPrompted}
+        {#key model.id}
+            <PromptClassesInput
+                classNames={model.class_names}
+                onChange={(classNames) => setPromptClassNames(model.id, classNames)}
+            />
+        {/key}
+    {/if}
     <ThresholdInput value={threshold} onChange={onThresholdChange} />
     <ModelRunControls
         {predictionCount}
         isGenerating={labelWithModel.isGenerating}
         isEmptyResult={labelWithModel.isEmptyResult}
-        canGenerate={labelWithModel.canGenerate}
+        canGenerate={labelWithModel.canGenerate && hasClassesToFind}
         {downloadProgress}
         onRun={() => void labelWithModel.generate()}
     />
