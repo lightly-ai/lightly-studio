@@ -186,54 +186,6 @@ def test_build_export_request__not_supported(
         build()
 
 
-def test_build_evaluation_request(mocker: MockerFixture) -> None:
-    mocker.patch.object(env, "LIGHTLY_STUDIO_TRANSPORT_QUERIES", False)
-
-    request = transport_query.build_evaluation_request(
-        sample_type=SampleType.IMAGE,
-        match_expression=ImageSampleField.width > 10,
-        filters_sample_ids=False,
-        is_sliced=False,
-    )
-
-    assert request == SampleQueryRequest(
-        query_expr=QueryExpr(
-            match_expr=IntegerExpr(
-                field=FieldRef(table="image", name="width"),
-                operator=OrdinalComparisonOperator.GT,
-                value=10,
-            )
-        )
-    )
-
-
-@pytest.mark.parametrize(
-    "unsupported",
-    [
-        {"is_sliced": True},
-        {"filters_sample_ids": True},
-        {"sample_type": SampleType.VIDEO},
-        {"match_expression": VideoFrameSampleField.parent_video.width > 1},
-    ],
-)
-def test_build_evaluation_request__not_supported(
-    mocker: MockerFixture, unsupported: dict[str, Any]
-) -> None:
-    def build() -> object:
-        supported: dict[str, Any] = {
-            "sample_type": SampleType.IMAGE,
-            "match_expression": None,
-            "filters_sample_ids": False,
-            "is_sliced": False,
-        }
-        return transport_query.build_evaluation_request(**{**supported, **unsupported})
-
-    assert build() is None
-    mocker.patch.object(active_transport, "is_remote", return_value=True)
-    with pytest.raises(UnsupportedQueryError):
-        build()
-
-
 @pytest.mark.usefixtures("patch_collection", "_transport_queries")
 def test_dataset_query__through_transport(mocker: MockerFixture) -> None:
     mocker.patch.object(transport_query, "DEFAULT_PAGE_SIZE", 1)

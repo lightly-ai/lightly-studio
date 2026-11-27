@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from pytest_mock import MockerFixture
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.evaluation import average_precision
@@ -22,6 +22,7 @@ from lightly_studio.models.evaluation_confusion_matrix import (
     NO_PREDICTION_COL_LABEL,
 )
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     collection_resolver,
@@ -859,8 +860,9 @@ def test_readback_does_not_materialize_sample_ids(
             annotation_label_id=label.annotation_label_id,
             annotation_collection_name=source_name,
         )
-    # A sliced query uses the SQL path, which reads the sample IDs.
-    evaluator = dataset.evaluate(query=dataset.query()[:1])
+    # A query with sample IDs uses the SQL path, which reads the sample IDs.
+    query = dataset.query().filter_by_sample_ids(select(SampleTable.sample_id))
+    evaluator = dataset.evaluate(query=query)
 
     evaluator.list_runs()
     # The cached property is absent until read, so readback did not scan the dataset.
