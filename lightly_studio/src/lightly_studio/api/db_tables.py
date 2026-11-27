@@ -37,6 +37,9 @@ from lightly_studio.models.group_component_definition import (
 from lightly_studio.models.image import (
     ImageTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.labeling_model import (
+    LabelingModelTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.mcap import (
     McapTable,  # noqa: F401, required for SQLModel to work properly
 )

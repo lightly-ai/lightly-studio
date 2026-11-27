@@ -16,6 +16,7 @@ from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricC
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
+from lightly_studio.models.labeling_model import LabelingModelCreate
 from lightly_studio.models.mcap_group_component_definition import (
     McapDataType,
     McapGroupComponentDefinitionTable,
@@ -36,6 +37,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     export_job_resolver,
+    labeling_model_resolver,
     mcap_group_sequence_resolver,
     metadata_resolver,
     object_track_resolver,
@@ -929,3 +931,27 @@ def test_delete_dataset__raises_for_nonexistent_dataset(db_session: Session) -> 
             session=db_session,
             dataset_id=nonexistent_id,
         )
+
+
+def test_delete_dataset__with_labeling_model(db_session: Session) -> None:
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    dataset_id = dataset.dataset_id  # Capture before delete
+    other_dataset_id = create_collection(session=db_session, collection_name="to_keep").dataset_id
+    for labeling_dataset_id in (dataset_id, other_dataset_id):
+        labeling_model_resolver.set_remote(
+            session=db_session,
+            labeling_model=LabelingModelCreate(
+                dataset_id=labeling_dataset_id, model_id="car-detector", url="http://labeling.test"
+            ),
+        )
+
+    dataset_resolver.delete_dataset(session=db_session, dataset_id=dataset_id)
+
+    assert (
+        labeling_model_resolver.get_all_by_dataset_id(session=db_session, dataset_id=dataset_id)
+        == []
+    )
+    kept = labeling_model_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=other_dataset_id
+    )
+    assert [labeling_model.model_id for labeling_model in kept] == ["car-detector"]
