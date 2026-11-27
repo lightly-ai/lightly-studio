@@ -15,7 +15,11 @@ from typing import Any
 from pydantic import ValidationError
 from sqlalchemy.orm import InstrumentedAttribute
 
-from lightly_studio.core.dataset_query import query_translation, video_query_validation
+from lightly_studio.core.dataset_query import (
+    query_translation,
+    sort_translation,
+    video_query_validation,
+)
 from lightly_studio.core.dataset_query.annotation_evaluation_metric_expression import (
     AnnotationEvaluationMetricMatchExpression,
 )
@@ -362,7 +366,7 @@ def _sort_fields_by_column() -> dict[tuple[str, Any], FieldRef]:
     """
     return {
         (table, field.get_sqlmodel_field()): FieldRef(table=table, name=name)
-        for (table, name), field in query_translation.sort_fields().items()
+        for (table, name), field in sort_translation.sort_fields().items()
         if not _is_nullable(field=field)
     }
 
