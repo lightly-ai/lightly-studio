@@ -75,8 +75,8 @@ dataset.export().to_youtube_vis_segmentation_mask("youtube_vis.json")
 ```
 
 !!! note "Crowd regions in COCO"
-    In COCO, polygons have `iscrowd=0` and masks have `iscrowd=1`. COCOeval treats
-    `iscrowd=1` annotations as ignore regions. It does not match predictions to them.
+    COCO export writes polygons and masks with `iscrowd=0`. LightlyStudio does not store the
+    crowd flag, so crowd annotations from an imported COCO file export as normal objects.
 
 ### Export a filtered subset
 
