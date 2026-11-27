@@ -13,6 +13,7 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.export import dataset_export, image_dataset_export
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.export_format import ExportFormat
+from lightly_studio.models.export_task import ExportTask
 from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
 
@@ -119,10 +120,13 @@ class TransportImageDatasetExport(ImageDatasetExport):
         if request is None or has_own_session:
             export_locally(output_path, annotation_collection_id)
             return
-        active_transport.get_transport().export.export(
-            collection_id=self._query.dataset.collection_id,
-            query_expr=request.query_expr,
+        task = ExportTask(
             export_format=export_format,
             output_path=Path(output_path),
             annotation_collection_id=annotation_collection_id,
+        )
+        active_transport.get_transport().export.export(
+            collection_id=self._query.dataset.collection_id,
+            query_expr=request.query_expr,
+            task=task,
         )

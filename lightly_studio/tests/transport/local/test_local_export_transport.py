@@ -5,12 +5,14 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+import sqlalchemy
 from pytest_mock import MockerFixture
 
 from lightly_studio.database import db_manager
 from lightly_studio.errors import NotFoundError, QueryExprError
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.export_format import ExportFormat
+from lightly_studio.models.export_task import ExportTask
 from lightly_studio.models.query_expr import (
     FieldRef,
     IntegerExpr,
@@ -47,9 +49,11 @@ class TestLocalExportTransport:
         transport.export(
             collection_id=collection_id,
             query_expr=query_expr,
-            export_format=ExportFormat.OBJECT_DETECTION_COCO,
-            output_path=output_json,
-            annotation_collection_id=None,
+            task=ExportTask(
+                export_format=ExportFormat.OBJECT_DETECTION_COCO,
+                output_path=output_json,
+                annotation_collection_id=None,
+            ),
         )
 
         coco = json.loads(output_json.read_text())
@@ -65,13 +69,45 @@ class TestLocalExportTransport:
         LocalExportTransport().export(
             collection_id=collection_id,
             query_expr=None,
-            export_format=ExportFormat.OBJECT_DETECTION_COCO,
-            output_path=output_json,
-            annotation_collection_id=None,
+            task=ExportTask(
+                export_format=ExportFormat.OBJECT_DETECTION_COCO,
+                output_path=output_json,
+                annotation_collection_id=None,
+            ),
         )
 
         coco = json.loads(output_json.read_text())
         assert [image["file_name"] for image in coco["images"]] == ["/a.png", "/b.png"]
+
+    def test_export__statement_count(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+
+        def count_statements() -> int:
+            session.expire_all()
+            listener = mocker.Mock()
+            engine = session.get_bind()
+            sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+            try:
+                LocalExportTransport().export(
+                    collection_id=collection_id,
+                    query_expr=None,
+                    task=ExportTask(
+                        export_format=ExportFormat.OBJECT_DETECTION_COCO,
+                        output_path=tmp_path / "coco.json",
+                        annotation_collection_id=None,
+                    ),
+                )
+            finally:
+                sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+            return int(listener.call_count)
+
+        create_image(session=session, collection_id=collection_id, file_path_abs="/a.png")
+        one_image_count = count_statements()
+        create_image(session=session, collection_id=collection_id, file_path_abs="/b.png")
+        create_image(session=session, collection_id=collection_id, file_path_abs="/c.png")
+
+        assert count_statements() == one_image_count
 
     def test_export__annotation_collection_id(self, mocker: MockerFixture, tmp_path: Path) -> None:
         session = db_manager.persistent_session()
@@ -86,9 +122,11 @@ class TestLocalExportTransport:
         LocalExportTransport().export(
             collection_id=collection_id,
             query_expr=None,
-            export_format=ExportFormat.OBJECT_DETECTION_COCO,
-            output_path=tmp_path / "coco.json",
-            annotation_collection_id=annotation_collection_id,
+            task=ExportTask(
+                export_format=ExportFormat.OBJECT_DETECTION_COCO,
+                output_path=tmp_path / "coco.json",
+                annotation_collection_id=annotation_collection_id,
+            ),
         )
 
         export_samples.assert_called_once_with(
@@ -110,9 +148,11 @@ class TestLocalExportTransport:
             LocalExportTransport().export(
                 collection_id=collection_id,
                 query_expr=query_expr,
-                export_format=ExportFormat.OBJECT_DETECTION_COCO,
-                output_path=tmp_path / "coco.json",
-                annotation_collection_id=None,
+                task=ExportTask(
+                    export_format=ExportFormat.OBJECT_DETECTION_COCO,
+                    output_path=tmp_path / "coco.json",
+                    annotation_collection_id=None,
+                ),
             )
 
     def test_export__format_not_for_images(self, tmp_path: Path) -> None:
@@ -123,9 +163,11 @@ class TestLocalExportTransport:
             LocalExportTransport().export(
                 collection_id=collection_id,
                 query_expr=None,
-                export_format=ExportFormat.YOUTUBE_VIS_SEGMENTATION,
-                output_path=tmp_path / "export.json",
-                annotation_collection_id=None,
+                task=ExportTask(
+                    export_format=ExportFormat.YOUTUBE_VIS_SEGMENTATION,
+                    output_path=tmp_path / "export.json",
+                    annotation_collection_id=None,
+                ),
             )
 
     def test_export__video_collection(self, tmp_path: Path) -> None:
@@ -138,9 +180,11 @@ class TestLocalExportTransport:
             LocalExportTransport().export(
                 collection_id=collection_id,
                 query_expr=None,
-                export_format=ExportFormat.OBJECT_DETECTION_COCO,
-                output_path=tmp_path / "coco.json",
-                annotation_collection_id=None,
+                task=ExportTask(
+                    export_format=ExportFormat.OBJECT_DETECTION_COCO,
+                    output_path=tmp_path / "coco.json",
+                    annotation_collection_id=None,
+                ),
             )
 
     def test_export__collection_not_found(self, tmp_path: Path) -> None:
@@ -148,7 +192,9 @@ class TestLocalExportTransport:
             LocalExportTransport().export(
                 collection_id=uuid4(),
                 query_expr=None,
-                export_format=ExportFormat.OBJECT_DETECTION_COCO,
-                output_path=tmp_path / "coco.json",
-                annotation_collection_id=None,
+                task=ExportTask(
+                    export_format=ExportFormat.OBJECT_DETECTION_COCO,
+                    output_path=tmp_path / "coco.json",
+                    annotation_collection_id=None,
+                ),
             )
