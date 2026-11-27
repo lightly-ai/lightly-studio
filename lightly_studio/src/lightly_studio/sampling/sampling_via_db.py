@@ -277,6 +277,9 @@ def sampling_via_database(
         )
         return
 
+    _check_preselection(
+        input_sample_ids=input_sample_ids, preselected_sample_ids=preselected_sample_ids
+    )
     input_sample_ids = _drop_samples_without_embeddings(
         session=session,
         config=config,
@@ -380,18 +383,28 @@ def _check_result_tag_name_free(session: Session, config: SamplingConfig) -> Non
         raise ValueError(msg)
 
 
-def _prepare_preselection(
-    input_sample_ids: Sequence[UUID],
-    preselected_sample_ids: Sequence[UUID],
-    n_samples_to_select: int,
-) -> tuple[list[int], int]:
-    """Validate preselection and return its indices and available selection size."""
+def _check_preselection(
+    input_sample_ids: Sequence[UUID], preselected_sample_ids: Sequence[UUID]
+) -> None:
+    """Reject preselected sample IDs that repeat or are not in the input.
+
+    Raises:
+        ValueError: If the preselected sample IDs are not unique, or not a subset of the
+            input sample IDs.
+    """
     preselected_set = set(preselected_sample_ids)
     if len(preselected_sample_ids) != len(preselected_set):
         raise ValueError("Preselected sample IDs must be unique.")
     if not preselected_set.issubset(input_sample_ids):
         raise ValueError("Preselected sample IDs must be a subset of input sample IDs.")
 
+
+def _prepare_preselection(
+    input_sample_ids: Sequence[UUID],
+    preselected_sample_ids: Sequence[UUID],
+    n_samples_to_select: int,
+) -> tuple[list[int], int]:
+    """Return the preselection indices and the available selection size."""
     sample_id_to_index = {sample_id: index for index, sample_id in enumerate(input_sample_ids)}
     preselected_indices = [sample_id_to_index[sample_id] for sample_id in preselected_sample_ids]
     n_available_samples = len(input_sample_ids) - len(preselected_indices)
@@ -409,8 +422,8 @@ def _drop_samples_without_embeddings(
     The order of ``input_sample_ids`` is kept, because Mundig indices map back to it.
 
     Raises:
-        ValueError: If a preselected input sample, or every input sample, has no
-            embedding of such a model.
+        ValueError: If a preselected sample, or every input sample, has no embedding of
+            such a model.
     """
     embedding_model_names = _get_embedding_model_names(strategies=config.strategies)
     if not embedding_model_names:
@@ -421,9 +434,7 @@ def _drop_samples_without_embeddings(
         sample_ids=input_sample_ids,
         embedding_model_names=embedding_model_names,
     )
-    preselected_without_embedding = (
-        set(preselected_sample_ids).intersection(input_sample_ids) - embedded_sample_ids
-    )
+    preselected_without_embedding = set(preselected_sample_ids) - embedded_sample_ids
     if preselected_without_embedding:
         raise ValueError(
             "Preselected samples without an embedding: "
