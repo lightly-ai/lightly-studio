@@ -26,7 +26,14 @@ from lightly_studio.models.sample_query import (
 from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import metadata_resolver, tag_resolver
 from lightly_studio.services.sample_services import sample_query_cursor, sample_query_service
-from tests.helpers_resolvers import create_caption, create_collection, create_image, create_tag
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_caption,
+    create_collection,
+    create_image,
+    create_tag,
+)
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     SampleMetricStub,
     create_run,
@@ -177,6 +184,34 @@ def test_query_samples__include_captions(db_session: Session) -> None:
     assert texts == {"a.png": ["a cat", "a dog"], "b.png": []}
 
 
+def test_query_samples__include_annotations(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.png")
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/b.png")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_data={"x": 1, "y": 2, "width": 3, "height": 4},
+    )
+    request = SampleQueryRequest(include=[SampleInclude.ANNOTATIONS])
+
+    page = sample_query_service.query_samples(
+        session=db_session, collection_id=collection_id, request=request
+    )
+
+    annotations = {s.file_name: s.annotations for s in page.samples}
+    assert annotations["b.png"] == []
+    [annotation] = annotations["a.png"] or []
+    assert annotation.annotation_label.annotation_label_name == "cat"
+    assert annotation.object_detection_details is not None
+    assert annotation.object_detection_details.width == 3
+
+
 def test_query_samples__cursor_of_other_sort__raises(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     for path in ["/a.png", "/b.png"]:
@@ -235,24 +270,13 @@ def test_query_samples__cursor_values_not_valid__raises(
         )
 
 
-@pytest.mark.parametrize(
-    ("request_", "error"),
-    [
-        (SampleQueryRequest(include=[SampleInclude.ANNOTATIONS]), ValueError),
-        (
-            SampleQueryRequest(sort=[SortKey(field=FieldRef(table="video", name="fps"))]),
-            QueryExprError,
-        ),
-    ],
-)
-def test_query_samples__not_supported__raises(
-    db_session: Session, request_: SampleQueryRequest, error: type[Exception]
-) -> None:
+def test_query_samples__unknown_sort_field__raises(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
+    request = SampleQueryRequest(sort=[SortKey(field=FieldRef(table="video", name="fps"))])
 
-    with pytest.raises(error):
+    with pytest.raises(QueryExprError):
         sample_query_service.query_samples(
-            session=db_session, collection_id=collection_id, request=request_
+            session=db_session, collection_id=collection_id, request=request
         )
 
 

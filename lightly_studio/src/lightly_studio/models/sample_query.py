@@ -10,6 +10,7 @@ from uuid import UUID
 import pydantic
 from pydantic import BaseModel
 
+from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.query_expr import FieldRef, QueryExpr
 from lightly_studio.models.sort_direction import SortDirection
@@ -112,6 +113,7 @@ class ImageSampleRecord(BaseModel):
         tags: The sorted tag names. None if the query did not include tags.
         metadata: The metadata. None if the query did not include metadata.
         captions: The captions. None if the query did not include captions.
+        annotations: The annotations. None if the query did not include annotations.
     """
 
     sample_id: UUID
@@ -125,6 +127,7 @@ class ImageSampleRecord(BaseModel):
     tags: list[str] | None = None
     metadata: MetadataRecord | None = None
     captions: list[CaptionView] | None = None
+    annotations: list[AnnotationView] | None = None
 
 
 class SamplePage(BaseModel):

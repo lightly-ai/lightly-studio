@@ -22,6 +22,7 @@ from lightly_studio.core.dataset_query import query_translation, sort_translatio
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.errors import QueryExprError
+from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.query_expr import (
@@ -43,7 +44,12 @@ from lightly_studio.models.sample_query import (
     SortKey,
 )
 from lightly_studio.models.sort_direction import SortDirection
-from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    caption_resolver,
+    metadata_resolver,
+    tag_resolver,
+)
 from lightly_studio.services.sample_services import sample_query_cursor
 
 # Only annotation match expressions correlate their table with the image.
@@ -73,10 +79,9 @@ def query_samples(session: Session, collection_id: UUID, request: SampleQueryReq
     """Get one page of the image samples of a collection that match a request.
 
     Raises:
-        ValueError: If the cursor is not valid or an include value is not supported.
+        ValueError: If the cursor is not valid.
         QueryExprError: If the filter or the sort uses an unknown field.
     """
-    _check_includes(includes=request.include)
     hash_ = sample_query_cursor.query_hash(collection_id=collection_id, request=request)
     query = _filtered_query(collection_id=collection_id, request=request)
     if any(_needs_offset_paging(key=key) for key in request.sort):
@@ -180,12 +185,6 @@ def _filtered_query(collection_id: UUID, request: SampleQueryRequest) -> SelectO
         return query
     match = to_image_match_expression(query_expr=request.query_expr)
     return query.where(match.get())
-
-
-def _check_includes(includes: Sequence[SampleInclude]) -> None:
-    for include in includes:
-        if include not in _INCLUDE_LOADERS:
-            raise ValueError(f"The include value '{include.value}' is not supported yet.")
 
 
 def _check_filter_fields(value: object, table: str) -> None:
@@ -296,6 +295,16 @@ def _captions(session: Session, sample_ids: Sequence[UUID]) -> dict[UUID, list[C
     return captions
 
 
+def _annotations(session: Session, sample_ids: Sequence[UUID]) -> dict[UUID, list[AnnotationView]]:
+    annotations: dict[UUID, list[AnnotationView]] = {sample_id: [] for sample_id in sample_ids}
+    for annotation in annotation_resolver.get_all_by_parent_sample_ids(
+        session=session, parent_sample_ids=sample_ids, load_view_relationships=True
+    ):
+        view = AnnotationView.from_annotation_table(annotation=annotation)
+        annotations[annotation.parent_sample_id].append(view)
+    return annotations
+
+
 def _parse_int(value: Any) -> int:
     if type(value) is not int:
         raise TypeError("The cursor value is not an integer.")
@@ -317,6 +326,7 @@ _INCLUDE_LOADERS: dict[SampleInclude, _IncludeLoader] = {
     SampleInclude.TAGS: _tag_names,
     SampleInclude.METADATA: _metadata,
     SampleInclude.CAPTIONS: _captions,
+    SampleInclude.ANNOTATIONS: _annotations,
 }
 _CURSOR_PARSERS: dict[str, Callable[[Any], Any]] = {
     "file_name": _parse_str,
