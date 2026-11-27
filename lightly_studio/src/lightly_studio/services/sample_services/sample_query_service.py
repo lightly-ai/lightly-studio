@@ -22,6 +22,7 @@ from lightly_studio.core.dataset_query import query_translation, sort_translatio
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.errors import QueryExprError
+from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.query_expr import (
     ClassificationMatchExpr,
@@ -42,7 +43,7 @@ from lightly_studio.models.sample_query import (
     SortKey,
 )
 from lightly_studio.models.sort_direction import SortDirection
-from lightly_studio.resolvers import metadata_resolver, tag_resolver
+from lightly_studio.resolvers import caption_resolver, metadata_resolver, tag_resolver
 from lightly_studio.services.sample_services import sample_query_cursor
 
 # Only annotation match expressions correlate their table with the image.
@@ -286,6 +287,15 @@ def _metadata(session: Session, sample_ids: Sequence[UUID]) -> dict[UUID, Metada
     }
 
 
+def _captions(session: Session, sample_ids: Sequence[UUID]) -> dict[UUID, list[CaptionView]]:
+    captions: dict[UUID, list[CaptionView]] = {sample_id: [] for sample_id in sample_ids}
+    for caption in caption_resolver.get_by_parent_sample_ids(
+        session=session, parent_sample_ids=sample_ids
+    ):
+        captions[caption.parent_sample_id].append(CaptionView.model_validate(caption))
+    return captions
+
+
 def _parse_int(value: Any) -> int:
     if type(value) is not int:
         raise TypeError("The cursor value is not an integer.")
@@ -306,6 +316,7 @@ def _parse_uuid(value: Any) -> UUID:
 _INCLUDE_LOADERS: dict[SampleInclude, _IncludeLoader] = {
     SampleInclude.TAGS: _tag_names,
     SampleInclude.METADATA: _metadata,
+    SampleInclude.CAPTIONS: _captions,
 }
 _CURSOR_PARSERS: dict[str, Callable[[Any], Any]] = {
     "file_name": _parse_str,

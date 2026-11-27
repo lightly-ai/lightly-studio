@@ -38,7 +38,7 @@ def test_v1_query_samples__pages(test_client: TestClient, db_session: Session) -
     ("body", "status_code"),
     [
         ({"cursor": "not a cursor"}, HTTP_STATUS_BAD_REQUEST),
-        ({"include": ["captions"]}, HTTP_STATUS_BAD_REQUEST),
+        ({"include": ["annotations"]}, HTTP_STATUS_BAD_REQUEST),
         ({"limit": 1001}, HTTP_STATUS_UNPROCESSABLE_ENTITY),
         ({"cursor": "x", "offset": 1}, HTTP_STATUS_UNPROCESSABLE_ENTITY),
     ],

@@ -26,7 +26,7 @@ from lightly_studio.models.sample_query import (
 from lightly_studio.models.sort_direction import SortDirection
 from lightly_studio.resolvers import metadata_resolver, tag_resolver
 from lightly_studio.services.sample_services import sample_query_cursor, sample_query_service
-from tests.helpers_resolvers import create_collection, create_image, create_tag
+from tests.helpers_resolvers import create_caption, create_collection, create_image, create_tag
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     SampleMetricStub,
     create_run,
@@ -153,6 +153,30 @@ def test_query_samples__include_metadata(db_session: Session) -> None:
     assert page.samples[0].tags is None
 
 
+def test_query_samples__include_captions(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.png")
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/b.png")
+    for text in ["a cat", "a dog"]:
+        create_caption(
+            session=db_session,
+            collection_id=collection_id,
+            parent_sample_id=image.sample_id,
+            text=text,
+        )
+    request = SampleQueryRequest(include=[SampleInclude.CAPTIONS])
+
+    page = sample_query_service.query_samples(
+        session=db_session, collection_id=collection_id, request=request
+    )
+
+    texts = {
+        s.file_name: None if s.captions is None else sorted(c.text for c in s.captions)
+        for s in page.samples
+    }
+    assert texts == {"a.png": ["a cat", "a dog"], "b.png": []}
+
+
 def test_query_samples__cursor_of_other_sort__raises(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     for path in ["/a.png", "/b.png"]:
@@ -214,7 +238,7 @@ def test_query_samples__cursor_values_not_valid__raises(
 @pytest.mark.parametrize(
     ("request_", "error"),
     [
-        (SampleQueryRequest(include=[SampleInclude.CAPTIONS]), ValueError),
+        (SampleQueryRequest(include=[SampleInclude.ANNOTATIONS]), ValueError),
         (
             SampleQueryRequest(sort=[SortKey(field=FieldRef(table="video", name="fps"))]),
             QueryExprError,
