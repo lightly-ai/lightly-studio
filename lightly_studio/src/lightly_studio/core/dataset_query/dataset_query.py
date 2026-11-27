@@ -371,6 +371,15 @@ class DatasetQuery(Generic[T]):
             is_sliced=self._slice is not None,
         )
 
+    def _evaluation_request(self) -> SampleQueryRequest | None:
+        """Get the request for an evaluation through the transport, or None to use SQL."""
+        return transport_query.build_evaluation_request(
+            sample_type=self.dataset.sample_type,
+            match_expression=self.match_expression,
+            filters_sample_ids=self._sample_ids_subquery is not None,
+            is_sliced=self._slice is not None,
+        )
+
     def _limit(self) -> int | None:
         """Get the maximum number of samples of the slice, or None without a limit."""
         if self._slice is None or self._slice.stop is None:
