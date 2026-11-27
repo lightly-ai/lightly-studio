@@ -368,3 +368,19 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
         });
     });
 });
+
+describe('SampleDetailsPanel annotation locks', () => {
+    it('clears the locks when the sample changes in the mounted panel', async () => {
+        const { rerender } = render(SampleDetailsPanel, { props: defaultProps });
+        mockAnnotationLabelContext.lockedAnnotationIds = new Set(['mask-a1', 'mask-a2']);
+
+        await rerender({
+            ...defaultProps,
+            sampleId: 'sample-2',
+            sample: { width: 100, height: 100, sample_id: 'sample-2' }
+        });
+        await rerender(defaultProps);
+
+        expect(mockAnnotationLabelContext.lockedAnnotationIds).toEqual(new Set());
+    });
+});
