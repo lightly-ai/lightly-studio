@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - COCO import reads RLE segmentation masks that are not marked as crowd annotations.
 - Diversity, deduplication and similarity sampling no longer tag the wrong images when some images have no embedding. Those images are left out, and a warning gives their count.
 - Typicality and similarity sampling in the GUI no longer fail with "is not a number" when some images have no embedding. Those images are left out.
+- After sampling in the GUI, a message says how many samples were left out because they have no embedding.
 
 ### Security
 - The GUI server no longer has an endpoint that sets cloud storage credentials without authentication.

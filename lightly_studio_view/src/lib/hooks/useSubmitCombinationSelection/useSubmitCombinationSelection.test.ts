@@ -9,7 +9,7 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
 }));
 
 vi.mock('svelte-sonner', () => ({
-    toast: { error: vi.fn(), success: vi.fn() }
+    toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() }
 }));
 
 const mockTrackEvent = vi.fn();
@@ -18,6 +18,16 @@ vi.mock('$lib/hooks', () => ({
 }));
 
 const { toast } = await import('svelte-sonner');
+
+function samplingSuccess(nSamplesWithoutEmbedding = 0, nSamplesSelected = 10) {
+    return {
+        data: {
+            n_samples_without_embedding: nSamplesWithoutEmbedding,
+            n_samples_selected: nSamplesSelected
+        },
+        error: null
+    } as never;
+}
 
 describe('useSubmitCombinationSelection', () => {
     const defaultHookParams = {
@@ -41,14 +51,10 @@ describe('useSubmitCombinationSelection', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(createSampling).mockResolvedValue(samplingSuccess());
     });
 
     it('submits metadata preparation and selection together', async () => {
-        vi.mocked(createSampling).mockResolvedValue({
-            data: undefined,
-            request: new Request('http://localhost'),
-            response: new Response(null, { status: 204 })
-        });
         const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
         const call = submit({
             ...defaultSubmitParams,
@@ -116,7 +122,6 @@ describe('useSubmitCombinationSelection', () => {
     });
 
     it('calls createSampling with mapped strategies, count, tag name, and filter', async () => {
-        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const selectionFilter = {
             filter_type: 'image' as const,
             sample_filter: { tag_ids: ['tag-1'] }
@@ -145,8 +150,6 @@ describe('useSubmitCombinationSelection', () => {
     });
 
     it('passes the preselected tag to createSampling', async () => {
-        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
-
         const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
         await submit({ ...defaultSubmitParams, preselectedTagId: 'preselected-tag' });
 
@@ -179,7 +182,6 @@ describe('useSubmitCombinationSelection', () => {
     });
 
     it('on success: reloads tags, selects matching new tag, closes dialog, shows toast', async () => {
-        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const loadTags = vi.fn().mockResolvedValue(undefined);
         const setTagSelected = vi.fn();
         const closeSelectionDialog = vi.fn();
@@ -203,10 +205,32 @@ describe('useSubmitCombinationSelection', () => {
 
         expect(result).toBe(true);
         expect(toast.success).toHaveBeenCalledWith('Sampling created successfully');
+        expect(toast.warning).not.toHaveBeenCalled();
         expect(loadTags).toHaveBeenCalled();
         expect(setTagSelected).toHaveBeenCalledWith('tag-abc', true);
         expect(closeSelectionDialog).toHaveBeenCalled();
     });
+
+    it.each([
+        [1, 1, 'Sampling created with 1 sample. 1 sample has no embedding and was left out.'],
+        [
+            12,
+            24,
+            'Sampling created with 24 samples. 12 samples have no embedding and were left out.'
+        ]
+    ])(
+        'on success with %i samples left out: warns with the counts',
+        async (nLeftOut, nSelected, message) => {
+            vi.mocked(createSampling).mockResolvedValue(samplingSuccess(nLeftOut, nSelected));
+            const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
+
+            const result = await submit({ ...defaultSubmitParams });
+
+            expect(result).toBe(true);
+            expect(toast.warning).toHaveBeenCalledWith(message);
+            expect(toast.success).not.toHaveBeenCalled();
+        }
+    );
 
     it('sets isSubmitting to true while running and false when done', async () => {
         let resolveApi!: (value: unknown) => void;
@@ -226,13 +250,12 @@ describe('useSubmitCombinationSelection', () => {
         });
         expect(get(isSubmitting)).toBe(true);
 
-        resolveApi({ data: {}, error: null });
+        resolveApi(samplingSuccess());
         expect(await call).toBe(true);
         expect(get(isSubmitting)).toBe(false);
     });
 
     it('tracks sampling_submitted with filteredSampleCount from params', async () => {
-        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const filteredSampleCount = writable(42);
 
         const { submit } = useSubmitCombinationSelection({
@@ -248,7 +271,6 @@ describe('useSubmitCombinationSelection', () => {
     });
 
     it('tracks sampling_triggered with success: true before closing the dialog', async () => {
-        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
         const closeSelectionDialog = vi.fn();
         const callOrder: string[] = [];
 
@@ -298,7 +320,7 @@ describe('useSubmitCombinationSelection', () => {
 
         expect(secondResult).toBe(false);
 
-        resolveFirst({ data: {}, error: null });
+        resolveFirst(samplingSuccess());
         await firstCall;
 
         expect(createSampling).toHaveBeenCalledTimes(1);
