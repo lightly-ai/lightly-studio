@@ -4,8 +4,9 @@ import httpx
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
-from lightly_studio_serve import server
+from lightly_studio_serve import labeling_protocol, server
 from lightly_studio_serve.labeling import LabelingModel, ModelTask, PredictedAnnotation
+from lightly_studio_serve.labeling_protocol import PredictionsResponse
 
 from lightly_studio.assisted_labeling.provider import (
     ProviderError,
@@ -120,21 +121,27 @@ class TestRemoteLabelingModelRunner:
         assert second == PredictedAnnotation(class_name="car", box=(1.0, 0.0, 2.0, 1.0), score=0.6)
 
     def test_predict__mask_size_not_image_size(self) -> None:
-        # The image has the shape (2, 3), so a mask of shape (3, 2) has the axes swapped.
-        model = StubLabelingModel(
-            model_id="seg",
-            task=ModelTask.INSTANCE_SEGMENTATION,
-            class_names=["car"],
-            predictions=[
-                PredictedAnnotation(
-                    class_name="car",
-                    box=(0.0, 0.0, 2.0, 3.0),
-                    score=0.9,
-                    mask=np.ones((3, 2), dtype=np.bool_),
-                ),
-            ],
+        runner = RemoteLabelingModelRunner.connect(
+            client=_client(model=StubLabelingModel(model_id="seg"))
         )
-        runner = RemoteLabelingModelRunner.connect(client=_client(model=model))
+        # The image has the shape (2, 3), so a mask of shape (3, 2) has the axes swapped.
+        # lightly_studio_serve rejects such a mask, so the body comes from a mock server.
+        prediction = PredictedAnnotation(
+            class_name="car",
+            box=(0.0, 0.0, 2.0, 3.0),
+            score=0.9,
+            mask=np.ones((3, 2), dtype=np.bool_),
+        )
+        body = PredictionsResponse(
+            model_id="seg",
+            predictions=[labeling_protocol.to_wire_prediction(prediction=prediction)],
+        )
+        runner._client = httpx.Client(
+            base_url=URL,
+            transport=httpx.MockTransport(
+                lambda _request: httpx.Response(200, json=body.model_dump(mode="json"))
+            ),
+        )
 
         with pytest.raises(ProviderError, match="mask that is not valid: mask_png has the size"):
             runner.predict(image=_image(), threshold=0.5)
