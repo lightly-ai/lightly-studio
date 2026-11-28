@@ -53,7 +53,7 @@ def test_create_combination_sampling__diversity_success(
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
     assert response.status_code == 200
-    assert response.json() == {"n_samples_without_embedding": 0}
+    assert response.json() == {"n_samples_without_embedding": 0, "n_samples_selected": 3}
 
     # Verify tag was created with correct samples
     created_tag = tag_resolver.get_by_name(
@@ -82,12 +82,12 @@ def test_create_combination_sampling__returns_count_without_embedding(
     response = test_client.post(
         f"/api/collections/{collection_id}/sampling",
         json=_sampling_request_data(
-            n_samples_to_select=2, sampling_result_tag_name="result", preselected_tag_id=None
+            n_samples_to_select=4, sampling_result_tag_name="result", preselected_tag_id=None
         ),
     )
 
     assert response.status_code == 200, response.text
-    assert response.json() == {"n_samples_without_embedding": 1}
+    assert response.json() == {"n_samples_without_embedding": 1, "n_samples_selected": 3}
 
 
 def test_create_combination_sampling__preselected_tag(
@@ -258,7 +258,7 @@ def test_create_sampling__passes_request_to_sampling(
     spy = mocker.patch.object(
         sampling_api,
         "sampling_via_database",
-        return_value=SamplingResult(n_samples_without_embedding=0),
+        return_value=SamplingResult(n_samples_without_embedding=0, n_samples_selected=3),
     )
     mocker.patch.object(image_resolver, "get_sample_ids", return_value=["a", "b", "c"])
 
@@ -456,7 +456,7 @@ def test_create_combination_sampling__metadata_weighting_success(
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
     assert response.status_code == 200
-    assert response.json() == {"n_samples_without_embedding": 0}
+    assert response.json() == {"n_samples_without_embedding": 0, "n_samples_selected": 2}
 
     # Verify tag was created with correct samples
     created_tag = tag_resolver.get_by_name(
@@ -1161,7 +1161,7 @@ def test_create_combination_sampling__sequence_collection(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"n_samples_without_embedding": 0}
+    assert response.json() == {"n_samples_without_embedding": 0, "n_samples_selected": 2}
     created_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="sequence_sampling", collection_id=collection.collection_id
     )

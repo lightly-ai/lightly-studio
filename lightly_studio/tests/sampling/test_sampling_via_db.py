@@ -117,7 +117,7 @@ def test_sampling_via_database__samples_without_embedding_left_out(
             session=db_session, config=config, input_sample_ids=sample_ids
         )
 
-    assert result == SamplingResult(n_samples_without_embedding=2)
+    assert result == SamplingResult(n_samples_without_embedding=2, n_samples_selected=3)
 
     assert set(
         _sample_ids_by_tag_name(session=db_session, collection_id=collection_id, tag_name="result")

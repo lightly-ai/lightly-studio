@@ -24,7 +24,7 @@ def sampling_via_database_sequences(
     config: SamplingConfig,
     input_sample_ids: list[UUID],
     preselected_sample_ids: Sequence[UUID],
-) -> None:
+) -> int:
     """Run mean-proxy sequence sampling on a VIDEO_FRAME collection.
 
     Args:
@@ -35,6 +35,9 @@ def sampling_via_database_sequences(
             already selected. They need not be candidates and are included in the
             result tag; they are chunked into sequences of their own that seed the
             selection.
+
+    Returns:
+        The number of frame samples in the result tag.
     """
     diversity_strategies = _validate_sequence_sampling(session=session, config=config)
     sequence_length = config.selected_sequence_length
@@ -75,7 +78,7 @@ def sampling_via_database_sequences(
                 tag_name=config.sampling_result_tag_name,
                 selected_sample_ids=list(preselected_sample_ids),
             )
-        return
+        return len(preselected_sample_ids)
 
     # Flattened in sequence order: `get_embeddings_by_sample_ids` returns embeddings in
     # this same order, which is what lets the reshape below group them positionally.
@@ -104,17 +107,18 @@ def sampling_via_database_sequences(
         n_samples=len(preselected_indices) + n_sequences_to_select,
         preselected_indices=preselected_indices,
     )
+    selected_sample_ids = list(preselected_sample_ids) + [
+        sample_id
+        for index in selected_sequence_indices[len(preselected_sequences) :]
+        for sample_id in sequences[index]
+    ]
     sampling_helpers.create_result_tag(
         session=session,
         collection_id=config.collection_id,
         tag_name=config.sampling_result_tag_name,
-        selected_sample_ids=list(preselected_sample_ids)
-        + [
-            sample_id
-            for index in selected_sequence_indices[len(preselected_sequences) :]
-            for sample_id in sequences[index]
-        ],
+        selected_sample_ids=selected_sample_ids,
     )
+    return len(selected_sample_ids)
 
 
 def _validate_sequence_sampling(

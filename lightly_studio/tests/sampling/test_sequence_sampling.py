@@ -477,7 +477,7 @@ def test_sampling_via_database__sequence_returns_no_samples_without_embedding(
         session=db_session, config=config, input_sample_ids=frame_sample_ids
     )
 
-    assert result == SamplingResult(n_samples_without_embedding=0)
+    assert result == SamplingResult(n_samples_without_embedding=0, n_samples_selected=5)
 
 
 def test_sampling_via_database__sequence_result_tag_name_equals_preselected_tag_name(

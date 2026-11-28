@@ -52,6 +52,9 @@ class SamplingResponse(BaseModel):
     n_samples_without_embedding: int = Field(
         description="Number of samples left out because they have no embedding"
     )
+    n_samples_selected: int = Field(
+        description="Number of samples in the result tag, preselected samples included"
+    )
 
 
 @sampling_router.post("/collections/{collection_id}/sampling")
@@ -74,7 +77,8 @@ def create_sampling(
         request: Sampling parameters including sample count and tag name.
 
     Returns:
-        A response with the number of samples left out because they have no embedding.
+        A response with the number of samples left out because they have no embedding, and
+        the number of samples in the result tag.
 
     Raises:
         HTTPException: 400 if sampling fails due to invalid parameters or other errors.
@@ -110,7 +114,10 @@ def create_sampling(
         input_sample_ids=input_sample_ids,
         required_embedding_model_names=metadata_embedding_model_names,
     )
-    return SamplingResponse(n_samples_without_embedding=result.n_samples_without_embedding)
+    return SamplingResponse(
+        n_samples_without_embedding=result.n_samples_without_embedding,
+        n_samples_selected=result.n_samples_selected,
+    )
 
 
 def _get_input_sample_ids(

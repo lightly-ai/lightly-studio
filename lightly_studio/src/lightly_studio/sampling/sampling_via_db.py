@@ -62,6 +62,9 @@ class SamplingResult:
     n_samples_without_embedding: int
     """Number of candidates left out because they have no embedding of a needed model."""
 
+    n_samples_selected: int
+    """Number of samples in the result tag, preselected samples included."""
+
 
 @dataclass(frozen=True)
 class _SamplingContext:
@@ -268,7 +271,8 @@ def sampling_via_database(
             the default embedding model of the collection.
 
     Returns:
-        A result with the number of candidates left out for a missing embedding.
+        A result with the number of candidates left out for a missing embedding, and the
+        number of samples in the result tag.
 
     Raises:
         ValueError: If the preselected tag does not exist, if its sample IDs are
@@ -285,13 +289,13 @@ def sampling_via_database(
     _check_result_tag_name_free(session=session, config=config)
 
     if config.selected_sequence_length is not None:
-        sequence_sampling.sampling_via_database_sequences(
+        n_samples_selected = sequence_sampling.sampling_via_database_sequences(
             session=session,
             config=config,
             input_sample_ids=input_sample_ids,
             preselected_sample_ids=preselected_sample_ids,
         )
-        return SamplingResult(n_samples_without_embedding=0)
+        return SamplingResult(n_samples_without_embedding=0, n_samples_selected=n_samples_selected)
 
     _check_preselection(
         input_sample_ids=input_sample_ids, preselected_sample_ids=preselected_sample_ids
@@ -306,7 +310,6 @@ def sampling_via_database(
         preselected_sample_ids=preselected_sample_ids,
         embedding_model_names=embedding_model_names,
     )
-    result = SamplingResult(n_samples_without_embedding=n_samples_without_embedding)
     preselected_indices, n_samples_to_select = _prepare_preselection(
         input_sample_ids=input_sample_ids,
         preselected_sample_ids=preselected_sample_ids,
@@ -321,7 +324,10 @@ def sampling_via_database(
                 tag_name=config.sampling_result_tag_name,
                 selected_sample_ids=preselected_sample_ids,
             )
-        return result
+        return SamplingResult(
+            n_samples_without_embedding=n_samples_without_embedding,
+            n_samples_selected=len(preselected_sample_ids),
+        )
 
     # Get root dataset id for balancing strategies
     root_collection = collection_resolver.get_root_collection(
@@ -354,7 +360,10 @@ def sampling_via_database(
         tag_name=config.sampling_result_tag_name,
         selected_sample_ids=selected_sample_ids,
     )
-    return result
+    return SamplingResult(
+        n_samples_without_embedding=n_samples_without_embedding,
+        n_samples_selected=len(selected_sample_ids),
+    )
 
 
 def _get_preselected_sample_ids(
