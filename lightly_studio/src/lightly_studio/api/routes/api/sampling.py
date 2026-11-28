@@ -46,11 +46,18 @@ class SamplingRequest(BaseModel):
     )
 
 
-@sampling_router.post(
-    "/collections/{collection_id}/sampling",
-    status_code=204,
-    response_model=None,
-)
+class SamplingResponse(BaseModel):
+    """Response model for sampling."""
+
+    n_samples_without_embedding: int = Field(
+        description="Number of samples left out because they have no embedding"
+    )
+    n_samples_selected: int = Field(
+        description="Number of samples in the result tag, preselected samples included"
+    )
+
+
+@sampling_router.post("/collections/{collection_id}/sampling")
 def create_sampling(
     session: SessionDep,
     collection: Annotated[
@@ -58,7 +65,7 @@ def create_sampling(
         Depends(get_and_validate_collection_id),
     ],
     request: SamplingRequest,
-) -> None:
+) -> SamplingResponse:
     """Create a combination sampling on the collection.
 
     This endpoint performs combination sampling using embeddings and metadata.
@@ -70,7 +77,8 @@ def create_sampling(
         request: Sampling parameters including sample count and tag name.
 
     Returns:
-        None (204 No Content on success).
+        A response with the number of samples left out because they have no embedding, and
+        the number of samples in the result tag.
 
     Raises:
         HTTPException: 400 if sampling fails due to invalid parameters or other errors.
@@ -100,11 +108,15 @@ def create_sampling(
     metadata_embedding_model_names = sampling_metadata.get_embedding_model_names(
         computations=request.metadata_computations
     )
-    sampling_via_database(
+    result = sampling_via_database(
         session=session,
         config=config,
         input_sample_ids=input_sample_ids,
         required_embedding_model_names=metadata_embedding_model_names,
+    )
+    return SamplingResponse(
+        n_samples_without_embedding=result.n_samples_without_embedding,
+        n_samples_selected=result.n_samples_selected,
     )
 
 

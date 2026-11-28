@@ -29,6 +29,7 @@ from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter 
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.sampling.sampling_config import EmbeddingDiversityStrategy
+from lightly_studio.sampling.sampling_via_db import SamplingResult
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
 from tests.resolvers.video import helpers as video_helpers
@@ -51,9 +52,8 @@ def test_create_combination_sampling__diversity_success(
 
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
-    # Assert 204 No Content response
-    assert response.status_code == 204
-    assert response.text == ""  # No response body
+    assert response.status_code == 200
+    assert response.json() == {"n_samples_without_embedding": 0, "n_samples_selected": 3}
 
     # Verify tag was created with correct samples
     created_tag = tag_resolver.get_by_name(
@@ -67,6 +67,27 @@ def test_create_combination_sampling__diversity_success(
         session=db_session, collection_id=collection_id, filters=tag_filter
     )
     assert len(result.samples) == 3
+
+
+def test_create_combination_sampling__returns_count_without_embedding(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = helpers_resolvers.fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=3, embedding_model_names=["test_embedding_model"]
+    )
+    helpers_resolvers.create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="no_embedding.jpg"
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/sampling",
+        json=_sampling_request_data(
+            n_samples_to_select=4, sampling_result_tag_name="result", preselected_tag_id=None
+        ),
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"n_samples_without_embedding": 1, "n_samples_selected": 3}
 
 
 def test_create_combination_sampling__preselected_tag(
@@ -96,7 +117,7 @@ def test_create_combination_sampling__preselected_tag(
         ),
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200
     result_ids = tag_resolver.get_sample_ids_by_tag_id(
         session=db_session, tag_id=preselected_tag.tag_id
     )
@@ -234,7 +255,11 @@ def test_create_sampling__passes_request_to_sampling(
         session=db_session,
         collection_name="legacy-selection-test",
     )
-    spy = mocker.patch.object(sampling_api, "sampling_via_database")
+    spy = mocker.patch.object(
+        sampling_api,
+        "sampling_via_database",
+        return_value=SamplingResult(n_samples_without_embedding=0, n_samples_selected=3),
+    )
     mocker.patch.object(image_resolver, "get_sample_ids", return_value=["a", "b", "c"])
 
     sampling_api.create_sampling(
@@ -277,8 +302,7 @@ def test_create_combination_sampling__diversity_success_videos(
 
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
-    assert response.status_code == 204
-    assert response.text == ""
+    assert response.status_code == 200
 
     created_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="test_combination_sampling", collection_id=collection_id
@@ -314,8 +338,7 @@ def test_create_combination_sampling__deduplication_success(
 
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
-    assert response.status_code == 204
-    assert response.text == ""
+    assert response.status_code == 200
 
     created_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="test_deduplication_sampling", collection_id=collection_id
@@ -377,7 +400,7 @@ def test_create_combination_sampling__duplicate_tag_name(
 
     # First request should succeed
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
-    assert response.status_code == 204
+    assert response.status_code == 200
 
     # Second request with same tag name should fail
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
@@ -432,9 +455,8 @@ def test_create_combination_sampling__metadata_weighting_success(
 
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
-    # Assert 204 No Content response
-    assert response.status_code == 204
-    assert response.text == ""  # No response body
+    assert response.status_code == 200
+    assert response.json() == {"n_samples_without_embedding": 0, "n_samples_selected": 2}
 
     # Verify tag was created with correct samples
     created_tag = tag_resolver.get_by_name(
@@ -509,8 +531,7 @@ def test_create_combination_sampling__metadata_weighting_success_videos(
 
     response = test_client.post(f"/api/collections/{collection_id}/sampling", json=request_data)
 
-    assert response.status_code == 204
-    assert response.text == ""
+    assert response.status_code == 200
 
     created_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="test_combination_sampling", collection_id=collection_id
@@ -561,8 +582,7 @@ def test_create_combination_sampling__embedding_similarity_success(
         },
     )
 
-    assert response.status_code == 204
-    assert response.text == ""
+    assert response.status_code == 200
 
     created_tag = tag_resolver.get_by_name(
         session=db_session,
@@ -702,8 +722,7 @@ def test_create_combination_sampling__annotation_class_balancing_success(
         },
     )
 
-    assert response.status_code == 204
-    assert response.text == ""
+    assert response.status_code == 200
 
     created_tag = tag_resolver.get_by_name(
         session=db_session,
@@ -757,8 +776,7 @@ def test_create_combination_sampling__metadata_balancing_success(
         },
     )
 
-    assert response.status_code == 204
-    assert response.text == ""
+    assert response.status_code == 200
 
     created_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="balanced_weather", collection_id=collection_id
@@ -841,7 +859,7 @@ def test_create_combination_sampling__image_filter_success(
         },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200
     spy_sample_resolver.assert_called_once_with(
         session=db_session,
         collection_id=collection_id,
@@ -915,7 +933,7 @@ def test_create_combination_sampling__video_filter_success(
         },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200
     spy_video_resolver.assert_called_once_with(
         session=db_session,
         collection_id=collection_id,
@@ -1004,8 +1022,7 @@ def test_create_combination_sampling__subpart_diversity_success(
         },
     )
 
-    assert response.status_code == 204
-    assert response.text == ""
+    assert response.status_code == 200
 
     created_tag = tag_resolver.get_by_name(
         session=db_session,
@@ -1143,7 +1160,8 @@ def test_create_combination_sampling__sequence_collection(
         },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert response.json() == {"n_samples_without_embedding": 0, "n_samples_selected": 2}
     created_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="sequence_sampling", collection_id=collection.collection_id
     )
@@ -1210,7 +1228,7 @@ def test_create_combination_sampling__sequence_collection_similarity(
         },
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200
     created_tag = tag_resolver.get_by_name(
         session=db_session, tag_name="similarity_sampling", collection_id=collection.collection_id
     )

@@ -56,6 +56,17 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
+class SamplingResult:
+    """Information about a sampling run in addition to the result tag."""
+
+    n_samples_without_embedding: int
+    """Number of candidates left out because they have no embedding of a needed model."""
+
+    n_samples_selected: int
+    """Number of samples in the result tag, preselected samples included."""
+
+
+@dataclass(frozen=True)
 class _SamplingContext:
     """Shared inputs used while resolving sampling strategies."""
 
@@ -235,7 +246,7 @@ def sampling_via_database(
     config: SamplingConfig,
     input_sample_ids: list[UUID],
     required_embedding_model_names: Sequence[str | None] = (),
-) -> None:
+) -> SamplingResult:
     """Run sampling using the provided candidate sample ids.
 
     First resolves the sampling config to concrete database values.
@@ -259,6 +270,10 @@ def sampling_via_database(
             indirectly, for example through precomputed metadata. ``None`` stands for
             the default embedding model of the collection.
 
+    Returns:
+        A result with the number of candidates left out for a missing embedding, and the
+        number of samples in the result tag.
+
     Raises:
         ValueError: If the preselected tag does not exist, if its sample IDs are
             not a subset of the input sample IDs, if no input sample or a preselected
@@ -274,21 +289,21 @@ def sampling_via_database(
     _check_result_tag_name_free(session=session, config=config)
 
     if config.selected_sequence_length is not None:
-        sequence_sampling.sampling_via_database_sequences(
+        n_samples_selected = sequence_sampling.sampling_via_database_sequences(
             session=session,
             config=config,
             input_sample_ids=input_sample_ids,
             preselected_sample_ids=preselected_sample_ids,
         )
-        return
+        return SamplingResult(n_samples_without_embedding=0, n_samples_selected=n_samples_selected)
 
     _check_preselection(
         input_sample_ids=input_sample_ids, preselected_sample_ids=preselected_sample_ids
     )
-    embedding_model_names = _get_strategy_embedding_model_names(
-        strategies=config.strategies
-    ).union(required_embedding_model_names)
-    input_sample_ids = _drop_samples_without_embeddings(
+    embedding_model_names = _get_strategy_embedding_model_names(strategies=config.strategies).union(
+        required_embedding_model_names
+    )
+    input_sample_ids, n_samples_without_embedding = _drop_samples_without_embeddings(
         session=session,
         collection_id=config.collection_id,
         input_sample_ids=input_sample_ids,
@@ -309,7 +324,10 @@ def sampling_via_database(
                 tag_name=config.sampling_result_tag_name,
                 selected_sample_ids=preselected_sample_ids,
             )
-        return
+        return SamplingResult(
+            n_samples_without_embedding=n_samples_without_embedding,
+            n_samples_selected=len(preselected_sample_ids),
+        )
 
     # Get root dataset id for balancing strategies
     root_collection = collection_resolver.get_root_collection(
@@ -341,6 +359,10 @@ def sampling_via_database(
         collection_id=config.collection_id,
         tag_name=config.sampling_result_tag_name,
         selected_sample_ids=selected_sample_ids,
+    )
+    return SamplingResult(
+        n_samples_without_embedding=n_samples_without_embedding,
+        n_samples_selected=len(selected_sample_ids),
     )
 
 
@@ -426,10 +448,13 @@ def _drop_samples_without_embeddings(
     input_sample_ids: Sequence[UUID],
     preselected_sample_ids: Sequence[UUID],
     embedding_model_names: Iterable[str | None],
-) -> list[UUID]:
-    """Return the input sample IDs that have an embedding of each given model.
+) -> tuple[list[UUID], int]:
+    """Leave out the input samples without an embedding of each given model.
 
     The order of ``input_sample_ids`` is kept, because Mundig indices map back to it.
+
+    Returns:
+        The kept sample IDs, and the number of samples left out.
 
     Raises:
         ValueError: If a preselected sample, or every input sample, has no embedding of
@@ -452,7 +477,7 @@ def _drop_samples_without_embeddings(
     ]
     n_left_out = len(input_sample_ids) - len(kept_sample_ids)
     if n_left_out == 0:
-        return kept_sample_ids
+        return kept_sample_ids, n_left_out
     if not kept_sample_ids:
         raise ValueError("No sample has an embedding.")
     logger.warning(
@@ -460,7 +485,7 @@ def _drop_samples_without_embeddings(
         n_left_out,
         len(input_sample_ids),
     )
-    return kept_sample_ids
+    return kept_sample_ids, n_left_out
 
 
 def _get_strategy_embedding_model_names(strategies: Sequence[Strategy]) -> set[str | None]:

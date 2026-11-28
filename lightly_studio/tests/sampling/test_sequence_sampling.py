@@ -17,7 +17,7 @@ from lightly_studio.sampling.sampling_config import (
     MetadataWeightingStrategy,
     SamplingConfig,
 )
-from lightly_studio.sampling.sampling_via_db import sampling_via_database
+from lightly_studio.sampling.sampling_via_db import SamplingResult, sampling_via_database
 from lightly_studio.sampling.sequence_sampling import sampling_via_database_sequences
 from tests import helpers_resolvers
 from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
@@ -456,6 +456,28 @@ def test_sampling_via_database__sequence_preselection_matches_single_sampling(
     assert len(first_batch) == 5
     assert set(first_batch) < set(second_batch)
     assert set(second_batch) == set(single_batch)
+
+
+def test_sampling_via_database__sequence_returns_no_samples_without_embedding(
+    db_session: Session,
+) -> None:
+    frame_collection_id, frame_sample_ids = _fill_db_with_video_frames_and_embeddings(
+        session=db_session,
+        n_frames=10,
+    )
+    config = SamplingConfig(
+        collection_id=frame_collection_id,
+        n_samples_to_select=5,
+        sampling_result_tag_name="result",
+        strategies=[EmbeddingDiversityStrategy(embedding_model_name="embedding_model_1")],
+        selected_sequence_length=5,
+    )
+
+    result = sampling_via_database(
+        session=db_session, config=config, input_sample_ids=frame_sample_ids
+    )
+
+    assert result == SamplingResult(n_samples_without_embedding=0, n_samples_selected=5)
 
 
 def test_sampling_via_database__sequence_result_tag_name_equals_preselected_tag_name(

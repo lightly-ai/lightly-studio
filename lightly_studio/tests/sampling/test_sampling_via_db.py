@@ -32,6 +32,7 @@ from lightly_studio.sampling.sampling_config import (
     SubpartDiversityStrategy,
 )
 from lightly_studio.sampling.sampling_via_db import (
+    SamplingResult,
     _aggregate_class_distributions,
     _check_result_tag_name_free,
     _get_subpart_embeddings,
@@ -112,7 +113,11 @@ def test_sampling_via_database__samples_without_embedding_left_out(
     )
 
     with caplog.at_level(logging.WARNING):
-        sampling_via_database(session=db_session, config=config, input_sample_ids=sample_ids)
+        result = sampling_via_database(
+            session=db_session, config=config, input_sample_ids=sample_ids
+        )
+
+    assert result == SamplingResult(n_samples_without_embedding=2, n_samples_selected=3)
 
     assert set(
         _sample_ids_by_tag_name(session=db_session, collection_id=collection_id, tag_name="result")
