@@ -29,8 +29,15 @@ from lightly_studio.core.start_gui import (
     stop_gui_background,
 )
 from lightly_studio_serve.labeling import LabelingModel, ModelTask, PredictedAnnotation
-from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
-from lightly_studio.assisted_labeling.public_api import register_labeling_model
+from lightly_studio_serve.types import (
+    EmbeddingResult,
+    EmbeddingSpaceSpec,
+    ImageCrop,
+)
+from lightly_studio.assisted_labeling.public_api import (
+    register_labeling_model,
+    register_remote_labeling_model,
+)
 from lightly_studio.embed.public_api import register_default_embedder, register_remote_embedder
 from lightly_studio.models.collection import SampleType
 from lightly_studio.enterprise import connect
@@ -66,6 +73,7 @@ __all__ = [
     "register_default_embedder",
     "register_labeling_model",
     "register_remote_embedder",
+    "register_remote_labeling_model",
     "start_gui",
     "start_gui_background",
     "stop_gui_background",

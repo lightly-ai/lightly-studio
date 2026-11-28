@@ -1,18 +1,26 @@
-"""Finds the labeling models that the GUI can run."""
+"""Finds the labeling models that the GUI can run.
+
+A model that is registered in this process wins over a server that the dataset saves
+under the same model ID. This is the same order as for embedders.
+"""
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
 
 from lightly_studio_serve.labeling import LabelingModel
 
-from lightly_studio.assisted_labeling import labeling_model_registry
+from lightly_studio.assisted_labeling import labeling_model_registry, remote_runner_cache
 from lightly_studio.assisted_labeling.labeling_model_runner import (
     LabelingModelRunner,
     LocalLabelingModelRunner,
 )
+from lightly_studio.assisted_labeling.provider import ProviderUnavailableError
+from lightly_studio.assisted_labeling.remote_labeling_model_runner import RemoteLabelingModelError
+from lightly_studio.assisted_labeling.remote_runner_cache import RemoteLabelingModelConfig
 from lightly_studio.errors import NotFoundError
 
 logger = logging.getLogger(__name__)
@@ -22,11 +30,13 @@ logger = logging.getLogger(__name__)
 class RunnerSnapshot:
     """The labeling models that can run now, and if more models are still loading.
 
-    Both fields come from one read of `ready` for each model. A model that becomes ready
-    during the request is then either in `runners` or counted in `has_loading_models`.
+    Both fields come from one read of `ready` for each registered model. A model that
+    becomes ready during the request is then either in `runners` or counted in
+    `has_loading_models`.
 
     Attributes:
-        runners: A runner for each model that is ready, in registration order.
+        runners: A runner for each model that can run now. The registered models come
+            first, in registration order. The saved servers follow.
         has_loading_models: True if a registered model is not ready yet.
     """
 
@@ -39,32 +49,56 @@ class _NotRunnable(Enum):
     FAILED = "failed"
 
 
-def get_runner_snapshot() -> RunnerSnapshot:
-    """Return the runners of the ready labeling models, and if a model is still loading.
+def get_runner_snapshot(
+    saved_models: Sequence[RemoteLabelingModelConfig] = (),
+) -> RunnerSnapshot:
+    """Return the runners of the models that can run now, and if a model is still loading.
 
-    A model with a property that raises an error is left out and logged, so that the other
-    models stay available. Such a model is not loading.
+    A registered model with a property that raises an error is left out and logged, so that
+    the other models stay available. Such a model is not loading. A saved server that cannot
+    be connected is left out, with a warning in the log.
+
+    Args:
+        saved_models: The labeling servers that the dataset saves.
     """
     models = labeling_model_registry.get_registry().list_models()
     results = [_create_runner_if_ready(model=model) for model in models]
-    return RunnerSnapshot(
-        runners=[result for result in results if not isinstance(result, _NotRunnable)],
-        has_loading_models=_NotRunnable.LOADING in results,
-    )
+    runners = [result for result in results if not isinstance(result, _NotRunnable)]
+    registered_ids = {runner.model_id for runner in runners}
+    for config in saved_models:
+        if config.model_id in registered_ids:
+            continue
+        try:
+            runners.append(remote_runner_cache.get_cache().get(config=config))
+        except RemoteLabelingModelError as error:
+            logger.warning("Labeling model %r is not available: %s", config.model_id, error)
+    return RunnerSnapshot(runners=runners, has_loading_models=_NotRunnable.LOADING in results)
 
 
-def get_runner(model_id: str) -> LabelingModelRunner:
+def get_runner(
+    model_id: str, saved_models: Sequence[RemoteLabelingModelConfig] = ()
+) -> LabelingModelRunner:
     """Return the runner of the labeling model with the ID.
 
-    The runner, not this function, checks that the model is ready.
+    Args:
+        model_id: The ID of the labeling model.
+        saved_models: The labeling servers that the dataset saves.
 
     Raises:
         NotFoundError: If no labeling model has the ID.
+        ProviderUnavailableError: If the server of the model cannot be connected.
     """
     model = labeling_model_registry.get_registry().get(model_id=model_id)
-    if model is None:
-        raise NotFoundError(f"No labeling model with ID {model_id!r} is registered.")
-    return LocalLabelingModelRunner(model=model)
+    if model is not None:
+        return LocalLabelingModelRunner(model=model)
+    for config in saved_models:
+        if config.model_id != model_id:
+            continue
+        try:
+            return remote_runner_cache.get_cache().get(config=config)
+        except RemoteLabelingModelError as error:
+            raise ProviderUnavailableError(str(error)) from error
+    raise NotFoundError(f"No labeling model with ID {model_id!r} is registered.")
 
 
 def _create_runner_if_ready(model: LabelingModel) -> LabelingModelRunner | _NotRunnable:

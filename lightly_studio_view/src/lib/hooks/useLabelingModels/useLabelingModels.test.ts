@@ -18,19 +18,24 @@ describe('useLabelingModels', () => {
     it('queries the models and returns them', () => {
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery').mockReturnValue(queryResult);
 
-        const labelingModels = useLabelingModels(() => true);
+        const labelingModels = useLabelingModels(() => ({
+            collectionId: 'collection-1',
+            enabled: true
+        }));
 
         const options = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
-        expect(options.queryKey).toEqual(getLabelingModelsOptions().queryKey);
+        expect(options.queryKey).toEqual(
+            getLabelingModelsOptions({ query: { collection_id: 'collection-1' } }).queryKey
+        );
         expect(options.enabled).toBe(true);
         expect(labelingModels.models).toEqual([model]);
         expect(labelingModels.isAvailable).toBe(true);
     });
 
-    it('disables the query when getEnabled returns false', () => {
+    it('disables the query when enabled is false', () => {
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery').mockReturnValue(queryResult);
 
-        useLabelingModels(() => false);
+        useLabelingModels(() => ({ collectionId: 'collection-1', enabled: false }));
 
         const options = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
         expect(options.enabled).toBe(false);
@@ -41,6 +46,11 @@ describe('useLabelingModels', () => {
             data: { models: [], has_loading_models: false }
         } as unknown as CreateQueryResult<LabelingModelsView, Error>);
 
-        expect(useLabelingModels(() => true).isAvailable).toBe(false);
+        const labelingModels = useLabelingModels(() => ({
+            collectionId: 'collection-1',
+            enabled: true
+        }));
+
+        expect(labelingModels.isAvailable).toBe(false);
     });
 });
