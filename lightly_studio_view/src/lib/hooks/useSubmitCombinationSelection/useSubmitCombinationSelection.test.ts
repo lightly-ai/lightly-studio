@@ -19,9 +19,12 @@ vi.mock('$lib/hooks', () => ({
 
 const { toast } = await import('svelte-sonner');
 
-function samplingSuccess(nSamplesWithoutEmbedding = 0) {
+function samplingSuccess(nSamplesWithoutEmbedding = 0, nSamplesSelected = 10) {
     return {
-        data: { n_samples_without_embedding: nSamplesWithoutEmbedding },
+        data: {
+            n_samples_without_embedding: nSamplesWithoutEmbedding,
+            n_samples_selected: nSamplesSelected
+        },
         error: null
     } as never;
 }
@@ -209,18 +212,25 @@ describe('useSubmitCombinationSelection', () => {
     });
 
     it.each([
-        [1, 'Sampling created. 1 sample has no embedding and was left out.'],
-        [12, 'Sampling created. 12 samples have no embedding and were left out.']
-    ])('on success with %i samples left out: warns with the count', async (count, message) => {
-        vi.mocked(createSampling).mockResolvedValue(samplingSuccess(count));
-        const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
+        [1, 1, 'Sampling created with 1 sample. 1 sample has no embedding and was left out.'],
+        [
+            12,
+            24,
+            'Sampling created with 24 samples. 12 samples have no embedding and were left out.'
+        ]
+    ])(
+        'on success with %i samples left out: warns with the counts',
+        async (nLeftOut, nSelected, message) => {
+            vi.mocked(createSampling).mockResolvedValue(samplingSuccess(nLeftOut, nSelected));
+            const { submit } = useSubmitCombinationSelection({ ...defaultHookParams });
 
-        const result = await submit({ ...defaultSubmitParams });
+            const result = await submit({ ...defaultSubmitParams });
 
-        expect(result).toBe(true);
-        expect(toast.warning).toHaveBeenCalledWith(message);
-        expect(toast.success).not.toHaveBeenCalled();
-    });
+            expect(result).toBe(true);
+            expect(toast.warning).toHaveBeenCalledWith(message);
+            expect(toast.success).not.toHaveBeenCalled();
+        }
+    );
 
     it('sets isSubmitting to true while running and false when done', async () => {
         let resolveApi!: (value: unknown) => void;

@@ -27,16 +27,19 @@ interface SubmitParams {
     preselectedTagId?: string;
 }
 
-function showSamplingCreatedToast(nSamplesWithoutEmbedding: number): void {
-    if (nSamplesWithoutEmbedding === 0) {
+function showSamplingCreatedToast(samplingResponse: SamplingResponse | undefined): void {
+    if (!samplingResponse || samplingResponse.n_samples_without_embedding === 0) {
         toast.success('Sampling created successfully');
         return;
     }
+    const { n_samples_selected: nSelected, n_samples_without_embedding: nLeftOut } =
+        samplingResponse;
+    const selected = nSelected === 1 ? '1 sample' : `${nSelected} samples`;
     const leftOut =
-        nSamplesWithoutEmbedding === 1
+        nLeftOut === 1
             ? '1 sample has no embedding and was left out.'
-            : `${nSamplesWithoutEmbedding} samples have no embedding and were left out.`;
-    toast.warning(`Sampling created. ${leftOut}`);
+            : `${nLeftOut} samples have no embedding and were left out.`;
+    toast.warning(`Sampling created with ${selected}. ${leftOut}`);
 }
 
 async function handleSelectionSuccess(
@@ -44,7 +47,7 @@ async function handleSelectionSuccess(
     samplingResponse: SamplingResponse | undefined,
     params: UseSubmitCombinationSelectionParams
 ): Promise<void> {
-    showSamplingCreatedToast(samplingResponse?.n_samples_without_embedding ?? 0);
+    showSamplingCreatedToast(samplingResponse);
     await params.loadTags();
     const newTag = get(params.tags).find((tag) => tag.name === selectionResultTagName);
     if (newTag) params.setTagSelected(newTag.tag_id, true);
